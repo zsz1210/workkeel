@@ -26,9 +26,14 @@ For a wider edit, choose an explicit local group:
 | `npm run test:core` | Core CLI, lifecycle, routing, recovery, governance, and mixed core/optional tests |
 | `npm run test:optional` | Console, Control Plane, and optional observer/provider integration |
 | `npm run test:experiments` | Offline experiment harnesses, acquisition classification, protocols, and analysis |
+| `npm run test:daily` | Curated representative core/optional safety paths for a broad routine check |
 | `npm run test:fast` | Small contracts, package-validator edge cases, and evidence Git-read behavior |
 
 The three broad groups partition the test inventory. New test files default to core. Fast tests overlap these groups intentionally; they are not another full suite.
+
+Use `npm run verify:daily` for a broad routine check when the changed area needs more than the fast contracts. It covers representative production CLI, lifecycle, authority, recovery, rollback, High-Assurance, JSON-RPC, evidence, and optional Control Plane paths in one Node process. It is intentionally not an exhaustive matrix: changed test files still select their whole group, offline model/process experiments remain available through `npm run test:experiments`, and every test remains in the complete suite. A final behavioral candidate or Release still requires `npm run verify`.
+
+Group commands use Node's compact dot reporter by default: successful cases occupy progress lines, while a failure still expands its test name, assertion diff, stack, and source location. Use `npm run test:full:verbose` only when per-test success names and durations are useful for investigation.
 
 For conservative local selection against your branch base:
 

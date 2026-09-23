@@ -36,16 +36,19 @@
   "scripts": {
     "release:pack": "node scripts/pack-npm-release.mjs",
     "check": "node scripts/check-repo.mjs && node scripts/check-doc-links.mjs && node scripts/check-package.mjs",
-    "test": "node --test",
+    "test": "node scripts/test-groups.mjs full",
     "test:browser": "node scripts/verify-console-browser.mjs",
     "test:fast": "node scripts/test-groups.mjs fast",
     "test:core": "node scripts/test-groups.mjs core",
     "test:optional": "node scripts/test-groups.mjs optional",
     "test:experiments": "node scripts/test-groups.mjs experiments",
+    "test:daily": "node scripts/test-groups.mjs daily",
     "test:changed": "node scripts/test-groups.mjs changed",
     "verify:changed": "npm run check && node scripts/test-groups.mjs changed",
-    "test:full": "node --test",
+    "test:full": "node scripts/test-groups.mjs full",
+    "test:full:verbose": "node scripts/test-groups.mjs full --verbose",
     "verify:fast": "npm run check && npm run test:fast",
+    "verify:daily": "npm run check && npm run test:daily",
     "verify": "npm run check && npm run test:full"
   },
   "dependencies": {

@@ -1,0 +1,145 @@
+{
+  "schema_version": "temple.work-item/v1",
+  "id": "WI-0253",
+  "title": "Slim the test suite without weakening safety coverage",
+  "state": "build",
+  "owner_position": "developer",
+  "assigned_agent_id": "agent-rikku",
+  "created_at": "2026-09-23T07:07:40.621Z",
+  "updated_at": "2026-09-23T07:10:21.834Z",
+  "scope": [
+    "Evaluate the current test inventory, remove or merge only evidence-backed duplication, reduce routine execution time and success-output volume, and preserve regression, authority, recovery, security, failure diagnostics, and full release verification boundaries."
+  ],
+  "acceptance_criteria": [
+    "Every removed, merged, or relocated check names its equivalent retained coverage.",
+    "Daily verification reports materially less wall time or output while retaining actionable failure diagnostics.",
+    "Full verification remains available and preserves core, optional, experiment, authority, recovery, and security coverage.",
+    "Before/after evidence records test count, test-file count, wall time, failures, and retained limitations on the same Node runtime."
+  ],
+  "affected_paths": [
+    "scripts/test-groups.mjs",
+    "package.json",
+    "docs/getting-started/testing.md",
+    "test"
+  ],
+  "context_refs": [],
+  "spec_refs": [],
+  "ux_refs": [],
+  "ui_refs": [],
+  "contract_refs": [],
+  "specification_mode": "gate-evidence",
+  "ui_delivery_mode": "not-applicable",
+  "workflow_profile": "standard",
+  "risk_tier": "standard",
+  "profile_assessment": {
+    "requested_profile": "standard",
+    "effective_profile": "standard",
+    "scope_class": "ordinary",
+    "escalation_triggers": [],
+    "rationale": "Broad behavioral test-infrastructure change can weaken safeguards if reviewed only as a bounded low-risk edit; retain Standard gates and independent QA.",
+    "evidence_refs": [],
+    "evaluated_at": "2026-09-23T07:07:40.608Z",
+    "escalated": false
+  },
+  "parent_work_item_id": null,
+  "tracker_visibility": "internal",
+  "tracker_refs": [],
+  "tracker_reconciliations": [],
+  "dependencies": [],
+  "required_disciplines": [],
+  "stage_requirements": {},
+  "base_revision": "2c5daa45afd756cf6ff18a31fdf13d8e03720828",
+  "parallel_mode": "pending",
+  "integration_owner_agent_id": null,
+  "planned_agent_id": null,
+  "shared_contract_refs": [],
+  "contract_status": "not_required",
+  "overlap_resolution": [],
+  "claim": {
+    "id": "claim-20260923071021-2919ade6",
+    "status": "active",
+    "principal_id": "human",
+    "agent_id": "agent-rikku",
+    "actor_provenance": {
+      "selection": "explicit-agent",
+      "principal_source": "explicit-principal",
+      "verification_class": "attributed",
+      "evidence_ref": null,
+      "provider_authenticated": false,
+      "externally_supplied_evidence": false
+    },
+    "position_id": "developer",
+    "base_revision": "2c5daa45afd756cf6ff18a31fdf13d8e03720828",
+    "branch": "codex/test-suite-slimming",
+    "worktree": null,
+    "claimed_at": "2026-09-23T07:10:21.834Z",
+    "released_at": null
+  },
+  "claims": [
+    {
+      "id": "claim-20260923070758-df106f48",
+      "status": "released",
+      "principal_id": "human",
+      "agent_id": "agent-mog",
+      "actor_provenance": {
+        "selection": "explicit-agent",
+        "principal_source": "explicit-principal",
+        "verification_class": "attributed",
+        "evidence_ref": null,
+        "provider_authenticated": false,
+        "externally_supplied_evidence": false
+      },
+      "position_id": "engineering_manager",
+      "base_revision": "2c5daa45afd756cf6ff18a31fdf13d8e03720828",
+      "branch": "codex/test-suite-slimming",
+      "worktree": null,
+      "claimed_at": "2026-09-23T07:07:58.193Z",
+      "released_at": "2026-09-23T07:10:10.703Z",
+      "release_reason": [
+        "Work order, scope, baseline, design, risk, and stop boundary recorded"
+      ]
+    },
+    {
+      "id": "claim-20260923071021-2919ade6",
+      "status": "active",
+      "principal_id": "human",
+      "agent_id": "agent-rikku",
+      "actor_provenance": {
+        "selection": "explicit-agent",
+        "principal_source": "explicit-principal",
+        "verification_class": "attributed",
+        "evidence_ref": null,
+        "provider_authenticated": false,
+        "externally_supplied_evidence": false
+      },
+      "position_id": "developer",
+      "base_revision": "2c5daa45afd756cf6ff18a31fdf13d8e03720828",
+      "branch": "codex/test-suite-slimming",
+      "worktree": null,
+      "claimed_at": "2026-09-23T07:10:21.834Z",
+      "released_at": null
+    }
+  ],
+  "gate_evidence": {
+    "work_order": [
+      ".ai-org/artifacts/WI-0253/design.md"
+    ],
+    "approved_scope": [
+      ".ai-org/artifacts/WI-0253/design.md"
+    ],
+    "acceptance_criteria": [
+      ".ai-org/artifacts/WI-0253/design.md"
+    ],
+    "technical_design": [
+      ".ai-org/artifacts/WI-0253/design.md"
+    ],
+    "risk_review": [
+      ".ai-org/artifacts/WI-0253/design.md"
+    ]
+  },
+  "evidence": [
+    ".ai-org/artifacts/WI-0253/design.md"
+  ],
+  "unresolved": [],
+  "next_position": "quality_evaluator"
+}
