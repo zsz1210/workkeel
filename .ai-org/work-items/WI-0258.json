@@ -1,0 +1,128 @@
+{
+  "acceptance_criteria": [
+    "Fresh task-first projects complete initialization, diagnostics, creation, claim, exact-candidate handoff, distinct-agent review and closure without Positions.",
+    "Scope, identity, approvals, evidence, dependencies, stale writes and explicit compatibility are fail-closed; history is preserved.",
+    "Native and fixed gateway model settings remain separate from the existing execution runtime; offline tests pass and live LiteLLM limitations are explicit."
+  ],
+  "affected_paths": [
+    "src",
+    "bin",
+    "test/workkeel-lifecycle.test.mjs",
+    "test/workkeel-runtime.test.mjs",
+    "docs",
+    "scripts/check-package.mjs",
+    "package.json",
+    "package-lock.json",
+    ".ai-org/project/domain-glossary.md"
+  ],
+  "assigned_agent_id": "agent-rikku",
+  "base_revision": "9d0f8547",
+  "claim": {
+    "actor_provenance": {
+      "evidence_ref": null,
+      "externally_supplied_evidence": false,
+      "principal_source": "explicit-principal",
+      "provider_authenticated": false,
+      "selection": "explicit-agent",
+      "verification_class": "attributed"
+    },
+    "agent_id": "agent-rikku",
+    "base_revision": "9d0f8547",
+    "branch": "codex/workkeel-reframe",
+    "claimed_at": "2026-09-23T10:04:23.251Z",
+    "id": "claim-20260923100423-76583879",
+    "position_id": "developer",
+    "principal_id": "human",
+    "released_at": null,
+    "status": "active",
+    "worktree": "."
+  },
+  "claims": [
+    {
+      "actor_provenance": {
+        "evidence_ref": null,
+        "externally_supplied_evidence": false,
+        "principal_source": "explicit-principal",
+        "provider_authenticated": false,
+        "selection": "explicit-agent",
+        "verification_class": "attributed"
+      },
+      "agent_id": "agent-rikku",
+      "base_revision": "9d0f8547",
+      "branch": "codex/workkeel-reframe",
+      "claimed_at": "2026-09-23T10:04:23.251Z",
+      "id": "claim-20260923100423-76583879",
+      "position_id": "developer",
+      "principal_id": "human",
+      "released_at": null,
+      "status": "active",
+      "worktree": "."
+    }
+  ],
+  "context_refs": [],
+  "contract_refs": [],
+  "contract_status": "not_required",
+  "created_at": "2026-09-23T10:04:20.589Z",
+  "dependencies": [],
+  "evidence": [
+    ".ai-org/artifacts/WI-0258/workkeel-design.md"
+  ],
+  "gate_evidence": {
+    "acceptance_criteria": [
+      ".ai-org/artifacts/WI-0258/workkeel-design.md"
+    ],
+    "approved_scope": [
+      ".ai-org/artifacts/WI-0258/workkeel-design.md"
+    ],
+    "risk_review": [
+      ".ai-org/artifacts/WI-0258/workkeel-design.md"
+    ],
+    "technical_design": [
+      ".ai-org/artifacts/WI-0258/workkeel-design.md"
+    ],
+    "work_order": [
+      ".ai-org/artifacts/WI-0258/workkeel-design.md"
+    ]
+  },
+  "id": "WI-0258",
+  "integration_owner_agent_id": null,
+  "next_position": "quality_evaluator",
+  "overlap_resolution": [],
+  "owner_position": "developer",
+  "parallel_mode": "sequential",
+  "parent_work_item_id": null,
+  "planned_agent_id": "agent-rikku",
+  "profile_assessment": {
+    "effective_profile": "standard",
+    "escalated": false,
+    "escalation_triggers": [
+      "schema-or-data-migration"
+    ],
+    "evaluated_at": "2026-09-23T10:04:20.576Z",
+    "evidence_refs": [],
+    "rationale": "Versioned opt-in metadata lifecycle, no new sandbox or production release; preserve legacy authority.",
+    "requested_profile": "standard",
+    "scope_class": "cross-system"
+  },
+  "required_disciplines": [],
+  "risk_tier": "standard",
+  "schema_version": "temple.work-item/v1",
+  "scope": [
+    "Operationalize role-free contracts using versioned task-first project state, explicit legacy compatibility and optional fixed-model Codex gateway settings."
+  ],
+  "shared_contract_refs": [],
+  "spec_refs": [],
+  "specification_mode": "gate-evidence",
+  "stage_requirements": {},
+  "state": "build",
+  "title": "Implement the Workkeel task-first lifecycle",
+  "tracker_reconciliations": [],
+  "tracker_refs": [],
+  "tracker_visibility": "team-visible",
+  "ui_delivery_mode": "not-applicable",
+  "ui_refs": [],
+  "unresolved": [],
+  "updated_at": "2026-09-23T10:04:23.251Z",
+  "ux_refs": [],
+  "workflow_profile": "standard"
+}

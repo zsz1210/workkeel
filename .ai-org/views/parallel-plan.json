@@ -1,13 +1,13 @@
 {
   "schema_version": "temple.parallel-plan/v1",
-  "generated_at": "2026-09-23T10:14:43.467Z",
-  "source_fingerprint": "5db099d33da6720a56b0727ee88777c7e3174ffae4df6b2fb4f818281495ee71",
+  "generated_at": "2026-09-23T10:16:30.555Z",
+  "source_fingerprint": "3af343d3f65034dd25959d6bb230ffb04619199f7e5b1582bce1f98d4f69cdc6",
   "scope": {
     "mode": "all-active",
     "parent_work_item_id": null,
     "selected_work_item_ids": [
       "WI-0253",
-      "WI-0255"
+      "WI-0258"
     ]
   },
   "max_workers": null,
@@ -22,18 +22,18 @@
   "waves": [],
   "active": [
     {
-      "work_item_id": "WI-0255",
-      "title": "Define Workkeel task and execution contracts",
+      "work_item_id": "WI-0258",
+      "title": "Implement the Workkeel task-first lifecycle",
       "disposition": "active",
       "position_id": "developer",
       "agent_id": "agent-rikku",
       "integration_owner_agent_id": null,
       "reasons": [],
-      "claim_id": "claim-20260923085932-89b9be4b",
+      "claim_id": "claim-20260923100423-76583879",
       "principal_id": "human",
       "branch": "codex/workkeel-reframe",
-      "worktree": "/Users/zsz1210/Documents/Codex/2026-09-23/chatgpt-tempo-github-tempo-clone/work/workkeel",
-      "base_revision": "53d075bcf619f655cc5613046d5ff05b3e8ab767"
+      "worktree": ".",
+      "base_revision": "9d0f8547"
     }
   ],
   "sequential": [
@@ -54,11 +54,23 @@
     {
       "kind": "affected-path",
       "left_work_item_id": "WI-0253",
-      "right_work_item_id": "WI-0255",
+      "right_work_item_id": "WI-0258",
       "paths": [
         {
+          "left_path": "package.json",
+          "right_path": "package.json"
+        },
+        {
+          "left_path": "docs/getting-started/testing.md",
+          "right_path": "docs"
+        },
+        {
           "left_path": "test",
-          "right_path": "test/task-contract.test.mjs"
+          "right_path": "test/workkeel-lifecycle.test.mjs"
+        },
+        {
+          "left_path": "test",
+          "right_path": "test/workkeel-runtime.test.mjs"
         }
       ],
       "resolution": "separate-waves"

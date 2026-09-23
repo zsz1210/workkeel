@@ -5,7 +5,7 @@
 - Active Agent Identities: 5
 - Collaboration profile: `solo` (0 Human Principals, 1 active claims)
 - Parallel plan: 0 wave(s), fresh=true
-- Work items: 256 total, 2 active
+- Work items: 258 total, 2 active
 - Codex tasks: 14 registered, 14 archive-ready
 - Runtime workers: 104 registered, 0 reserved, 0 active
 - Shared resources: 0 defined, 0 active reservation(s)
@@ -302,14 +302,16 @@
 | WI-0252 | Integrate collaboration recovery and measured closeout | done | Engineering Manager | Mog | pending | team-visible | 0 | gate-evidence | not-applicable | 0 | 0 | 0 | — | `8f7ab5f0` | 1 | 14 | 0 |
 | WI-0253 | Slim the test suite without weakening safety coverage | build | Developer | Rikku | pending | internal | 0 | gate-evidence | not-applicable | 0 | 0 | 0 | — | `—` | 0 | 3 | 0 |
 | WI-0254 | Repair baseline test harness failures | cancelled | Engineering Manager | Mog | pending | internal | 0 | gate-evidence | not-applicable | 0 | 0 | 0 | — | `b863ee49` | 0 | 5 | 0 |
-| WI-0255 | Define Workkeel task and execution contracts | build | Developer | Rikku | pending | team-visible | 0 | gate-evidence | not-applicable | 0 | 0 | 0 | claim-20260923085932-89b9be4b | `—` | 0 | 1 | 0 |
+| WI-0255 | Define Workkeel task and execution contracts | done | Engineering Manager | Mog | sequential | team-visible | 0 | gate-evidence | not-applicable | 0 | 0 | 0 | — | `8165774f` | 0 | 7 | 0 |
 | WI-0256 | Qualify baseline test harness repair | done | Engineering Manager | Mog | sequential | internal | 0 | gate-evidence | not-applicable | 0 | 0 | 0 | — | `4ac435d8` | 0 | 5 | 0 |
+| WI-0257 | Deliver the role-free Workkeel lifecycle and runtime connection boundary | cancelled | Engineering Manager | Mog | sequential | team-visible | 0 | gate-evidence | not-applicable | 0 | 0 | 0 | — | `—` | 0 | 2 | 0 |
+| WI-0258 | Implement the Workkeel task-first lifecycle | build | Developer | Rikku | sequential | team-visible | 0 | gate-evidence | not-applicable | 0 | 0 | 0 | claim-20260923100423-76583879 | `—` | 0 | 1 | 0 |
 
 ## Delivery attention
 
 - WI-0253: awaiting-owner — Have the eligible owner claim or resume the next scoped responsibility.
   - owner: No active eligible ownership claim is recorded.
-- WI-0255: awaiting-owner — The recorded owner can continue the scoped work; no attached active worker is recorded.
+- WI-0258: awaiting-owner — The recorded owner can continue the scoped work; no attached active worker is recorded.
   - owner: No attached active runtime is recorded for this claim.
 
 ## Codex task registry
@@ -478,7 +480,7 @@
 - Profile: `repository-only`
 - Sync granularity: `team-visible`
 - Active providers: 0
-- Team-visible Work Items: 102
+- Team-visible Work Items: 104
 - Linked Work Items: 0
 - Observed external items: 0
 - Reconciliation actions: 0
@@ -552,14 +554,14 @@
 
 | Time | Event | Work item | Actor |
 |---|---|---|---|
-| 2026-09-23T10:14:26.507Z | work_item_reworked | WI-0253 | agent-lulu |
-| 2026-09-23T10:14:16.884Z | work_item_claimed | WI-0253 | human |
-| 2026-09-23T10:09:29.680Z | work_item_closed | WI-0256 | agent-lulu |
-| 2026-09-23T10:09:29.680Z | work_item_transitioned | WI-0256 | agent-lulu |
-| 2026-09-23T10:09:29.666Z | work_item_claim_released | WI-0256 | human |
-| 2026-09-23T10:08:55.830Z | work_item_claimed | WI-0256 | human |
-| 2026-09-23T10:08:55.289Z | work_item_claim_released | WI-0256 | human |
-| 2026-09-23T10:04:29.159Z | work_item_claimed | WI-0256 | human |
+| 2026-08-30T09:17:37.867Z | runtime_worker_reserved | WI-0026 | project-owner |
+| 2026-08-30T09:17:37.551Z | runtime_worker_reserved | WI-0025 | project-owner |
+| 2026-08-30T09:11:23.500Z | runtime_worker_reserved | WI-0025 | project-owner |
+| 2026-08-30T09:11:23.831Z | runtime_worker_reserved | WI-0026 | project-owner |
+| 2026-08-30T09:01:03.015Z | runtime_worker_reserved | WI-0026 | project-owner |
+| 2026-08-30T09:01:02.738Z | runtime_worker_reserved | WI-0025 | project-owner |
+| 2026-08-30T08:44:54.577Z | runtime_worker_reserved | WI-0025 | project-owner |
+| 2026-08-30T08:44:54.849Z | runtime_worker_reserved | WI-0026 | project-owner |
 
 ## Assignments
 
