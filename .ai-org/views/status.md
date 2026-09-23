@@ -3,7 +3,7 @@
 - Project ID: `temple`
 - Organization system version: `0.1.0-alpha.33`
 - Active Agent Identities: 5
-- Collaboration profile: `solo` (0 Human Principals, 1 active claims)
+- Collaboration profile: `solo` (0 Human Principals, 0 active claims)
 - Parallel plan: 0 wave(s), fresh=false
 - Work items: 254 total, 2 active
 - Codex tasks: 14 registered, 14 archive-ready
@@ -27,7 +27,7 @@
 - Human Principals: 0
 - Agent sponsorships: 0
 - Active Position memberships: 10
-- Active Work Item claims: 1
+- Active Work Item claims: 0
 - Active Human Authority Grants: 0
 - Governance recovery: `not_configured`
 - Real Collaborative validation: `not_run` (.ai-org/templates/collaborative-large-scale-test-plan.md)
@@ -301,14 +301,14 @@
 | WI-0251 | Include reviewed closeout files in package boundary | done | Engineering Manager | Mog | pending | team-visible | 0 | gate-evidence | not-applicable | 0 | 0 | 0 | — | `41a1a4f7` | 0 | 4 | 0 |
 | WI-0252 | Integrate collaboration recovery and measured closeout | done | Engineering Manager | Mog | pending | team-visible | 0 | gate-evidence | not-applicable | 0 | 0 | 0 | — | `8f7ab5f0` | 1 | 14 | 0 |
 | WI-0253 | Slim the test suite without weakening safety coverage | test | Quality & Evaluation Engineer | Lulu | pending | internal | 0 | gate-evidence | not-applicable | 0 | 0 | 0 | — | `b0fe9161` | 0 | 3 | 0 |
-| WI-0254 | Repair baseline test harness failures | build | Developer | Rikku | pending | internal | 0 | gate-evidence | not-applicable | 0 | 0 | 0 | claim-20260923081709-07039aa2 | `—` | 0 | 2 | 0 |
+| WI-0254 | Repair baseline test harness failures | test | Quality & Evaluation Engineer | Lulu | pending | internal | 0 | gate-evidence | not-applicable | 0 | 0 | 0 | — | `b863ee49` | 0 | 4 | 0 |
 
 ## Delivery attention
 
 - WI-0253: awaiting-owner — Have the eligible owner claim or resume the next scoped responsibility.
   - owner: No active eligible ownership claim is recorded.
-- WI-0254: awaiting-owner — The recorded owner can continue the scoped work; no attached active worker is recorded.
-  - owner: No attached active runtime is recorded for this claim.
+- WI-0254: awaiting-owner — Have the eligible owner claim or resume the next scoped responsibility.
+  - owner: No active eligible ownership claim is recorded.
 
 ## Codex task registry
 
@@ -551,14 +551,14 @@
 
 | Time | Event | Work item | Actor |
 |---|---|---|---|
+| 2026-09-23T08:29:05.051Z | work_item_transitioned | WI-0254 | agent-rikku |
+| 2026-09-23T08:28:56.850Z | work_item_claim_released | WI-0254 | human |
+| 2026-09-23T08:28:49.439Z | handoff_created | WI-0254 | agent-rikku |
 | 2026-09-23T08:17:09.376Z | work_item_claimed | WI-0254 | human |
 | 2026-09-23T08:16:51.034Z | work_item_transitioned | WI-0254 | agent-mog |
 | 2026-09-23T08:16:12.407Z | work_item_claimed | WI-0254 | human |
 | 2026-09-23T08:15:53.862Z | work_item_coordination_configured | WI-0254 | agent-mog |
 | 2026-09-23T08:15:18.618Z | work_item_created | WI-0254 | agent-mog |
-| 2026-09-23T07:55:31.387Z | work_item_transitioned | WI-0253 | agent-rikku |
-| 2026-09-23T07:55:30.881Z | work_item_claim_released | WI-0253 | human |
-| 2026-09-23T07:55:15.291Z | handoff_created | WI-0253 | agent-rikku |
 
 ## Assignments
 
