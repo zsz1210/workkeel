@@ -4,8 +4,8 @@
 - Organization system version: `0.1.0-alpha.33`
 - Active Agent Identities: 5
 - Collaboration profile: `solo` (0 Human Principals, 0 active claims)
-- Parallel plan: 1 wave(s), fresh=false
-- Work items: 259 total, 5 active
+- Parallel plan: 1 wave(s), fresh=true
+- Work items: 259 total, 2 active
 - Codex tasks: 14 registered, 14 archive-ready
 - Runtime workers: 106 registered, 0 reserved, 0 active
 - Shared resources: 0 defined, 0 active reservation(s)
@@ -18,7 +18,7 @@
 - Specifications: 2 indexed, 2 approved (hybrid)
 - Tracker: `repository-only` (0 active provider(s), 0 linked Work Item(s))
 - Repository integration: `confirmed` (Develop focused changes on short-lived branches and submit them through pull requests; the maintainer owns final integration and release decisions.)
-- Attention signals: 27
+- Attention signals: 26
 
 ## Collaboration
 
@@ -37,10 +37,10 @@
 - Generated plan: `.ai-org/views/parallel-plan.json`
 - Installed: yes
 - Valid: yes
-- Fresh: no
+- Fresh: yes
 - Safe waves: 1
 - Dispatchable Work Items: 1
-- Active / sequential / blocked: 0 / 3 / 0
+- Active / sequential / blocked: 0 / 1 / 0
 - Next wave: WI-0258
 - Codex tasks, claims, or external actions performed by planning: no
 
@@ -300,22 +300,16 @@
 | WI-0250 | Automate measurement closeout and clarify task readiness | done | Engineering Manager | Mog | pending | team-visible | 0 | gate-evidence | not-applicable | 0 | 0 | 0 | — | `9148bd64` | 1 | 10 | 0 |
 | WI-0251 | Include reviewed closeout files in package boundary | done | Engineering Manager | Mog | pending | team-visible | 0 | gate-evidence | not-applicable | 0 | 0 | 0 | — | `41a1a4f7` | 0 | 4 | 0 |
 | WI-0252 | Integrate collaboration recovery and measured closeout | done | Engineering Manager | Mog | pending | team-visible | 0 | gate-evidence | not-applicable | 0 | 0 | 0 | — | `8f7ab5f0` | 1 | 14 | 0 |
-| WI-0253 | Slim the test suite without weakening safety coverage | test | Quality & Evaluation Engineer | Lulu | pending | internal | 0 | gate-evidence | not-applicable | 0 | 0 | 0 | — | `b0fe9161` | 0 | 3 | 0 |
-| WI-0254 | Repair baseline test harness failures | test | Quality & Evaluation Engineer | Lulu | pending | internal | 0 | gate-evidence | not-applicable | 0 | 0 | 0 | — | `b863ee49` | 0 | 4 | 0 |
+| WI-0253 | Slim the test suite without weakening safety coverage | done | Engineering Manager | Mog | sequential | internal | 0 | gate-evidence | not-applicable | 0 | 0 | 0 | — | `6ace82eb` | 0 | 11 | 0 |
+| WI-0254 | Repair baseline test harness failures | cancelled | Engineering Manager | Mog | pending | internal | 0 | gate-evidence | not-applicable | 0 | 0 | 0 | — | `b863ee49` | 0 | 5 | 0 |
 | WI-0255 | Define Workkeel task and execution contracts | done | Engineering Manager | Mog | sequential | team-visible | 0 | gate-evidence | not-applicable | 0 | 0 | 0 | — | `8165774f` | 0 | 7 | 0 |
-| WI-0256 | Qualify baseline test harness repair | intake | Engineering Manager | Mog | pending | internal | 0 | gate-evidence | not-applicable | 0 | 0 | 0 | — | `—` | 0 | 0 | 0 |
+| WI-0256 | Qualify baseline test harness repair | done | Engineering Manager | Mog | sequential | internal | 0 | gate-evidence | not-applicable | 0 | 0 | 0 | — | `4ac435d8` | 0 | 5 | 0 |
 | WI-0257 | Deliver the role-free Workkeel lifecycle and runtime connection boundary | cancelled | Engineering Manager | Mog | sequential | team-visible | 0 | gate-evidence | not-applicable | 0 | 0 | 0 | — | `—` | 0 | 2 | 0 |
 | WI-0258 | Implement the Workkeel task-first lifecycle | build | Developer | Rikku | parallel | team-visible | 0 | gate-evidence | not-applicable | 0 | 0 | 0 | — | `—` | 0 | 3 | 0 |
 | WI-0259 | Rename and reframe the public Workkeel framework | build | Developer | Rikku | sequential | team-visible | 0 | gate-evidence | not-applicable | 0 | 0 | 0 | — | `—` | 0 | 1 | 0 |
 
 ## Delivery attention
 
-- WI-0253: awaiting-owner — Have the eligible owner claim or resume the next scoped responsibility.
-  - owner: No active eligible ownership claim is recorded.
-- WI-0254: awaiting-owner — Have the eligible owner claim or resume the next scoped responsibility.
-  - owner: No active eligible ownership claim is recorded.
-- WI-0256: awaiting-owner — Have the eligible owner claim or resume the next scoped responsibility.
-  - owner: No active eligible ownership claim is recorded.
 - WI-0258: awaiting-owner — Have the eligible owner claim or resume the next scoped responsibility.
   - owner: No active eligible ownership claim is recorded.
 - WI-0259: awaiting-owner — Have the eligible owner claim or resume the next scoped responsibility.
@@ -483,7 +477,6 @@
 - worker-20260915174040-464e550f is failed
 - worker-20260915175330-3e16bfe8 is failed
 - worker-20260915233053-33b568eb is failed
-- Generated parallel plan is stale; rebuild it before dispatch
 
 ## External tracker coordination
 
@@ -564,14 +557,14 @@
 
 | Time | Event | Work item | Actor |
 |---|---|---|---|
-| 2026-09-23T10:48:01.524Z | work_item_transitioned | WI-0259 | agent-tidus |
-| 2026-09-23T10:48:00.792Z | work_item_transitioned | WI-0259 | agent-yuna |
-| 2026-09-23T10:48:00.122Z | work_item_transitioned | WI-0259 | agent-mog |
-| 2026-09-23T10:47:59.491Z | work_item_coordination_configured | WI-0259 | agent-mog |
-| 2026-09-23T10:47:47.344Z | work_item_reworked | WI-0258 | agent-lulu |
-| 2026-09-23T10:47:39.402Z | runtime_worker_status_changed | WI-0258 | agent-lulu |
-| 2026-09-23T10:46:58.533Z | work_item_created | WI-0259 | agent-mog |
-| 2026-09-23T10:41:59.493Z | runtime_worker_attached | WI-0258 | agent-lulu |
+| 2026-08-30T09:17:37.867Z | runtime_worker_reserved | WI-0026 | project-owner |
+| 2026-08-30T09:17:37.551Z | runtime_worker_reserved | WI-0025 | project-owner |
+| 2026-08-30T09:11:23.500Z | runtime_worker_reserved | WI-0025 | project-owner |
+| 2026-08-30T09:11:23.831Z | runtime_worker_reserved | WI-0026 | project-owner |
+| 2026-08-30T09:01:03.015Z | runtime_worker_reserved | WI-0026 | project-owner |
+| 2026-08-30T09:01:02.738Z | runtime_worker_reserved | WI-0025 | project-owner |
+| 2026-08-30T08:44:54.577Z | runtime_worker_reserved | WI-0025 | project-owner |
+| 2026-08-30T08:44:54.849Z | runtime_worker_reserved | WI-0026 | project-owner |
 
 ## Assignments
 

@@ -1,23 +1,21 @@
 {
   "schema_version": "temple.parallel-plan/v1",
-  "generated_at": "2026-09-23T10:37:26.087Z",
-  "source_fingerprint": "8da863fba9a010558958dcfc18b0fbe51fabf8a8465fdb2b90da7f758c502fa1",
+  "generated_at": "2026-09-23T10:49:02.281Z",
+  "source_fingerprint": "d88a07772119358070403c63bf744bdcd72e299167acd1fb758ec0100048b996",
   "scope": {
     "mode": "all-active",
     "parent_work_item_id": null,
     "selected_work_item_ids": [
-      "WI-0253",
-      "WI-0254",
-      "WI-0256",
-      "WI-0258"
+      "WI-0258",
+      "WI-0259"
     ]
   },
   "max_workers": null,
   "summary": {
-    "selected": 4,
+    "selected": 2,
     "dispatchable": 1,
     "active": 0,
-    "sequential": 3,
+    "sequential": 1,
     "blocked": 0,
     "waves": 1
   },
@@ -29,10 +27,10 @@
         {
           "work_item_id": "WI-0258",
           "title": "Implement the Workkeel task-first lifecycle",
-          "position_id": "quality_evaluator",
-          "agent_id": "agent-lulu",
-          "agent_name": "Lulu",
-          "suggested_task_title": "WI-0258 · Implemen… · Quality & Evaluation Engineer (Lulu)",
+          "position_id": "developer",
+          "agent_id": "agent-rikku",
+          "agent_name": "Rikku",
+          "suggested_task_title": "WI-0258 · Implement the Workkeel task… · Developer (Rikku)",
           "base_revision": "3dfb3094716b207cfc0c33a411ee7c506ba7dccf",
           "affected_paths": [
             "src",
@@ -48,13 +46,13 @@
           "dependencies": [],
           "required_disciplines": [],
           "active_requirements": {
-            "stage": "test",
+            "stage": "build",
             "disciplines": [],
             "resources": []
           },
-          "preparation_fingerprint": "d5b223a1a4cfcf558207494412b5bc92a8841bd45a065cb5480a64246ad1741c",
+          "preparation_fingerprint": "48d742b1b2c5589c19b0c02dd8274143aafdd55f07df7f89c2f233b1bf1005f1",
           "integration_owner_agent_id": "agent-mog",
-          "context_command": "node ./templew.mjs context resolve . --work-item WI-0258 --position quality_evaluator --no-write --json",
+          "context_command": "node ./templew.mjs context resolve . --work-item WI-0258 --position developer --no-write --json",
           "claim_required_before_work": true,
           "task_registration_required_after_creation": true,
           "task_creation_performed": false,
@@ -78,37 +76,14 @@
   "active": [],
   "sequential": [
     {
-      "work_item_id": "WI-0253",
-      "title": "Slim the test suite without weakening safety coverage",
+      "work_item_id": "WI-0259",
+      "title": "Rename and reframe the public Workkeel framework",
       "disposition": "sequential",
-      "position_id": "quality_evaluator",
-      "agent_id": "agent-lulu",
-      "integration_owner_agent_id": null,
+      "position_id": "developer",
+      "agent_id": "agent-rikku",
+      "integration_owner_agent_id": "agent-mog",
       "reasons": [
-        "integration_owner_assigned"
-      ]
-    },
-    {
-      "work_item_id": "WI-0254",
-      "title": "Repair baseline test harness failures",
-      "disposition": "sequential",
-      "position_id": "quality_evaluator",
-      "agent_id": "agent-lulu",
-      "integration_owner_agent_id": null,
-      "reasons": [
-        "integration_owner_assigned"
-      ]
-    },
-    {
-      "work_item_id": "WI-0256",
-      "title": "Qualify baseline test harness repair",
-      "disposition": "sequential",
-      "position_id": "engineering_manager",
-      "agent_id": "agent-mog",
-      "integration_owner_agent_id": null,
-      "reasons": [
-        "base_revision_recorded",
-        "integration_owner_assigned"
+        "requested_mode_sequential"
       ]
     }
   ],
@@ -116,76 +91,36 @@
   "conflicts": [
     {
       "kind": "affected-path",
-      "left_work_item_id": "WI-0253",
-      "right_work_item_id": "WI-0254",
+      "left_work_item_id": "WI-0258",
+      "right_work_item_id": "WI-0259",
       "paths": [
         {
-          "left_path": "test",
-          "right_path": "test/continuity-live-runner.test.mjs"
+          "left_path": "src",
+          "right_path": "src/constants.mjs"
         },
         {
-          "left_path": "test",
-          "right_path": "test/delivery-control-pair.test.mjs"
-        }
-      ],
-      "resolution": "separate-waves"
-    },
-    {
-      "kind": "affected-path",
-      "left_work_item_id": "WI-0253",
-      "right_work_item_id": "WI-0256",
-      "paths": [
-        {
-          "left_path": "test",
-          "right_path": "test/continuity-live-runner.test.mjs"
+          "left_path": "src",
+          "right_path": "src/bootstrap.mjs"
         },
         {
-          "left_path": "test",
-          "right_path": "test/delivery-control-pair.test.mjs"
-        }
-      ],
-      "resolution": "separate-waves"
-    },
-    {
-      "kind": "affected-path",
-      "left_work_item_id": "WI-0253",
-      "right_work_item_id": "WI-0258",
-      "paths": [
+          "left_path": "src",
+          "right_path": "src/workkeel-project.mjs"
+        },
+        {
+          "left_path": "src",
+          "right_path": "src/cli.mjs"
+        },
+        {
+          "left_path": "docs",
+          "right_path": "docs"
+        },
         {
           "left_path": "package.json",
           "right_path": "package.json"
         },
         {
-          "left_path": "docs/getting-started/testing.md",
-          "right_path": "docs"
-        },
-        {
-          "left_path": "test",
-          "right_path": "test/workkeel-lifecycle.test.mjs"
-        },
-        {
-          "left_path": "test",
-          "right_path": "test/workkeel-runtime.test.mjs"
-        }
-      ],
-      "resolution": "separate-waves"
-    },
-    {
-      "kind": "affected-path",
-      "left_work_item_id": "WI-0254",
-      "right_work_item_id": "WI-0256",
-      "paths": [
-        {
-          "left_path": "scripts/continuity-live-runner.mjs",
-          "right_path": "scripts/continuity-live-runner.mjs"
-        },
-        {
-          "left_path": "test/continuity-live-runner.test.mjs",
-          "right_path": "test/continuity-live-runner.test.mjs"
-        },
-        {
-          "left_path": "test/delivery-control-pair.test.mjs",
-          "right_path": "test/delivery-control-pair.test.mjs"
+          "left_path": "package-lock.json",
+          "right_path": "package-lock.json"
         }
       ],
       "resolution": "separate-waves"

@@ -1,15 +1,4 @@
 {
-  "schema_version": "temple.work-item/v1",
-  "id": "WI-0254",
-  "title": "Repair baseline test harness failures",
-  "state": "test",
-  "owner_position": "quality_evaluator",
-  "assigned_agent_id": "agent-lulu",
-  "created_at": "2026-09-23T08:15:18.618Z",
-  "updated_at": "2026-09-23T08:29:05.051Z",
-  "scope": [
-    "Fix the previous-instruction runtime collision guard and quote the delivery-pair synthetic Git revision command so the six retained baseline test failures pass without weakening assertions."
-  ],
   "acceptance_criteria": [
     "Existing runtime targets are rejected before any copy or write, with the expected collision error.",
     "Delivery-pair synthetic revision verification passes the revision expression to zsh literally and all four affected child scenarios reach their intended assertions.",
@@ -20,31 +9,184 @@
     "test/continuity-live-runner.test.mjs",
     "test/delivery-control-pair.test.mjs"
   ],
-  "context_refs": [],
-  "spec_refs": [],
-  "ux_refs": [],
-  "ui_refs": [],
-  "contract_refs": [],
-  "specification_mode": "gate-evidence",
-  "ui_delivery_mode": "not-applicable",
-  "workflow_profile": "lean",
-  "risk_tier": "low",
-  "profile_assessment": {
-    "requested_profile": "lean",
-    "effective_profile": "lean",
-    "scope_class": "bounded",
-    "escalation_triggers": [],
-    "rationale": "Bounded internal test-harness repair with no product, schema, UI, integration, or release behavior change.",
-    "evidence_refs": [],
-    "evaluated_at": "2026-09-23T08:15:18.605Z",
-    "escalated": false
+  "assigned_agent_id": "agent-mog",
+  "base_revision": "53d075bcf619f655cc5613046d5ff05b3e8ab767",
+  "claim": {
+    "actor_provenance": {
+      "evidence_ref": null,
+      "externally_supplied_evidence": false,
+      "principal_source": "explicit-principal",
+      "provider_authenticated": false,
+      "selection": "explicit-agent",
+      "verification_class": "attributed"
+    },
+    "agent_id": "agent-lulu",
+    "base_revision": "53d075bcf619f655cc5613046d5ff05b3e8ab767",
+    "branch": "codex/fix-test-harness-baselines",
+    "claimed_at": "2026-09-23T08:48:10.754Z",
+    "id": "claim-20260923084810-c637fbf4",
+    "position_id": "quality_evaluator",
+    "principal_id": "human",
+    "release_reason": "position_transition",
+    "released_at": "2026-09-23T09:07:32.913Z",
+    "status": "released",
+    "worktree": "/Users/zsz1210/Documents/Codex/2026-09-23/temple-test-slimming/work/temple-test-baseline-fixes"
   },
-  "parent_work_item_id": null,
-  "tracker_visibility": "internal",
-  "tracker_refs": [],
-  "tracker_reconciliations": [],
+  "claims": [
+    {
+      "actor_provenance": {
+        "evidence_ref": null,
+        "externally_supplied_evidence": false,
+        "principal_source": "explicit-principal",
+        "provider_authenticated": false,
+        "selection": "explicit-agent",
+        "verification_class": "attributed"
+      },
+      "agent_id": "agent-mog",
+      "base_revision": "d28d7e481f8398cccad92742c22943a2c0899cb1",
+      "branch": "codex/fix-test-harness-baselines",
+      "claimed_at": "2026-09-23T08:16:12.407Z",
+      "id": "claim-20260923081612-8be19b52",
+      "position_id": "engineering_manager",
+      "principal_id": "human",
+      "release_reason": "position_transition",
+      "released_at": "2026-09-23T08:16:51.034Z",
+      "status": "released",
+      "worktree": "/Users/zsz1210/Documents/Codex/2026-09-23/temple-test-slimming/work/temple-test-baseline-fixes"
+    },
+    {
+      "actor_provenance": {
+        "evidence_ref": null,
+        "externally_supplied_evidence": false,
+        "principal_source": "explicit-principal",
+        "provider_authenticated": false,
+        "selection": "explicit-agent",
+        "verification_class": "attributed"
+      },
+      "agent_id": "agent-rikku",
+      "base_revision": "d28d7e481f8398cccad92742c22943a2c0899cb1",
+      "branch": "codex/fix-test-harness-baselines",
+      "claimed_at": "2026-09-23T08:17:09.376Z",
+      "id": "claim-20260923081709-07039aa2",
+      "position_id": "developer",
+      "principal_id": "human",
+      "release_reason": [
+        "Developer implementation and exact-candidate verification complete; handoff created for Lean verification."
+      ],
+      "released_at": "2026-09-23T08:28:56.850Z",
+      "status": "released",
+      "worktree": "/Users/zsz1210/Documents/Codex/2026-09-23/temple-test-slimming/work/temple-test-baseline-fixes"
+    },
+    {
+      "actor_provenance": {
+        "evidence_ref": null,
+        "externally_supplied_evidence": false,
+        "principal_source": "explicit-principal",
+        "provider_authenticated": false,
+        "selection": "explicit-agent",
+        "verification_class": "attributed"
+      },
+      "agent_id": "agent-lulu",
+      "base_revision": "53d075bcf619f655cc5613046d5ff05b3e8ab767",
+      "branch": "codex/fix-test-harness-baselines",
+      "claimed_at": "2026-09-23T08:48:10.754Z",
+      "id": "claim-20260923084810-c637fbf4",
+      "position_id": "quality_evaluator",
+      "principal_id": "human",
+      "release_reason": "position_transition",
+      "released_at": "2026-09-23T09:07:32.913Z",
+      "status": "released",
+      "worktree": "/Users/zsz1210/Documents/Codex/2026-09-23/temple-test-slimming/work/temple-test-baseline-fixes"
+    }
+  ],
+  "context_refs": [],
+  "contract_refs": [],
+  "contract_status": "not_required",
+  "created_at": "2026-09-23T08:15:18.618Z",
   "dependencies": [],
+  "developer_candidate_revision": "b863ee4976c9ed1c8fe586525401b2dddcea39bc",
+  "evidence": [
+    ".ai-org/artifacts/WI-0254/design.md",
+    ".ai-org/work-items/WI-0254.json",
+    ".ai-org/artifacts/WI-0254/handoff-001-developer-to-quality_evaluator.md",
+    ".ai-org/artifacts/WI-0254/developer-evidence.md",
+    ".ai-org/artifacts/WI-0254/cancellation-reason.md"
+  ],
+  "gate_evidence": {
+    "acceptance_criteria": [
+      ".ai-org/work-items/WI-0254.json"
+    ],
+    "approved_scope": [
+      ".ai-org/work-items/WI-0254.json"
+    ],
+    "cancellation_reason": [
+      ".ai-org/artifacts/WI-0254/cancellation-reason.md"
+    ],
+    "developer_evidence": [
+      ".ai-org/artifacts/WI-0254/developer-evidence.md"
+    ],
+    "developer_handoff": [
+      ".ai-org/artifacts/WI-0254/handoff-001-developer-to-quality_evaluator.md"
+    ],
+    "profile_eligibility": [
+      ".ai-org/artifacts/WI-0254/design.md"
+    ],
+    "risk_review": [
+      ".ai-org/artifacts/WI-0254/design.md"
+    ],
+    "technical_design": [
+      ".ai-org/artifacts/WI-0254/design.md"
+    ],
+    "work_order": [
+      ".ai-org/artifacts/WI-0254/design.md"
+    ]
+  },
+  "handoffs": [
+    {
+      "actor": "agent-rikku",
+      "actor_provenance": {
+        "evidence_ref": null,
+        "externally_supplied_evidence": false,
+        "principal_source": "active-claim",
+        "provider_authenticated": false,
+        "selection": "active-claim",
+        "verification_class": "attributed"
+      },
+      "artifact": ".ai-org/artifacts/WI-0254/handoff-001-developer-to-quality_evaluator.md",
+      "created_at": "2026-09-23T08:28:49.439Z",
+      "from_position": "developer",
+      "input_revision": "b863ee4976c9ed1c8fe586525401b2dddcea39bc",
+      "principal_id": "human",
+      "to_position": "quality_evaluator"
+    }
+  ],
+  "id": "WI-0254",
+  "integration_owner_agent_id": null,
+  "next_position": null,
+  "overlap_resolution": [],
+  "owner_position": "engineering_manager",
+  "parallel_mode": "pending",
+  "parent_work_item_id": null,
+  "planned_agent_id": null,
+  "profile_assessment": {
+    "effective_profile": "lean",
+    "escalated": false,
+    "escalation_triggers": [],
+    "evaluated_at": "2026-09-23T08:15:18.605Z",
+    "evidence_refs": [],
+    "rationale": "Bounded internal test-harness repair with no product, schema, UI, integration, or release behavior change.",
+    "requested_profile": "lean",
+    "scope_class": "bounded"
+  },
   "required_disciplines": [],
+  "risk_tier": "low",
+  "schema_version": "temple.work-item/v1",
+  "scope": [
+    "Fix the previous-instruction runtime collision guard and quote the delivery-pair synthetic Git revision command so the six retained baseline test failures pass without weakening assertions."
+  ],
+  "shared_contract_refs": [],
+  "spec_refs": [],
+  "specification_mode": "gate-evidence",
   "stage_requirements": {
     "build": {
       "disciplines": [
@@ -53,134 +195,15 @@
       "resources": []
     }
   },
-  "base_revision": "d28d7e481f8398cccad92742c22943a2c0899cb1",
-  "parallel_mode": "pending",
-  "integration_owner_agent_id": null,
-  "planned_agent_id": null,
-  "shared_contract_refs": [],
-  "contract_status": "not_required",
-  "overlap_resolution": [],
-  "claim": {
-    "id": "claim-20260923081709-07039aa2",
-    "status": "released",
-    "principal_id": "human",
-    "agent_id": "agent-rikku",
-    "actor_provenance": {
-      "selection": "explicit-agent",
-      "principal_source": "explicit-principal",
-      "verification_class": "attributed",
-      "evidence_ref": null,
-      "provider_authenticated": false,
-      "externally_supplied_evidence": false
-    },
-    "position_id": "developer",
-    "base_revision": "d28d7e481f8398cccad92742c22943a2c0899cb1",
-    "branch": "codex/fix-test-harness-baselines",
-    "worktree": "/Users/zsz1210/Documents/Codex/2026-09-23/temple-test-slimming/work/temple-test-baseline-fixes",
-    "claimed_at": "2026-09-23T08:17:09.376Z",
-    "released_at": "2026-09-23T08:28:56.850Z",
-    "release_reason": [
-      "Developer implementation and exact-candidate verification complete; handoff created for Lean verification."
-    ]
-  },
-  "claims": [
-    {
-      "id": "claim-20260923081612-8be19b52",
-      "status": "released",
-      "principal_id": "human",
-      "agent_id": "agent-mog",
-      "actor_provenance": {
-        "selection": "explicit-agent",
-        "principal_source": "explicit-principal",
-        "verification_class": "attributed",
-        "evidence_ref": null,
-        "provider_authenticated": false,
-        "externally_supplied_evidence": false
-      },
-      "position_id": "engineering_manager",
-      "base_revision": "d28d7e481f8398cccad92742c22943a2c0899cb1",
-      "branch": "codex/fix-test-harness-baselines",
-      "worktree": "/Users/zsz1210/Documents/Codex/2026-09-23/temple-test-slimming/work/temple-test-baseline-fixes",
-      "claimed_at": "2026-09-23T08:16:12.407Z",
-      "released_at": "2026-09-23T08:16:51.034Z",
-      "release_reason": "position_transition"
-    },
-    {
-      "id": "claim-20260923081709-07039aa2",
-      "status": "released",
-      "principal_id": "human",
-      "agent_id": "agent-rikku",
-      "actor_provenance": {
-        "selection": "explicit-agent",
-        "principal_source": "explicit-principal",
-        "verification_class": "attributed",
-        "evidence_ref": null,
-        "provider_authenticated": false,
-        "externally_supplied_evidence": false
-      },
-      "position_id": "developer",
-      "base_revision": "d28d7e481f8398cccad92742c22943a2c0899cb1",
-      "branch": "codex/fix-test-harness-baselines",
-      "worktree": "/Users/zsz1210/Documents/Codex/2026-09-23/temple-test-slimming/work/temple-test-baseline-fixes",
-      "claimed_at": "2026-09-23T08:17:09.376Z",
-      "released_at": "2026-09-23T08:28:56.850Z",
-      "release_reason": [
-        "Developer implementation and exact-candidate verification complete; handoff created for Lean verification."
-      ]
-    }
-  ],
-  "gate_evidence": {
-    "work_order": [
-      ".ai-org/artifacts/WI-0254/design.md"
-    ],
-    "approved_scope": [
-      ".ai-org/work-items/WI-0254.json"
-    ],
-    "acceptance_criteria": [
-      ".ai-org/work-items/WI-0254.json"
-    ],
-    "technical_design": [
-      ".ai-org/artifacts/WI-0254/design.md"
-    ],
-    "risk_review": [
-      ".ai-org/artifacts/WI-0254/design.md"
-    ],
-    "profile_eligibility": [
-      ".ai-org/artifacts/WI-0254/design.md"
-    ],
-    "developer_handoff": [
-      ".ai-org/artifacts/WI-0254/handoff-001-developer-to-quality_evaluator.md"
-    ],
-    "developer_evidence": [
-      ".ai-org/artifacts/WI-0254/developer-evidence.md"
-    ]
-  },
-  "evidence": [
-    ".ai-org/artifacts/WI-0254/design.md",
-    ".ai-org/work-items/WI-0254.json",
-    ".ai-org/artifacts/WI-0254/handoff-001-developer-to-quality_evaluator.md",
-    ".ai-org/artifacts/WI-0254/developer-evidence.md"
-  ],
+  "state": "cancelled",
+  "title": "Repair baseline test harness failures",
+  "tracker_reconciliations": [],
+  "tracker_refs": [],
+  "tracker_visibility": "internal",
+  "ui_delivery_mode": "not-applicable",
+  "ui_refs": [],
   "unresolved": [],
-  "next_position": "engineering_manager",
-  "handoffs": [
-    {
-      "from_position": "developer",
-      "to_position": "quality_evaluator",
-      "actor": "agent-rikku",
-      "principal_id": "human",
-      "actor_provenance": {
-        "selection": "active-claim",
-        "principal_source": "active-claim",
-        "verification_class": "attributed",
-        "evidence_ref": null,
-        "provider_authenticated": false,
-        "externally_supplied_evidence": false
-      },
-      "input_revision": "b863ee4976c9ed1c8fe586525401b2dddcea39bc",
-      "artifact": ".ai-org/artifacts/WI-0254/handoff-001-developer-to-quality_evaluator.md",
-      "created_at": "2026-09-23T08:28:49.439Z"
-    }
-  ],
-  "developer_candidate_revision": "b863ee4976c9ed1c8fe586525401b2dddcea39bc"
+  "updated_at": "2026-09-23T09:07:32.913Z",
+  "ux_refs": [],
+  "workflow_profile": "lean"
 }

@@ -1,15 +1,4 @@
 {
-  "schema_version": "temple.work-item/v1",
-  "id": "WI-0253",
-  "title": "Slim the test suite without weakening safety coverage",
-  "state": "test",
-  "owner_position": "quality_evaluator",
-  "assigned_agent_id": "agent-lulu",
-  "created_at": "2026-09-23T07:07:40.621Z",
-  "updated_at": "2026-09-23T07:55:31.387Z",
-  "scope": [
-    "Evaluate the current test inventory, remove or merge only evidence-backed duplication, reduce routine execution time and success-output volume, and preserve regression, authority, recovery, security, failure diagnostics, and full release verification boundaries."
-  ],
   "acceptance_criteria": [
     "Every removed, merged, or relocated check names its equivalent retained coverage.",
     "Daily verification reports materially less wall time or output while retaining actionable failure diagnostics.",
@@ -22,159 +11,403 @@
     "docs/getting-started/testing.md",
     "test"
   ],
-  "context_refs": [],
-  "spec_refs": [],
-  "ux_refs": [],
-  "ui_refs": [],
-  "contract_refs": [],
-  "specification_mode": "gate-evidence",
-  "ui_delivery_mode": "not-applicable",
-  "workflow_profile": "standard",
-  "risk_tier": "standard",
-  "profile_assessment": {
-    "requested_profile": "standard",
-    "effective_profile": "standard",
-    "scope_class": "ordinary",
-    "escalation_triggers": [],
-    "rationale": "Broad behavioral test-infrastructure change can weaken safeguards if reviewed only as a bounded low-risk edit; retain Standard gates and independent QA.",
-    "evidence_refs": [],
-    "evaluated_at": "2026-09-23T07:07:40.608Z",
-    "escalated": false
-  },
-  "parent_work_item_id": null,
-  "tracker_visibility": "internal",
-  "tracker_refs": [],
-  "tracker_reconciliations": [],
-  "dependencies": [],
-  "required_disciplines": [],
-  "stage_requirements": {},
-  "base_revision": "2c5daa45afd756cf6ff18a31fdf13d8e03720828",
-  "parallel_mode": "pending",
-  "integration_owner_agent_id": null,
-  "planned_agent_id": null,
-  "shared_contract_refs": [],
-  "contract_status": "not_required",
-  "overlap_resolution": [],
+  "approval_record": "not-required",
+  "assigned_agent_id": "agent-mog",
+  "base_revision": "6ace82eba938cbd7cde491f0b7126af6b5e9bd12",
   "claim": {
-    "id": "claim-20260923071021-2919ade6",
-    "status": "released",
-    "principal_id": "human",
-    "agent_id": "agent-rikku",
     "actor_provenance": {
-      "selection": "explicit-agent",
-      "principal_source": "explicit-principal",
-      "verification_class": "attributed",
       "evidence_ref": null,
+      "externally_supplied_evidence": false,
+      "principal_source": "explicit-principal",
       "provider_authenticated": false,
-      "externally_supplied_evidence": false
+      "selection": "explicit-agent",
+      "verification_class": "attributed"
     },
-    "position_id": "developer",
-    "base_revision": "2c5daa45afd756cf6ff18a31fdf13d8e03720828",
-    "branch": "codex/test-suite-slimming",
-    "worktree": null,
-    "claimed_at": "2026-09-23T07:10:21.834Z",
-    "released_at": "2026-09-23T07:55:30.881Z",
-    "release_reason": [
-      "Behavioral candidate b0fe9161f654a17aaeefd53373770249efee0ceb and Developer evidence handed to Quality Evaluator"
-    ]
+    "agent_id": "agent-mog",
+    "base_revision": "6ace82eba938cbd7cde491f0b7126af6b5e9bd12",
+    "branch": "codex/fix-test-harness-baselines",
+    "claimed_at": "2026-09-23T10:41:45.826Z",
+    "id": "claim-20260923104145-f9995243",
+    "position_id": "release_manager",
+    "principal_id": "human",
+    "release_reason": "work_item_closed",
+    "released_at": "2026-09-23T10:42:27.403Z",
+    "status": "released",
+    "worktree": "/Users/zsz1210/Documents/Codex/2026-09-23/temple-test-slimming/work/temple-test-baseline-fixes"
   },
   "claims": [
     {
-      "id": "claim-20260923070758-df106f48",
-      "status": "released",
-      "principal_id": "human",
-      "agent_id": "agent-mog",
       "actor_provenance": {
-        "selection": "explicit-agent",
-        "principal_source": "explicit-principal",
-        "verification_class": "attributed",
         "evidence_ref": null,
+        "externally_supplied_evidence": false,
+        "principal_source": "explicit-principal",
         "provider_authenticated": false,
-        "externally_supplied_evidence": false
+        "selection": "explicit-agent",
+        "verification_class": "attributed"
       },
-      "position_id": "engineering_manager",
+      "agent_id": "agent-mog",
       "base_revision": "2c5daa45afd756cf6ff18a31fdf13d8e03720828",
       "branch": "codex/test-suite-slimming",
-      "worktree": null,
       "claimed_at": "2026-09-23T07:07:58.193Z",
-      "released_at": "2026-09-23T07:10:10.703Z",
+      "id": "claim-20260923070758-df106f48",
+      "position_id": "engineering_manager",
+      "principal_id": "human",
       "release_reason": [
         "Work order, scope, baseline, design, risk, and stop boundary recorded"
-      ]
+      ],
+      "released_at": "2026-09-23T07:10:10.703Z",
+      "status": "released",
+      "worktree": null
     },
     {
-      "id": "claim-20260923071021-2919ade6",
-      "status": "released",
-      "principal_id": "human",
-      "agent_id": "agent-rikku",
       "actor_provenance": {
-        "selection": "explicit-agent",
-        "principal_source": "explicit-principal",
-        "verification_class": "attributed",
         "evidence_ref": null,
+        "externally_supplied_evidence": false,
+        "principal_source": "explicit-principal",
         "provider_authenticated": false,
-        "externally_supplied_evidence": false
+        "selection": "explicit-agent",
+        "verification_class": "attributed"
       },
-      "position_id": "developer",
+      "agent_id": "agent-rikku",
       "base_revision": "2c5daa45afd756cf6ff18a31fdf13d8e03720828",
       "branch": "codex/test-suite-slimming",
-      "worktree": null,
       "claimed_at": "2026-09-23T07:10:21.834Z",
-      "released_at": "2026-09-23T07:55:30.881Z",
+      "id": "claim-20260923071021-2919ade6",
+      "position_id": "developer",
+      "principal_id": "human",
       "release_reason": [
         "Behavioral candidate b0fe9161f654a17aaeefd53373770249efee0ceb and Developer evidence handed to Quality Evaluator"
-      ]
+      ],
+      "released_at": "2026-09-23T07:55:30.881Z",
+      "status": "released",
+      "worktree": null
+    },
+    {
+      "actor_provenance": {
+        "evidence_ref": null,
+        "externally_supplied_evidence": false,
+        "principal_source": "explicit-principal",
+        "provider_authenticated": false,
+        "selection": "explicit-agent",
+        "verification_class": "attributed"
+      },
+      "agent_id": "agent-lulu",
+      "base_revision": "b0fe9161f654a17aaeefd53373770249efee0ceb",
+      "branch": "codex/fix-test-harness-baselines",
+      "claimed_at": "2026-09-23T10:14:16.884Z",
+      "id": "claim-20260923101416-14aa5ede",
+      "position_id": "quality_evaluator",
+      "principal_id": "human",
+      "release_reason": "review_rework",
+      "released_at": "2026-09-23T10:14:26.507Z",
+      "status": "released",
+      "worktree": "/Users/zsz1210/Documents/Codex/2026-09-23/temple-test-slimming/work/temple-test-baseline-fixes"
+    },
+    {
+      "actor_provenance": {
+        "evidence_ref": null,
+        "externally_supplied_evidence": false,
+        "principal_source": "explicit-principal",
+        "provider_authenticated": false,
+        "selection": "explicit-agent",
+        "verification_class": "attributed"
+      },
+      "agent_id": "agent-rikku",
+      "base_revision": "6676b5a24116a31b4c13cbdbaad3880c6f36d4fe",
+      "branch": "codex/fix-test-harness-baselines",
+      "claimed_at": "2026-09-23T10:22:35.284Z",
+      "id": "claim-20260923102235-9665f137",
+      "position_id": "developer",
+      "principal_id": "human",
+      "release_reason": "position_transition",
+      "released_at": "2026-09-23T10:30:30.567Z",
+      "status": "released",
+      "worktree": "/Users/zsz1210/Documents/Codex/2026-09-23/temple-test-slimming/work/temple-test-baseline-fixes"
+    },
+    {
+      "actor_provenance": {
+        "evidence_ref": null,
+        "externally_supplied_evidence": false,
+        "principal_source": "explicit-principal",
+        "provider_authenticated": false,
+        "selection": "explicit-agent",
+        "verification_class": "attributed"
+      },
+      "agent_id": "agent-lulu",
+      "base_revision": "6ace82eba938cbd7cde491f0b7126af6b5e9bd12",
+      "branch": "codex/fix-test-harness-baselines",
+      "claimed_at": "2026-09-23T10:33:28.375Z",
+      "id": "claim-20260923103328-2a8f84fe",
+      "position_id": "quality_evaluator",
+      "principal_id": "human",
+      "release_reason": [
+        "Test and Eval complete; handoff created for Independent QA."
+      ],
+      "released_at": "2026-09-23T10:38:17.634Z",
+      "status": "released",
+      "worktree": "/Users/zsz1210/Documents/Codex/2026-09-23/temple-test-slimming/work/temple-test-baseline-fixes"
+    },
+    {
+      "actor_provenance": {
+        "evidence_ref": null,
+        "externally_supplied_evidence": false,
+        "principal_source": "explicit-principal",
+        "provider_authenticated": false,
+        "selection": "explicit-agent",
+        "verification_class": "attributed"
+      },
+      "agent_id": "agent-lulu",
+      "base_revision": "6ace82eba938cbd7cde491f0b7126af6b5e9bd12",
+      "branch": "codex/fix-test-harness-baselines",
+      "claimed_at": "2026-09-23T10:38:38.476Z",
+      "id": "claim-20260923103838-b47fab5e",
+      "position_id": "independent_qa",
+      "principal_id": "human",
+      "release_reason": [
+        "Independent QA passed; handoff created for Release Manager."
+      ],
+      "released_at": "2026-09-23T10:39:37.853Z",
+      "status": "released",
+      "worktree": "/Users/zsz1210/Documents/Codex/2026-09-23/temple-test-slimming/work/temple-test-baseline-fixes"
+    },
+    {
+      "actor_provenance": {
+        "evidence_ref": null,
+        "externally_supplied_evidence": false,
+        "principal_source": "explicit-principal",
+        "provider_authenticated": false,
+        "selection": "explicit-agent",
+        "verification_class": "attributed"
+      },
+      "agent_id": "agent-mog",
+      "base_revision": "6ace82eba938cbd7cde491f0b7126af6b5e9bd12",
+      "branch": "codex/fix-test-harness-baselines",
+      "claimed_at": "2026-09-23T10:41:45.826Z",
+      "id": "claim-20260923104145-f9995243",
+      "position_id": "release_manager",
+      "principal_id": "human",
+      "release_reason": "work_item_closed",
+      "released_at": "2026-09-23T10:42:27.403Z",
+      "status": "released",
+      "worktree": "/Users/zsz1210/Documents/Codex/2026-09-23/temple-test-slimming/work/temple-test-baseline-fixes"
     }
   ],
+  "closeout_reasons": [],
+  "context_refs": [],
+  "contract_refs": [],
+  "contract_status": "not_required",
+  "created_at": "2026-09-23T07:07:40.621Z",
+  "dependencies": [],
+  "developer_candidate_revision": "6ace82eba938cbd7cde491f0b7126af6b5e9bd12",
+  "evidence": [
+    ".ai-org/artifacts/WI-0253/design.md",
+    ".ai-org/artifacts/WI-0253/handoff-001-developer-to-quality_evaluator.md",
+    ".ai-org/artifacts/WI-0253/developer-evidence.md",
+    ".ai-org/artifacts/WI-0253/handoff-002-developer-to-quality_evaluator.md",
+    ".ai-org/artifacts/WI-0253/developer-evidence-rework-001.md",
+    ".ai-org/artifacts/WI-0253/test-evidence-rework-001.md",
+    ".ai-org/artifacts/WI-0253/handoff-003-quality_evaluator-to-independent_qa.md",
+    ".ai-org/artifacts/WI-0253/evaluation-report-rework-001.md",
+    ".ai-org/artifacts/WI-0253/handoff-004-independent_qa-to-release_manager.md",
+    ".ai-org/artifacts/WI-0253/independent-qa-rework-001.md",
+    ".ai-org/artifacts/WI-0253/release-record.md"
+  ],
+  "external_release_status": "not_performed",
   "gate_evidence": {
-    "work_order": [
+    "acceptance_criteria": [
       ".ai-org/artifacts/WI-0253/design.md"
+    ],
+    "accepted_scope": [
+      ".ai-org/artifacts/WI-0253/evaluation-report-rework-001.md"
     ],
     "approved_scope": [
       ".ai-org/artifacts/WI-0253/design.md"
     ],
-    "acceptance_criteria": [
-      ".ai-org/artifacts/WI-0253/design.md"
+    "developer_evidence": [
+      ".ai-org/artifacts/WI-0253/developer-evidence-rework-001.md"
     ],
-    "technical_design": [
-      ".ai-org/artifacts/WI-0253/design.md"
+    "developer_handoff": [
+      ".ai-org/artifacts/WI-0253/handoff-002-developer-to-quality_evaluator.md"
+    ],
+    "evaluation_report": [
+      ".ai-org/artifacts/WI-0253/evaluation-report-rework-001.md"
+    ],
+    "independent_qa_pass": [
+      ".ai-org/artifacts/WI-0253/independent-qa-rework-001.md"
+    ],
+    "independent_qa_report": [
+      ".ai-org/artifacts/WI-0253/independent-qa-rework-001.md"
+    ],
+    "required_human_approval": [
+      "not-required"
     ],
     "risk_review": [
       ".ai-org/artifacts/WI-0253/design.md"
     ],
-    "developer_handoff": [
-      ".ai-org/artifacts/WI-0253/handoff-001-developer-to-quality_evaluator.md"
+    "rollback_plan": [
+      ".ai-org/artifacts/WI-0253/release-record.md"
     ],
-    "developer_evidence": [
-      ".ai-org/artifacts/WI-0253/developer-evidence.md",
+    "technical_design": [
+      ".ai-org/artifacts/WI-0253/design.md"
+    ],
+    "test_evidence": [
+      ".ai-org/artifacts/WI-0253/test-evidence-rework-001.md"
+    ],
+    "work_order": [
       ".ai-org/artifacts/WI-0253/design.md"
     ]
   },
-  "evidence": [
-    ".ai-org/artifacts/WI-0253/design.md",
-    ".ai-org/artifacts/WI-0253/handoff-001-developer-to-quality_evaluator.md",
-    ".ai-org/artifacts/WI-0253/developer-evidence.md"
-  ],
-  "unresolved": [],
-  "next_position": "quality_evaluator",
   "handoffs": [
     {
-      "from_position": "developer",
-      "to_position": "quality_evaluator",
       "actor": "agent-rikku",
-      "principal_id": "human",
       "actor_provenance": {
-        "selection": "active-claim",
-        "principal_source": "active-claim",
-        "verification_class": "attributed",
         "evidence_ref": null,
+        "externally_supplied_evidence": false,
+        "principal_source": "active-claim",
         "provider_authenticated": false,
-        "externally_supplied_evidence": false
+        "selection": "active-claim",
+        "verification_class": "attributed"
       },
-      "input_revision": "b0fe9161f654a17aaeefd53373770249efee0ceb",
       "artifact": ".ai-org/artifacts/WI-0253/handoff-001-developer-to-quality_evaluator.md",
-      "created_at": "2026-09-23T07:55:15.291Z"
+      "created_at": "2026-09-23T07:55:15.291Z",
+      "from_position": "developer",
+      "input_revision": "b0fe9161f654a17aaeefd53373770249efee0ceb",
+      "principal_id": "human",
+      "to_position": "quality_evaluator"
+    },
+    {
+      "actor": "agent-rikku",
+      "actor_provenance": {
+        "evidence_ref": null,
+        "externally_supplied_evidence": false,
+        "principal_source": "active-claim",
+        "provider_authenticated": false,
+        "selection": "active-claim",
+        "verification_class": "attributed"
+      },
+      "artifact": ".ai-org/artifacts/WI-0253/handoff-002-developer-to-quality_evaluator.md",
+      "created_at": "2026-09-23T10:30:19.079Z",
+      "from_position": "developer",
+      "input_revision": "6ace82eba938cbd7cde491f0b7126af6b5e9bd12",
+      "principal_id": "human",
+      "to_position": "quality_evaluator"
+    },
+    {
+      "actor": "agent-lulu",
+      "actor_provenance": {
+        "evidence_ref": null,
+        "externally_supplied_evidence": false,
+        "principal_source": "active-claim",
+        "provider_authenticated": false,
+        "selection": "active-claim",
+        "verification_class": "attributed"
+      },
+      "artifact": ".ai-org/artifacts/WI-0253/handoff-003-quality_evaluator-to-independent_qa.md",
+      "created_at": "2026-09-23T10:38:17.151Z",
+      "from_position": "quality_evaluator",
+      "input_revision": "6ace82eba938cbd7cde491f0b7126af6b5e9bd12",
+      "principal_id": "human",
+      "to_position": "independent_qa"
+    },
+    {
+      "actor": "agent-lulu",
+      "actor_provenance": {
+        "evidence_ref": null,
+        "externally_supplied_evidence": false,
+        "principal_source": "active-claim",
+        "provider_authenticated": false,
+        "selection": "active-claim",
+        "verification_class": "attributed"
+      },
+      "artifact": ".ai-org/artifacts/WI-0253/handoff-004-independent_qa-to-release_manager.md",
+      "created_at": "2026-09-23T10:39:37.354Z",
+      "from_position": "independent_qa",
+      "input_revision": "6ace82eba938cbd7cde491f0b7126af6b5e9bd12",
+      "principal_id": "human",
+      "to_position": "release_manager"
     }
   ],
-  "developer_candidate_revision": "b0fe9161f654a17aaeefd53373770249efee0ceb"
+  "id": "WI-0253",
+  "integration_owner_agent_id": "agent-rikku",
+  "lifecycle_outcome": "accepted",
+  "next_position": null,
+  "overlap_resolution": [
+    "WI-0258 separate worktree and product slice; WI-0253 retains existing test runner files; full-suite windows coordinated"
+  ],
+  "owner_position": "engineering_manager",
+  "parallel_mode": "sequential",
+  "parent_work_item_id": null,
+  "planned_agent_id": null,
+  "profile_assessment": {
+    "effective_profile": "standard",
+    "escalated": false,
+    "escalation_triggers": [],
+    "evaluated_at": "2026-09-23T07:07:40.608Z",
+    "evidence_refs": [],
+    "rationale": "Broad behavioral test-infrastructure change can weaken safeguards if reviewed only as a bounded low-risk edit; retain Standard gates and independent QA.",
+    "requested_profile": "standard",
+    "scope_class": "ordinary"
+  },
+  "release_gate_result": "go",
+  "required_disciplines": [],
+  "rework_history": [
+    {
+      "findings": [
+        ".ai-org/artifacts/WI-0253/rework-findings-001.md"
+      ],
+      "from_state": "test",
+      "handoff_refs": [
+        ".ai-org/artifacts/WI-0253/handoff-001-developer-to-quality_evaluator.md"
+      ],
+      "reason": [
+        "Required full verification remained red on six retained baseline harness failure positions; include the separately qualified bounded repair and produce a fresh exact candidate."
+      ],
+      "rejected_revision": "b0fe9161f654a17aaeefd53373770249efee0ceb",
+      "retained_requirements": [
+        "work_order",
+        "approved_scope",
+        "acceptance_criteria",
+        "technical_design",
+        "risk_review"
+      ],
+      "retired_candidate_fields": {
+        "developer_candidate_revision": "b0fe9161f654a17aaeefd53373770249efee0ceb"
+      },
+      "retired_gate_evidence": {
+        "developer_evidence": [
+          ".ai-org/artifacts/WI-0253/developer-evidence.md",
+          ".ai-org/artifacts/WI-0253/design.md"
+        ],
+        "developer_handoff": [
+          ".ai-org/artifacts/WI-0253/handoff-001-developer-to-quality_evaluator.md"
+        ]
+      },
+      "returned_at": "2026-09-23T10:14:26.507Z",
+      "reviewer_agent_id": "agent-lulu",
+      "reviewer_claim_id": "claim-20260923101416-14aa5ede",
+      "scope_digest": "fd73d653218bb68f8dc2bd8365d40aff2d1b9a2ec3a3d5a32e073673bcd54752",
+      "sequence": 1
+    }
+  ],
+  "risk_tier": "standard",
+  "schema_version": "temple.work-item/v1",
+  "scope": [
+    "Evaluate the current test inventory, remove or merge only evidence-backed duplication, reduce routine execution time and success-output volume, and preserve regression, authority, recovery, security, failure diagnostics, and full release verification boundaries."
+  ],
+  "shared_contract_refs": [],
+  "spec_refs": [],
+  "specification_mode": "gate-evidence",
+  "stage_requirements": {},
+  "state": "done",
+  "tested_revision": "6ace82eba938cbd7cde491f0b7126af6b5e9bd12",
+  "title": "Slim the test suite without weakening safety coverage",
+  "tracker_reconciliations": [],
+  "tracker_refs": [],
+  "tracker_visibility": "internal",
+  "ui_delivery_mode": "not-applicable",
+  "ui_refs": [],
+  "unresolved": [],
+  "updated_at": "2026-09-23T10:42:27.403Z",
+  "ux_refs": [],
+  "workflow_profile": "standard"
 }

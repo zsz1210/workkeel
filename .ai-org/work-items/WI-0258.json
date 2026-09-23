@@ -1,15 +1,4 @@
 {
-  "schema_version": "temple.work-item/v1",
-  "id": "WI-0258",
-  "title": "Implement the Workkeel task-first lifecycle",
-  "state": "build",
-  "owner_position": "developer",
-  "assigned_agent_id": "agent-rikku",
-  "created_at": "2026-09-23T10:04:20.589Z",
-  "updated_at": "2026-09-23T10:47:47.344Z",
-  "scope": [
-    "Operationalize role-free contracts using versioned task-first project state, explicit legacy compatibility and optional fixed-model Codex gateway settings."
-  ],
   "acceptance_criteria": [
     "Fresh task-first projects complete initialization, diagnostics, creation, claim, exact-candidate handoff, distinct-agent review and closure without Positions.",
     "Scope, identity, approvals, evidence, dependencies, stale writes and explicit compatibility are fail-closed; history is preserved.",
@@ -26,169 +15,158 @@
     "package-lock.json",
     ".ai-org/project/domain-glossary.md"
   ],
-  "context_refs": [],
-  "spec_refs": [],
-  "ux_refs": [],
-  "ui_refs": [],
-  "contract_refs": [],
-  "specification_mode": "gate-evidence",
-  "ui_delivery_mode": "not-applicable",
-  "workflow_profile": "standard",
-  "risk_tier": "standard",
-  "profile_assessment": {
-    "requested_profile": "standard",
-    "effective_profile": "standard",
-    "scope_class": "cross-system",
-    "escalation_triggers": [
-      "schema-or-data-migration"
-    ],
-    "rationale": "Versioned opt-in metadata lifecycle, no new sandbox or production release; preserve legacy authority.",
-    "evidence_refs": [],
-    "evaluated_at": "2026-09-23T10:04:20.576Z",
-    "escalated": false
-  },
-  "parent_work_item_id": null,
-  "tracker_visibility": "team-visible",
-  "tracker_refs": [],
-  "tracker_reconciliations": [],
-  "dependencies": [],
-  "required_disciplines": [],
-  "stage_requirements": {},
+  "assigned_agent_id": "agent-rikku",
   "base_revision": "3dfb3094716b207cfc0c33a411ee7c506ba7dccf",
-  "parallel_mode": "parallel",
-  "integration_owner_agent_id": "agent-mog",
-  "planned_agent_id": null,
-  "shared_contract_refs": [],
-  "contract_status": "not_required",
-  "overlap_resolution": [
-    "WI-0253: independent worktree and metadata-only QA; no existing test runner or test edits, full-suite timing coordinated",
-    "WI-0256: independent worktree and new focused files only; no shared harness edits or concurrent full suite"
-  ],
   "claim": {
-    "id": "claim-20260923103738-49abc3e0",
-    "status": "released",
-    "principal_id": "human",
-    "agent_id": "agent-lulu",
     "actor_provenance": {
-      "selection": "explicit-agent",
-      "principal_source": "explicit-principal",
-      "verification_class": "attributed",
       "evidence_ref": null,
+      "externally_supplied_evidence": false,
+      "principal_source": "explicit-principal",
       "provider_authenticated": false,
-      "externally_supplied_evidence": false
+      "selection": "explicit-agent",
+      "verification_class": "attributed"
     },
-    "position_id": "quality_evaluator",
+    "agent_id": "agent-lulu",
     "base_revision": "3dfb3094716b207cfc0c33a411ee7c506ba7dccf",
     "branch": "codex/workkeel-reframe",
-    "worktree": ".",
     "claimed_at": "2026-09-23T10:37:38.147Z",
+    "id": "claim-20260923103738-49abc3e0",
+    "position_id": "quality_evaluator",
+    "principal_id": "human",
+    "release_reason": "review_rework",
     "released_at": "2026-09-23T10:47:47.344Z",
-    "release_reason": "review_rework"
+    "status": "released",
+    "worktree": "."
   },
   "claims": [
     {
-      "id": "claim-20260923100423-76583879",
-      "status": "released",
-      "principal_id": "human",
-      "agent_id": "agent-rikku",
       "actor_provenance": {
-        "selection": "explicit-agent",
-        "principal_source": "explicit-principal",
-        "verification_class": "attributed",
         "evidence_ref": null,
+        "externally_supplied_evidence": false,
+        "principal_source": "explicit-principal",
         "provider_authenticated": false,
-        "externally_supplied_evidence": false
+        "selection": "explicit-agent",
+        "verification_class": "attributed"
       },
-      "position_id": "developer",
+      "agent_id": "agent-rikku",
       "base_revision": "9d0f8547",
       "branch": "codex/workkeel-reframe",
-      "worktree": ".",
       "claimed_at": "2026-09-23T10:04:23.251Z",
-      "released_at": "2026-09-23T10:37:24.395Z",
+      "id": "claim-20260923100423-76583879",
+      "position_id": "developer",
+      "principal_id": "human",
       "release_reason": [
         "Handoff exact verified Workkeel candidate to independent reviewer"
-      ]
+      ],
+      "released_at": "2026-09-23T10:37:24.395Z",
+      "status": "released",
+      "worktree": "."
     },
     {
-      "id": "claim-20260923103738-49abc3e0",
-      "status": "released",
-      "principal_id": "human",
-      "agent_id": "agent-lulu",
       "actor_provenance": {
-        "selection": "explicit-agent",
-        "principal_source": "explicit-principal",
-        "verification_class": "attributed",
         "evidence_ref": null,
+        "externally_supplied_evidence": false,
+        "principal_source": "explicit-principal",
         "provider_authenticated": false,
-        "externally_supplied_evidence": false
+        "selection": "explicit-agent",
+        "verification_class": "attributed"
       },
-      "position_id": "quality_evaluator",
+      "agent_id": "agent-lulu",
       "base_revision": "3dfb3094716b207cfc0c33a411ee7c506ba7dccf",
       "branch": "codex/workkeel-reframe",
-      "worktree": ".",
       "claimed_at": "2026-09-23T10:37:38.147Z",
+      "id": "claim-20260923103738-49abc3e0",
+      "position_id": "quality_evaluator",
+      "principal_id": "human",
+      "release_reason": "review_rework",
       "released_at": "2026-09-23T10:47:47.344Z",
-      "release_reason": "review_rework"
+      "status": "released",
+      "worktree": "."
     }
   ],
-  "gate_evidence": {
-    "work_order": [
-      ".ai-org/artifacts/WI-0258/workkeel-design.md"
-    ],
-    "approved_scope": [
-      ".ai-org/artifacts/WI-0258/workkeel-design.md"
-    ],
-    "acceptance_criteria": [
-      ".ai-org/artifacts/WI-0258/workkeel-design.md"
-    ],
-    "technical_design": [
-      ".ai-org/artifacts/WI-0258/workkeel-design.md"
-    ],
-    "risk_review": [
-      ".ai-org/artifacts/WI-0258/workkeel-design.md"
-    ]
-  },
+  "context_refs": [],
+  "contract_refs": [],
+  "contract_status": "not_required",
+  "created_at": "2026-09-23T10:04:20.589Z",
+  "dependencies": [],
   "evidence": [
     ".ai-org/artifacts/WI-0258/workkeel-design.md",
     ".ai-org/artifacts/WI-0258/handoff-003-developer-to-quality_evaluator.md",
     ".ai-org/artifacts/WI-0258/workkeel-developer-evidence.md"
   ],
-  "unresolved": [],
-  "next_position": "quality_evaluator",
+  "gate_evidence": {
+    "acceptance_criteria": [
+      ".ai-org/artifacts/WI-0258/workkeel-design.md"
+    ],
+    "approved_scope": [
+      ".ai-org/artifacts/WI-0258/workkeel-design.md"
+    ],
+    "risk_review": [
+      ".ai-org/artifacts/WI-0258/workkeel-design.md"
+    ],
+    "technical_design": [
+      ".ai-org/artifacts/WI-0258/workkeel-design.md"
+    ],
+    "work_order": [
+      ".ai-org/artifacts/WI-0258/workkeel-design.md"
+    ]
+  },
   "handoffs": [
     {
-      "from_position": "developer",
-      "to_position": "quality_evaluator",
       "actor": "agent-rikku",
-      "principal_id": "human",
       "actor_provenance": {
-        "selection": "active-claim",
-        "principal_source": "active-claim",
-        "verification_class": "attributed",
         "evidence_ref": null,
+        "externally_supplied_evidence": false,
+        "principal_source": "active-claim",
         "provider_authenticated": false,
-        "externally_supplied_evidence": false
+        "selection": "active-claim",
+        "verification_class": "attributed"
       },
-      "input_revision": "3dfb3094716b207cfc0c33a411ee7c506ba7dccf",
       "artifact": ".ai-org/artifacts/WI-0258/handoff-003-developer-to-quality_evaluator.md",
-      "created_at": "2026-09-23T10:37:23.801Z"
+      "created_at": "2026-09-23T10:37:23.801Z",
+      "from_position": "developer",
+      "input_revision": "3dfb3094716b207cfc0c33a411ee7c506ba7dccf",
+      "principal_id": "human",
+      "to_position": "quality_evaluator"
     }
   ],
+  "id": "WI-0258",
+  "integration_owner_agent_id": "agent-mog",
+  "next_position": "quality_evaluator",
+  "overlap_resolution": [
+    "WI-0253: independent worktree and metadata-only QA; no existing test runner or test edits, full-suite timing coordinated",
+    "WI-0256: independent worktree and new focused files only; no shared harness edits or concurrent full suite"
+  ],
+  "owner_position": "developer",
+  "parallel_mode": "parallel",
+  "parent_work_item_id": null,
+  "planned_agent_id": null,
+  "profile_assessment": {
+    "effective_profile": "standard",
+    "escalated": false,
+    "escalation_triggers": [
+      "schema-or-data-migration"
+    ],
+    "evaluated_at": "2026-09-23T10:04:20.576Z",
+    "evidence_refs": [],
+    "rationale": "Versioned opt-in metadata lifecycle, no new sandbox or production release; preserve legacy authority.",
+    "requested_profile": "standard",
+    "scope_class": "cross-system"
+  },
+  "required_disciplines": [],
   "rework_history": [
     {
-      "sequence": 1,
-      "returned_at": "2026-09-23T10:47:47.344Z",
-      "from_state": "test",
-      "reviewer_agent_id": "agent-lulu",
-      "reviewer_claim_id": "claim-20260923103738-49abc3e0",
-      "rejected_revision": "3dfb3094716b207cfc0c33a411ee7c506ba7dccf",
-      "reason": [
-        "Real legacy init installs work-items/README.md, which migration preview and native listing reject; preserve normal legacy documentation and add real-init migration coverage."
-      ],
       "findings": [
         ".ai-org/artifacts/WI-0258/workkeel-independent-review.md"
       ],
-      "scope_digest": "9c9e08e85c646929ea8109a29161bdfd1e80026028d6bc2be16f235ad2ff33ae",
+      "from_state": "test",
+      "handoff_refs": [
+        ".ai-org/artifacts/WI-0258/handoff-003-developer-to-quality_evaluator.md"
+      ],
+      "reason": [
+        "Real legacy init installs work-items/README.md, which migration preview and native listing reject; preserve normal legacy documentation and add real-init migration coverage."
+      ],
+      "rejected_revision": "3dfb3094716b207cfc0c33a411ee7c506ba7dccf",
       "retained_requirements": [
         "work_order",
         "approved_scope",
@@ -196,20 +174,42 @@
         "technical_design",
         "risk_review"
       ],
-      "retired_gate_evidence": {
-        "developer_handoff": [
-          ".ai-org/artifacts/WI-0258/handoff-003-developer-to-quality_evaluator.md"
-        ],
-        "developer_evidence": [
-          ".ai-org/artifacts/WI-0258/workkeel-developer-evidence.md"
-        ]
-      },
       "retired_candidate_fields": {
         "developer_candidate_revision": "3dfb3094716b207cfc0c33a411ee7c506ba7dccf"
       },
-      "handoff_refs": [
-        ".ai-org/artifacts/WI-0258/handoff-003-developer-to-quality_evaluator.md"
-      ]
+      "retired_gate_evidence": {
+        "developer_evidence": [
+          ".ai-org/artifacts/WI-0258/workkeel-developer-evidence.md"
+        ],
+        "developer_handoff": [
+          ".ai-org/artifacts/WI-0258/handoff-003-developer-to-quality_evaluator.md"
+        ]
+      },
+      "returned_at": "2026-09-23T10:47:47.344Z",
+      "reviewer_agent_id": "agent-lulu",
+      "reviewer_claim_id": "claim-20260923103738-49abc3e0",
+      "scope_digest": "9c9e08e85c646929ea8109a29161bdfd1e80026028d6bc2be16f235ad2ff33ae",
+      "sequence": 1
     }
-  ]
+  ],
+  "risk_tier": "standard",
+  "schema_version": "temple.work-item/v1",
+  "scope": [
+    "Operationalize role-free contracts using versioned task-first project state, explicit legacy compatibility and optional fixed-model Codex gateway settings."
+  ],
+  "shared_contract_refs": [],
+  "spec_refs": [],
+  "specification_mode": "gate-evidence",
+  "stage_requirements": {},
+  "state": "build",
+  "title": "Implement the Workkeel task-first lifecycle",
+  "tracker_reconciliations": [],
+  "tracker_refs": [],
+  "tracker_visibility": "team-visible",
+  "ui_delivery_mode": "not-applicable",
+  "ui_refs": [],
+  "unresolved": [],
+  "updated_at": "2026-09-23T10:47:47.344Z",
+  "ux_refs": [],
+  "workflow_profile": "standard"
 }
