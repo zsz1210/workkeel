@@ -1,0 +1,14 @@
+{
+  "schema_version": "temple.finish-observation/v1",
+  "authority": "observation-only",
+  "work_item_id": "WI-0256",
+  "operation_id": "finish-wi0256-qa-4ac435d8-v1",
+  "candidate_revision": "4ac435d8fa47dc246609e296a2b224c8590da55b",
+  "request_digest": "f1b6401cfee24a98e322c3eeb7ce2dbe9295eaecde8aff263913957efd42989e",
+  "plan_digest": "d5f58c0a951837ea2d556c0c1d445ec262bd4a8498f13548031410f6e7a9677b",
+  "receipt_sha256": "8926cd6b876fd10a8796ee91dae27d04f85331fba89f8f9b7d56f4b141494868",
+  "status": "passed",
+  "observed_at": "2026-09-23T10:09:37.803Z",
+  "errors": [],
+  "recovery_authority": "origin-checkout-journal-required"
+}
