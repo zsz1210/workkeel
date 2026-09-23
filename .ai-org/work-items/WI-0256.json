@@ -2,11 +2,11 @@
   "schema_version": "temple.work-item/v1",
   "id": "WI-0256",
   "title": "Qualify baseline test harness repair",
-  "state": "intake",
-  "owner_position": "engineering_manager",
-  "assigned_agent_id": "agent-mog",
+  "state": "build",
+  "owner_position": "developer",
+  "assigned_agent_id": "agent-rikku",
   "created_at": "2026-09-23T09:48:28.197Z",
-  "updated_at": "2026-09-23T09:48:28.197Z",
+  "updated_at": "2026-09-23T09:51:44.060Z",
   "scope": [
     "Qualify the existing bounded repair for the previous-instruction runtime collision guard and delivery-pair Git revision quoting without changing product behavior or weakening assertions."
   ],
@@ -53,17 +53,101 @@
       "resources": []
     }
   },
-  "base_revision": null,
-  "parallel_mode": "pending",
-  "integration_owner_agent_id": null,
+  "base_revision": "9273264ec1409cc0add81fcb346d61377edbdd18",
+  "parallel_mode": "sequential",
+  "integration_owner_agent_id": "agent-mog",
   "planned_agent_id": null,
   "shared_contract_refs": [],
   "contract_status": "not_required",
-  "overlap_resolution": [],
-  "claim": null,
-  "claims": [],
-  "gate_evidence": {},
-  "evidence": [],
+  "overlap_resolution": [
+    "WI-0253 frozen candidate retained; WI-0256 qualification runs sequentially"
+  ],
+  "claim": {
+    "id": "claim-20260923095144-92bb0fd8",
+    "status": "active",
+    "principal_id": "human",
+    "agent_id": "agent-rikku",
+    "actor_provenance": {
+      "selection": "explicit-agent",
+      "principal_source": "explicit-principal",
+      "verification_class": "attributed",
+      "evidence_ref": null,
+      "provider_authenticated": false,
+      "externally_supplied_evidence": false
+    },
+    "position_id": "developer",
+    "base_revision": "9273264ec1409cc0add81fcb346d61377edbdd18",
+    "branch": "codex/fix-test-harness-baselines",
+    "worktree": "/Users/zsz1210/Documents/Codex/2026-09-23/temple-test-slimming/work/temple-test-baseline-fixes",
+    "claimed_at": "2026-09-23T09:51:44.060Z",
+    "released_at": null
+  },
+  "claims": [
+    {
+      "id": "claim-20260923095015-dd12519c",
+      "status": "released",
+      "principal_id": "human",
+      "agent_id": "agent-mog",
+      "actor_provenance": {
+        "selection": "explicit-agent",
+        "principal_source": "explicit-principal",
+        "verification_class": "attributed",
+        "evidence_ref": null,
+        "provider_authenticated": false,
+        "externally_supplied_evidence": false
+      },
+      "position_id": "engineering_manager",
+      "base_revision": "9273264ec1409cc0add81fcb346d61377edbdd18",
+      "branch": "codex/fix-test-harness-baselines",
+      "worktree": "/Users/zsz1210/Documents/Codex/2026-09-23/temple-test-slimming/work/temple-test-baseline-fixes",
+      "claimed_at": "2026-09-23T09:50:15.084Z",
+      "released_at": "2026-09-23T09:51:26.462Z",
+      "release_reason": "position_transition"
+    },
+    {
+      "id": "claim-20260923095144-92bb0fd8",
+      "status": "active",
+      "principal_id": "human",
+      "agent_id": "agent-rikku",
+      "actor_provenance": {
+        "selection": "explicit-agent",
+        "principal_source": "explicit-principal",
+        "verification_class": "attributed",
+        "evidence_ref": null,
+        "provider_authenticated": false,
+        "externally_supplied_evidence": false
+      },
+      "position_id": "developer",
+      "base_revision": "9273264ec1409cc0add81fcb346d61377edbdd18",
+      "branch": "codex/fix-test-harness-baselines",
+      "worktree": "/Users/zsz1210/Documents/Codex/2026-09-23/temple-test-slimming/work/temple-test-baseline-fixes",
+      "claimed_at": "2026-09-23T09:51:44.060Z",
+      "released_at": null
+    }
+  ],
+  "gate_evidence": {
+    "work_order": [
+      ".ai-org/artifacts/WI-0256/design.md"
+    ],
+    "approved_scope": [
+      ".ai-org/artifacts/WI-0256/design.md"
+    ],
+    "acceptance_criteria": [
+      ".ai-org/artifacts/WI-0256/design.md"
+    ],
+    "technical_design": [
+      ".ai-org/artifacts/WI-0256/design.md"
+    ],
+    "risk_review": [
+      ".ai-org/artifacts/WI-0256/design.md"
+    ],
+    "profile_eligibility": [
+      ".ai-org/artifacts/WI-0256/design.md"
+    ]
+  },
+  "evidence": [
+    ".ai-org/artifacts/WI-0256/design.md"
+  ],
   "unresolved": [],
-  "next_position": "developer"
+  "next_position": "quality_evaluator"
 }
