@@ -1,0 +1,315 @@
+{
+  "acceptance_criteria": [
+    "Role-free contracts validate without positions or generic model skill declarations; unsafe and incomplete boundaries fail closed.",
+    "Existing Work Items project into the new contract without canonical mutations or fabricated permissions; unresolved boundaries block execution readiness.",
+    "Runtime adapter capabilities and model connections remain separate; optional fixed LiteLLM configuration contains credential references only and makes no network calls.",
+    "Focused tests and full offline verification pass; documentation states migration limits accurately."
+  ],
+  "affected_paths": [
+    "src/task-contract.mjs",
+    "src/cli.mjs",
+    "test/task-contract.test.mjs",
+    "docs/concepts/task-contract.md",
+    "docs/adr/0071-workkeel-task-contract.md",
+    "docs/adr/README.md",
+    ".ai-org/artifacts/WI-0255"
+  ],
+  "approval_record": "not-required",
+  "assigned_agent_id": "agent-mog",
+  "base_revision": "8165774f97f98e4609dbd021620f1e9852967c36",
+  "claim": {
+    "actor_provenance": {
+      "evidence_ref": null,
+      "externally_supplied_evidence": false,
+      "principal_source": "explicit-principal",
+      "provider_authenticated": false,
+      "selection": "explicit-agent",
+      "verification_class": "attributed"
+    },
+    "agent_id": "agent-mog",
+    "base_revision": "8165774f97f98e4609dbd021620f1e9852967c36",
+    "branch": "codex/workkeel-reframe",
+    "claimed_at": "2026-09-23T09:54:00.097Z",
+    "id": "claim-20260923095400-c2b15a8f",
+    "position_id": "release_manager",
+    "principal_id": "human",
+    "release_reason": "work_item_closed",
+    "released_at": "2026-09-23T09:54:01.334Z",
+    "status": "released",
+    "worktree": "/Users/zsz1210/Documents/Codex/2026-09-23/chatgpt-tempo-github-tempo-clone/work/workkeel"
+  },
+  "claims": [
+    {
+      "actor_provenance": {
+        "evidence_ref": null,
+        "externally_supplied_evidence": false,
+        "principal_source": "explicit-principal",
+        "provider_authenticated": false,
+        "selection": "explicit-agent",
+        "verification_class": "attributed"
+      },
+      "agent_id": "agent-mog",
+      "base_revision": "53d075bcf619f655cc5613046d5ff05b3e8ab767",
+      "branch": "codex/workkeel-reframe",
+      "claimed_at": "2026-09-23T08:58:12.161Z",
+      "id": "claim-20260923085812-7ea6e5d3",
+      "position_id": "engineering_manager",
+      "principal_id": "human",
+      "release_reason": "position_transition",
+      "released_at": "2026-09-23T08:59:30.399Z",
+      "status": "released",
+      "worktree": "/Users/zsz1210/Documents/Codex/2026-09-23/chatgpt-tempo-github-tempo-clone/work/workkeel"
+    },
+    {
+      "actor_provenance": {
+        "evidence_ref": null,
+        "externally_supplied_evidence": false,
+        "principal_source": "explicit-principal",
+        "provider_authenticated": false,
+        "selection": "explicit-agent",
+        "verification_class": "attributed"
+      },
+      "agent_id": "agent-rikku",
+      "base_revision": "53d075bcf619f655cc5613046d5ff05b3e8ab767",
+      "branch": "codex/workkeel-reframe",
+      "claimed_at": "2026-09-23T08:59:32.367Z",
+      "id": "claim-20260923085932-89b9be4b",
+      "position_id": "developer",
+      "principal_id": "human",
+      "release_reason": [
+        "Developer evidence complete; independent verification follows on exact candidate."
+      ],
+      "released_at": "2026-09-23T09:46:15.175Z",
+      "status": "released",
+      "worktree": "/Users/zsz1210/Documents/Codex/2026-09-23/chatgpt-tempo-github-tempo-clone/work/workkeel"
+    },
+    {
+      "actor_provenance": {
+        "evidence_ref": null,
+        "externally_supplied_evidence": false,
+        "principal_source": "explicit-principal",
+        "provider_authenticated": false,
+        "selection": "explicit-agent",
+        "verification_class": "attributed"
+      },
+      "agent_id": "agent-lulu",
+      "base_revision": "8165774f97f98e4609dbd021620f1e9852967c36",
+      "branch": "codex/workkeel-reframe",
+      "claimed_at": "2026-09-23T09:47:20.987Z",
+      "id": "claim-20260923094720-c5541156",
+      "position_id": "quality_evaluator",
+      "principal_id": "human",
+      "release_reason": [
+        "Test and Eval finished; runtime completed; handing exact candidate to Independent QA."
+      ],
+      "released_at": "2026-09-23T09:51:29.282Z",
+      "status": "released",
+      "worktree": "/Users/zsz1210/Documents/Codex/2026-09-23/chatgpt-tempo-github-tempo-clone/work/workkeel"
+    },
+    {
+      "actor_provenance": {
+        "evidence_ref": null,
+        "externally_supplied_evidence": false,
+        "principal_source": "explicit-principal",
+        "provider_authenticated": false,
+        "selection": "explicit-agent",
+        "verification_class": "attributed"
+      },
+      "agent_id": "agent-lulu",
+      "base_revision": "8165774f97f98e4609dbd021620f1e9852967c36",
+      "branch": "codex/workkeel-reframe",
+      "claimed_at": "2026-09-23T09:51:30.275Z",
+      "id": "claim-20260923095130-2d6e32c6",
+      "position_id": "independent_qa",
+      "principal_id": "human",
+      "release_reason": [
+        "Independent QA completed; exact-candidate findings handed to Release Manager."
+      ],
+      "released_at": "2026-09-23T09:51:59.244Z",
+      "status": "released",
+      "worktree": "/Users/zsz1210/Documents/Codex/2026-09-23/chatgpt-tempo-github-tempo-clone/work/workkeel"
+    },
+    {
+      "actor_provenance": {
+        "evidence_ref": null,
+        "externally_supplied_evidence": false,
+        "principal_source": "explicit-principal",
+        "provider_authenticated": false,
+        "selection": "explicit-agent",
+        "verification_class": "attributed"
+      },
+      "agent_id": "agent-mog",
+      "base_revision": "8165774f97f98e4609dbd021620f1e9852967c36",
+      "branch": "codex/workkeel-reframe",
+      "claimed_at": "2026-09-23T09:54:00.097Z",
+      "id": "claim-20260923095400-c2b15a8f",
+      "position_id": "release_manager",
+      "principal_id": "human",
+      "release_reason": "work_item_closed",
+      "released_at": "2026-09-23T09:54:01.334Z",
+      "status": "released",
+      "worktree": "/Users/zsz1210/Documents/Codex/2026-09-23/chatgpt-tempo-github-tempo-clone/work/workkeel"
+    }
+  ],
+  "closeout_reasons": [],
+  "context_refs": [],
+  "contract_refs": [],
+  "contract_status": "stable",
+  "created_at": "2026-09-23T08:57:50.185Z",
+  "dependencies": [],
+  "developer_candidate_revision": "8165774f97f98e4609dbd021620f1e9852967c36",
+  "evidence": [
+    ".ai-org/artifacts/WI-0255/design.md",
+    ".ai-org/artifacts/WI-0255/handoff-001-developer-to-quality_evaluator.md",
+    ".ai-org/artifacts/WI-0255/developer-evidence.md",
+    ".ai-org/artifacts/WI-0255/independent-review.md",
+    ".ai-org/artifacts/WI-0255/handoff-002-quality_evaluator-to-independent_qa.md",
+    ".ai-org/artifacts/WI-0255/handoff-003-independent_qa-to-release_manager.md",
+    ".ai-org/artifacts/WI-0255/release-record.md"
+  ],
+  "external_release_status": "not_performed",
+  "gate_evidence": {
+    "acceptance_criteria": [
+      ".ai-org/artifacts/WI-0255/design.md"
+    ],
+    "accepted_scope": [
+      ".ai-org/artifacts/WI-0255/design.md"
+    ],
+    "approved_scope": [
+      ".ai-org/artifacts/WI-0255/design.md"
+    ],
+    "developer_evidence": [
+      ".ai-org/artifacts/WI-0255/developer-evidence.md"
+    ],
+    "developer_handoff": [
+      ".ai-org/artifacts/WI-0255/handoff-001-developer-to-quality_evaluator.md"
+    ],
+    "evaluation_report": [
+      ".ai-org/artifacts/WI-0255/independent-review.md"
+    ],
+    "independent_qa_pass": [
+      ".ai-org/artifacts/WI-0255/independent-review.md"
+    ],
+    "independent_qa_report": [
+      ".ai-org/artifacts/WI-0255/independent-review.md"
+    ],
+    "required_human_approval": [
+      "not-required"
+    ],
+    "risk_review": [
+      ".ai-org/artifacts/WI-0255/design.md"
+    ],
+    "rollback_plan": [
+      ".ai-org/artifacts/WI-0255/release-record.md"
+    ],
+    "technical_design": [
+      ".ai-org/artifacts/WI-0255/design.md"
+    ],
+    "test_evidence": [
+      ".ai-org/artifacts/WI-0255/independent-review.md"
+    ],
+    "work_order": [
+      ".ai-org/artifacts/WI-0255/design.md"
+    ]
+  },
+  "handoffs": [
+    {
+      "actor": "agent-rikku",
+      "actor_provenance": {
+        "evidence_ref": null,
+        "externally_supplied_evidence": false,
+        "principal_source": "active-claim",
+        "provider_authenticated": false,
+        "selection": "active-claim",
+        "verification_class": "attributed"
+      },
+      "artifact": ".ai-org/artifacts/WI-0255/handoff-001-developer-to-quality_evaluator.md",
+      "created_at": "2026-09-23T09:46:14.625Z",
+      "from_position": "developer",
+      "input_revision": "8165774f97f98e4609dbd021620f1e9852967c36",
+      "principal_id": "human",
+      "to_position": "quality_evaluator"
+    },
+    {
+      "actor": "agent-lulu",
+      "actor_provenance": {
+        "evidence_ref": null,
+        "externally_supplied_evidence": false,
+        "principal_source": "active-claim",
+        "provider_authenticated": false,
+        "selection": "active-claim",
+        "verification_class": "attributed"
+      },
+      "artifact": ".ai-org/artifacts/WI-0255/handoff-002-quality_evaluator-to-independent_qa.md",
+      "created_at": "2026-09-23T09:51:28.786Z",
+      "from_position": "quality_evaluator",
+      "input_revision": "8165774f97f98e4609dbd021620f1e9852967c36",
+      "principal_id": "human",
+      "to_position": "independent_qa"
+    },
+    {
+      "actor": "agent-lulu",
+      "actor_provenance": {
+        "evidence_ref": null,
+        "externally_supplied_evidence": false,
+        "principal_source": "active-claim",
+        "provider_authenticated": false,
+        "selection": "active-claim",
+        "verification_class": "attributed"
+      },
+      "artifact": ".ai-org/artifacts/WI-0255/handoff-003-independent_qa-to-release_manager.md",
+      "created_at": "2026-09-23T09:51:58.730Z",
+      "from_position": "independent_qa",
+      "input_revision": "8165774f97f98e4609dbd021620f1e9852967c36",
+      "principal_id": "human",
+      "to_position": "release_manager"
+    }
+  ],
+  "id": "WI-0255",
+  "integration_owner_agent_id": "agent-rikku",
+  "lifecycle_outcome": "accepted",
+  "next_position": null,
+  "overlap_resolution": [
+    "WI-0253: coordinated separate worktrees; only a new task-contract test file here; existing tests and runner unchanged; full-suite timing window released."
+  ],
+  "owner_position": "engineering_manager",
+  "parallel_mode": "sequential",
+  "parent_work_item_id": null,
+  "planned_agent_id": null,
+  "profile_assessment": {
+    "effective_profile": "standard",
+    "escalated": false,
+    "escalation_triggers": [],
+    "evaluated_at": "2026-09-23T08:57:50.165Z",
+    "evidence_refs": [],
+    "rationale": "Versioned additive contract and legacy projection; existing mutation authority remains unchanged and independent review remains required.",
+    "requested_profile": "standard",
+    "scope_class": "ordinary"
+  },
+  "release_gate_result": "go",
+  "required_disciplines": [],
+  "risk_tier": "standard",
+  "schema_version": "temple.work-item/v1",
+  "scope": [
+    "First migration slice: versioned role-free task contract, explicit operation and environment boundaries, read-only projection of existing Work Items, runtime/model separation and fixed optional gateway configuration validation. Preserve legacy lifecycle authority and historical records.",
+    "No test-suite slimming, context-reading optimization, company Position deletion, new graph engine, external provider calls, publication, or repository rename in this slice."
+  ],
+  "shared_contract_refs": [
+    "docs/adr/0071-workkeel-task-contract.md"
+  ],
+  "spec_refs": [],
+  "specification_mode": "gate-evidence",
+  "stage_requirements": {},
+  "state": "done",
+  "tested_revision": "8165774f97f98e4609dbd021620f1e9852967c36",
+  "title": "Define Workkeel task and execution contracts",
+  "tracker_reconciliations": [],
+  "tracker_refs": [],
+  "tracker_visibility": "team-visible",
+  "ui_delivery_mode": "not-applicable",
+  "ui_refs": [],
+  "unresolved": [],
+  "updated_at": "2026-09-23T09:54:01.334Z",
+  "ux_refs": [],
+  "workflow_profile": "standard"
+}

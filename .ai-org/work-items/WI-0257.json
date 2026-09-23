@@ -1,0 +1,139 @@
+{
+  "acceptance_criteria": [
+    "A fresh task-first project completes init, doctor, create, claim, exact-candidate handoff, independent review and close without Position or generic skill catalogs.",
+    "Identity, scoped approvals, dependencies, evidence, stale claims and explicit migration guards are enforced; existing Temple projects remain usable without rewriting history.",
+    "Runtime and model settings remain separate; optional LiteLLM wiring uses the existing Codex execution interface and never changes global settings or reads credentials during planning.",
+    "Focused negative and end-to-end fixtures, package checks, exact-candidate full verification and independent review pass; live service limitations remain explicit."
+  ],
+  "affected_paths": [
+    "src",
+    "bin",
+    "test/workkeel-lifecycle.test.mjs",
+    "test/workkeel-runtime.test.mjs",
+    "docs",
+    "scripts/check-package.mjs",
+    "package.json",
+    "package-lock.json",
+    ".ai-org/project/domain-glossary.md"
+  ],
+  "assigned_agent_id": "agent-mog",
+  "base_revision": "9d0f8547",
+  "claim": {
+    "actor_provenance": {
+      "evidence_ref": null,
+      "externally_supplied_evidence": false,
+      "principal_source": "explicit-principal",
+      "provider_authenticated": false,
+      "selection": "explicit-agent",
+      "verification_class": "attributed"
+    },
+    "agent_id": "agent-rikku",
+    "base_revision": "9d0f8547",
+    "branch": "codex/workkeel-reframe",
+    "claimed_at": "2026-09-23T10:02:51.851Z",
+    "id": "claim-20260923100251-443cdba9",
+    "position_id": "developer",
+    "principal_id": "human",
+    "release_reason": [
+      "Cancel planning attempt with historical artifact filename collision"
+    ],
+    "released_at": "2026-09-23T10:04:19.572Z",
+    "status": "released",
+    "worktree": "."
+  },
+  "claims": [
+    {
+      "actor_provenance": {
+        "evidence_ref": null,
+        "externally_supplied_evidence": false,
+        "principal_source": "explicit-principal",
+        "provider_authenticated": false,
+        "selection": "explicit-agent",
+        "verification_class": "attributed"
+      },
+      "agent_id": "agent-rikku",
+      "base_revision": "9d0f8547",
+      "branch": "codex/workkeel-reframe",
+      "claimed_at": "2026-09-23T10:02:51.851Z",
+      "id": "claim-20260923100251-443cdba9",
+      "position_id": "developer",
+      "principal_id": "human",
+      "release_reason": [
+        "Cancel planning attempt with historical artifact filename collision"
+      ],
+      "released_at": "2026-09-23T10:04:19.572Z",
+      "status": "released",
+      "worktree": "."
+    }
+  ],
+  "context_refs": [],
+  "contract_refs": [],
+  "contract_status": "not_required",
+  "created_at": "2026-09-23T10:01:18.731Z",
+  "dependencies": [],
+  "evidence": [
+    ".ai-org/artifacts/WI-0257/design.md",
+    ".ai-org/artifacts/WI-0257/workkeel-cancellation.md"
+  ],
+  "gate_evidence": {
+    "acceptance_criteria": [
+      ".ai-org/artifacts/WI-0257/design.md"
+    ],
+    "approved_scope": [
+      ".ai-org/artifacts/WI-0257/design.md"
+    ],
+    "cancellation_reason": [
+      ".ai-org/artifacts/WI-0257/workkeel-cancellation.md"
+    ],
+    "risk_review": [
+      ".ai-org/artifacts/WI-0257/design.md"
+    ],
+    "technical_design": [
+      ".ai-org/artifacts/WI-0257/design.md"
+    ],
+    "work_order": [
+      ".ai-org/artifacts/WI-0257/design.md"
+    ]
+  },
+  "id": "WI-0257",
+  "integration_owner_agent_id": null,
+  "next_position": null,
+  "overlap_resolution": [],
+  "owner_position": "engineering_manager",
+  "parallel_mode": "sequential",
+  "parent_work_item_id": null,
+  "planned_agent_id": null,
+  "profile_assessment": {
+    "effective_profile": "standard",
+    "escalated": false,
+    "escalation_triggers": [
+      "schema-or-data-migration"
+    ],
+    "evaluated_at": "2026-09-23T10:01:18.718Z",
+    "evidence_refs": [],
+    "rationale": "Opt-in versioned metadata lifecycle with explicit guards, no sandbox or production deployment; preserve legacy authority.",
+    "requested_profile": "standard",
+    "scope_class": "cross-system"
+  },
+  "required_disciplines": [],
+  "risk_tier": "standard",
+  "schema_version": "temple.work-item/v1",
+  "scope": [
+    "Provide an opt-in task-first canonical lifecycle, minimal project initialization, explicit legacy compatibility, and fixed-model Codex gateway configuration without introducing an execution engine."
+  ],
+  "shared_contract_refs": [],
+  "spec_refs": [],
+  "specification_mode": "gate-evidence",
+  "stage_requirements": {},
+  "state": "cancelled",
+  "title": "Deliver the role-free Workkeel lifecycle and runtime connection boundary",
+  "tracker_reconciliations": [],
+  "tracker_refs": [],
+  "tracker_visibility": "team-visible",
+  "ui_delivery_mode": "not-applicable",
+  "ui_refs": [],
+  "unresolved": [],
+  "updated_at": "2026-09-23T10:04:20.099Z",
+  "ux_refs": [],
+  "workflow_profile": "standard"
+}

@@ -4,7 +4,7 @@ import os from "node:os";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
 import test from "node:test";
-import { testInventory, groupFor, fastFiles, selectChangedTests, changedPaths, selectionOptions } from "../scripts/test-groups.mjs";
+import { testInventory, groupFor, fastFiles, dailyFiles, selectChangedTests, changedPaths, selectionOptions } from "../scripts/test-groups.mjs";
 
 test("every discovered test belongs to exactly one group; new tests default to core", async () => {
   const inventory = await testInventory();
@@ -13,7 +13,17 @@ test("every discovered test belongs to exactly one group; new tests default to c
   const combined = ["core", "optional", "experiments"].flatMap((group) => inventory.filter((file) => groupFor(file) === group));
   assert.deepEqual(combined.sort(), inventory);
   assert.equal(groupFor("test/new.test.mjs"), "core");
+  for (const file of ["test/delivery-control-pair.test.mjs", "test/continuity-live-runner.test.mjs",
+    "test/delivery-matrix-experiment.test.mjs", "test/recovery-matrix-fixtures.test.mjs"]) {
+    assert.equal(groupFor(file), "experiments", file);
+  }
   assert.ok(fastFiles.every((file) => inventory.includes(file)));
+  assert.ok(dailyFiles.every((file) => inventory.includes(file)));
+  assert.ok(fastFiles.every((file) => dailyFiles.includes(file)));
+  assert.ok(["test/autonomous-delivery.test.mjs", "test/collaborative-recovery.test.mjs",
+    "test/high-assurance.test.mjs", "test/recovery.test.mjs", "test/control-plane-live.test.mjs",
+    "test/json-rpc-process-cleanup.test.mjs"].every((file) => dailyFiles.includes(file)));
+  assert.ok(dailyFiles.every((file) => groupFor(file) !== "experiments"));
 });
 
 test("prose uses fast checks; changed tests include their entire group", async () => {
@@ -35,11 +45,28 @@ test("unknown, shared, state, fixture and deleted test paths fail toward the ful
 });
 
 test("selection options reject typos, duplicate flags and missing base values", () => {
-  assert.deepEqual(selectionOptions("changed", ["--base", "origin/main", "--list"]), { base: "origin/main", list: true });
+  assert.deepEqual(selectionOptions("changed", ["--base", "origin/main", "--list", "--verbose"]), { base: "origin/main", list: true, verbose: true });
   for (const args of [["--unknown"], ["--base"], ["--base", "--list"], ["--base", "HEAD", "--base", "main"], ["--list", "--list"]]) {
     assert.throws(() => selectionOptions("changed", args), /selection option/);
   }
+  assert.throws(() => selectionOptions("full", ["--verbose", "--verbose"]), /selection option/);
   assert.throws(() => selectionOptions("core", ["--base", "HEAD"]));
+});
+
+test("compact reporter keeps full failed-test diagnostics", async (t) => {
+  const directory = await fs.mkdtemp(path.join(os.tmpdir(), "temple-compact-reporter-"));
+  t.after(() => fs.rm(directory, { recursive: true, force: true }));
+  const fixture = path.join(directory, "failure.test.mjs");
+  await fs.writeFile(fixture, `import test from "node:test";\nimport assert from "node:assert/strict";\ntest("actionable sentinel",()=>assert.equal("actual","expected"));\n`);
+  const env = { ...process.env }; delete env.NODE_TEST_CONTEXT;
+  const result = spawnSync(process.execPath, ["--test", "--test-reporter=dot", fixture], { encoding: "utf8", env });
+  assert.equal(result.status, 1);
+  assert.match(result.stdout, /Failed tests:/);
+  assert.match(result.stdout, /actionable sentinel/);
+  assert.match(result.stdout, /AssertionError/);
+  assert.match(result.stdout, /actual/);
+  assert.match(result.stdout, /expected/);
+  assert.match(result.stdout, /failure\.test\.mjs/);
 });
 
 test("CLI does not silently narrow verification after an unrecognized option", () => {

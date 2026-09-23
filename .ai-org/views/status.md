@@ -3,9 +3,9 @@
 - Project ID: `temple`
 - Organization system version: `0.1.0-alpha.33`
 - Active Agent Identities: 5
-- Collaboration profile: `solo` (0 Human Principals, 0 active claims)
+- Collaboration profile: `solo` (0 Human Principals, 1 active claims)
 - Parallel plan: 0 wave(s), fresh=true
-- Work items: 252 total, 0 active
+- Work items: 258 total, 1 active
 - Codex tasks: 14 registered, 14 archive-ready
 - Runtime workers: 104 registered, 0 reserved, 0 active
 - Shared resources: 0 defined, 0 active reservation(s)
@@ -27,7 +27,7 @@
 - Human Principals: 0
 - Agent sponsorships: 0
 - Active Position memberships: 10
-- Active Work Item claims: 0
+- Active Work Item claims: 1
 - Active Human Authority Grants: 0
 - Governance recovery: `not_configured`
 - Real Collaborative validation: `not_run` (.ai-org/templates/collaborative-large-scale-test-plan.md)
@@ -40,7 +40,7 @@
 - Fresh: yes
 - Safe waves: 0
 - Dispatchable Work Items: 0
-- Active / sequential / blocked: 0 / 0 / 0
+- Active / sequential / blocked: 1 / 0 / 0
 - Next wave: none
 - Codex tasks, claims, or external actions performed by planning: no
 
@@ -300,9 +300,17 @@
 | WI-0250 | Automate measurement closeout and clarify task readiness | done | Engineering Manager | Mog | pending | team-visible | 0 | gate-evidence | not-applicable | 0 | 0 | 0 | — | `9148bd64` | 1 | 10 | 0 |
 | WI-0251 | Include reviewed closeout files in package boundary | done | Engineering Manager | Mog | pending | team-visible | 0 | gate-evidence | not-applicable | 0 | 0 | 0 | — | `41a1a4f7` | 0 | 4 | 0 |
 | WI-0252 | Integrate collaboration recovery and measured closeout | done | Engineering Manager | Mog | pending | team-visible | 0 | gate-evidence | not-applicable | 0 | 0 | 0 | — | `8f7ab5f0` | 1 | 14 | 0 |
+| WI-0253 | Slim the test suite without weakening safety coverage | done | Engineering Manager | Mog | sequential | internal | 0 | gate-evidence | not-applicable | 0 | 0 | 0 | — | `6ace82eb` | 0 | 11 | 0 |
+| WI-0254 | Repair baseline test harness failures | cancelled | Engineering Manager | Mog | pending | internal | 0 | gate-evidence | not-applicable | 0 | 0 | 0 | — | `b863ee49` | 0 | 5 | 0 |
+| WI-0255 | Define Workkeel task and execution contracts | done | Engineering Manager | Mog | sequential | team-visible | 0 | gate-evidence | not-applicable | 0 | 0 | 0 | — | `8165774f` | 0 | 7 | 0 |
+| WI-0256 | Qualify baseline test harness repair | done | Engineering Manager | Mog | sequential | internal | 0 | gate-evidence | not-applicable | 0 | 0 | 0 | — | `4ac435d8` | 0 | 5 | 0 |
+| WI-0257 | Deliver the role-free Workkeel lifecycle and runtime connection boundary | cancelled | Engineering Manager | Mog | sequential | team-visible | 0 | gate-evidence | not-applicable | 0 | 0 | 0 | — | `—` | 0 | 2 | 0 |
+| WI-0258 | Implement the Workkeel task-first lifecycle | build | Developer | Rikku | sequential | team-visible | 0 | gate-evidence | not-applicable | 0 | 0 | 0 | claim-20260923100423-76583879 | `—` | 0 | 1 | 0 |
 
 ## Delivery attention
 
+- WI-0258: awaiting-owner — The recorded owner can continue the scoped work; no attached active worker is recorded.
+  - owner: No attached active runtime is recorded for this claim.
 
 ## Codex task registry
 
@@ -470,7 +478,7 @@
 - Profile: `repository-only`
 - Sync granularity: `team-visible`
 - Active providers: 0
-- Team-visible Work Items: 101
+- Team-visible Work Items: 104
 - Linked Work Items: 0
 - Observed external items: 0
 - Reconciliation actions: 0
@@ -544,14 +552,14 @@
 
 | Time | Event | Work item | Actor |
 |---|---|---|---|
-| 2026-09-18T01:29:01.795Z | work_item_closed | WI-0252 | agent-mog |
-| 2026-09-18T01:29:01.795Z | release_gate_completed | WI-0252 | agent-mog |
-| 2026-09-18T01:29:01.407Z | work_item_claimed | WI-0252 | human |
-| 2026-09-18T01:29:00.998Z | work_item_transitioned | WI-0252 | agent-lulu |
-| 2026-09-18T01:29:00.613Z | work_item_claim_released | WI-0252 | human |
-| 2026-09-18T01:29:00.234Z | handoff_created | WI-0252 | agent-lulu |
-| 2026-09-18T01:28:59.833Z | work_item_claimed | WI-0252 | human |
-| 2026-09-18T01:28:59.427Z | work_item_transitioned | WI-0252 | agent-lulu |
+| 2026-09-23T10:42:27.403Z | work_item_closed | WI-0253 | agent-mog |
+| 2026-09-23T10:42:27.403Z | release_gate_completed | WI-0253 | agent-mog |
+| 2026-09-23T10:41:45.826Z | work_item_claimed | WI-0253 | human |
+| 2026-09-23T10:39:38.350Z | work_item_transitioned | WI-0253 | agent-lulu |
+| 2026-09-23T10:39:37.853Z | work_item_claim_released | WI-0253 | human |
+| 2026-09-23T10:39:37.354Z | handoff_created | WI-0253 | agent-lulu |
+| 2026-09-23T10:38:38.476Z | work_item_claimed | WI-0253 | human |
+| 2026-09-23T10:38:18.149Z | work_item_transitioned | WI-0253 | agent-lulu |
 
 ## Assignments
 

@@ -1,0 +1,238 @@
+{
+  "schema_version": "temple.work-item/v1",
+  "id": "WI-0256",
+  "title": "Qualify baseline test harness repair",
+  "state": "done",
+  "owner_position": "engineering_manager",
+  "assigned_agent_id": "agent-mog",
+  "created_at": "2026-09-23T09:48:28.197Z",
+  "updated_at": "2026-09-23T10:09:29.680Z",
+  "scope": [
+    "Qualify the existing bounded repair for the previous-instruction runtime collision guard and delivery-pair Git revision quoting without changing product behavior or weakening assertions."
+  ],
+  "acceptance_criteria": [
+    "Existing runtime targets are rejected before any copy or write with ERR_FS_CP_EEXIST.",
+    "Delivery-pair synthetic revision verification passes the revision expression to zsh literally and all affected child scenarios reach their intended assertions.",
+    "Focused tests and the full npm run verify gate pass on the exact committed candidate revision."
+  ],
+  "affected_paths": [
+    "scripts/continuity-live-runner.mjs",
+    "test/continuity-live-runner.test.mjs",
+    "test/delivery-control-pair.test.mjs"
+  ],
+  "context_refs": [],
+  "spec_refs": [],
+  "ux_refs": [],
+  "ui_refs": [],
+  "contract_refs": [],
+  "specification_mode": "gate-evidence",
+  "ui_delivery_mode": "not-applicable",
+  "workflow_profile": "lean",
+  "risk_tier": "low",
+  "profile_assessment": {
+    "requested_profile": "lean",
+    "effective_profile": "lean",
+    "scope_class": "bounded",
+    "escalation_triggers": [],
+    "rationale": "Bounded internal test-harness repair with no product, schema, UI, integration, or release behavior change.",
+    "evidence_refs": [],
+    "evaluated_at": "2026-09-23T09:48:28.184Z",
+    "escalated": false
+  },
+  "parent_work_item_id": null,
+  "tracker_visibility": "internal",
+  "tracker_refs": [],
+  "tracker_reconciliations": [],
+  "dependencies": [],
+  "required_disciplines": [],
+  "stage_requirements": {
+    "build": {
+      "disciplines": [
+        "general-development"
+      ],
+      "resources": []
+    }
+  },
+  "base_revision": "4ac435d8fa47dc246609e296a2b224c8590da55b",
+  "parallel_mode": "sequential",
+  "integration_owner_agent_id": "agent-mog",
+  "planned_agent_id": null,
+  "shared_contract_refs": [],
+  "contract_status": "not_required",
+  "overlap_resolution": [
+    "WI-0253 frozen candidate retained; WI-0256 qualification runs sequentially"
+  ],
+  "claim": {
+    "id": "claim-20260923100855-af041d78",
+    "status": "released",
+    "principal_id": "human",
+    "agent_id": "agent-lulu",
+    "actor_provenance": {
+      "selection": "explicit-agent",
+      "principal_source": "explicit-principal",
+      "verification_class": "attributed",
+      "evidence_ref": null,
+      "provider_authenticated": false,
+      "externally_supplied_evidence": false
+    },
+    "position_id": "quality_evaluator",
+    "base_revision": "4ac435d8fa47dc246609e296a2b224c8590da55b",
+    "branch": "codex/fix-test-harness-baselines",
+    "worktree": "/Users/zsz1210/Documents/Codex/2026-09-23/temple-test-slimming/work/temple-test-baseline-fixes",
+    "claimed_at": "2026-09-23T10:08:55.830Z",
+    "released_at": "2026-09-23T10:09:29.666Z",
+    "release_reason": "completed"
+  },
+  "claims": [
+    {
+      "id": "claim-20260923095015-dd12519c",
+      "status": "released",
+      "principal_id": "human",
+      "agent_id": "agent-mog",
+      "actor_provenance": {
+        "selection": "explicit-agent",
+        "principal_source": "explicit-principal",
+        "verification_class": "attributed",
+        "evidence_ref": null,
+        "provider_authenticated": false,
+        "externally_supplied_evidence": false
+      },
+      "position_id": "engineering_manager",
+      "base_revision": "9273264ec1409cc0add81fcb346d61377edbdd18",
+      "branch": "codex/fix-test-harness-baselines",
+      "worktree": "/Users/zsz1210/Documents/Codex/2026-09-23/temple-test-slimming/work/temple-test-baseline-fixes",
+      "claimed_at": "2026-09-23T09:50:15.084Z",
+      "released_at": "2026-09-23T09:51:26.462Z",
+      "release_reason": "position_transition"
+    },
+    {
+      "id": "claim-20260923095144-92bb0fd8",
+      "status": "released",
+      "principal_id": "human",
+      "agent_id": "agent-rikku",
+      "actor_provenance": {
+        "selection": "explicit-agent",
+        "principal_source": "explicit-principal",
+        "verification_class": "attributed",
+        "evidence_ref": null,
+        "provider_authenticated": false,
+        "externally_supplied_evidence": false
+      },
+      "position_id": "developer",
+      "base_revision": "9273264ec1409cc0add81fcb346d61377edbdd18",
+      "branch": "codex/fix-test-harness-baselines",
+      "worktree": "/Users/zsz1210/Documents/Codex/2026-09-23/temple-test-slimming/work/temple-test-baseline-fixes",
+      "claimed_at": "2026-09-23T09:51:44.060Z",
+      "released_at": "2026-09-23T10:02:13.539Z",
+      "release_reason": "position_transition"
+    },
+    {
+      "id": "claim-20260923100429-1ab932b2",
+      "status": "released",
+      "principal_id": "human",
+      "agent_id": "agent-lulu",
+      "actor_provenance": {
+        "selection": "explicit-agent",
+        "principal_source": "explicit-principal",
+        "verification_class": "attributed",
+        "evidence_ref": null,
+        "provider_authenticated": false,
+        "externally_supplied_evidence": false
+      },
+      "position_id": "quality_evaluator",
+      "base_revision": "3e90b5ca3da622b43099a814d7a61d18613786f3",
+      "branch": "codex/fix-test-harness-baselines",
+      "worktree": "/Users/zsz1210/Documents/Codex/2026-09-23/temple-test-slimming/work/temple-test-baseline-fixes",
+      "claimed_at": "2026-09-23T10:04:29.159Z",
+      "released_at": "2026-09-23T10:08:55.289Z",
+      "release_reason": [
+        "Verifier claim base revision must pin the exact candidate; replace with exact-candidate claim."
+      ]
+    },
+    {
+      "id": "claim-20260923100855-af041d78",
+      "status": "released",
+      "principal_id": "human",
+      "agent_id": "agent-lulu",
+      "actor_provenance": {
+        "selection": "explicit-agent",
+        "principal_source": "explicit-principal",
+        "verification_class": "attributed",
+        "evidence_ref": null,
+        "provider_authenticated": false,
+        "externally_supplied_evidence": false
+      },
+      "position_id": "quality_evaluator",
+      "base_revision": "4ac435d8fa47dc246609e296a2b224c8590da55b",
+      "branch": "codex/fix-test-harness-baselines",
+      "worktree": "/Users/zsz1210/Documents/Codex/2026-09-23/temple-test-slimming/work/temple-test-baseline-fixes",
+      "claimed_at": "2026-09-23T10:08:55.830Z",
+      "released_at": "2026-09-23T10:09:29.666Z",
+      "release_reason": "completed"
+    }
+  ],
+  "gate_evidence": {
+    "work_order": [
+      ".ai-org/artifacts/WI-0256/design.md"
+    ],
+    "approved_scope": [
+      ".ai-org/artifacts/WI-0256/design.md"
+    ],
+    "acceptance_criteria": [
+      ".ai-org/artifacts/WI-0256/design.md"
+    ],
+    "technical_design": [
+      ".ai-org/artifacts/WI-0256/design.md"
+    ],
+    "risk_review": [
+      ".ai-org/artifacts/WI-0256/design.md"
+    ],
+    "profile_eligibility": [
+      ".ai-org/artifacts/WI-0256/design.md"
+    ],
+    "developer_handoff": [
+      ".ai-org/artifacts/WI-0256/handoff-001-developer-to-quality_evaluator.md"
+    ],
+    "developer_evidence": [
+      ".ai-org/artifacts/WI-0256/developer-evidence.md"
+    ],
+    "test_evidence": [
+      ".ai-org/artifacts/WI-0256/verifier-evidence-agent-lulu.md"
+    ],
+    "lean_closeout": [
+      ".ai-org/artifacts/WI-0256/lean-closeout-agent-lulu.md"
+    ]
+  },
+  "evidence": [
+    ".ai-org/artifacts/WI-0256/design.md",
+    ".ai-org/artifacts/WI-0256/handoff-001-developer-to-quality_evaluator.md",
+    ".ai-org/artifacts/WI-0256/developer-evidence.md",
+    ".ai-org/artifacts/WI-0256/verifier-evidence-agent-lulu.md",
+    ".ai-org/artifacts/WI-0256/lean-closeout-agent-lulu.md"
+  ],
+  "unresolved": [],
+  "next_position": null,
+  "handoffs": [
+    {
+      "from_position": "developer",
+      "to_position": "quality_evaluator",
+      "actor": "agent-rikku",
+      "principal_id": "human",
+      "actor_provenance": {
+        "selection": "active-claim",
+        "principal_source": "active-claim",
+        "verification_class": "attributed",
+        "evidence_ref": null,
+        "provider_authenticated": false,
+        "externally_supplied_evidence": false
+      },
+      "input_revision": "4ac435d8fa47dc246609e296a2b224c8590da55b",
+      "artifact": ".ai-org/artifacts/WI-0256/handoff-001-developer-to-quality_evaluator.md",
+      "created_at": "2026-09-23T10:01:59.829Z"
+    }
+  ],
+  "developer_candidate_revision": "4ac435d8fa47dc246609e296a2b224c8590da55b",
+  "lifecycle_outcome": "accepted",
+  "closeout_reasons": [],
+  "external_release_status": "not_performed"
+}

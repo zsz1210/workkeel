@@ -1,29 +1,46 @@
 {
   "schema_version": "temple.parallel-plan/v1",
-  "generated_at": "2026-09-18T01:29:02.234Z",
-  "source_fingerprint": "9b4e46bd2e74283c01a9f238d1d383a49287bf999edc620b80a0740a30d8a84e",
+  "generated_at": "2026-09-23T10:42:28.000Z",
+  "source_fingerprint": "ae005ad8c640359fd7f8a97575a25664a72fd85e34b7ad8185e2ae01f92288a2",
   "scope": {
     "mode": "all-active",
     "parent_work_item_id": null,
-    "selected_work_item_ids": []
+    "selected_work_item_ids": [
+      "WI-0258"
+    ]
   },
-  "max_workers": 1,
+  "max_workers": null,
   "summary": {
-    "selected": 0,
+    "selected": 1,
     "dispatchable": 0,
-    "active": 0,
+    "active": 1,
     "sequential": 0,
     "blocked": 0,
     "waves": 0
   },
   "waves": [],
-  "active": [],
+  "active": [
+    {
+      "work_item_id": "WI-0258",
+      "title": "Implement the Workkeel task-first lifecycle",
+      "disposition": "active",
+      "position_id": "developer",
+      "agent_id": "agent-rikku",
+      "integration_owner_agent_id": null,
+      "reasons": [],
+      "claim_id": "claim-20260923100423-76583879",
+      "principal_id": "human",
+      "branch": "codex/workkeel-reframe",
+      "worktree": ".",
+      "base_revision": "9d0f8547"
+    }
+  ],
   "sequential": [],
   "blocked": [],
   "conflicts": [],
   "execution_policy": {
     "parallel_by_default_when_safe": true,
-    "runtime_capacity_limit": 1,
+    "runtime_capacity_limit": null,
     "fallback": "Execute each wave sequentially when concurrent task dispatch is unavailable.",
     "replan_after_join": true,
     "task_creation_performed": false,
