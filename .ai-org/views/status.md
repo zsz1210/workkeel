@@ -4,8 +4,8 @@
 - Organization system version: `0.1.0-alpha.33`
 - Active Agent Identities: 5
 - Collaboration profile: `solo` (0 Human Principals, 1 active claims)
-- Parallel plan: 0 wave(s), fresh=true
-- Work items: 255 total, 2 active
+- Parallel plan: 0 wave(s), fresh=false
+- Work items: 256 total, 3 active
 - Codex tasks: 14 registered, 14 archive-ready
 - Runtime workers: 104 registered, 0 reserved, 0 active
 - Shared resources: 0 defined, 0 active reservation(s)
@@ -18,7 +18,7 @@
 - Specifications: 2 indexed, 2 approved (hybrid)
 - Tracker: `repository-only` (0 active provider(s), 0 linked Work Item(s))
 - Repository integration: `confirmed` (Develop focused changes on short-lived branches and submit them through pull requests; the maintainer owns final integration and release decisions.)
-- Attention signals: 26
+- Attention signals: 27
 
 ## Collaboration
 
@@ -37,7 +37,7 @@
 - Generated plan: `.ai-org/views/parallel-plan.json`
 - Installed: yes
 - Valid: yes
-- Fresh: yes
+- Fresh: no
 - Safe waves: 0
 - Dispatchable Work Items: 0
 - Active / sequential / blocked: 1 / 1 / 0
@@ -303,6 +303,7 @@
 | WI-0253 | Slim the test suite without weakening safety coverage | test | Quality & Evaluation Engineer | Lulu | pending | internal | 0 | gate-evidence | not-applicable | 0 | 0 | 0 | — | `b0fe9161` | 0 | 3 | 0 |
 | WI-0254 | Repair baseline test harness failures | cancelled | Engineering Manager | Mog | pending | internal | 0 | gate-evidence | not-applicable | 0 | 0 | 0 | — | `b863ee49` | 0 | 5 | 0 |
 | WI-0255 | Define Workkeel task and execution contracts | build | Developer | Rikku | pending | team-visible | 0 | gate-evidence | not-applicable | 0 | 0 | 0 | claim-20260923085932-89b9be4b | `—` | 0 | 1 | 0 |
+| WI-0256 | Qualify baseline test harness repair | intake | Engineering Manager | Mog | pending | internal | 0 | gate-evidence | not-applicable | 0 | 0 | 0 | — | `—` | 0 | 0 | 0 |
 
 ## Delivery attention
 
@@ -310,6 +311,8 @@
   - owner: No active eligible ownership claim is recorded.
 - WI-0255: awaiting-owner — The recorded owner can continue the scoped work; no attached active worker is recorded.
   - owner: No attached active runtime is recorded for this claim.
+- WI-0256: awaiting-owner — Have the eligible owner claim or resume the next scoped responsibility.
+  - owner: No active eligible ownership claim is recorded.
 
 ## Codex task registry
 
@@ -471,6 +474,7 @@
 - worker-20260915174040-464e550f is failed
 - worker-20260915175330-3e16bfe8 is failed
 - worker-20260915233053-33b568eb is failed
+- Generated parallel plan is stale; rebuild it before dispatch
 
 ## External tracker coordination
 
@@ -551,6 +555,7 @@
 
 | Time | Event | Work item | Actor |
 |---|---|---|---|
+| 2026-09-23T09:48:28.197Z | work_item_created | WI-0256 | agent-mog |
 | 2026-08-30T09:17:37.867Z | runtime_worker_reserved | WI-0026 | project-owner |
 | 2026-08-30T09:17:37.551Z | runtime_worker_reserved | WI-0025 | project-owner |
 | 2026-08-30T09:11:23.500Z | runtime_worker_reserved | WI-0025 | project-owner |
@@ -558,7 +563,6 @@
 | 2026-08-30T09:01:03.015Z | runtime_worker_reserved | WI-0026 | project-owner |
 | 2026-08-30T09:01:02.738Z | runtime_worker_reserved | WI-0025 | project-owner |
 | 2026-08-30T08:44:54.577Z | runtime_worker_reserved | WI-0025 | project-owner |
-| 2026-08-30T08:44:54.849Z | runtime_worker_reserved | WI-0026 | project-owner |
 
 ## Assignments
 
