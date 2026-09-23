@@ -1,0 +1,143 @@
+{
+  "schema_version": "temple.work-item/v1",
+  "id": "WI-0265",
+  "title": "Bounded Luna/Sol pilot and optional development router assessment",
+  "state": "build",
+  "owner_position": "developer",
+  "assigned_agent_id": "agent-rikku",
+  "created_at": "2026-09-23T17:21:00.339Z",
+  "updated_at": "2026-09-23T17:22:25.542Z",
+  "scope": [
+    "Run three matched synthetic coding tasks per model with one bounded repair each; preserve measurements and assess LiteLLM Auto as an external personal opt-in tool, never core"
+  ],
+  "acceptance_criteria": [
+    "Immutable plan before live calls, at most 12 work steps within 20 minutes, no Astra or paid API; independent checks and honest usage; pinned license/compatibility assessment and no unapproved activation"
+  ],
+  "affected_paths": [
+    "scripts/workkeel-model-pilot.mjs",
+    "test/workkeel-model-pilot.test.mjs",
+    "docs/operations/development-model-pilot.md",
+    "docs/adr",
+    ".ai-org/artifacts/WI-0265"
+  ],
+  "context_refs": [],
+  "spec_refs": [],
+  "ux_refs": [],
+  "ui_refs": [],
+  "contract_refs": [],
+  "specification_mode": "gate-evidence",
+  "ui_delivery_mode": "not-applicable",
+  "workflow_profile": "standard",
+  "risk_tier": "standard",
+  "profile_assessment": {
+    "requested_profile": "standard",
+    "effective_profile": "standard",
+    "scope_class": "ordinary",
+    "escalation_triggers": [],
+    "rationale": "Authorized bounded real subscription experiment plus optional integration assessment; retain independent review",
+    "evidence_refs": [],
+    "evaluated_at": "2026-09-23T17:21:00.327Z",
+    "escalated": false
+  },
+  "parent_work_item_id": null,
+  "tracker_visibility": "team-visible",
+  "tracker_refs": [],
+  "tracker_reconciliations": [],
+  "dependencies": [],
+  "required_disciplines": [],
+  "stage_requirements": {},
+  "base_revision": "8df740c41217a1729e671c3f15b0dfa28fa7ae6a",
+  "parallel_mode": "pending",
+  "integration_owner_agent_id": null,
+  "planned_agent_id": null,
+  "shared_contract_refs": [],
+  "contract_status": "not_required",
+  "overlap_resolution": [],
+  "claim": {
+    "id": "claim-20260923172225-468ba430",
+    "status": "active",
+    "principal_id": "human",
+    "agent_id": "agent-rikku",
+    "actor_provenance": {
+      "selection": "explicit-agent",
+      "principal_source": "explicit-principal",
+      "verification_class": "attributed",
+      "evidence_ref": null,
+      "provider_authenticated": false,
+      "externally_supplied_evidence": false
+    },
+    "position_id": "developer",
+    "base_revision": "8df740c41217a1729e671c3f15b0dfa28fa7ae6a",
+    "branch": "codex/workkeel-automation",
+    "worktree": null,
+    "claimed_at": "2026-09-23T17:22:25.542Z",
+    "released_at": null
+  },
+  "claims": [
+    {
+      "id": "claim-20260923172127-f6178064",
+      "status": "released",
+      "principal_id": "human",
+      "agent_id": "agent-mog",
+      "actor_provenance": {
+        "selection": "explicit-agent",
+        "principal_source": "explicit-principal",
+        "verification_class": "attributed",
+        "evidence_ref": null,
+        "provider_authenticated": false,
+        "externally_supplied_evidence": false
+      },
+      "position_id": "engineering_manager",
+      "base_revision": "8df740c41217a1729e671c3f15b0dfa28fa7ae6a",
+      "branch": "codex/workkeel-automation",
+      "worktree": null,
+      "claimed_at": "2026-09-23T17:21:27.282Z",
+      "released_at": "2026-09-23T17:22:23.530Z",
+      "release_reason": [
+        "Recorded bounded work order"
+      ]
+    },
+    {
+      "id": "claim-20260923172225-468ba430",
+      "status": "active",
+      "principal_id": "human",
+      "agent_id": "agent-rikku",
+      "actor_provenance": {
+        "selection": "explicit-agent",
+        "principal_source": "explicit-principal",
+        "verification_class": "attributed",
+        "evidence_ref": null,
+        "provider_authenticated": false,
+        "externally_supplied_evidence": false
+      },
+      "position_id": "developer",
+      "base_revision": "8df740c41217a1729e671c3f15b0dfa28fa7ae6a",
+      "branch": "codex/workkeel-automation",
+      "worktree": null,
+      "claimed_at": "2026-09-23T17:22:25.542Z",
+      "released_at": null
+    }
+  ],
+  "gate_evidence": {
+    "work_order": [
+      ".ai-org/artifacts/WI-0265/work-order.md"
+    ],
+    "approved_scope": [
+      ".ai-org/artifacts/WI-0265/work-order.md"
+    ],
+    "acceptance_criteria": [
+      ".ai-org/artifacts/WI-0265/work-order.md"
+    ],
+    "technical_design": [
+      ".ai-org/artifacts/WI-0265/work-order.md"
+    ],
+    "risk_review": [
+      ".ai-org/artifacts/WI-0265/work-order.md"
+    ]
+  },
+  "evidence": [
+    ".ai-org/artifacts/WI-0265/work-order.md"
+  ],
+  "unresolved": [],
+  "next_position": "quality_evaluator"
+}

@@ -3,9 +3,9 @@
 - Project ID: `temple`
 - Organization system version: `0.1.0-alpha.33`
 - Active Agent Identities: 5
-- Collaboration profile: `solo` (0 Human Principals, 0 active claims)
-- Parallel plan: 0 wave(s), fresh=true
-- Work items: 264 total, 0 active
+- Collaboration profile: `solo` (0 Human Principals, 1 active claims)
+- Parallel plan: 0 wave(s), fresh=false
+- Work items: 265 total, 1 active
 - Codex tasks: 14 registered, 14 archive-ready
 - Runtime workers: 113 registered, 0 reserved, 0 active
 - Shared resources: 0 defined, 0 active reservation(s)
@@ -18,7 +18,7 @@
 - Specifications: 2 indexed, 2 approved (hybrid)
 - Tracker: `repository-only` (0 active provider(s), 0 linked Work Item(s))
 - Repository integration: `confirmed` (Develop focused changes on short-lived branches and submit them through pull requests; the maintainer owns final integration and release decisions.)
-- Attention signals: 26
+- Attention signals: 27
 
 ## Collaboration
 
@@ -27,7 +27,7 @@
 - Human Principals: 0
 - Agent sponsorships: 0
 - Active Position memberships: 10
-- Active Work Item claims: 0
+- Active Work Item claims: 1
 - Active Human Authority Grants: 0
 - Governance recovery: `not_configured`
 - Real Collaborative validation: `not_run` (.ai-org/templates/collaborative-large-scale-test-plan.md)
@@ -37,7 +37,7 @@
 - Generated plan: `.ai-org/views/parallel-plan.json`
 - Installed: yes
 - Valid: yes
-- Fresh: yes
+- Fresh: no
 - Safe waves: 0
 - Dispatchable Work Items: 0
 - Active / sequential / blocked: 0 / 0 / 0
@@ -312,9 +312,12 @@
 | WI-0262 | Record final Workkeel local acceptance status | done | Engineering Manager | Mog | parallel | team-visible | 0 | gate-evidence | not-applicable | 0 | 0 | 0 | — | `dcd95179` | 0 | 4 | 0 |
 | WI-0263 | Clarify execution handoff and Workkeel visual guides | done | Engineering Manager | Mog | parallel | team-visible | 0 | gate-evidence | code-first | 0 | 0 | 0 | — | `7cb080b0` | 0 | 6 | 0 |
 | WI-0264 | Record per-task model usage and execution timing | done | Engineering Manager | Mog | parallel | team-visible | 0 | gate-evidence | not-applicable | 0 | 0 | 0 | — | `c901c420` | 0 | 6 | 0 |
+| WI-0265 | Bounded Luna/Sol pilot and optional development router assessment | build | Developer | Rikku | pending | team-visible | 0 | gate-evidence | not-applicable | 0 | 0 | 0 | claim-20260923172225-468ba430 | `—` | 0 | 1 | 0 |
 
 ## Delivery attention
 
+- WI-0265: awaiting-owner — The recorded owner can continue the scoped work; no attached active worker is recorded.
+  - owner: No attached active runtime is recorded for this claim.
 
 ## Codex task registry
 
@@ -485,13 +488,14 @@
 - worker-20260915174040-464e550f is failed
 - worker-20260915175330-3e16bfe8 is failed
 - worker-20260915233053-33b568eb is failed
+- Generated parallel plan is stale; rebuild it before dispatch
 
 ## External tracker coordination
 
 - Profile: `repository-only`
 - Sync granularity: `team-visible`
 - Active providers: 0
-- Team-visible Work Items: 109
+- Team-visible Work Items: 110
 - Linked Work Items: 0
 - Observed external items: 0
 - Reconciliation actions: 0
@@ -565,14 +569,14 @@
 
 | Time | Event | Work item | Actor |
 |---|---|---|---|
+| 2026-09-23T17:22:25.542Z | work_item_claimed | WI-0265 | human |
+| 2026-09-23T17:22:25.025Z | work_item_transitioned | WI-0265 | agent-tidus |
+| 2026-09-23T17:22:24.537Z | work_item_transitioned | WI-0265 | agent-yuna |
+| 2026-09-23T17:22:24.056Z | work_item_transitioned | WI-0265 | agent-mog |
+| 2026-09-23T17:22:23.530Z | work_item_claim_released | WI-0265 | human |
+| 2026-09-23T17:21:27.282Z | work_item_claimed | WI-0265 | human |
+| 2026-09-23T17:21:00.339Z | work_item_created | WI-0265 | agent-mog |
 | 2026-09-23T17:07:12.419Z | work_item_closed | WI-0264 | agent-mog |
-| 2026-09-23T17:07:12.419Z | release_gate_completed | WI-0264 | agent-mog |
-| 2026-09-23T17:06:17.117Z | work_item_claimed | WI-0264 | human |
-| 2026-09-23T17:06:16.508Z | work_item_transitioned | WI-0264 | agent-lulu |
-| 2026-09-23T17:06:15.929Z | work_item_transitioned | WI-0264 | agent-lulu |
-| 2026-09-23T17:06:15.345Z | work_item_transitioned | WI-0264 | agent-lulu |
-| 2026-09-23T17:06:14.750Z | work_item_claim_released | WI-0264 | human |
-| 2026-09-23T17:06:14.135Z | runtime_worker_status_changed | WI-0264 | agent-lulu |
 
 ## Assignments
 
