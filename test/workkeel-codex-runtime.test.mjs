@@ -16,13 +16,13 @@ async function context(t) {
     selection: { connection: { kind: "gateway", provider: "litellm", base_url: "http://localhost:4000/v1", model: "fixture-fixed", selection: "fixed", credential_env: "FIXTURE_KEY" } },
     input: { instruction: "Offline protocol fixture", previous_results: {} } };
 }
-function fixtureHost({ reroute = false, approval = false, neverComplete = false, account = "chatgpt", available = true, permissionMismatch = false, effortMismatch = false, earlyApproval = false, dirtyTerminals = false, wrongCwd = false, attention = false, delayedStart = false, hideStarted = false, onStart = () => {}, onTurn = () => {}, onStarted = () => {}, onInterrupt = () => {} } = {}) {
+function fixtureHost({ reroute = false, earlyReroute = false, approval = false, neverComplete = false, account = "chatgpt", available = true, permissionMismatch = false, effortMismatch = false, earlyApproval = false, dirtyTerminals = false, wrongCwd = false, attention = false, delayedStart = false, hideStarted = false, onStart = () => {}, onTurn = () => {}, onStarted = () => {}, onInterrupt = () => {} } = {}) {
   const source = `import readline from 'node:readline';
     const send = x => process.stdout.write(JSON.stringify(x)+'\\n');
     const reply = (id,result) => send({id,result});
     readline.createInterface({input:process.stdin}).on('line',line=>{
       const m=JSON.parse(line);
-      if(m.method==='initialize') { ${earlyApproval ? "send({id:81,method:'item/commandExecution/requestApproval',params:{}});" : ""} reply(m.id,{userAgent:'offline-fixture'}); }
+      if(m.method==='initialize') { ${earlyApproval ? "send({id:81,method:'item/commandExecution/requestApproval',params:{}});" : ""} ${earlyReroute ? "send({method:'model/rerouted',params:{toModel:'unapproved'}});" : ""} reply(m.id,{userAgent:'offline-fixture'}); }
       if(m.method==='account/read') reply(m.id,{account:{type:${JSON.stringify(account)}}});
       if(m.method==='model/list') reply(m.id,{data:${available ? "[{model:'gpt-6-luna',supportedReasoningEfforts:[{reasoningEffort:'low'}]}]" : "[]"}});
       if(m.method==='thread/start'||m.method==='thread/resume') {
@@ -116,6 +116,7 @@ test("a mismatched active permission profile blocks the turn", async t => {
 test("fatal initialization requests stop before opening a thread", async t => {
   let starts = 0;
   await assert.rejects(createCodexRuntime(fixtureHost({ earlyApproval: true, onStart: () => starts++ })).start(await context(t)), /operator attention/);
+  await assert.rejects(createCodexRuntime(fixtureHost({ earlyReroute: true, onStart: () => starts++ })).start(await context(t)), /pinned model/);
   assert.equal(starts, 0);
 });
 test("unexpected workspace settings or uncleared terminals cannot report completion", async t => {

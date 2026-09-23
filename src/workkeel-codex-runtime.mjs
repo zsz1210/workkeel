@@ -87,13 +87,15 @@ export function createCodexRuntime(host) {
       settled: new Promise(resolve => { settle = resolve; }) };
     function notification(message) {
       const p = message.params ?? {};
+      // This connection belongs to one operation. A model change is fatal even
+      // before the runtime has supplied the thread/turn identifiers.
+      if (message.method === "model/rerouted") { rejectTurn(new Error("Runtime changed the pinned model; automatic fallback is prohibited")); return; }
       if (message.method === "turn/started" && current.turnRequested && p.threadId === current.threadId) {
         if (typeof p.turn?.id !== "string" || current.turnId && current.turnId !== p.turn.id) return rejectTurn(new Error("Codex started a conflicting turn"));
         current.turnId = p.turn.id;
       }
       if (!current.turnId) { if (buffered.length >= 2000) return rejectTurn(new Error("Excessive pre-turn notifications")); buffered.push(message); return; }
       if (p.threadId !== current.threadId || p.turnId && p.turnId !== current.turnId) return;
-      if (message.method === "model/rerouted") { rejectTurn(new Error("Runtime changed the pinned model; automatic fallback is prohibited")); return; }
       if (message.method === "item/completed" && p.item?.type === "agentMessage") {
         const text = p.item.text;
         if (typeof text !== "string") return rejectTurn(new Error("Invalid Codex final message"));
@@ -179,6 +181,7 @@ export function createCodexRuntime(host) {
       current.turnId = turn.turn.id;
       for (const message of buffered.splice(0)) notification(message);
       const terminal = await completed;
+      if (firstFatal) throw firstFatal;
       if (!["completed", "failed", "interrupted"].includes(terminal.status)) throw new Error("Unknown Codex terminal status");
       let outcome = "attention";
       if (terminal.status === "completed") {
