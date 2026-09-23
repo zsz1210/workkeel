@@ -5,7 +5,7 @@
 - Active Agent Identities: 5
 - Collaboration profile: `solo` (0 Human Principals, 0 active claims)
 - Parallel plan: 0 wave(s), fresh=false
-- Work items: 254 total, 2 active
+- Work items: 254 total, 1 active
 - Codex tasks: 14 registered, 14 archive-ready
 - Runtime workers: 104 registered, 0 reserved, 0 active
 - Shared resources: 0 defined, 0 active reservation(s)
@@ -301,13 +301,11 @@
 | WI-0251 | Include reviewed closeout files in package boundary | done | Engineering Manager | Mog | pending | team-visible | 0 | gate-evidence | not-applicable | 0 | 0 | 0 | — | `41a1a4f7` | 0 | 4 | 0 |
 | WI-0252 | Integrate collaboration recovery and measured closeout | done | Engineering Manager | Mog | pending | team-visible | 0 | gate-evidence | not-applicable | 0 | 0 | 0 | — | `8f7ab5f0` | 1 | 14 | 0 |
 | WI-0253 | Slim the test suite without weakening safety coverage | test | Quality & Evaluation Engineer | Lulu | pending | internal | 0 | gate-evidence | not-applicable | 0 | 0 | 0 | — | `b0fe9161` | 0 | 3 | 0 |
-| WI-0254 | Repair baseline test harness failures | test | Quality & Evaluation Engineer | Lulu | pending | internal | 0 | gate-evidence | not-applicable | 0 | 0 | 0 | — | `b863ee49` | 0 | 4 | 0 |
+| WI-0254 | Repair baseline test harness failures | cancelled | Engineering Manager | Mog | pending | internal | 0 | gate-evidence | not-applicable | 0 | 0 | 0 | — | `b863ee49` | 0 | 5 | 0 |
 
 ## Delivery attention
 
 - WI-0253: awaiting-owner — Have the eligible owner claim or resume the next scoped responsibility.
-  - owner: No active eligible ownership claim is recorded.
-- WI-0254: awaiting-owner — Have the eligible owner claim or resume the next scoped responsibility.
   - owner: No active eligible ownership claim is recorded.
 
 ## Codex task registry
@@ -551,14 +549,14 @@
 
 | Time | Event | Work item | Actor |
 |---|---|---|---|
+| 2026-09-23T09:07:32.913Z | work_item_transitioned | WI-0254 | agent-lulu |
+| 2026-09-23T08:48:10.754Z | work_item_claimed | WI-0254 | human |
 | 2026-09-23T08:29:05.051Z | work_item_transitioned | WI-0254 | agent-rikku |
 | 2026-09-23T08:28:56.850Z | work_item_claim_released | WI-0254 | human |
 | 2026-09-23T08:28:49.439Z | handoff_created | WI-0254 | agent-rikku |
 | 2026-09-23T08:17:09.376Z | work_item_claimed | WI-0254 | human |
 | 2026-09-23T08:16:51.034Z | work_item_transitioned | WI-0254 | agent-mog |
 | 2026-09-23T08:16:12.407Z | work_item_claimed | WI-0254 | human |
-| 2026-09-23T08:15:53.862Z | work_item_coordination_configured | WI-0254 | agent-mog |
-| 2026-09-23T08:15:18.618Z | work_item_created | WI-0254 | agent-mog |
 
 ## Assignments
 
