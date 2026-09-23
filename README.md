@@ -115,7 +115,7 @@ was applied well. [Selection and outcome checks →](docs/extensions/workkeel-co
 
 ## Evidence and limits
 
-The initial automation baseline passed 1,387 offline cases and nine model-free sandbox checks.
+Latest offline verification passed 1,392 cases; the earlier automation baseline also passed nine model-free sandbox checks.
 The final subscription check failed after Luna incorrectly rejected a still-valid
 authorization; execution stopped before Sol. Automatic execution remains experimental,
 not a qualified reliable workflow or evidence of subscription savings.

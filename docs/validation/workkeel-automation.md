@@ -10,7 +10,32 @@ fast checks. This does not qualify reliable live automation. The named judgments
 and exact evidence are retained in the repository's WI-0260 review and release
 records; external publication was not performed.
 
-## Observed results
+## Latest offline follow-up
+
+The maintainer authorized an offline handoff improvement and revised visual guides
+in WI-0263. Executable candidate:
+`b6f8967c5187e8f65596f9f9518e087f72f2f18c`.
+
+- Complete verification: 135 test files, 1,392 passing test markers, exit 0.
+  Approximately 319 seconds from log creation to final output on this machine;
+  this is a diagnostic duration, not a performance benchmark.
+- Focused protocol/visual checks: 16 cases passed. The added expiry cases cover
+  future authorization, missing/invalid/expired authorization, unchanged contract
+  handoff, and expiration during initialization before a model turn.
+- Existing Console browser regression: four viewports, six views, reduced motion
+  and six attention states passed. The new explainer passed 84 scenario/layout/
+  language/theme combinations plus playback, pause, keyboard and motion checks.
+- Package boundary: 487 files. Four obsolete Mermaid sources were replaced by
+  one offline HTML explainer; original SVGs use a dependency-free generator.
+  No runtime package, third-party artwork or service was added.
+
+These are developer verification measurements; exact logs and rendered evidence
+are retained with WI-0263. The complete task contract remains model-visible;
+numeric expiry observations are separate from node work and do not grant authority.
+No additional subscription or LiteLLM call was made. Whether the revised handoff
+prevents the model's mistaken refusal is still unverified in a live run.
+
+## Initial automation results
 
 | Check | Observation | What it establishes |
 | --- | --- | --- |
