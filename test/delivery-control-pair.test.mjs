@@ -147,7 +147,7 @@ function replayFactory({ mutate, mode, calls = [], ledger = [], errors=[] } = {}
         } else {
           revision=JSON.parse(await read("DELIVERY.json")).candidate_revision;
           await read("HANDOFF.md"); await read("order.mjs"); await read("test/added.test.mjs");
-          assert.equal((await execute("git",[],"git-rev-parse",`git rev-parse ${revision}^{commit}`)).output.trim(),revision);
+          assert.equal(await g(["rev-parse",`${revision}^{commit}`]),revision);
         }
         const {exitCode}=await execute("node",[],"product-tests-all",true);
         const record={candidate_revision:revision,test_command:"node --test test/*.test.mjs",test_exit_code:exitCode,decision:stage==="build"?"delivered":exitCode===0?"accept":"reject",summary:"Synthetic fixture execution",unresolved:[]};

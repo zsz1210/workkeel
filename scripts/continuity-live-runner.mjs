@@ -51,7 +51,17 @@ export function assertInstructionOnlyRuntimes(current, previous) {
 export async function preparePreviousInstructionRuntime(bundle, target) {
   // Coordinator-owned fresh runtime: same executable code, only pinned old
   // distribution instructions. No actor sees coordinator Git or the other arm.
-  // cp with errorOnExist rejects an existing target, including a directory.
+  // Reserve the target atomically: Node's recursive cp may otherwise merge an
+  // existing directory even with errorOnExist.
+  await fs.mkdir(path.dirname(target),{recursive:true});
+  try {
+    await fs.mkdir(target);
+  } catch (error) {
+    if (error.code !== 'EEXIST') throw error;
+    const collision = new Error(`Previous-instruction runtime target already exists: ${target}`,{cause:error});
+    collision.code = 'ERR_FS_CP_EEXIST';
+    throw collision;
+  }
   await fs.cp(bundle,target,{recursive:true,errorOnExist:true,force:false});
   for(const p of instructionPaths) {
     const {stdout}=await exec('git',['show',`${previousInstructionRevision}:project-overlay/${p}`],
