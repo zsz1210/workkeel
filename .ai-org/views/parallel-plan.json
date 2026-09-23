@@ -1,7 +1,7 @@
 {
   "schema_version": "temple.parallel-plan/v1",
-  "generated_at": "2026-09-23T10:29:23.855Z",
-  "source_fingerprint": "f3bee25d08ee0f13f47d34a98e3265a2f90c49ced5ce59fc74bde75205f303f8",
+  "generated_at": "2026-09-23T10:39:57.337Z",
+  "source_fingerprint": "41f59be1f8bfba8250a2f63076a4927306a19d5e1ac3ab063d9648a06dd63ec9",
   "scope": {
     "mode": "all-active",
     "parent_work_item_id": null,
@@ -14,27 +14,13 @@
   "summary": {
     "selected": 2,
     "dispatchable": 0,
-    "active": 2,
-    "sequential": 0,
+    "active": 1,
+    "sequential": 1,
     "blocked": 0,
     "waves": 0
   },
   "waves": [],
   "active": [
-    {
-      "work_item_id": "WI-0253",
-      "title": "Slim the test suite without weakening safety coverage",
-      "disposition": "active",
-      "position_id": "developer",
-      "agent_id": "agent-rikku",
-      "integration_owner_agent_id": "agent-rikku",
-      "reasons": [],
-      "claim_id": "claim-20260923102235-9665f137",
-      "principal_id": "human",
-      "branch": "codex/fix-test-harness-baselines",
-      "worktree": "/Users/zsz1210/Documents/Codex/2026-09-23/temple-test-slimming/work/temple-test-baseline-fixes",
-      "base_revision": "6676b5a24116a31b4c13cbdbaad3880c6f36d4fe"
-    },
     {
       "work_item_id": "WI-0258",
       "title": "Implement the Workkeel task-first lifecycle",
@@ -50,7 +36,19 @@
       "base_revision": "9d0f8547"
     }
   ],
-  "sequential": [],
+  "sequential": [
+    {
+      "work_item_id": "WI-0253",
+      "title": "Slim the test suite without weakening safety coverage",
+      "disposition": "sequential",
+      "position_id": "release_manager",
+      "agent_id": "agent-mog",
+      "integration_owner_agent_id": "agent-rikku",
+      "reasons": [
+        "requested_mode_sequential"
+      ]
+    }
+  ],
   "blocked": [],
   "conflicts": [
     {
