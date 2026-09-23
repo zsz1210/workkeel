@@ -3128,6 +3128,34 @@
       "attached_at": "2026-09-23T15:54:11.408Z",
       "completed_at": "2026-09-23T15:55:13.692Z",
       "updated_at": "2026-09-23T15:55:13.692Z"
+    },
+    {
+      "id": "worker-20260923162947-cce80e55",
+      "runtime_kind": "internal-subagent",
+      "status": "completed",
+      "work_item_id": "WI-0263",
+      "position_id": "independent_qa",
+      "agent_id": "agent-lulu",
+      "principal_id": "human",
+      "claim_id": "claim-20260923162947-fd5c649a",
+      "base_revision": "7cb080b0beb31119b4906e52f8b670216b98fa33",
+      "branch": "codex/workkeel-automation",
+      "worktree": null,
+      "plan_fingerprint": "c5906b71c2205ebfff722041ca34e9fc031755d3dc14331fc68ac4bfc48db44f",
+      "plan_digest": "690ed2cc85ab3b2124447e0d4ec9b9a9034a9fcadd924df49407278c7db76be0",
+      "preparation_fingerprint": "89fb688f91e33518f867bc0998ab64a7a8ebe63ab9e08bfe25cda7e9c77b80d1",
+      "wave_id": "wave-001",
+      "runtime_id": "/root/workkeel_visual_handoff_qa",
+      "task_id": null,
+      "resource_reservation_ids": [],
+      "current_revision": "7cb080b0beb31119b4906e52f8b670216b98fa33",
+      "evidence": [
+        ".ai-org/artifacts/WI-0263/independent-review.md"
+      ],
+      "reserved_at": "2026-09-23T16:29:47.160Z",
+      "attached_at": "2026-09-23T16:30:23.899Z",
+      "completed_at": "2026-09-23T16:33:29.387Z",
+      "updated_at": "2026-09-23T16:33:29.387Z"
     }
   ]
 }
