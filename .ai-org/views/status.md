@@ -40,7 +40,7 @@
 - Fresh: no
 - Safe waves: 0
 - Dispatchable Work Items: 0
-- Active / sequential / blocked: 0 / 0 / 0
+- Active / sequential / blocked: 1 / 0 / 0
 - Next wave: none
 - Codex tasks, claims, or external actions performed by planning: no
 
@@ -312,7 +312,7 @@
 | WI-0262 | Record final Workkeel local acceptance status | done | Engineering Manager | Mog | parallel | team-visible | 0 | gate-evidence | not-applicable | 0 | 0 | 0 | — | `dcd95179` | 0 | 4 | 0 |
 | WI-0263 | Clarify execution handoff and Workkeel visual guides | done | Engineering Manager | Mog | parallel | team-visible | 0 | gate-evidence | code-first | 0 | 0 | 0 | — | `7cb080b0` | 0 | 6 | 0 |
 | WI-0264 | Record per-task model usage and execution timing | done | Engineering Manager | Mog | parallel | team-visible | 0 | gate-evidence | not-applicable | 0 | 0 | 0 | — | `c901c420` | 0 | 6 | 0 |
-| WI-0265 | Bounded Luna/Sol pilot and optional development router assessment | build | Developer | Rikku | pending | team-visible | 0 | gate-evidence | not-applicable | 0 | 0 | 0 | claim-20260923172225-468ba430 | `—` | 0 | 1 | 0 |
+| WI-0265 | Bounded Luna/Sol pilot and optional development router assessment | build | Developer | Rikku | pending | team-visible | 0 | gate-evidence | not-applicable | 0 | 0 | 0 | claim-20260923174201-a9e841c9 | `8babea09` | 0 | 4 | 0 |
 
 ## Delivery attention
 
@@ -569,14 +569,14 @@
 
 | Time | Event | Work item | Actor |
 |---|---|---|---|
+| 2026-09-23T17:42:01.434Z | work_item_claimed | WI-0265 | human |
+| 2026-09-23T17:41:36.815Z | work_item_claim_released | WI-0265 | human |
+| 2026-09-23T17:41:36.301Z | handoff_created | WI-0265 | agent-rikku |
 | 2026-09-23T17:22:25.542Z | work_item_claimed | WI-0265 | human |
 | 2026-09-23T17:22:25.025Z | work_item_transitioned | WI-0265 | agent-tidus |
 | 2026-09-23T17:22:24.537Z | work_item_transitioned | WI-0265 | agent-yuna |
 | 2026-09-23T17:22:24.056Z | work_item_transitioned | WI-0265 | agent-mog |
 | 2026-09-23T17:22:23.530Z | work_item_claim_released | WI-0265 | human |
-| 2026-09-23T17:21:27.282Z | work_item_claimed | WI-0265 | human |
-| 2026-09-23T17:21:00.339Z | work_item_created | WI-0265 | agent-mog |
-| 2026-09-23T17:07:12.419Z | work_item_closed | WI-0264 | agent-mog |
 
 ## Assignments
 

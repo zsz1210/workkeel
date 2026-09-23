@@ -37,7 +37,7 @@ included. Account-wide remaining quota moved from 45% during planning to 43% aft
 the stop; this is not attributable solely to the pilot.
 
 The original live candidate was `d45b4eec95665049a1c1fb7e1308cc01255e3cf7`.
-The machine-readable [results](../../.ai-org/artifacts/WI-0265/pilot-results.json)
+The machine-readable [results](pilot-results.json)
 bind source hashes, original checks, model confirmations and raw report hashes.
 Runtime-confirmed models are not independently observed backend models.
 
@@ -62,7 +62,7 @@ to spend again; obtain a new bounded work order first.
 
 ## LiteLLM option
 
-[ADR-0074](../adr/0074-external-development-model-selection.md) keeps this outside
+The [development ADR](external-development-model-selection.md) keeps this outside
 the framework. The personal prototype uses LiteLLM 1.101.0's **local heuristic
 classifier**, then offers native Codex as the executor. It is not a LiteLLM proxy
 and does not automatically switch models inside the current Codex app task.

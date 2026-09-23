@@ -1,4 +1,4 @@
-# ADR-0074: Keep personal development model selection external
+# Development ADR: Keep personal model selection external
 
 Status: accepted for bounded local evaluation; not a framework runtime integration.
 

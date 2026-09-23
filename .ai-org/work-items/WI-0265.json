@@ -6,7 +6,7 @@
   "owner_position": "developer",
   "assigned_agent_id": "agent-rikku",
   "created_at": "2026-09-23T17:21:00.339Z",
-  "updated_at": "2026-09-23T17:22:25.542Z",
+  "updated_at": "2026-09-23T17:42:01.434Z",
   "scope": [
     "Run three matched synthetic coding tasks per model with one bounded repair each; preserve measurements and assess LiteLLM Auto as an external personal opt-in tool, never core"
   ],
@@ -46,7 +46,7 @@
   "dependencies": [],
   "required_disciplines": [],
   "stage_requirements": {},
-  "base_revision": "8df740c41217a1729e671c3f15b0dfa28fa7ae6a",
+  "base_revision": "8babea0956a0c71eeb48935c97093b9cf5627c71",
   "parallel_mode": "pending",
   "integration_owner_agent_id": null,
   "planned_agent_id": null,
@@ -54,7 +54,7 @@
   "contract_status": "not_required",
   "overlap_resolution": [],
   "claim": {
-    "id": "claim-20260923172225-468ba430",
+    "id": "claim-20260923174201-a9e841c9",
     "status": "active",
     "principal_id": "human",
     "agent_id": "agent-rikku",
@@ -67,10 +67,10 @@
       "externally_supplied_evidence": false
     },
     "position_id": "developer",
-    "base_revision": "8df740c41217a1729e671c3f15b0dfa28fa7ae6a",
+    "base_revision": "8babea0956a0c71eeb48935c97093b9cf5627c71",
     "branch": "codex/workkeel-automation",
     "worktree": null,
-    "claimed_at": "2026-09-23T17:22:25.542Z",
+    "claimed_at": "2026-09-23T17:42:01.434Z",
     "released_at": null
   },
   "claims": [
@@ -99,7 +99,7 @@
     },
     {
       "id": "claim-20260923172225-468ba430",
-      "status": "active",
+      "status": "released",
       "principal_id": "human",
       "agent_id": "agent-rikku",
       "actor_provenance": {
@@ -115,6 +115,29 @@
       "branch": "codex/workkeel-automation",
       "worktree": null,
       "claimed_at": "2026-09-23T17:22:25.542Z",
+      "released_at": "2026-09-23T17:41:36.815Z",
+      "release_reason": [
+        "Handoff exact candidate for separate review; final full verification running"
+      ]
+    },
+    {
+      "id": "claim-20260923174201-a9e841c9",
+      "status": "active",
+      "principal_id": "human",
+      "agent_id": "agent-rikku",
+      "actor_provenance": {
+        "selection": "explicit-agent",
+        "principal_source": "explicit-principal",
+        "verification_class": "attributed",
+        "evidence_ref": null,
+        "provider_authenticated": false,
+        "externally_supplied_evidence": false
+      },
+      "position_id": "developer",
+      "base_revision": "8babea0956a0c71eeb48935c97093b9cf5627c71",
+      "branch": "codex/workkeel-automation",
+      "worktree": null,
+      "claimed_at": "2026-09-23T17:42:01.434Z",
       "released_at": null
     }
   ],
@@ -133,11 +156,41 @@
     ],
     "risk_review": [
       ".ai-org/artifacts/WI-0265/work-order.md"
+    ],
+    "developer_handoff": [
+      ".ai-org/artifacts/WI-0265/handoff-001-developer-to-quality_evaluator.md"
+    ],
+    "developer_evidence": [
+      ".ai-org/artifacts/WI-0265/developer-verification.md",
+      ".ai-org/artifacts/WI-0265/pilot-results.json"
     ]
   },
   "evidence": [
-    ".ai-org/artifacts/WI-0265/work-order.md"
+    ".ai-org/artifacts/WI-0265/work-order.md",
+    ".ai-org/artifacts/WI-0265/handoff-001-developer-to-quality_evaluator.md",
+    ".ai-org/artifacts/WI-0265/developer-verification.md",
+    ".ai-org/artifacts/WI-0265/pilot-results.json"
   ],
   "unresolved": [],
-  "next_position": "quality_evaluator"
+  "next_position": "quality_evaluator",
+  "handoffs": [
+    {
+      "from_position": "developer",
+      "to_position": "quality_evaluator",
+      "actor": "agent-rikku",
+      "principal_id": "human",
+      "actor_provenance": {
+        "selection": "active-claim",
+        "principal_source": "active-claim",
+        "verification_class": "attributed",
+        "evidence_ref": null,
+        "provider_authenticated": false,
+        "externally_supplied_evidence": false
+      },
+      "input_revision": "8babea0956a0c71eeb48935c97093b9cf5627c71",
+      "artifact": ".ai-org/artifacts/WI-0265/handoff-001-developer-to-quality_evaluator.md",
+      "created_at": "2026-09-23T17:41:36.301Z"
+    }
+  ],
+  "developer_candidate_revision": "8babea0956a0c71eeb48935c97093b9cf5627c71"
 }

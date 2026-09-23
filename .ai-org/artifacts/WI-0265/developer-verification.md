@@ -2,7 +2,7 @@
 
 ## Candidate scope
 
-New manual paired-model experiment harness and five offline tests; ADR-0074 and
+New manual paired-model experiment harness and five offline tests; a development ADR and
 focused results guide. No `src/`, production dependency, model default, console,
 credential or published package behavior changed. Personal optional router lives
 outside the repository under the parent workspace's `work/development-router`.
@@ -37,7 +37,7 @@ fixture changes; its completion record names the final tested revision.
 
 LiteLLM 1.101.0 installed only in sibling `litellm-dev-1.101.0`, 55 exact wheel
 versions and hashes in `litellm-dev-requirements.txt`; installation report and logs
-retained. macOS ARM64 LiteLLM wheel hash matches ADR-0074. `pip check`: no broken
+retained. macOS ARM64 LiteLLM wheel hash matches the development ADR. `pip check`: no broken
 requirements. Installed package license notices retained, no source vendoring.
 Transitive licenses include MIT, BSD, Apache, PSF, CNRI and MPL (certifi/tqdm);
 this is local installation, not redistribution. Do not claim every dependency
@@ -55,6 +55,12 @@ explicit mechanical SIMPLE tasks to Luna. Its limitations remain disclosed.
 The optional interactive launcher is unexercised live. It previews first, requires
 a terminal and ChatGPT login, does not edit global settings and excludes API-key
 environment inheritance. No automatic current-task model change is claimed.
+
+The second verification attempt failed before tests because two new internal
+experiment documents exceeded the reviewed npm file-count boundary. They now
+live with this Work Item's evidence instead of the distributable documentation.
+No package-count/size guard was raised or disabled. The third full verification
+checks the corrected final candidate. The failed log remains preserved.
 
 ## Learning and next owner
 
