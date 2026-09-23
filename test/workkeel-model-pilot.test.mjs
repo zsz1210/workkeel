@@ -7,7 +7,7 @@ import {cases,evaluate,assertBudget,prepare,runPair,limits} from "../scripts/wor
 
 const solutions=[
   `export function mergeIntervals(a){if(!Array.isArray(a)||a.some(p=>!Array.isArray(p)||p.length!==2||p.some(n=>typeof n!=='number'||!Number.isFinite(n))||p[0]>p[1]))throw new TypeError();const out=[];for(const p of a.map(p=>[...p]).sort((a,b)=>a[0]-b[0])){const last=out.at(-1);if(last&&p[0]<=last[1])last[1]=Math.max(last[1],p[1]);else out.push(p)}return out}`,
-  `export function readyTasks(tasks,state,limit){const completed=new Set(state.completed),excluded=new Set([...state.completed,...state.running,...state.failed]);return tasks.filter(t=>!excluded.has(t.id)&&t.dependencies.every(id=>completed.has(id))).slice(0,limit).map(t=>t.id)}`,
+  `export function readyTasks(tasks,state,limit){const known=new Set(tasks.map(t=>t.id)),completed=new Set(state.completed),excluded=new Set([...state.completed,...state.running,...state.failed]);return tasks.filter(t=>!excluded.has(t.id)&&t.dependencies.every(id=>known.has(id)&&completed.has(id))).slice(0,limit).map(t=>t.id)}`,
   `export function summarizeUsage(records){return Object.fromEntries(['input_tokens','output_tokens'].map(k=>{const values=records.map(r=>r[k]).filter(v=>Number.isSafeInteger(v)&&v>=0),sum=values.reduce((a,b)=>a+b,0),safe=Number.isSafeInteger(sum),complete=safe&&values.length===records.length;return [k,{observed:values.length,complete,total:complete?sum:null,known_subtotal:safe&&(values.length||!records.length)?sum:null}]}))}`
 ];
 
@@ -21,6 +21,10 @@ test("evaluator rejects imports and bounded infinite code",()=>{
   assert.equal(evaluate("import fs from 'node:fs';",cases[0]).pass,false);
   assert.equal(evaluate("while(true){}",cases[0]).pass,false);
   assert.equal(evaluate("process.exit(0)",cases[0]).pass,false);
+});
+test("dependency oracle distinguishes known completed tasks from absent dependency IDs",()=>{
+  const unsafe=solutions[1].replace("known.has(id)&&","");
+  assert.deepEqual(evaluate(unsafe,cases[1]).failed,["completed but absent"]);
 });
 test("pilot has hard step/time and conservative quota brakes, not a token-to-dollar conversion",()=>{
   const base={steps:0,startedAt:1000,now:1000,remaining:45};
