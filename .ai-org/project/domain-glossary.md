@@ -332,6 +332,20 @@ Project-owned vocabulary for product decisions, implementation, tests, and hando
 
 ## Unresolved terminology
 
+## Task-first canonical record
+
+- Status: implemented in WI-0258, pending candidate qualification
+- Bounded context: Opt-in Workkeel project lifecycle
+- Definition: A `workkeel.work-item/v1` record in the existing Work Item store, with an immutable approved contract and separate versioned claim, delivery, review, acceptance and append-only operation history.
+- Examples: A native task completed by an attributed Agent and a distinct registered reviewer without company Positions.
+- Non-examples: A sandbox, authenticated human identity, model turn completion, external publication, or automatic conversion of legacy authority.
+- Invariants: Exact candidate and evidence bindings; explicit approving Principal; no silent claim takeover; preserved failed attempts; no generic model-skill catalogue. Host execution boundaries remain the host's responsibility.
+- Owner or authoritative source: WI-0258, ADR-0072 and `src/workkeel-tasks.mjs`.
+- Related terms: Workkeel task contract; Agent Identity; Human Principal; model connection.
+- Last confirmed: 2026-09-23
+
+## Remaining migration terminology
+
 | Conflict | Affected contexts | Decision owner | Evidence needed | Revisit trigger |
 |---|---|---|---|---|
 | Mapping existing Position-based lifecycle ownership and review gates into task-level actor/approval contracts | Work Items, init, actor selection, workflow, Doctor and adapters | Human Principal and migration design owner | Reviewed writer migration, compatibility fixtures and exact-revision independent QA | Follow-up lifecycle migration after WI-0255 |

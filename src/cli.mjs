@@ -3296,6 +3296,11 @@ async function dispatch(argv) {
     console.log(TEMPLATE_VERSION);
     return 0;
   }
+  // A migrated project must never fall through to Position-based writers.
+  const { existsEntry } = await import("./workkeel-project.mjs");
+  if (await existsEntry(path.resolve(parsed.target ?? "."), "workkeel.lock")) {
+    throw new Error("This project uses Workkeel task-first mode; use its pinned workkeelw.mjs launcher");
+  }
   if (parsed.command === "chamber") {
     console.log(CHAMBER);
     return 0;

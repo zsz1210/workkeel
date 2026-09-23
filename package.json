@@ -24,6 +24,7 @@
     "THIRD_PARTY_NOTICES.md"
   ],
   "bin": {
+    "workkeel": "./bin/workkeel.mjs",
     "temple": "./bin/temple.mjs"
   },
   "engines": {

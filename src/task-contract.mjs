@@ -145,7 +145,7 @@ export function validateTaskContract(document, { now = new Date() } = {}) {
 }
 
 /** Bounded input reader: no traversal, symlinks, devices or oversized JSON. */
-export async function readTaskContractInput(target, source) {
+export async function readTaskFile(target, source) {
   if (!repositoryPath(source)) throw new Error("Contract input must be a normalized repository-relative file path");
   const root = await fs.realpath(target);
   let current = root;
@@ -176,10 +176,15 @@ export async function readTaskContractInput(target, source) {
     let content;
     try { content = new TextDecoder("utf-8", { fatal: true }).decode(buffer.subarray(0, length)); }
     catch { throw new Error("Contract input is not valid UTF-8"); }
-    let document;
-    try { document = JSON.parse(content); } catch { throw new Error("Contract input is not valid JSON"); }
-    return { document, digest: sha256(content) };
+    return { content, digest: sha256(content) };
   } finally { await file.close(); }
+}
+
+export async function readTaskContractInput(target, source) {
+  const { content, digest } = await readTaskFile(target, source);
+  let document;
+  try { document = JSON.parse(content); } catch { throw new Error("Contract input is not valid JSON"); }
+  return { document, digest };
 }
 
 /** Project legacy data without converting scope, roles or assignment into grants. */

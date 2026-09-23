@@ -1,5 +1,7 @@
 # Architecture Decision Records
 
+- [ADR-0072: Task-first lifecycle without company Positions](0072-task-first-lifecycle.md)
+
 - [ADR-0066: Demand-driven Learning review coverage](0066-demand-driven-learning-review-coverage.md)
 
 - [ADR-0065: Shared autonomous execution with preserved risk contracts](0065-unified-autonomous-delivery.md)
