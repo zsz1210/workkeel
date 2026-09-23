@@ -2,11 +2,11 @@
   "schema_version": "temple.work-item/v1",
   "id": "WI-0253",
   "title": "Slim the test suite without weakening safety coverage",
-  "state": "build",
-  "owner_position": "developer",
-  "assigned_agent_id": "agent-rikku",
+  "state": "test",
+  "owner_position": "quality_evaluator",
+  "assigned_agent_id": "agent-lulu",
   "created_at": "2026-09-23T07:07:40.621Z",
-  "updated_at": "2026-09-23T07:10:21.834Z",
+  "updated_at": "2026-09-23T07:55:31.387Z",
   "scope": [
     "Evaluate the current test inventory, remove or merge only evidence-backed duplication, reduce routine execution time and success-output volume, and preserve regression, authority, recovery, security, failure diagnostics, and full release verification boundaries."
   ],
@@ -57,7 +57,7 @@
   "overlap_resolution": [],
   "claim": {
     "id": "claim-20260923071021-2919ade6",
-    "status": "active",
+    "status": "released",
     "principal_id": "human",
     "agent_id": "agent-rikku",
     "actor_provenance": {
@@ -73,7 +73,10 @@
     "branch": "codex/test-suite-slimming",
     "worktree": null,
     "claimed_at": "2026-09-23T07:10:21.834Z",
-    "released_at": null
+    "released_at": "2026-09-23T07:55:30.881Z",
+    "release_reason": [
+      "Behavioral candidate b0fe9161f654a17aaeefd53373770249efee0ceb and Developer evidence handed to Quality Evaluator"
+    ]
   },
   "claims": [
     {
@@ -101,7 +104,7 @@
     },
     {
       "id": "claim-20260923071021-2919ade6",
-      "status": "active",
+      "status": "released",
       "principal_id": "human",
       "agent_id": "agent-rikku",
       "actor_provenance": {
@@ -117,7 +120,10 @@
       "branch": "codex/test-suite-slimming",
       "worktree": null,
       "claimed_at": "2026-09-23T07:10:21.834Z",
-      "released_at": null
+      "released_at": "2026-09-23T07:55:30.881Z",
+      "release_reason": [
+        "Behavioral candidate b0fe9161f654a17aaeefd53373770249efee0ceb and Developer evidence handed to Quality Evaluator"
+      ]
     }
   ],
   "gate_evidence": {
@@ -135,11 +141,40 @@
     ],
     "risk_review": [
       ".ai-org/artifacts/WI-0253/design.md"
+    ],
+    "developer_handoff": [
+      ".ai-org/artifacts/WI-0253/handoff-001-developer-to-quality_evaluator.md"
+    ],
+    "developer_evidence": [
+      ".ai-org/artifacts/WI-0253/developer-evidence.md",
+      ".ai-org/artifacts/WI-0253/design.md"
     ]
   },
   "evidence": [
-    ".ai-org/artifacts/WI-0253/design.md"
+    ".ai-org/artifacts/WI-0253/design.md",
+    ".ai-org/artifacts/WI-0253/handoff-001-developer-to-quality_evaluator.md",
+    ".ai-org/artifacts/WI-0253/developer-evidence.md"
   ],
   "unresolved": [],
-  "next_position": "quality_evaluator"
+  "next_position": "quality_evaluator",
+  "handoffs": [
+    {
+      "from_position": "developer",
+      "to_position": "quality_evaluator",
+      "actor": "agent-rikku",
+      "principal_id": "human",
+      "actor_provenance": {
+        "selection": "active-claim",
+        "principal_source": "active-claim",
+        "verification_class": "attributed",
+        "evidence_ref": null,
+        "provider_authenticated": false,
+        "externally_supplied_evidence": false
+      },
+      "input_revision": "b0fe9161f654a17aaeefd53373770249efee0ceb",
+      "artifact": ".ai-org/artifacts/WI-0253/handoff-001-developer-to-quality_evaluator.md",
+      "created_at": "2026-09-23T07:55:15.291Z"
+    }
+  ],
+  "developer_candidate_revision": "b0fe9161f654a17aaeefd53373770249efee0ceb"
 }
