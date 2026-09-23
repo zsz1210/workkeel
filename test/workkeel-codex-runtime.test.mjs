@@ -9,8 +9,10 @@ async function context(t) {
   const target = await fs.mkdtemp(path.join(os.tmpdir(), "workkeel-codex-"));
   t.after(() => fs.rm(target, { recursive: true, force: true }));
   await fs.mkdir(path.join(target, "src"));
+  await fs.writeFile(path.join(target, "approval.md"), "Synthetic offline approval");
   return { target, operation_id: "run:node", run_id: "run", conversation_id: null,
     contract: { execution: { runtime: { adapter_id: "codex-app-server", required_features: [] } },
+      authorization: { approval_ref: "approval.md", expires_at: null, operations: ["read", "write", "execute"] },
       environment: { cwd: ".", read_paths: ["src"], write_paths: ["src"], tools: ["shell"], external_actions: [], data: { model_access: "approved-connection" } } },
     policy: { headroom: { mode: "off" }, limits: { timeout_ms: 3000, max_cost_usd: null } },
     selection: { connection: { kind: "gateway", provider: "litellm", base_url: "http://localhost:4000/v1", model: "fixture-fixed", selection: "fixed", credential_env: "FIXTURE_KEY" } },
@@ -38,7 +40,7 @@ function fixtureHost({ reroute = false, earlyReroute = false, approval = false, 
       if(m.method==='turn/start') {
         if(!m.params.permissions.startsWith('workkeel-')||m.params.sandboxPolicy) process.exit(3);
         if(m.params.outputSchema?.additionalProperties!==false) process.exit(5);
-        send({method:'fixture/turn',params:{}});
+        send({method:'fixture/turn',params:m.params});
         ${hideStarted ? "" : "send({method:'turn/started',params:{threadId:'thread-one',turn:{id:'turn-one',status:'inProgress'}}});"}
         ${delayedStart ? "setTimeout(()=>reply(m.id,{turn:{id:'turn-one',status:'inProgress'}}),1000);" : "reply(m.id,{turn:{id:'turn-one',status:'inProgress'}});"}
         ${approval ? "send({id:80,method:'item/commandExecution/requestApproval',params:{}});" : ""}
@@ -55,7 +57,7 @@ function fixtureHost({ reroute = false, earlyReroute = false, approval = false, 
   const connect = host.connect;
   host.connect = options => connect({ ...options, onNotification: message => {
     if (message.method === "fixture/started") onStart();
-    else if (message.method === "fixture/turn") onTurn();
+    else if (message.method === "fixture/turn") onTurn(message.params);
     else if (message.method === "fixture/interrupt") onInterrupt();
     else { options.onNotification(message); if (message.method === "turn/started") onStarted(); }
   } });
@@ -136,6 +138,45 @@ test("explicit descendants cannot override protected authority or runner-state p
 test("a completed provider turn with an attention result is a failed workflow step", async t => {
   const result = await createCodexRuntime(fixtureHost({ attention: true })).start(await context(t));
   assert.equal(result.status, "failed"); assert.equal(result.outcome, "attention");
+});
+
+test("dispatch separates numeric authorization observation from unchanged task and work", async t => {
+  const c = await context(t);
+  c.contract.authorization.expires_at = new Date(Date.now() + 600000).toISOString();
+  const original = structuredClone(c.contract);
+  let sent;
+  await createCodexRuntime(fixtureHost({ onTurn: params => { sent = JSON.parse(params.input[0].text); } })).start(c);
+  assert.deepEqual(sent.task, original); assert.deepEqual(c.contract, original);
+  assert.deepEqual(sent.work, c.input);
+  const check = sent.execution_context.authorization_check;
+  assert.equal(check.expiry_status, "valid_at_dispatch");
+  assert.equal(check.expires_at_utc, original.authorization.expires_at);
+  assert.ok(Date.parse(check.checked_at_utc) < Date.parse(check.expires_at_utc));
+  assert.equal(check.checked_at_utc, sent.execution_context.started_at_utc);
+  assert.match(check.scope, /does not grant permissions/);
+});
+
+test("invalid or expired authorization blocks both start and resume before connection", async t => {
+  for (const authority of [null, { approval_ref: "approval.md" }, { approval_ref: "approval.md", expires_at: "bad" },
+    { approval_ref: "approval.md", expires_at: new Date(Date.now() - 1000).toISOString() }]) {
+    const c = await context(t); c.contract.authorization = authority;
+    let connects = 0;
+    const runtime = createCodexRuntime({ assertCompatible: async () => {}, connect: () => { connects++; } });
+    await assert.rejects(runtime.start(c), /authorization/);
+    await assert.rejects(runtime.resume(c), /authorization/);
+    assert.equal(connects, 0);
+  }
+});
+
+test("authorization expiring during initialization never starts a model turn", async t => {
+  const c = await context(t); let turns = 0;
+  const host = fixtureHost({ onTurn: () => turns++ });
+  c.contract.authorization.expires_at = new Date(Date.now() + 1000).toISOString();
+  host.assertConnected = async () => {
+    await new Promise(resolve => setTimeout(resolve, Math.max(0, Date.parse(c.contract.authorization.expires_at) - Date.now() + 5)));
+  };
+  await assert.rejects(createCodexRuntime(host).start(c), /authorization expired/);
+  assert.equal(turns, 0);
 });
 test("cancellation binds early turn notifications and preserves unknown dispatch uncertainty", async t => {
   for (const hideStarted of [false, true]) {

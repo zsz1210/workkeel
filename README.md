@@ -35,6 +35,11 @@ work around it; it is not an application framework or a replacement model.
   <img src="docs/assets/workkeel-workflow.svg" alt="Approve goal and boundaries, plan steps and models, execute, review the exact candidate, then accept; failed review returns to implementation.">
 </picture>
 
+Want to see the states move? Download or open
+[`workkeel-flow.html`](docs/assets/workkeel-flow.html) from your clone in a browser.
+Play, pause or step through approval, rework and interruptions. It works offline;
+it is an explanation, not live telemetry. GitHub displays the HTML source only.
+
 For example: inspect a cart-total bug with Luna, pause for the approved approach,
 then implement and test with Sol. Preserve evidence, hand off the candidate, and
 have a different Agent review it. A graph finishing is not approval, acceptance
@@ -64,6 +69,24 @@ The experimental profile currently targets macOS and a pinned Codex version; no 
 API key or LiteLLM server is required. It selects models for Workkeel-launched
 steps, not existing desktop conversations or your global model default.
 
+## Defaults, options and support
+
+| Capability | Default | Available support and boundary |
+| --- | --- | --- |
+| Task coordination | Core / on | Repository task contract, claims, handoffs and exact-candidate review; no server required |
+| Coding agent | Your existing agent | Codex, Claude Code or another instruction-following agent; native use does not select its model |
+| Graph engine | Off / opt-in | LangGraph packages plus an approved workflow; sequences, branches, direct joins and checkpoints |
+| Automatic model selection | Off / opt-in | Workkeel policy: node override → matching rule → approved default; no classifier model call |
+| Codex monthly subscription | Opt-in / experimental | Existing ChatGPT login; macOS and pinned Codex host; final live qualification failed |
+| LiteLLM gateway | Off / optional | Fixed approved connection only; no bundled server; live qualification pending |
+| LiteLLM Auto Router | Not integrated | Distinct from Workkeel policy routing; not enabled by the gateway option |
+| Headroom | Off | Lossless views via a host-owned integration; no native Codex tool-output interception |
+| Console / observer | Optional | Existing local observation surface; new Workkeel task/graph dashboard integration is not implemented |
+
+There is no universal Luna/Sol/Astra default: a native agent keeps its own setting;
+an automatic workflow must supply its approved policy. No macOS app or mandatory
+background daemon is installed. See [runtime setup and limits](docs/operations/workkeel-workflows.md).
+
 ## Architecture
 
 <picture>
@@ -92,7 +115,7 @@ was applied well. [Selection and outcome checks →](docs/extensions/workkeel-co
 
 ## Evidence and limits
 
-Offline verification passed 1,387 cases, with nine model-free sandbox checks.
+The initial automation baseline passed 1,387 offline cases and nine model-free sandbox checks.
 The final subscription check failed after Luna incorrectly rejected a still-valid
 authorization; execution stopped before Sol. Automatic execution remains experimental,
 not a qualified reliable workflow or evidence of subscription savings.

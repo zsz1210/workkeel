@@ -6,6 +6,18 @@ import path from "node:path";
 import crypto from "node:crypto";
 import { readTaskFile } from "./task-contract.mjs";
 
+// A point-in-time observation, never a replacement grant or task-store update.
+function authorizationSnapshot(contract, now = new Date()) {
+  const authority = contract.authorization;
+  if (!authority || typeof authority.approval_ref !== "string" || !authority.approval_ref.trim()) throw new Error("Codex dispatch requires task authorization");
+  const expires = authority.expires_at;
+  if (expires !== null && (typeof expires !== "string" || !Number.isFinite(Date.parse(expires)))) throw new Error("Invalid task authorization expiry");
+  if (expires !== null && Date.parse(expires) <= now.getTime()) throw new Error("Task authorization expired before Codex dispatch");
+  return { expiry_status: "valid_at_dispatch", checked_at_utc: now.toISOString(), expires_at_utc: expires,
+    approval_ref: authority.approval_ref, authority_source: "task.authorization",
+    scope: "Expiry check only; does not grant permissions, extend expiry or accept results." };
+}
+
 export function codexPermissionProfileArgs({ id, profile }) {
   if (!/^workkeel-[a-f0-9-]{36}$/.test(id)) throw new Error("Invalid generated Codex permission profile ID");
   const toml = value => value !== null && typeof value === "object" ? `{${Object.entries(value).map(([key, entry]) => `${JSON.stringify(key)}=${toml(entry)}`).join(",")}}` : JSON.stringify(value);
@@ -71,6 +83,7 @@ export function createCodexRuntime(host) {
     await current.settled;
   }
   async function dispatch(context, resume) {
+    authorizationSnapshot(context.contract);
     await assertCompatible(context);
     if (context.signal?.aborted) throw new Error("Codex operation was cancelled before dispatch");
     if (active.has(context.operation_id)) throw new Error("Duplicate active runtime operation");
@@ -152,7 +165,7 @@ export function createCodexRuntime(host) {
       const started = await request(resume ? "thread/resume" : "thread/start", {
         ...parameters, ...(resume ? { threadId: context.conversation_id } : { allowProviderModelFallback: false }), cwd,
         approvalPolicy: "never", permissions,
-        developerInstructions: "Follow the approved Workkeel task contract. The coordinator already holds the task claim and owns lifecycle changes; do not create, claim, review or close tasks yourself. execution_context.started_at_utc is the dispatch clock; use the actual UTC clock, not a date-only header, when checking expiration. Automatic project-instruction and Skill discovery may be disabled: before performing the task, read WORKKEEL.md and AGENTS.md when present, applicable nested AGENTS.md files, every Skill named by task.skills, and their required references. Also match other available project Skills to the task; do not read the entire catalog. If required material is unavailable within approved read paths, stop and report it instead of ignoring it. Apply selected procedures and verify outcomes; report actual Skill use and limits. Do not launch background or detached jobs. Workflow completion is not independent acceptance. Do not expand permissions or change models.",
+        developerInstructions: "Perform work within task, the complete approved Workkeel contract. The coordinator owns task claims and lifecycle; do not create, claim, review or close tasks yourself. execution_context.authorization_check records the adapter's numeric UTC expiry check immediately before this dispatch. It is a point-in-time observation, not new authority. Do not infer expiry from a date-only session header or re-plan coordinator administration as part of work. The original task.authorization and environment remain binding; stop for actual expiry, conflicting scope or missing authority, using the actual UTC clock when needed. Automatic instruction and Skill discovery may be disabled: first read WORKKEEL.md and AGENTS.md when present, applicable nested AGENTS.md, every Skill named by task.skills and required references. Match other available project Skills to the task without reading the whole catalog. If required material is unavailable within approved read paths, return attention. Apply procedures and verify outcomes; report actual Skill use and limits. Do not launch background or detached jobs. Workflow completion is not independent acceptance. Do not expand permissions or change models.",
         config: { ...parameters.config, web_search: "disabled", allow_login_shell: false,
           permissions: { [permissions]: profile }, default_permissions: permissions }
       });
@@ -168,13 +181,16 @@ export function createCodexRuntime(host) {
           !resume && (!Array.isArray(started.thread.turns) || started.thread.turns.length)) throw new Error("Codex thread identity, permissions or selected connection differs from the request");
       const existingTerminals = await request("thread/backgroundTerminals/list", { threadId: current.threadId });
       if (!Array.isArray(existingTerminals.data) || existingTerminals.data.length || existingTerminals.nextCursor) throw new Error("Codex has unexpected background terminals; recovery requires inspection");
+      // Initialization can outlive the approval. Recheck before any model work.
+      const authorizationCheck = authorizationSnapshot(context.contract);
       current.turnRequested = true;
       const turn = await request("turn/start", { threadId: current.threadId, cwd, approvalPolicy: "never",
         permissions,
         outputSchema: { type: "object", properties: { outcome: { type: "string", enum: ["done", "attention"] }, output: { type: "string" } }, required: ["outcome", "output"], additionalProperties: false },
         input: [{ type: "text", text: JSON.stringify({ task: context.contract, work: context.input,
-          execution_context: { started_at_utc: new Date().toISOString(), lifecycle_owner: "workkeel-coordinator",
-            result_rule: "Return outcome done only when the requested work was performed; refusal, missing authority/material or incomplete work requires attention. Put the requested result text, not progress commentary, in output. Never treat a local date/time as UTC; use the actual UTC clock when checking expiration." } }) }],
+          execution_context: { started_at_utc: authorizationCheck.checked_at_utc, lifecycle_owner: "workkeel-coordinator",
+            authorization_check: authorizationCheck,
+            result_rule: "Execute work within task; do not repeat coordinator lifecycle work. Return done only when requested work was performed. Refusal, missing authority/material, a scope conflict or incomplete work requires attention. Put the requested result text, not progress commentary, in output." } }) }],
         ...(parameters.model ? { model: parameters.model } : {}),
         ...(context.selection.connection.effort ? { effort: context.selection.connection.effort } : {}) });
       if (typeof turn.turn?.id !== "string" || current.turnId && current.turnId !== turn.turn.id) throw new Error("Codex did not return the matching turn ID");

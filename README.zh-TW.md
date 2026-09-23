@@ -32,6 +32,10 @@ Coding runtime 仍負責寫程式的迴圈與工具。Workkeel 協調周邊工�
   <img src="docs/assets/workkeel-workflow.svg" alt="核准目標與邊界，規劃步驟及模型，執行後審查確切版本，再接受成果；審查不通過則回到實作。">
 </picture>
 
+想看狀態怎麼移動？將 [`workkeel-flow.html`](docs/assets/workkeel-flow.html) 下載，或從 clone
+的資料夾用瀏覽器開啟，選「繁體中文」即可播放、暫停與逐步觀看核准、返工、中斷。
+完全離線，不是即時監控；GitHub 的檔案頁只顯示原始碼。
+
 例如：先用 Luna 檢查購物車計算錯誤，暫停等待方案核准，再用 Sol 實作與測試。
 保留證據，交接候選版本，交由不同 Agent 審查。Graph 跑完不等於核准、驗收或部署。
 [完整流程指南 →](docs/operations/workkeel-workflows.md)
@@ -56,6 +60,23 @@ node bin/workkeel.mjs help
 再依照 [Codex 訂閱設定](docs/operations/workkeel-workflows.md#choose-how-to-run)操作。
 目前的實驗性設定限定 macOS 與指定 Codex 版本，不需要額外 API key 或 LiteLLM 伺服器。
 選模適用於 Workkeel 啟動的步驟，不會更動既有桌面對話或全域預設模型。
+
+## 預設、選配與支援範圍
+
+| 功能 | 預設 | 支援與限制 |
+| --- | --- | --- |
+| 任務協調 | 核心／啟用 | 儲存庫中的任務契約、認領、交接與確切版本審查；不需要伺服器 |
+| Coding Agent | 使用既有 Agent | Codex、Claude Code 或其他能遵循指令的 Agent；原生使用不會替它選模型 |
+| Graph 引擎 | 關閉／選配 | 安裝 LangGraph 依賴並核准流程；支援順序、分支、直接匯合與檢查點 |
+| 自動選模 | 關閉／選配 | Workkeel 政策：步驟明確指定 → 符合的規則 → 核准的預設；不另呼叫模型分類 |
+| Codex 月費 | 選配／實驗性 | 既有 ChatGPT 登入、macOS 與指定 Codex 版本；最後一次真實驗證失敗 |
+| LiteLLM gateway | 關閉／選配 | 固定且核准的連線；不內附伺服器；真實服務驗證待完成 |
+| LiteLLM Auto Router | 尚未整合 | 與 Workkeel 規則選模不同；啟用 gateway 不代表啟用 Auto |
+| Headroom | 關閉 | 主機自有整合可用無損檢視；不支援攔截 Codex 原生工具輸出 |
+| Console／observer | 選配 | 已有本機觀測介面；尚未完成新 Workkeel 任務／Graph 儀表板整合 |
+
+沒有通用的 Luna／Sol／Astra 預設：原生 Agent 保留自己的設定，自動流程則必須提供核准的政策。
+不會安裝 macOS app，也不要求常駐背景程式。詳見[執行設定與限制](docs/operations/workkeel-workflows.md)。
 
 ## 架構
 
@@ -84,7 +105,7 @@ Skills 提供專案方法；記錄「已讀」不代表真正運用得好。
 
 ## 驗證資料與限制
 
-離線驗證通過 1,387 個案例，另有九項不呼叫模型的沙箱檢查通過。
+最初的自動化基準版本通過 1,387 個離線案例，另有九項不呼叫模型的沙箱檢查通過。
 最後一次訂閱實測中，Luna 把仍有效的授權誤判為過期，流程在呼叫 Sol 前停止。
 自動執行仍屬實驗性功能，尚不能宣稱可靠可用或能節省月費額度。
 [測試方法、結果與待驗證項目 →](docs/validation/workkeel-automation.md)

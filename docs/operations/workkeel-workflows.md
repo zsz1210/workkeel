@@ -36,6 +36,34 @@ node bin/workkeel.mjs help
 The core-only installation uses `--omit=optional`. Initialization never downloads
 a model, gateway or Python environment.
 
+### Workkeel routing is not LiteLLM Auto Router
+
+Workkeel selects a connection from the approved task policy. Its explicit rules
+run locally, without a classifier model call. The optional LiteLLM connection
+describes a fixed model through a separately operated gateway; it does not install
+or enable [LiteLLM Auto Router](https://docs.litellm.ai/docs/auto_router/), which is
+a separate request-classification and model-routing feature. The Codex monthly
+subscription path goes directly to the local Codex host, not through LiteLLM.
+
+Do not substitute an Auto Router alias and assume that it preserves a fixed-model
+contract. Supporting gateway-owned routing would need an approved model allowlist,
+data policy, actual-model observations, fallback rules and its own qualification.
+That integration is not implemented here.
+
+### Observation is optional
+
+Core task coordination needs no server. The existing Console/control plane can
+serve local views and event streams on demand; a managed observer is a separate
+opt-in. Its current records are not yet a complete dashboard for the new Workkeel
+task and graph execution stores. No macOS application is shipped.
+
+A future monitor can show task state, runner state, selected/confirmed model,
+completed steps, elapsed time and observed token usage without asking a model to
+summarize progress. Model reasoning has no trustworthy percent-complete measure;
+unknown usage remains unknown. Subscription tokens are not a dollar invoice.
+An on-demand viewer need not install a background service, but continuing work
+after closing it still requires the execution process to remain alive.
+
 ## Approve the workflow and model policy
 
 Start with the complete [task setup](../getting-started/workkeel.md). For the local
@@ -166,6 +194,13 @@ can return task-specific outcomes; the concrete Codex adapter currently returns
 is not task success: `attention` becomes a failed step and stops dispatch, rather
 than passing refusal text to the next node. Commentary is excluded from result
 text. Self-reported success still needs artifact checks and independent review.
+The adapter retains the full task contract and adds a separate, numeric UTC expiry
+observation immediately before dispatch. Initialization is followed by another
+expiry check; expired or missing authorization prevents a model turn. This
+snapshot grants no new permission, does not extend expiry and is not acceptance.
+The coordinator owns lifecycle administration; the model receives the actual
+node work separately. This offline handoff improvement has not been requalified
+with live subscription calls.
 Cycles and retries share the configured dispatch and
 elapsed-time bounds. `retry:true` permits only a reported failed/retry continuation
 of the same conversation, never an uncertain fresh attempt.

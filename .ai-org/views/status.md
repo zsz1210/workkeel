@@ -3,9 +3,9 @@
 - Project ID: `temple`
 - Organization system version: `0.1.0-alpha.33`
 - Active Agent Identities: 5
-- Collaboration profile: `solo` (0 Human Principals, 0 active claims)
-- Parallel plan: 0 wave(s), fresh=true
-- Work items: 262 total, 0 active
+- Collaboration profile: `solo` (0 Human Principals, 1 active claims)
+- Parallel plan: 0 wave(s), fresh=false
+- Work items: 263 total, 1 active
 - Codex tasks: 14 registered, 14 archive-ready
 - Runtime workers: 111 registered, 0 reserved, 0 active
 - Shared resources: 0 defined, 0 active reservation(s)
@@ -18,7 +18,7 @@
 - Specifications: 2 indexed, 2 approved (hybrid)
 - Tracker: `repository-only` (0 active provider(s), 0 linked Work Item(s))
 - Repository integration: `confirmed` (Develop focused changes on short-lived branches and submit them through pull requests; the maintainer owns final integration and release decisions.)
-- Attention signals: 26
+- Attention signals: 27
 
 ## Collaboration
 
@@ -27,7 +27,7 @@
 - Human Principals: 0
 - Agent sponsorships: 0
 - Active Position memberships: 10
-- Active Work Item claims: 0
+- Active Work Item claims: 1
 - Active Human Authority Grants: 0
 - Governance recovery: `not_configured`
 - Real Collaborative validation: `not_run` (.ai-org/templates/collaborative-large-scale-test-plan.md)
@@ -37,7 +37,7 @@
 - Generated plan: `.ai-org/views/parallel-plan.json`
 - Installed: yes
 - Valid: yes
-- Fresh: yes
+- Fresh: no
 - Safe waves: 0
 - Dispatchable Work Items: 0
 - Active / sequential / blocked: 0 / 0 / 0
@@ -310,9 +310,12 @@
 | WI-0260 | Implement Workkeel workflows, model routing and user-facing delivery | done | Engineering Manager | Mog | parallel | internal | 0 | gate-evidence | not-applicable | 0 | 0 | 0 | — | `c84f1b55` | 0 | 8 | 0 |
 | WI-0261 | Qualify Workkeel automation package additions | done | Engineering Manager | Mog | sequential | team-visible | 0 | gate-evidence | not-applicable | 0 | 0 | 0 | — | `c84f1b55` | 0 | 4 | 0 |
 | WI-0262 | Record final Workkeel local acceptance status | done | Engineering Manager | Mog | parallel | team-visible | 0 | gate-evidence | not-applicable | 0 | 0 | 0 | — | `dcd95179` | 0 | 4 | 0 |
+| WI-0263 | Clarify execution handoff and Workkeel visual guides | build | Developer | Rikku | pending | team-visible | 0 | gate-evidence | code-first | 0 | 0 | 0 | claim-20260923160841-be3ca805 | `—` | 0 | 1 | 0 |
 
 ## Delivery attention
 
+- WI-0263: awaiting-owner — The recorded owner can continue the scoped work; no attached active worker is recorded.
+  - owner: No attached active runtime is recorded for this claim.
 
 ## Codex task registry
 
@@ -481,13 +484,14 @@
 - worker-20260915174040-464e550f is failed
 - worker-20260915175330-3e16bfe8 is failed
 - worker-20260915233053-33b568eb is failed
+- Generated parallel plan is stale; rebuild it before dispatch
 
 ## External tracker coordination
 
 - Profile: `repository-only`
 - Sync granularity: `team-visible`
 - Active providers: 0
-- Team-visible Work Items: 107
+- Team-visible Work Items: 108
 - Linked Work Items: 0
 - Observed external items: 0
 - Reconciliation actions: 0
@@ -561,14 +565,14 @@
 
 | Time | Event | Work item | Actor |
 |---|---|---|---|
-| 2026-09-23T15:55:20.037Z | work_item_closed | WI-0262 | agent-lulu |
-| 2026-09-23T15:55:20.037Z | work_item_transitioned | WI-0262 | agent-lulu |
-| 2026-09-23T15:55:20.022Z | work_item_claim_released | WI-0262 | human |
-| 2026-09-23T15:55:13.692Z | runtime_worker_status_changed | WI-0262 | agent-lulu |
-| 2026-09-23T15:54:11.408Z | runtime_worker_attached | WI-0262 | agent-lulu |
-| 2026-09-23T15:53:42.148Z | runtime_worker_reserved | WI-0262 | human |
-| 2026-09-23T15:53:42.184Z | work_item_claimed | WI-0262 | human |
-| 2026-09-23T15:53:40.657Z | work_item_coordination_configured | WI-0262 | agent-lulu |
+| 2026-09-23T16:08:41.621Z | work_item_claimed | WI-0263 | human |
+| 2026-09-23T16:08:41.000Z | work_item_transitioned | WI-0263 | agent-tidus |
+| 2026-09-23T16:08:40.426Z | work_item_claim_released | WI-0263 | human |
+| 2026-09-23T16:08:39.872Z | work_item_claimed | WI-0263 | human |
+| 2026-09-23T16:08:39.270Z | work_item_transitioned | WI-0263 | agent-yuna |
+| 2026-09-23T16:08:38.693Z | work_item_claim_released | WI-0263 | human |
+| 2026-09-23T16:08:38.138Z | work_item_claimed | WI-0263 | human |
+| 2026-09-23T16:08:37.518Z | work_item_transitioned | WI-0263 | agent-mog |
 
 ## Assignments
 
