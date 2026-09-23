@@ -2,11 +2,11 @@
   "schema_version": "temple.work-item/v1",
   "id": "WI-0253",
   "title": "Slim the test suite without weakening safety coverage",
-  "state": "release_gate",
-  "owner_position": "release_manager",
+  "state": "done",
+  "owner_position": "engineering_manager",
   "assigned_agent_id": "agent-mog",
   "created_at": "2026-09-23T07:07:40.621Z",
-  "updated_at": "2026-09-23T10:39:38.350Z",
+  "updated_at": "2026-09-23T10:42:27.403Z",
   "scope": [
     "Evaluate the current test inventory, remove or merge only evidence-backed duplication, reduce routine execution time and success-output volume, and preserve regression, authority, recovery, security, failure diagnostics, and full release verification boundaries."
   ],
@@ -58,10 +58,10 @@
     "WI-0258 separate worktree and product slice; WI-0253 retains existing test runner files; full-suite windows coordinated"
   ],
   "claim": {
-    "id": "claim-20260923103838-b47fab5e",
+    "id": "claim-20260923104145-f9995243",
     "status": "released",
     "principal_id": "human",
-    "agent_id": "agent-lulu",
+    "agent_id": "agent-mog",
     "actor_provenance": {
       "selection": "explicit-agent",
       "principal_source": "explicit-principal",
@@ -70,15 +70,13 @@
       "provider_authenticated": false,
       "externally_supplied_evidence": false
     },
-    "position_id": "independent_qa",
+    "position_id": "release_manager",
     "base_revision": "6ace82eba938cbd7cde491f0b7126af6b5e9bd12",
     "branch": "codex/fix-test-harness-baselines",
     "worktree": "/Users/zsz1210/Documents/Codex/2026-09-23/temple-test-slimming/work/temple-test-baseline-fixes",
-    "claimed_at": "2026-09-23T10:38:38.476Z",
-    "released_at": "2026-09-23T10:39:37.853Z",
-    "release_reason": [
-      "Independent QA passed; handoff created for Release Manager."
-    ]
+    "claimed_at": "2026-09-23T10:41:45.826Z",
+    "released_at": "2026-09-23T10:42:27.403Z",
+    "release_reason": "work_item_closed"
   },
   "claims": [
     {
@@ -214,6 +212,27 @@
       "release_reason": [
         "Independent QA passed; handoff created for Release Manager."
       ]
+    },
+    {
+      "id": "claim-20260923104145-f9995243",
+      "status": "released",
+      "principal_id": "human",
+      "agent_id": "agent-mog",
+      "actor_provenance": {
+        "selection": "explicit-agent",
+        "principal_source": "explicit-principal",
+        "verification_class": "attributed",
+        "evidence_ref": null,
+        "provider_authenticated": false,
+        "externally_supplied_evidence": false
+      },
+      "position_id": "release_manager",
+      "base_revision": "6ace82eba938cbd7cde491f0b7126af6b5e9bd12",
+      "branch": "codex/fix-test-harness-baselines",
+      "worktree": "/Users/zsz1210/Documents/Codex/2026-09-23/temple-test-slimming/work/temple-test-baseline-fixes",
+      "claimed_at": "2026-09-23T10:41:45.826Z",
+      "released_at": "2026-09-23T10:42:27.403Z",
+      "release_reason": "work_item_closed"
     }
   ],
   "gate_evidence": {
@@ -246,6 +265,18 @@
     ],
     "independent_qa_pass": [
       ".ai-org/artifacts/WI-0253/independent-qa-rework-001.md"
+    ],
+    "accepted_scope": [
+      ".ai-org/artifacts/WI-0253/evaluation-report-rework-001.md"
+    ],
+    "independent_qa_report": [
+      ".ai-org/artifacts/WI-0253/independent-qa-rework-001.md"
+    ],
+    "rollback_plan": [
+      ".ai-org/artifacts/WI-0253/release-record.md"
+    ],
+    "required_human_approval": [
+      "not-required"
     ]
   },
   "evidence": [
@@ -258,10 +289,11 @@
     ".ai-org/artifacts/WI-0253/handoff-003-quality_evaluator-to-independent_qa.md",
     ".ai-org/artifacts/WI-0253/evaluation-report-rework-001.md",
     ".ai-org/artifacts/WI-0253/handoff-004-independent_qa-to-release_manager.md",
-    ".ai-org/artifacts/WI-0253/independent-qa-rework-001.md"
+    ".ai-org/artifacts/WI-0253/independent-qa-rework-001.md",
+    ".ai-org/artifacts/WI-0253/release-record.md"
   ],
   "unresolved": [],
-  "next_position": "engineering_manager",
+  "next_position": null,
   "handoffs": [
     {
       "from_position": "developer",
@@ -371,5 +403,11 @@
       ]
     }
   ],
-  "developer_candidate_revision": "6ace82eba938cbd7cde491f0b7126af6b5e9bd12"
+  "developer_candidate_revision": "6ace82eba938cbd7cde491f0b7126af6b5e9bd12",
+  "tested_revision": "6ace82eba938cbd7cde491f0b7126af6b5e9bd12",
+  "release_gate_result": "go",
+  "lifecycle_outcome": "accepted",
+  "closeout_reasons": [],
+  "external_release_status": "not_performed",
+  "approval_record": "not-required"
 }

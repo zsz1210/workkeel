@@ -1,21 +1,20 @@
 {
   "schema_version": "temple.parallel-plan/v1",
-  "generated_at": "2026-09-23T10:39:57.337Z",
-  "source_fingerprint": "41f59be1f8bfba8250a2f63076a4927306a19d5e1ac3ab063d9648a06dd63ec9",
+  "generated_at": "2026-09-23T10:42:28.000Z",
+  "source_fingerprint": "ae005ad8c640359fd7f8a97575a25664a72fd85e34b7ad8185e2ae01f92288a2",
   "scope": {
     "mode": "all-active",
     "parent_work_item_id": null,
     "selected_work_item_ids": [
-      "WI-0253",
       "WI-0258"
     ]
   },
   "max_workers": null,
   "summary": {
-    "selected": 2,
+    "selected": 1,
     "dispatchable": 0,
     "active": 1,
-    "sequential": 1,
+    "sequential": 0,
     "blocked": 0,
     "waves": 0
   },
@@ -36,46 +35,9 @@
       "base_revision": "9d0f8547"
     }
   ],
-  "sequential": [
-    {
-      "work_item_id": "WI-0253",
-      "title": "Slim the test suite without weakening safety coverage",
-      "disposition": "sequential",
-      "position_id": "release_manager",
-      "agent_id": "agent-mog",
-      "integration_owner_agent_id": "agent-rikku",
-      "reasons": [
-        "requested_mode_sequential"
-      ]
-    }
-  ],
+  "sequential": [],
   "blocked": [],
-  "conflicts": [
-    {
-      "kind": "affected-path",
-      "left_work_item_id": "WI-0253",
-      "right_work_item_id": "WI-0258",
-      "paths": [
-        {
-          "left_path": "package.json",
-          "right_path": "package.json"
-        },
-        {
-          "left_path": "docs/getting-started/testing.md",
-          "right_path": "docs"
-        },
-        {
-          "left_path": "test",
-          "right_path": "test/workkeel-lifecycle.test.mjs"
-        },
-        {
-          "left_path": "test",
-          "right_path": "test/workkeel-runtime.test.mjs"
-        }
-      ],
-      "resolution": "separate-waves"
-    }
-  ],
+  "conflicts": [],
   "execution_policy": {
     "parallel_by_default_when_safe": true,
     "runtime_capacity_limit": null,
