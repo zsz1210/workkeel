@@ -78,6 +78,7 @@ node bin/workkeel.mjs help
 | LiteLLM Auto Router | 未統合 | Workkeel のルール選択とは別。gateway を使っても Auto は有効にならない |
 | Headroom | 無効 | ホスト所有の統合で可逆ビューを利用。Codex 標準ツール出力の傍受は非対応 |
 | Console／observer | 任意 | ローカル観測画面あり。新 Workkeel タスク／Graph ダッシュボードとの統合は未実装 |
+| タスク計測 | Workflow 実行中に記録 | モデル・token・所要時間の読み取り専用クエリ。ネイティブの作業セッションは未収集。[ガイド](docs/operations/workkeel-measurements.md) |
 
 Luna／Sol／Astra の共通既定値はありません。ネイティブエージェントは自身の設定を維持し、
 自動フローには承認済み方針が必要です。macOS app や必須の常駐サービスはインストールしません。

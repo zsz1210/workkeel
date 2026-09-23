@@ -52,6 +52,11 @@ That integration is not implemented here.
 
 ### Observation is optional
 
+The workflow runner itself records per-attempt model, token and duration
+observations without another process. Use `task metrics` or `workflow metrics`
+for a read-only report; unknown native sessions and resumed-token baselines remain
+explicit. See [task execution measurements](workkeel-measurements.md).
+
 Core task coordination needs no server. The existing Console/control plane can
 serve local views and event streams on demand; a managed observer is a separate
 opt-in. Its current records are not yet a complete dashboard for the new Workkeel

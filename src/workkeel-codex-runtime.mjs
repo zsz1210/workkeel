@@ -95,6 +95,18 @@ export function createCodexRuntime(host) {
     const fatalOnly = completed.then(() => new Promise(() => {}));
     fatalOnly.catch(() => {});
     let output = "", outputBytes = 0, usage = { input_tokens: null, output_tokens: null, cost_usd: null };
+    let runtimeModel = null, observations = Promise.resolve();
+    const previousCounters = {}, invalidCounters = new Set();
+    const counter = (name, value) => {
+      if (!Number.isSafeInteger(value) || value < 0 || value < (previousCounters[name] ?? 0)) invalidCounters.add(name);
+      if (invalidCounters.has(name)) return null;
+      previousCounters[name] = value; return value;
+    };
+    const observe = () => {
+      const snapshot = { runtime_model: runtimeModel, observed_model: null, usage: { ...usage } };
+      observations = observations.then(() => context.observe?.(snapshot));
+      observations.catch(rejectTurn);
+    };
     const buffered = [];
     const current = { threadId: null, turnId: null, turnRequested: false, rpc: null, fail: rejectTurn, terminalConfirmed: false,
       settled: new Promise(resolve => { settle = resolve; }) };
@@ -117,11 +129,14 @@ export function createCodexRuntime(host) {
         if (p.item.phase !== "commentary") output += `${text}\n`;
       }
       if (message.method === "thread/tokenUsage/updated") {
+        if (p.turnId !== current.turnId || current.terminalConfirmed) return;
         // `last` is the latest model request, not the whole tool-using turn.
         // A fresh node conversation starts at zero; resumed conversations need
         // a trusted pre-turn baseline we do not yet have, so report unknown.
         const observed = resume ? null : p.tokenUsage?.total;
-        if (Number.isSafeInteger(observed?.inputTokens) && observed.inputTokens >= 0 && Number.isSafeInteger(observed?.outputTokens) && observed.outputTokens >= 0) usage = { input_tokens: observed.inputTokens, output_tokens: observed.outputTokens, cost_usd: null };
+        usage = { input_tokens: counter("input_tokens", observed?.inputTokens),
+          output_tokens: counter("output_tokens", observed?.outputTokens), cost_usd: null };
+        observe();
       }
       if (message.method === "turn/completed" && p.turn?.id === current.turnId) { current.terminalConfirmed = true; resolveTurn(p.turn); }
     }
@@ -179,6 +194,7 @@ export function createCodexRuntime(host) {
           !Array.isArray(started.instructionSources) || started.instructionSources.length ||
           !Array.isArray(started.runtimeWorkspaceRoots) || started.runtimeWorkspaceRoots.some(root => root !== cwd) ||
           !resume && (!Array.isArray(started.thread.turns) || started.thread.turns.length)) throw new Error("Codex thread identity, permissions or selected connection differs from the request");
+      runtimeModel = started.model ?? null; observe();
       const existingTerminals = await request("thread/backgroundTerminals/list", { threadId: current.threadId });
       if (!Array.isArray(existingTerminals.data) || existingTerminals.data.length || existingTerminals.nextCursor) throw new Error("Codex has unexpected background terminals; recovery requires inspection");
       // Initialization can outlive the approval. Recheck before any model work.
@@ -226,6 +242,8 @@ export function createCodexRuntime(host) {
         catch { cleanupError = new Error("Codex process shutdown is unconfirmed; inspect host state before recovery"); }
         active.delete(context.operation_id); settle();
       }
+      try { await observations; }
+      catch (error) { if (!cleanupError) throw error; }
       if (cleanupError) { cleanupError.runtimeUnsettled = true; throw cleanupError; }
     }
   }

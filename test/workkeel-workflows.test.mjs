@@ -9,6 +9,7 @@ import { createNativeTask, mutateNativeTask, readNativeTask } from "../src/workk
 import { executeWorkflow, readWorkflowRun, cancelWorkflow, planWorkflow } from "../src/workkeel-workflows.mjs";
 import { selectNodeModel, validateExecutionPolicy } from "../src/workkeel-execution-policy.mjs";
 import { validateWorkflow } from "../src/workkeel-workflow-schema.mjs";
+import { readTaskMeasurements, readWorkflowMeasurements } from "../src/workkeel-measurements.mjs";
 
 const actor = { agent_id: "builder", principal_id: "owner" };
 const approval = token => ({ token, approved: true, actor, evidence_ref: "docs/approval.md" });
@@ -56,6 +57,74 @@ test("real registered execution persists and completed replay does not dispatch 
   assert.equal(await fs.readFile(path.join(root, "src/result.txt"), "utf8"), "executed");
   assert.equal((await executeWorkflow(root, request, { adapters: [host] })).status.state, "completed");
   assert.equal(calls, 1); assert.equal((await readNativeTask(root, request.task_id)).state, "build");
+});
+
+test("task measurements persist live snapshots and failure timing without granting replay", async t => {
+  const { root, request } = await fixture(t);
+  assert.equal((await readTaskMeasurements(root, request.task_id)).coverage, "unobserved");
+  let live;
+  const host = adapter(async ({ observe }) => {
+    const snapshot = { runtime_model: "fixture-confirmed", observed_model: null, usage: { input_tokens: 25, output_tokens: 6, cost_usd: null } };
+    await observe(snapshot); await observe(snapshot);
+    live = await readTaskMeasurements(root, request.task_id);
+    throw new Error("Disconnected after token observation");
+  });
+  await assert.rejects(executeWorkflow(root, request, { adapters: [host] }), /Disconnected/);
+  assert.equal(live.usage.input_tokens.known_subtotal, 25); assert.equal(live.usage.input_tokens.total, null);
+  const metrics = await readTaskMeasurements(root, request.task_id);
+  assert.equal(metrics.runs[0].runner_state, "blocked"); assert.equal(metrics.runs[0].operations[0].state, "unresolved");
+  assert.equal(metrics.runs[0].operations[0].runtime_model, "fixture-confirmed");
+  assert.ok(metrics.timing.adapter_work_ms > 0); assert.equal(metrics.usage.output_tokens.known_subtotal, 6);
+  assert.equal(metrics.usage.output_tokens.total, null);
+  await assert.rejects(executeWorkflow(root, request, { adapters: [host] }), /Uncertain/);
+  assert.deepEqual((await readTaskMeasurements(root, request.task_id)).usage, metrics.usage);
+});
+
+test("task metrics CLI is read-only, replay-safe and omits result content", async t => {
+  const { root, request } = await fixture(t);
+  const host = adapter(async () => result({ runtime_model: "fixture-confirmed", usage: { input_tokens: 30, output_tokens: 5, cost_usd: null } }));
+  await executeWorkflow(root, request, { adapters: [host] });
+  const first = await readWorkflowMeasurements(root, request.run_id);
+  await executeWorkflow(root, request, { adapters: [host] });
+  const second = await readWorkflowMeasurements(root, request.run_id);
+  assert.deepEqual(first.usage, second.usage); assert.equal(first.wall_elapsed_ms, second.wall_elapsed_ms);
+  const before = git(root, "status", "--porcelain");
+  const cli = new URL("../bin/workkeel.mjs", import.meta.url).pathname;
+  const task = JSON.parse(execFileSync(process.execPath, [cli, "task", "metrics", root, "--id", request.task_id], { encoding: "utf8" }));
+  assert.equal(task.usage.input_tokens.total, 30); assert.equal(task.usage.cost_usd.total, null);
+  assert.equal(task.task_state, "build"); assert.equal(task.mutation_status, "no-write");
+  assert.equal(JSON.stringify(task).includes("fixture completed"), false);
+  assert.equal(git(root, "status", "--porcelain"), before);
+  const workflow = JSON.parse(execFileSync(process.execPath, [cli, "workflow", "metrics", root, "--id", request.run_id], { encoding: "utf8" }));
+  assert.equal(workflow.usage.output_tokens.total, 5);
+  await fs.unlink(path.join(root, ".ai-org/execution/run-one/operations/work-0-0.json"));
+  await assert.rejects(readTaskMeasurements(root, request.task_id), /Incomplete measurement/);
+});
+
+test("retries preserve each operation and missing resume usage makes totals incomplete", async t => {
+  const { root, request } = await fixture(t, graph([{ id: "work", kind: "runtime", input: "work", retry: true }]));
+  let count = 0;
+  await executeWorkflow(root, request, { adapters: [adapter(async () => ++count === 1 ?
+    result({ status: "failed", outcome: "retry", usage: { input_tokens: 10, output_tokens: 2, cost_usd: null } }) : result())] });
+  const metrics = await readTaskMeasurements(root, request.task_id);
+  assert.equal(metrics.runs[0].operations.length, 2); assert.equal(metrics.usage.input_tokens.total, null);
+  assert.equal(metrics.usage.input_tokens.known_subtotal, 10); assert.equal(metrics.timing.measured_operations, 2);
+});
+
+test("task totals include multiple runs without claiming visibility into native sessions", async t => {
+  const { root, request } = await fixture(t);
+  const host = adapter(async () => result({ usage: { input_tokens: 10, output_tokens: 3, cost_usd: null } }));
+  await executeWorkflow(root, request, { adapters: [host] });
+  await mutateNativeTask(root, request.task_id, "release", { operation_id: "release", expected_version: 2, actor, claim_id: request.claim_id, summary: "Continue in a new authorized execution run" });
+  const next = await mutateNativeTask(root, request.task_id, "claim", { operation_id: "claim-next", expected_version: 3, actor, base_revision: git(root, "rev-parse", "HEAD") });
+  await executeWorkflow(root, { ...request, run_id: "run-two", claim_id: next.claim.id }, { adapters: [host] });
+  const metrics = await readTaskMeasurements(root, request.task_id);
+  assert.equal(metrics.runs.length, 2); assert.equal(metrics.usage.input_tokens.total, 20);
+  assert.equal(metrics.coverage, "recorded-workflow-runs-only");
+  const file = path.join(root, ".ai-org/execution/run-two/operations/work-0-0.json");
+  const before = JSON.parse(await fs.readFile(file, "utf8")); before.value.result.usage.input_tokens = 999;
+  await fs.writeFile(file, JSON.stringify(before));
+  await assert.rejects(readTaskMeasurements(root, request.task_id), /integrity/);
 });
 
 test("fan-out/join executes both branches and only then the join", async t => {

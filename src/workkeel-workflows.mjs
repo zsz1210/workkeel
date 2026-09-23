@@ -8,6 +8,7 @@ import { safeDirectory, assertActor, readTaskProject } from "./workkeel-project.
 import { assertTaskExecutionContext } from "./workkeel-tasks.mjs";
 import { executionDigest, exactKeys, EXECUTION_ID, validateExecutionPolicy, selectNodeModel, validateRuntimeAdapter, validateRuntimeResult } from "./workkeel-execution-policy.mjs";
 import { validateWorkflow } from "./workkeel-workflow-schema.mjs";
+import { validateExecutionObservation } from "./workkeel-measurements.mjs";
 
 const runRef = id => {
   if (!EXECUTION_ID.test(id ?? "") || ["constructor", "prototype"].includes(id)) throw new Error("Invalid workflow run ID");
@@ -294,19 +295,45 @@ export async function executeWorkflow(targetInput, request, { adapters = [], sig
           active.set(id, handle);
           const onAbort = () => { Promise.resolve(adapter.cancel(handle)).catch(() => {}); };
           controller.signal.addEventListener("abort", onAbort, { once: true });
+          const started = performance.now();
+          let measurement = {}, observationWrite = Promise.resolve(), acceptingObservations = true;
+          const observe = value => {
+            if (!acceptingObservations) return Promise.reject(new Error("Operation observation arrived after settlement"));
+            const observation = validateExecutionObservation(value);
+            observationWrite = observationWrite.then(async () => {
+              measurement = { ...measurement, observation, observed_at: new Date().toISOString(), observed_elapsed_ms: performance.now() - started };
+              const updated = { ...record, measurement };
+              await durableAtomicWrite(path.join(operationsDir, `${id}.json`), envelope(updated)); operations.set(id, updated);
+            });
+            // Adapters may deliver event callbacks synchronously. Still surface
+            // write failure when settling the operation, without unhandled rejects.
+            observationWrite.catch(() => {});
+            return observationWrite;
+          };
           try {
             const context = { target, contract: input.nodeContracts[node.id], policy: input.policy, selection, input: nodeInput,
-              operation_id: handle.operation_id, run_id: request.run_id, conversation_id: conversationId, signal: controller.signal };
+              operation_id: handle.operation_id, run_id: request.run_id, conversation_id: conversationId, signal: controller.signal,
+              observe };
             context.toolView = async viewRequest => {
               await stopIfNeeded();
               const { workflowToolView } = await import("./workkeel-headroom.mjs");
               return workflowToolView(context, viewRequest);
             };
             result = validateRuntimeResult(await (conversationId ? adapter.resume(context) : adapter.start(context)));
-            const updated = { ...record, result, completed_at: new Date().toISOString() };
+            acceptingObservations = false;
+            const elapsed = performance.now() - started;
+            await observationWrite;
+            measurement = { ...measurement, adapter_elapsed_ms: elapsed, ended_at: new Date().toISOString() };
+            const updated = { ...record, result, measurement, completed_at: new Date().toISOString() };
             await durableAtomicWrite(path.join(operationsDir, `${id}.json`), envelope(updated)); operations.set(id, updated);
           } catch (error) {
             if (error?.runtimeUnsettled === true) runtimeUnsettled = true;
+            acceptingObservations = false;
+            const elapsed = performance.now() - started;
+            await observationWrite;
+            measurement = { ...measurement, adapter_elapsed_ms: elapsed, ended_at: new Date().toISOString() };
+            const updated = { ...record, measurement };
+            await durableAtomicWrite(path.join(operationsDir, `${id}.json`), envelope(updated)); operations.set(id, updated);
             throw error;
           } finally { active.delete(id); controller.signal.removeEventListener("abort", onAbort); }
         }

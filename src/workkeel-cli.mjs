@@ -14,12 +14,14 @@ workkeel migration apply [target] --policy repository-policy.json --fingerprint 
 workkeel status|doctor [target]
 workkeel task create [target] --source contract.json --request request.json
 workkeel task show [target] --id task-id
+workkeel task metrics [target] --id task-id
 workkeel task claim|release|handoff|review|rework|close|cancel [target] --id task-id --request request.json
 workkeel runtime plan [target] --id task-id
 workkeel instructions preview|apply [target] [--fingerprint sha256]
 workkeel workflow plan [target] --request workflow-request.json
 workkeel workflow run [target] --request workflow-run.json
 workkeel workflow show [target] --id run-id
+workkeel workflow metrics [target] --id run-id
 workkeel workflow cancel|recover-lock [target] --id run-id --request actor.json
 workkeel headroom view|read [target] --request tool-view-request.json
 workkeel skills audit [target] --request skill-use.json
@@ -72,7 +74,11 @@ export async function workkeelMain(args) {
       schema_version: "workkeel.status/v1", tasks: await listTaskItems(target), authority: "observation-only", mutation_status: "no-write"
     };
   } else if (command === "task") {
-    if (action === "show") { allow(options, ["--id"]); output = await readNativeTask(target, required(options, "--id")); }
+    if (action === "metrics") {
+      allow(options, ["--id"]);
+      const { readTaskMeasurements } = await import("./workkeel-measurements.mjs");
+      output = await readTaskMeasurements(target, required(options, "--id"));
+    } else if (action === "show") { allow(options, ["--id"]); output = await readNativeTask(target, required(options, "--id")); }
     else {
       allow(options, action === "create" ? ["--source", "--request"] : ["--id", "--request"]);
       const request = (await readTaskContractInput(target, required(options, "--request"))).document;
@@ -94,7 +100,11 @@ export async function workkeelMain(args) {
     else throw new Error("Instructions requires preview or apply");
   } else if (command === "workflow") {
     const { planWorkflow, readWorkflowRun, cancelWorkflow, recoverWorkflowLock } = await import("./workkeel-workflows.mjs");
-    if (action === "show") { allow(options, ["--id"]); output = await readWorkflowRun(target, required(options, "--id")); }
+    if (action === "metrics") {
+      allow(options, ["--id"]);
+      const { readWorkflowMeasurements } = await import("./workkeel-measurements.mjs");
+      output = await readWorkflowMeasurements(target, required(options, "--id"));
+    } else if (action === "show") { allow(options, ["--id"]); output = await readWorkflowRun(target, required(options, "--id")); }
     else {
       allow(options, ["plan", "run"].includes(action) ? ["--request"] : ["--id", "--request"]);
       const request = (await readTaskContractInput(target, required(options, "--request"))).document;
@@ -113,7 +123,7 @@ export async function workkeelMain(args) {
       }
       else if (action === "cancel") output = await cancelWorkflow(target, required(options, "--id"), request);
       else if (action === "recover-lock") output = await recoverWorkflowLock(target, required(options, "--id"), request);
-      else throw new Error("Workflow requires plan, run, show, cancel or recover-lock");
+      else throw new Error("Workflow requires plan, run, show, metrics, cancel or recover-lock");
     }
   } else if (command === "headroom") {
     allow(options, ["--request"]);

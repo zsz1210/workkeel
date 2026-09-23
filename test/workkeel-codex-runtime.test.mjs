@@ -112,6 +112,45 @@ test("subscription routing requires existing ChatGPT login and an available expl
   await assert.rejects(createCodexRuntime(fixtureHost({ available: false })).start(c), /unavailable/);
   await assert.rejects(createCodexRuntime(fixtureHost({ effortMismatch: true })).start(c), /differs from the request/);
 });
+
+test("usage observations replace cumulative totals, ignore unrelated turns and survive structured-result failure", async t => {
+  for (const failResult of [false, true]) {
+    const c = await context(t), observations = [];
+    c.observe = async value => { observations.push(value); };
+    const host = fixtureHost(), connect = host.connect;
+    host.connect = options => connect({ ...options, onNotification: message => {
+      if (message.method === "thread/tokenUsage/updated") {
+        for (const inputTokens of [10, 20, 20]) options.onNotification({ ...message, params: { ...message.params,
+          tokenUsage: { last: { inputTokens: 2, outputTokens: 1 }, total: { inputTokens, outputTokens: 8 } } } });
+        options.onNotification({ ...message, params: { ...message.params, turnId: "unrelated",
+          tokenUsage: { total: { inputTokens: 999, outputTokens: 999 } } } });
+        return;
+      }
+      if (failResult && message.method === "item/completed" && message.params.item.phase === "final_answer") message.params.item.text = "not structured JSON";
+      options.onNotification(message);
+    } });
+    if (failResult) await assert.rejects(createCodexRuntime(host).start(c), /structured/);
+    else assert.deepEqual((await createCodexRuntime(host).start(c)).usage, { input_tokens: 20, output_tokens: 8, cost_usd: null });
+    assert.equal(observations.at(-1).usage.input_tokens, 20);
+    assert.equal(observations.at(-1).usage.cost_usd, null);
+    assert.equal(observations.some(value => value.usage.input_tokens === 999), false);
+  }
+});
+
+test("counter regression and absent resume baseline stay unknown, not underestimated", async t => {
+  const c = await context(t), host = fixtureHost(), connect = host.connect;
+  host.connect = options => connect({ ...options, onNotification: message => {
+    if (message.method === "thread/tokenUsage/updated") {
+      for (const inputTokens of [20, 10, 30]) options.onNotification({ ...message, params: { ...message.params,
+        tokenUsage: { total: { inputTokens, outputTokens: 8 } } } });
+    } else options.onNotification(message);
+  } });
+  const first = await createCodexRuntime(host).start(c);
+  assert.equal(first.usage.input_tokens, null); assert.equal(first.usage.output_tokens, 8);
+  const observations = [];
+  await createCodexRuntime(fixtureHost()).resume({ ...c, conversation_id: "thread-one", observe: value => { observations.push(value); } });
+  assert.equal(observations.at(-1).usage.input_tokens, null);
+});
 test("a mismatched active permission profile blocks the turn", async t => {
   await assert.rejects(createCodexRuntime(fixtureHost({ permissionMismatch: true })).start(await context(t)), /permissions.*differs/);
 });

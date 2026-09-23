@@ -82,6 +82,7 @@ steps, not existing desktop conversations or your global model default.
 | LiteLLM Auto Router | Not integrated | Distinct from Workkeel policy routing; not enabled by the gateway option |
 | Headroom | Off | Lossless views via a host-owned integration; no native Codex tool-output interception |
 | Console / observer | Optional | Existing local observation surface; new Workkeel task/graph dashboard integration is not implemented |
+| Task measurements | Recorded during workflow execution | Read-only model/token/time queries; native host sessions remain unobserved. [Guide](docs/operations/workkeel-measurements.md) |
 
 There is no universal Luna/Sol/Astra default: a native agent keeps its own setting;
 an automatic workflow must supply its approved policy. No macOS app or mandatory

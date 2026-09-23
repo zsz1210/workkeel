@@ -23,9 +23,11 @@ export const REQUIRED_PACKAGE_PATHS = [
   "src/workkeel-skill-audit.mjs",
   "src/workkeel-workflow-schema.mjs",
   "src/workkeel-workflows.mjs",
+  "src/workkeel-measurements.mjs",
   "docs/adr/0073-opt-in-workflow-execution.md",
   "docs/extensions/workkeel-context.md",
   "docs/operations/workkeel-workflows.md",
+  "docs/operations/workkeel-measurements.md",
   "docs/validation/workkeel-automation.md",
   "docs/assets/workkeel-workflow.svg",
   "docs/assets/workkeel-workflow-mobile.svg",
@@ -126,7 +128,8 @@ const ALLOWED_TOP_LEVEL_DIRECTORIES = ["bin/", "docs/", "packs/", "project-overl
 // all required above; no new roots or increased size allowance.
 // WI-0263 replaces four obsolete Mermaid sources with one offline flow explorer.
 // Four SVGs remain; their dependency-free authoring script is not distributed.
-const MAX_FILE_COUNT = 487;
+// WI-0264 adds the measurement module and its public operations guide.
+const MAX_FILE_COUNT = 489;
 const MAX_UNPACKED_SIZE = 8 * 1024 * 1024;
 
 export function validatePackageDryRun(pack) {

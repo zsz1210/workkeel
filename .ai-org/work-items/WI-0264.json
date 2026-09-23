@@ -1,0 +1,151 @@
+{
+  "schema_version": "temple.work-item/v1",
+  "id": "WI-0264",
+  "title": "Record per-task model usage and execution timing",
+  "state": "build",
+  "owner_position": "developer",
+  "assigned_agent_id": "agent-rikku",
+  "created_at": "2026-09-23T16:49:01.782Z",
+  "updated_at": "2026-09-23T16:57:20.676Z",
+  "scope": [
+    "Add read-only task and workflow measurements with durable per-attempt observations and monotonic timing; offline validation only"
+  ],
+  "acceptance_criteria": [
+    "Requested runtime-confirmed and observed models remain distinct; token totals never double-count snapshots or unknown values; failures and retries retain measurements; task query is read-only; native unobserved execution remains unknown"
+  ],
+  "affected_paths": [
+    "src/workkeel-measurements.mjs",
+    "src/workkeel-workflows.mjs",
+    "src/workkeel-codex-runtime.mjs",
+    "src/workkeel-cli.mjs",
+    "test/workkeel-workflows.test.mjs",
+    "test/workkeel-codex-runtime.test.mjs",
+    "test/workkeel-measurements.test.mjs",
+    "docs/operations/workkeel-measurements.md",
+    "docs/operations/workkeel-workflows.md",
+    "README.md",
+    "README.zh-TW.md",
+    "README.ja.md",
+    "scripts/check-package.mjs"
+  ],
+  "context_refs": [],
+  "spec_refs": [],
+  "ux_refs": [],
+  "ui_refs": [],
+  "contract_refs": [],
+  "specification_mode": "gate-evidence",
+  "ui_delivery_mode": "not-applicable",
+  "workflow_profile": "standard",
+  "risk_tier": "standard",
+  "profile_assessment": {
+    "requested_profile": "standard",
+    "effective_profile": "standard",
+    "scope_class": "ordinary",
+    "escalation_triggers": [],
+    "rationale": "Additive local observability contract across runner and adapter; no UI security policy or model routing changes",
+    "evidence_refs": [],
+    "evaluated_at": "2026-09-23T16:49:01.771Z",
+    "escalated": false
+  },
+  "parent_work_item_id": null,
+  "tracker_visibility": "team-visible",
+  "tracker_refs": [],
+  "tracker_reconciliations": [],
+  "dependencies": [],
+  "required_disciplines": [],
+  "stage_requirements": {},
+  "base_revision": "5729bd91bbfe973b7ebfc83ddf8097a727d52a2d",
+  "parallel_mode": "parallel",
+  "integration_owner_agent_id": "agent-mog",
+  "planned_agent_id": null,
+  "shared_contract_refs": [],
+  "contract_status": "not_required",
+  "overlap_resolution": [],
+  "claim": {
+    "id": "claim-20260923165013-08496a22",
+    "status": "active",
+    "principal_id": "human",
+    "agent_id": "agent-rikku",
+    "actor_provenance": {
+      "selection": "explicit-agent",
+      "principal_source": "explicit-principal",
+      "verification_class": "attributed",
+      "evidence_ref": null,
+      "provider_authenticated": false,
+      "externally_supplied_evidence": false
+    },
+    "position_id": "developer",
+    "base_revision": "5729bd91bbfe973b7ebfc83ddf8097a727d52a2d",
+    "branch": "codex/workkeel-automation",
+    "worktree": null,
+    "claimed_at": "2026-09-23T16:50:13.749Z",
+    "released_at": null
+  },
+  "claims": [
+    {
+      "id": "claim-20260923164952-c3bb699e",
+      "status": "released",
+      "principal_id": "human",
+      "agent_id": "agent-mog",
+      "actor_provenance": {
+        "selection": "explicit-agent",
+        "principal_source": "explicit-principal",
+        "verification_class": "attributed",
+        "evidence_ref": null,
+        "provider_authenticated": false,
+        "externally_supplied_evidence": false
+      },
+      "position_id": "engineering_manager",
+      "base_revision": "5729bd91bbfe973b7ebfc83ddf8097a727d52a2d",
+      "branch": "codex/workkeel-automation",
+      "worktree": null,
+      "claimed_at": "2026-09-23T16:49:52.103Z",
+      "released_at": "2026-09-23T16:50:11.380Z",
+      "release_reason": [
+        "Approved work order recorded"
+      ]
+    },
+    {
+      "id": "claim-20260923165013-08496a22",
+      "status": "active",
+      "principal_id": "human",
+      "agent_id": "agent-rikku",
+      "actor_provenance": {
+        "selection": "explicit-agent",
+        "principal_source": "explicit-principal",
+        "verification_class": "attributed",
+        "evidence_ref": null,
+        "provider_authenticated": false,
+        "externally_supplied_evidence": false
+      },
+      "position_id": "developer",
+      "base_revision": "5729bd91bbfe973b7ebfc83ddf8097a727d52a2d",
+      "branch": "codex/workkeel-automation",
+      "worktree": null,
+      "claimed_at": "2026-09-23T16:50:13.749Z",
+      "released_at": null
+    }
+  ],
+  "gate_evidence": {
+    "work_order": [
+      ".ai-org/artifacts/WI-0264/work-order.md"
+    ],
+    "approved_scope": [
+      ".ai-org/artifacts/WI-0264/work-order.md"
+    ],
+    "acceptance_criteria": [
+      ".ai-org/artifacts/WI-0264/work-order.md"
+    ],
+    "technical_design": [
+      ".ai-org/artifacts/WI-0264/work-order.md"
+    ],
+    "risk_review": [
+      ".ai-org/artifacts/WI-0264/work-order.md"
+    ]
+  },
+  "evidence": [
+    ".ai-org/artifacts/WI-0264/work-order.md"
+  ],
+  "unresolved": [],
+  "next_position": "quality_evaluator"
+}

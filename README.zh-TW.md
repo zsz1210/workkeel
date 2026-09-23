@@ -74,6 +74,7 @@ node bin/workkeel.mjs help
 | LiteLLM Auto Router | 尚未整合 | 與 Workkeel 規則選模不同；啟用 gateway 不代表啟用 Auto |
 | Headroom | 關閉 | 主機自有整合可用無損檢視；不支援攔截 Codex 原生工具輸出 |
 | Console／observer | 選配 | 已有本機觀測介面；尚未完成新 Workkeel 任務／Graph 儀表板整合 |
+| 任務量測 | Workflow 執行時記錄 | 唯讀查詢模型、token 與耗時；原生代理工作階段尚未收集。[指南](docs/operations/workkeel-measurements.md) |
 
 沒有通用的 Luna／Sol／Astra 預設：原生 Agent 保留自己的設定，自動流程則必須提供核准的政策。
 不會安裝 macOS app，也不要求常駐背景程式。詳見[執行設定與限制](docs/operations/workkeel-workflows.md)。
