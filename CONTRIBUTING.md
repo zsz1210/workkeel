@@ -1,6 +1,10 @@
 # Contributing
 
-Temple welcomes focused bug reports, documentation improvements, tests, and implementation proposals. The project is still in Alpha, so open an issue before starting a large feature or a change to architecture, lifecycle authority, file ownership, security, or external integrations.
+Workkeel welcomes focused bug reports, documentation improvements, tests, and implementation proposals. The project is still in Alpha, so open an issue before starting a large feature or a change to architecture, lifecycle authority, file ownership, security, or external integrations.
+
+New projects may use [task-first mode](docs/getting-started/workkeel.md). This
+framework repository still self-hosts the legacy Temple operating contract;
+its current lifecycle gates and instructions remain binding for contributions.
 
 This repository is the central framework. Do not add Agent names, product specifications, work items, prompts, credentials, telemetry, or verification evidence from any real project.
 

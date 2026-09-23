@@ -2,21 +2,31 @@
 
 ## Supported versions
 
-Temple is still preparing its first public Alpha. No public version is supported yet. After publication, security fixes will target the latest GitHub pre-release only unless its release notes state otherwise; older Alpha builds may be asked to upgrade before a fix is provided.
+Workkeel is an Alpha project. The latest published prerelease is Temple
+`0.1.0-alpha.33`; the Workkeel task-first source is not yet an npm release.
+Security fixes target the latest GitHub prerelease unless its release notes say
+otherwise. Older Alpha builds may be asked to upgrade before a fix is provided.
 
 ## Report a vulnerability
 
 Do not disclose a suspected vulnerability, credential, private prompt, customer record, or repository evidence in a public issue.
 
-Once this repository is public, use GitHub's **Security → Report a vulnerability** flow as the primary private reporting channel. GitHub makes this repository-level flow available only after public visibility, so the maintainer must enable and verify it immediately after the controlled visibility change and before creating the first public tag or GitHub Release.
+Use GitHub's **Security → Report a vulnerability** flow as the primary private
+reporting channel. Private vulnerability reporting is enabled on this repository.
 
-During that transition, or if GitHub's private reporting flow is temporarily unavailable, email `zsz1210+oss.temple@gmail.com` with the subject prefix `[Temple][SECURITY]`. This Human-approved project alias is monitored by the maintainer. Do not reuse the conduct-reporting subject prefix for a vulnerability report.
+If GitHub's private reporting flow is unavailable, email
+`zsz1210+oss.temple@gmail.com` with the subject prefix `[Temple][SECURITY]`.
+The maintainer-approved legacy address and subject routing remain unchanged after
+the Workkeel rename. Do not use the conduct-reporting prefix for a vulnerability.
 
-This Alpha project does not promise a response-time SLA. The first public release must name the supported version and confirm that GitHub private vulnerability reporting was enabled and tested.
+This Alpha project does not promise a response-time SLA.
 
 ## Repository and project data
 
 - Do not commit API keys, GitHub tokens, private prompts, or customer data to this repository.
+- Task-first scope and environment declarations are not an operating-system sandbox.
+  The host must enforce actual access controls. Ordinary actor attribution is not
+  authentication; gateway plans do not read or store secret values.
 - Initialization configuration should contain only Agent display names and Position assignments, never model credentials.
 - `temple init` does not overwrite managed files whose contents differ. It also leaves an existing `AGENTS.md` unchanged unless integration is explicitly requested.
 - Archify is an optional visualization adapter. It must never receive authority to approve a release or modify canonical state.

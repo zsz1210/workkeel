@@ -3,11 +3,11 @@
 - Project ID: `temple`
 - Organization system version: `0.1.0-alpha.33`
 - Active Agent Identities: 5
-- Collaboration profile: `solo` (0 Human Principals, 1 active claims)
+- Collaboration profile: `solo` (0 Human Principals, 0 active claims)
 - Parallel plan: 0 wave(s), fresh=true
-- Work items: 258 total, 1 active
+- Work items: 259 total, 0 active
 - Codex tasks: 14 registered, 14 archive-ready
-- Runtime workers: 104 registered, 0 reserved, 0 active
+- Runtime workers: 109 registered, 0 reserved, 0 active
 - Shared resources: 0 defined, 0 active reservation(s)
 - Optional Skill packs: 0 installed
 - Repository capabilities: 6 available, 0 invalid
@@ -27,7 +27,7 @@
 - Human Principals: 0
 - Agent sponsorships: 0
 - Active Position memberships: 10
-- Active Work Item claims: 1
+- Active Work Item claims: 0
 - Active Human Authority Grants: 0
 - Governance recovery: `not_configured`
 - Real Collaborative validation: `not_run` (.ai-org/templates/collaborative-large-scale-test-plan.md)
@@ -40,7 +40,7 @@
 - Fresh: yes
 - Safe waves: 0
 - Dispatchable Work Items: 0
-- Active / sequential / blocked: 1 / 0 / 0
+- Active / sequential / blocked: 0 / 0 / 0
 - Next wave: none
 - Codex tasks, claims, or external actions performed by planning: no
 
@@ -305,12 +305,11 @@
 | WI-0255 | Define Workkeel task and execution contracts | done | Engineering Manager | Mog | sequential | team-visible | 0 | gate-evidence | not-applicable | 0 | 0 | 0 | — | `8165774f` | 0 | 7 | 0 |
 | WI-0256 | Qualify baseline test harness repair | done | Engineering Manager | Mog | sequential | internal | 0 | gate-evidence | not-applicable | 0 | 0 | 0 | — | `4ac435d8` | 0 | 5 | 0 |
 | WI-0257 | Deliver the role-free Workkeel lifecycle and runtime connection boundary | cancelled | Engineering Manager | Mog | sequential | team-visible | 0 | gate-evidence | not-applicable | 0 | 0 | 0 | — | `—` | 0 | 2 | 0 |
-| WI-0258 | Implement the Workkeel task-first lifecycle | build | Developer | Rikku | sequential | team-visible | 0 | gate-evidence | not-applicable | 0 | 0 | 0 | claim-20260923100423-76583879 | `—` | 0 | 1 | 0 |
+| WI-0258 | Implement the Workkeel task-first lifecycle | done | Engineering Manager | Mog | parallel | team-visible | 0 | gate-evidence | not-applicable | 0 | 0 | 0 | — | `6bb9c98e` | 0 | 9 | 0 |
+| WI-0259 | Rename and reframe the public Workkeel framework | done | Engineering Manager | Mog | parallel | team-visible | 0 | gate-evidence | not-applicable | 0 | 0 | 0 | — | `1c1d57bf` | 0 | 9 | 0 |
 
 ## Delivery attention
 
-- WI-0258: awaiting-owner — The recorded owner can continue the scoped work; no attached active worker is recorded.
-  - owner: No attached active runtime is recorded for this claim.
 
 ## Codex task registry
 
@@ -439,6 +438,11 @@
 | worker-20260917154651-bbe4f0e9 | internal-subagent | WI-0248 | Independent QA / Lulu | completed | /root/physical_recovery_qa | `0c1c6f1c` | 0 |
 | worker-20260917160948-5466d2ac | internal-subagent | WI-0249 | Quality & Evaluation Engineer / Lulu | completed | /root/finish_physical_test | `360b1b86` | 0 |
 | worker-20260917161330-18d6211d | internal-subagent | WI-0249 | Independent QA / Lulu | completed | /root/finish_physical_qa | `360b1b86` | 0 |
+| worker-20260923094720-9641150a | internal-subagent | WI-0255 | Quality & Evaluation Engineer / Lulu | completed | /root/workkeel_contract_review | `8165774f` | 0 |
+| worker-20260923103738-489eacc0 | internal-subagent | WI-0258 | Quality & Evaluation Engineer / Lulu | completed | /root/workkeel_lifecycle_review | `3dfb3094` | 0 |
+| worker-20260923111127-c847b9d2 | internal-subagent | WI-0258 | Quality & Evaluation Engineer / Lulu | completed | /root/workkeel_rework_acceptance | `6bb9c98e` | 0 |
+| worker-20260923112426-33caa43a | internal-subagent | WI-0259 | Quality & Evaluation Engineer / Lulu | completed | /root/workkeel_brand_review | `6bb9c98e` | 0 |
+| worker-20260923113129-92b5fae3 | internal-subagent | WI-0259 | Quality & Evaluation Engineer / Lulu | completed | /root/workkeel_brand_acceptance | `1c1d57bf` | 0 |
 
 - Shared resource registry: `.ai-org/project/resources.json`
 - Runtime worker registry: `.ai-org/project/runtime-workers.json`
@@ -478,7 +482,7 @@
 - Profile: `repository-only`
 - Sync granularity: `team-visible`
 - Active providers: 0
-- Team-visible Work Items: 104
+- Team-visible Work Items: 105
 - Linked Work Items: 0
 - Observed external items: 0
 - Reconciliation actions: 0
@@ -552,14 +556,14 @@
 
 | Time | Event | Work item | Actor |
 |---|---|---|---|
-| 2026-09-23T10:42:27.403Z | work_item_closed | WI-0253 | agent-mog |
-| 2026-09-23T10:42:27.403Z | release_gate_completed | WI-0253 | agent-mog |
-| 2026-09-23T10:41:45.826Z | work_item_claimed | WI-0253 | human |
-| 2026-09-23T10:39:38.350Z | work_item_transitioned | WI-0253 | agent-lulu |
-| 2026-09-23T10:39:37.853Z | work_item_claim_released | WI-0253 | human |
-| 2026-09-23T10:39:37.354Z | handoff_created | WI-0253 | agent-lulu |
-| 2026-09-23T10:38:38.476Z | work_item_claimed | WI-0253 | human |
-| 2026-09-23T10:38:18.149Z | work_item_transitioned | WI-0253 | agent-lulu |
+| 2026-09-23T11:37:24.295Z | work_item_closed | WI-0259 | agent-mog |
+| 2026-09-23T11:37:24.295Z | release_gate_completed | WI-0259 | agent-mog |
+| 2026-09-23T11:37:23.804Z | work_item_claimed | WI-0259 | human |
+| 2026-09-23T11:35:45.661Z | work_item_transitioned | WI-0259 | agent-lulu |
+| 2026-09-23T11:35:45.173Z | work_item_claim_released | WI-0259 | human |
+| 2026-09-23T11:35:44.703Z | handoff_created | WI-0259 | agent-lulu |
+| 2026-09-23T11:35:44.189Z | work_item_claimed | WI-0259 | human |
+| 2026-09-23T11:35:24.590Z | work_item_transitioned | WI-0259 | agent-lulu |
 
 ## Assignments
 

@@ -15,27 +15,28 @@
     "package-lock.json",
     ".ai-org/project/domain-glossary.md"
   ],
-  "assigned_agent_id": "agent-rikku",
-  "base_revision": "9d0f8547",
+  "assigned_agent_id": "agent-mog",
+  "base_revision": "6bb9c98e25fe6056621ba4189ce0ed640e8f4438",
   "claim": {
-    "actor_provenance": {
-      "evidence_ref": null,
-      "externally_supplied_evidence": false,
-      "principal_source": "explicit-principal",
-      "provider_authenticated": false,
-      "selection": "explicit-agent",
-      "verification_class": "attributed"
-    },
-    "agent_id": "agent-rikku",
-    "base_revision": "9d0f8547",
-    "branch": "codex/workkeel-reframe",
-    "claimed_at": "2026-09-23T10:04:23.251Z",
-    "id": "claim-20260923100423-76583879",
-    "position_id": "developer",
+    "id": "claim-20260923112352-d0fe77ff",
+    "status": "released",
     "principal_id": "human",
-    "released_at": null,
-    "status": "active",
-    "worktree": "."
+    "agent_id": "agent-mog",
+    "actor_provenance": {
+      "selection": "explicit-agent",
+      "principal_source": "explicit-principal",
+      "verification_class": "attributed",
+      "evidence_ref": null,
+      "provider_authenticated": false,
+      "externally_supplied_evidence": false
+    },
+    "position_id": "release_manager",
+    "base_revision": "6bb9c98e25fe6056621ba4189ce0ed640e8f4438",
+    "branch": "codex/workkeel-reframe",
+    "worktree": ".",
+    "claimed_at": "2026-09-23T11:23:52.609Z",
+    "released_at": "2026-09-23T11:23:53.126Z",
+    "release_reason": "work_item_closed"
   },
   "claims": [
     {
@@ -54,9 +55,146 @@
       "id": "claim-20260923100423-76583879",
       "position_id": "developer",
       "principal_id": "human",
-      "released_at": null,
-      "status": "active",
+      "release_reason": [
+        "Handoff exact verified Workkeel candidate to independent reviewer"
+      ],
+      "released_at": "2026-09-23T10:37:24.395Z",
+      "status": "released",
       "worktree": "."
+    },
+    {
+      "actor_provenance": {
+        "evidence_ref": null,
+        "externally_supplied_evidence": false,
+        "principal_source": "explicit-principal",
+        "provider_authenticated": false,
+        "selection": "explicit-agent",
+        "verification_class": "attributed"
+      },
+      "agent_id": "agent-lulu",
+      "base_revision": "3dfb3094716b207cfc0c33a411ee7c506ba7dccf",
+      "branch": "codex/workkeel-reframe",
+      "claimed_at": "2026-09-23T10:37:38.147Z",
+      "id": "claim-20260923103738-49abc3e0",
+      "position_id": "quality_evaluator",
+      "principal_id": "human",
+      "release_reason": "review_rework",
+      "released_at": "2026-09-23T10:47:47.344Z",
+      "status": "released",
+      "worktree": "."
+    },
+    {
+      "id": "claim-20260923105005-acff4d8f",
+      "status": "released",
+      "principal_id": "human",
+      "agent_id": "agent-rikku",
+      "actor_provenance": {
+        "selection": "explicit-agent",
+        "principal_source": "explicit-principal",
+        "verification_class": "attributed",
+        "evidence_ref": null,
+        "provider_authenticated": false,
+        "externally_supplied_evidence": false
+      },
+      "position_id": "developer",
+      "base_revision": "fa1491f3",
+      "branch": "codex/workkeel-reframe",
+      "worktree": ".",
+      "claimed_at": "2026-09-23T10:50:05.441Z",
+      "released_at": "2026-09-23T10:55:43.474Z",
+      "release_reason": [
+        "Migration repair implemented and focused tests pass; remaining sequential branding owns this checkout until joint candidate verification, then Developer will reclaim for exact handoff."
+      ]
+    },
+    {
+      "id": "claim-20260923111029-fac4dd91",
+      "status": "released",
+      "principal_id": "human",
+      "agent_id": "agent-rikku",
+      "actor_provenance": {
+        "selection": "explicit-agent",
+        "principal_source": "explicit-principal",
+        "verification_class": "attributed",
+        "evidence_ref": null,
+        "provider_authenticated": false,
+        "externally_supplied_evidence": false
+      },
+      "position_id": "developer",
+      "base_revision": "6bb9c98e25fe6056621ba4189ce0ed640e8f4438",
+      "branch": "codex/workkeel-reframe",
+      "worktree": ".",
+      "claimed_at": "2026-09-23T11:10:29.929Z",
+      "released_at": "2026-09-23T11:11:13.733Z",
+      "release_reason": [
+        "Corrected exact candidate handed to separate actual QA Agent"
+      ]
+    },
+    {
+      "id": "claim-20260923111127-e6230ca3",
+      "status": "released",
+      "principal_id": "human",
+      "agent_id": "agent-lulu",
+      "actor_provenance": {
+        "selection": "explicit-agent",
+        "principal_source": "explicit-principal",
+        "verification_class": "attributed",
+        "evidence_ref": null,
+        "provider_authenticated": false,
+        "externally_supplied_evidence": false
+      },
+      "position_id": "quality_evaluator",
+      "base_revision": "6bb9c98e25fe6056621ba4189ce0ed640e8f4438",
+      "branch": "codex/workkeel-reframe",
+      "worktree": ".",
+      "claimed_at": "2026-09-23T11:11:27.365Z",
+      "released_at": "2026-09-23T11:17:58.455Z",
+      "release_reason": [
+        "Test and Eval evidence handed to Independent QA; terminal worker preserved."
+      ]
+    },
+    {
+      "id": "claim-20260923111833-5a4d69be",
+      "status": "released",
+      "principal_id": "human",
+      "agent_id": "agent-lulu",
+      "actor_provenance": {
+        "selection": "explicit-agent",
+        "principal_source": "explicit-principal",
+        "verification_class": "attributed",
+        "evidence_ref": null,
+        "provider_authenticated": false,
+        "externally_supplied_evidence": false
+      },
+      "position_id": "independent_qa",
+      "base_revision": "6bb9c98e25fe6056621ba4189ce0ed640e8f4438",
+      "branch": "codex/workkeel-reframe",
+      "worktree": ".",
+      "claimed_at": "2026-09-23T11:18:33.106Z",
+      "released_at": "2026-09-23T11:18:49.076Z",
+      "release_reason": [
+        "Independent QA PASS handed to Release Manager; reviewer authority ends at Release Gate."
+      ]
+    },
+    {
+      "id": "claim-20260923112352-d0fe77ff",
+      "status": "released",
+      "principal_id": "human",
+      "agent_id": "agent-mog",
+      "actor_provenance": {
+        "selection": "explicit-agent",
+        "principal_source": "explicit-principal",
+        "verification_class": "attributed",
+        "evidence_ref": null,
+        "provider_authenticated": false,
+        "externally_supplied_evidence": false
+      },
+      "position_id": "release_manager",
+      "base_revision": "6bb9c98e25fe6056621ba4189ce0ed640e8f4438",
+      "branch": "codex/workkeel-reframe",
+      "worktree": ".",
+      "claimed_at": "2026-09-23T11:23:52.609Z",
+      "released_at": "2026-09-23T11:23:53.126Z",
+      "release_reason": "work_item_closed"
     }
   ],
   "context_refs": [],
@@ -65,7 +203,15 @@
   "created_at": "2026-09-23T10:04:20.589Z",
   "dependencies": [],
   "evidence": [
-    ".ai-org/artifacts/WI-0258/workkeel-design.md"
+    ".ai-org/artifacts/WI-0258/workkeel-design.md",
+    ".ai-org/artifacts/WI-0258/handoff-003-developer-to-quality_evaluator.md",
+    ".ai-org/artifacts/WI-0258/workkeel-developer-evidence.md",
+    ".ai-org/artifacts/WI-0258/handoff-004-developer-to-quality_evaluator.md",
+    ".ai-org/artifacts/WI-0258/workkeel-developer-evidence-attempt-2.md",
+    ".ai-org/artifacts/WI-0258/workkeel-independent-review-attempt-2.md",
+    ".ai-org/artifacts/WI-0258/handoff-005-quality_evaluator-to-independent_qa.md",
+    ".ai-org/artifacts/WI-0258/handoff-006-independent_qa-to-release_manager.md",
+    ".ai-org/artifacts/WI-0258/release-record.md"
   ],
   "gate_evidence": {
     "acceptance_criteria": [
@@ -82,16 +228,115 @@
     ],
     "work_order": [
       ".ai-org/artifacts/WI-0258/workkeel-design.md"
+    ],
+    "developer_handoff": [
+      ".ai-org/artifacts/WI-0258/handoff-004-developer-to-quality_evaluator.md"
+    ],
+    "developer_evidence": [
+      ".ai-org/artifacts/WI-0258/workkeel-developer-evidence-attempt-2.md"
+    ],
+    "test_evidence": [
+      ".ai-org/artifacts/WI-0258/workkeel-independent-review-attempt-2.md"
+    ],
+    "evaluation_report": [
+      ".ai-org/artifacts/WI-0258/workkeel-independent-review-attempt-2.md"
+    ],
+    "independent_qa_pass": [
+      ".ai-org/artifacts/WI-0258/workkeel-independent-review-attempt-2.md"
+    ],
+    "accepted_scope": [
+      ".ai-org/artifacts/WI-0258/workkeel-design.md"
+    ],
+    "independent_qa_report": [
+      ".ai-org/artifacts/WI-0258/workkeel-independent-review-attempt-2.md"
+    ],
+    "rollback_plan": [
+      ".ai-org/artifacts/WI-0258/release-record.md"
+    ],
+    "required_human_approval": [
+      "not-required"
     ]
   },
+  "handoffs": [
+    {
+      "actor": "agent-rikku",
+      "actor_provenance": {
+        "evidence_ref": null,
+        "externally_supplied_evidence": false,
+        "principal_source": "active-claim",
+        "provider_authenticated": false,
+        "selection": "active-claim",
+        "verification_class": "attributed"
+      },
+      "artifact": ".ai-org/artifacts/WI-0258/handoff-003-developer-to-quality_evaluator.md",
+      "created_at": "2026-09-23T10:37:23.801Z",
+      "from_position": "developer",
+      "input_revision": "3dfb3094716b207cfc0c33a411ee7c506ba7dccf",
+      "principal_id": "human",
+      "to_position": "quality_evaluator"
+    },
+    {
+      "from_position": "developer",
+      "to_position": "quality_evaluator",
+      "actor": "agent-rikku",
+      "principal_id": "human",
+      "actor_provenance": {
+        "selection": "active-claim",
+        "principal_source": "active-claim",
+        "verification_class": "attributed",
+        "evidence_ref": null,
+        "provider_authenticated": false,
+        "externally_supplied_evidence": false
+      },
+      "input_revision": "6bb9c98e25fe6056621ba4189ce0ed640e8f4438",
+      "artifact": ".ai-org/artifacts/WI-0258/handoff-004-developer-to-quality_evaluator.md",
+      "created_at": "2026-09-23T11:11:13.249Z"
+    },
+    {
+      "from_position": "quality_evaluator",
+      "to_position": "independent_qa",
+      "actor": "agent-lulu",
+      "principal_id": "human",
+      "actor_provenance": {
+        "selection": "active-claim",
+        "principal_source": "active-claim",
+        "verification_class": "attributed",
+        "evidence_ref": null,
+        "provider_authenticated": false,
+        "externally_supplied_evidence": false
+      },
+      "input_revision": "6bb9c98e25fe6056621ba4189ce0ed640e8f4438",
+      "artifact": ".ai-org/artifacts/WI-0258/handoff-005-quality_evaluator-to-independent_qa.md",
+      "created_at": "2026-09-23T11:17:52.646Z"
+    },
+    {
+      "from_position": "independent_qa",
+      "to_position": "release_manager",
+      "actor": "agent-lulu",
+      "principal_id": "human",
+      "actor_provenance": {
+        "selection": "active-claim",
+        "principal_source": "active-claim",
+        "verification_class": "attributed",
+        "evidence_ref": null,
+        "provider_authenticated": false,
+        "externally_supplied_evidence": false
+      },
+      "input_revision": "6bb9c98e25fe6056621ba4189ce0ed640e8f4438",
+      "artifact": ".ai-org/artifacts/WI-0258/handoff-006-independent_qa-to-release_manager.md",
+      "created_at": "2026-09-23T11:18:42.196Z"
+    }
+  ],
   "id": "WI-0258",
-  "integration_owner_agent_id": null,
-  "next_position": "quality_evaluator",
-  "overlap_resolution": [],
-  "owner_position": "developer",
-  "parallel_mode": "sequential",
+  "integration_owner_agent_id": "agent-mog",
+  "next_position": null,
+  "overlap_resolution": [
+    "WI-0259: same exact fully tested candidate; no product writes; sequential formal reviews; only WI-0258 dispatched now"
+  ],
+  "owner_position": "engineering_manager",
+  "parallel_mode": "parallel",
   "parent_work_item_id": null,
-  "planned_agent_id": "agent-rikku",
+  "planned_agent_id": null,
   "profile_assessment": {
     "effective_profile": "standard",
     "escalated": false,
@@ -105,6 +350,44 @@
     "scope_class": "cross-system"
   },
   "required_disciplines": [],
+  "rework_history": [
+    {
+      "findings": [
+        ".ai-org/artifacts/WI-0258/workkeel-independent-review.md"
+      ],
+      "from_state": "test",
+      "handoff_refs": [
+        ".ai-org/artifacts/WI-0258/handoff-003-developer-to-quality_evaluator.md"
+      ],
+      "reason": [
+        "Real legacy init installs work-items/README.md, which migration preview and native listing reject; preserve normal legacy documentation and add real-init migration coverage."
+      ],
+      "rejected_revision": "3dfb3094716b207cfc0c33a411ee7c506ba7dccf",
+      "retained_requirements": [
+        "work_order",
+        "approved_scope",
+        "acceptance_criteria",
+        "technical_design",
+        "risk_review"
+      ],
+      "retired_candidate_fields": {
+        "developer_candidate_revision": "3dfb3094716b207cfc0c33a411ee7c506ba7dccf"
+      },
+      "retired_gate_evidence": {
+        "developer_evidence": [
+          ".ai-org/artifacts/WI-0258/workkeel-developer-evidence.md"
+        ],
+        "developer_handoff": [
+          ".ai-org/artifacts/WI-0258/handoff-003-developer-to-quality_evaluator.md"
+        ]
+      },
+      "returned_at": "2026-09-23T10:47:47.344Z",
+      "reviewer_agent_id": "agent-lulu",
+      "reviewer_claim_id": "claim-20260923103738-49abc3e0",
+      "scope_digest": "9c9e08e85c646929ea8109a29161bdfd1e80026028d6bc2be16f235ad2ff33ae",
+      "sequence": 1
+    }
+  ],
   "risk_tier": "standard",
   "schema_version": "temple.work-item/v1",
   "scope": [
@@ -114,7 +397,7 @@
   "spec_refs": [],
   "specification_mode": "gate-evidence",
   "stage_requirements": {},
-  "state": "build",
+  "state": "done",
   "title": "Implement the Workkeel task-first lifecycle",
   "tracker_reconciliations": [],
   "tracker_refs": [],
@@ -122,7 +405,14 @@
   "ui_delivery_mode": "not-applicable",
   "ui_refs": [],
   "unresolved": [],
-  "updated_at": "2026-09-23T10:04:23.251Z",
+  "updated_at": "2026-09-23T11:23:53.126Z",
   "ux_refs": [],
-  "workflow_profile": "standard"
+  "workflow_profile": "standard",
+  "developer_candidate_revision": "6bb9c98e25fe6056621ba4189ce0ed640e8f4438",
+  "tested_revision": "6bb9c98e25fe6056621ba4189ce0ed640e8f4438",
+  "release_gate_result": "go",
+  "lifecycle_outcome": "accepted",
+  "closeout_reasons": [],
+  "external_release_status": "not_performed",
+  "approval_record": "not-required"
 }

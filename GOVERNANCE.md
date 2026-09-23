@@ -1,6 +1,10 @@
 # Governance
 
-Temple is currently a maintainer-led Alpha project. The repository owner is the project maintainer and final release authority. Temple Position names describe responsibility inside the framework; they do not automatically grant GitHub permission or project governance authority to a contributor.
+Workkeel is currently a maintainer-led Alpha project. The repository owner is the
+project maintainer and final release authority. Task-first Agent identities and
+legacy Temple Position names never automatically grant GitHub permission or
+maintainer authority. The toolkit's retained Temple self-hosting gates remain
+binding; adopting the Workkeel name does not change the merge or release policy.
 
 ## How decisions are made
 

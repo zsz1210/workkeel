@@ -1,6 +1,8 @@
 # Repository instructions
 
-This repository builds the Temple AI Development Organization Framework.
+This repository builds Workkeel, a repository-native task coordination framework
+for coding agents. It retains Temple compatibility mode and currently self-hosts
+the legacy operating contract below; do not reinterpret it as a task-first project.
 
 - Never add project-specific Agent display names to `project-overlay/`.
 - Keep Position definitions separate from Agent Identity and Assignment data.

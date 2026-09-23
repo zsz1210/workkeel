@@ -1,11 +1,11 @@
 {
-  "name": "@zsz1210/temple-ai-dev-org",
+  "name": "@zsz1210/workkeel",
   "version": "0.1.0-alpha.33",
-  "description": "A repository-native, extensible AI development organization framework for Codex projects.",
+  "description": "A repository-native task coordination framework for coding agents.",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/zsz1210/temple-ai-dev-org.git"
+    "url": "git+https://github.com/zsz1210/workkeel.git"
   },
   "type": "module",
   "files": [
@@ -24,6 +24,7 @@
     "THIRD_PARTY_NOTICES.md"
   ],
   "bin": {
+    "workkeel": "./bin/workkeel.mjs",
     "temple": "./bin/temple.mjs"
   },
   "engines": {

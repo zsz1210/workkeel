@@ -1,6 +1,6 @@
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
-import { PACKAGE_NAME, REPOSITORY_ROOT, TEMPLATE_REPOSITORY, TEMPLATE_VERSION } from "./constants.mjs";
+import { KNOWN_PACKAGE_NAMES, PACKAGE_NAME, REPOSITORY_ROOT, TEMPLATE_REPOSITORY, TEMPLATE_VERSION } from "./constants.mjs";
 
 const execFileAsync = promisify(execFile);
 export const CLI_BOOTSTRAP_SCHEMA = "temple.cli-bootstrap/v1";
@@ -49,7 +49,7 @@ export function validateCliBootstrapMetadata(document, templateVersion = TEMPLAT
     errors.push(`bootstrap node requirement must be ${SUPPORTED_NODE_RANGE}`);
   }
   if (document.launcher !== "templew.mjs") errors.push("bootstrap launcher must be templew.mjs");
-  if (document.package_spec !== `${PACKAGE_NAME}@${templateVersion}`) {
+  if (![...KNOWN_PACKAGE_NAMES].some(name => document.package_spec === `${name}@${templateVersion}`)) {
     errors.push("bootstrap package_spec must pin the installed package version");
   }
   if (!(document.repository_spec === null || (

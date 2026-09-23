@@ -1,5 +1,24 @@
 # Architecture
 
+## Workkeel task-first boundary
+
+The current opt-in mode coordinates approved tasks in the repository. A
+`workkeel.lock` pins the CLI and explicit Agent/Principal approval policy. Each
+`.ai-org/work-items/` record keeps an immutable contract, current claim, exact
+candidate, evidence digests, review, closeout and failed-attempt history.
+
+The host coding agent executes the work and enforces actual tool, filesystem,
+network and data controls. Optional project Skills supply specific procedures;
+they are not authority or a mandatory generic model-capability catalog. Model
+transport is separate: native settings are the default and a fixed gateway can
+be described in a read-only plan. There is no new execution loop or automatic
+task-first provider launch. See the [guide](../getting-started/workkeel.md) and
+[ADR-0072](../adr/0072-task-first-lifecycle.md).
+
+The remaining sections describe **legacy Temple compatibility mode**, not the
+required setup for a new task-first project. This toolkit still self-hosts that
+legacy operating contract until a separately approved migration can preserve it.
+
 ## System boundary at a glance
 
 ```mermaid
@@ -46,7 +65,8 @@ Solid arrows show governed project flow. Dotted arrows are deliberately weaker: 
 
 Temple routes three different decisions after human direction and Work Item scope are known:
 
-The README's compact diagram groups engineering methods and execution adaptation together as **Guidance**. The more detailed product taxonomy keeps them as separate layers in the [vision](vision.md#the-seven-framework-layers); this is a difference in presentation depth, not two competing architectures.
+The legacy taxonomy keeps engineering methods and execution adaptation as separate
+layers in the [legacy vision](vision.md#the-seven-framework-layers).
 
 | Route | Question | Primary input | Output | It does not |
 |---|---|---|---|---|
@@ -89,9 +109,12 @@ See [Collaborative development model](../operations/collaboration.md) for the co
 
 ## Naming boundary
 
-`Temple` is the name of the central framework, CLI, and technical namespace. It is not the name of an installed project or AI team.
+`Workkeel` is the public framework name. `Temple` identifies its retained legacy
+CLI and technical namespace, not an installed project's identity.
 
-- The central repository, `temple` CLI, `temple.lock`, `temple.*` schemas, CLI-specific Skill IDs, and compatibility markers retain stable names. General-purpose Skills use neutral names.
+- The repository and source package are `zsz1210/workkeel` and `@zsz1210/workkeel`.
+  The `temple` compatibility CLI, `temple.lock`, `temple.*` schemas, CLI-specific
+  Skill IDs and compatibility markers retain stable names. General-purpose Skills use neutral names.
 - After installation, project-facing instructions, status, artifacts, and Agent descriptions use the project name or "this project's AI development organization."
 - Project members are not called the Temple team, and the central framework brand does not replace product identity.
 - `TEMPLE.md` remains temporarily as a compatibility filename, but its contents are the repository's organizational operating contract, not another external project.

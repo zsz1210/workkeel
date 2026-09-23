@@ -1,181 +1,70 @@
-<h1 align="center">Temple</h1>
+# Workkeel
 
-<p align="center"><strong>AI 開發組織框架</strong></p>
+以程式庫為基礎的 AI 開發代理任務協作框架。
 
-<p align="center">讓每一項變更都有負責者、做法與驗證依據。</p>
+換了對話、代理或模型，工作仍能接著走。
 
-<p align="center"><a href="README.md">English</a> · <a href="README.ja.md">日本語</a> · <strong>繁體中文</strong></p>
+[English](README.md) · 繁體中文 · [日本語](README.ja.md)
 
-<p align="center">
-  <a href="https://github.com/zsz1210/temple-ai-dev-org/actions/workflows/ci.yml"><img alt="CI 狀態" src="https://github.com/zsz1210/temple-ai-dev-org/actions/workflows/ci.yml/badge.svg"></a>
-  &nbsp;·&nbsp; Early Alpha
-  &nbsp;·&nbsp; Node.js 24 以上
-  &nbsp;·&nbsp; <a href="LICENSE">MIT</a>
-</p>
+[![CI](https://github.com/zsz1210/workkeel/actions/workflows/ci.yml/badge.svg)](https://github.com/zsz1210/workkeel/actions/workflows/ci.yml)
+Early Alpha · Node.js 24+ · [MIT](LICENSE)
 
----
+## 協調工作，不必先組一間 AI 公司
 
-## AI 讓實作變快了，但協作沒有因此變簡單。
+現在的 coding agent 已經能規劃、實作與測試。換一段對話後容易遺失的，往往是工作周圍的約定：核准了什麼、誰正在做、允許碰哪些檔案與工具、交接了什麼，以及哪個確切版本通過驗收。
 
-AI 可以規劃、寫程式、測試與審查。可是當專案裡同時有多項工作、多段對話、多人或多個 AI 在行動時，真正困難的通常是組織問題：
+Workkeel 把這些約定留在程式碼旁邊。新的任務優先模式不需要 CEO、PM 或工程師職稱，也不用建立一大張通用技能表，才能告訴 AI「你會寫程式」。你繼續使用既有 coding agent；Workkeel 記錄範圍、身分、操作邊界、相依關係、證據與驗收。
 
-- 這項變更由誰負責？
-- 實際核准的是哪些內容？
-- 哪些工作可以安全地同時進行？
-- 測試的是哪一個版本？
-- 下一位接手者該讀什麼，又可以忽略什麼？
-- 這次的教訓能不能重用，還是只適用於當時的情況？
+它不是應用程式框架、模型、新的代理執行引擎，也不是自主發號施令的管理者。專案架構、工具與人類決策權仍由你掌握。「AI 公司」保留為舊模式的選項，不再是新核心的前提。
 
-Temple 把一套能長期使用的開發組織放進專案版本庫。責任、工作狀態、所需資料、工程方法、交接、驗證紀錄與學習內容不再只存在對話裡，因此換一個人或 AI 接手時，不必重新拼湊舊聊天紀錄。
+## 一項任務，從核准到可驗證交接
 
-Temple 不是應用程式框架、任務追蹤工具，也不是會自行發號施令的管理者。專案原本的架構、技術、文件與工具都可以保留；Temple 管理的是人與 AI 要怎麼圍繞這些內容一起工作。
+1. 確認目標、範圍、驗收條件與實際工作環境。
+2. 由指定代理認領，在既有 coding runtime 裡工作。
+3. 交付確切 Git 版本、驗證證據，先處理未解決事項。
+4. 由不同的已登記代理審查；不通過就保留失敗紀錄並重做。
+5. 明確接受已審查的版本。驗收不等於發布或部署。
 
-> **產品要怎麼做，由你的專案決定；工作如何分配、驗證與留下紀錄，則由 Temple 協助整理。**
+核准契約不隨進度改寫；進度、認領、失敗嘗試與驗收結果分開記錄。版本檢查防止過期更新，雜湊檢查可發現證據被改動。「附件」目錄也不能用來藏未驗收的程式。實際工具與網路隔離仍由執行環境負責，設定格式正確不代表獲得權限。
 
-## 從一個專案開始
+## 從開發中原始碼開始
 
-請準備 Git、Node.js 24 以上版本、專案目錄，以及用於引導式設定的 Codex。目前公開預覽版為 [Alpha.33](https://github.com/zsz1210/temple-ai-dev-org/releases/tag/v0.1.0-alpha.33)，可透過 npm 的 `next` 頻道取得。
+這次 Workkeel 改版是**尚未發布的原始碼**，不是先前已發布的 Temple Alpha.33 套件。Repository 或套件資訊改名，不代表已發布 npm 版本。需要 Git、Node.js 24 以上，以及一個已有 Git 的專案。
 
-**先選擇導入來源：** npm `@next` 安裝的是已發布的 Alpha.33。下方下載原始碼的方式會取得 `main`，其中也包含[尚未發布的修改](CHANGELOG.md#unreleased-changes)。Compact evidence 與可選的 Headroom adapter 目前需要這份開發中原始碼，Alpha.33 尚未包含。若要使用已發布版本的原始碼，請將下方 clone 指令改成 `git clone --branch v0.1.0-alpha.33 https://github.com/zsz1210/temple-ai-dev-org.git`。
-
-### AI 引導式設定
-
-先下載一次 Temple，讓 Codex 能讀取初始化 Skill：
-
-```bash
-git clone https://github.com/zsz1210/temple-ai-dev-org.git
-cd temple-ai-dev-org
-npm ci
+```sh
+git clone https://github.com/zsz1210/workkeel.git
+cd workkeel
+npm ci --ignore-scripts
+node bin/workkeel.mjs help
 ```
 
-在 Codex 開啟這份原始碼，然後提出：
+在 coding agent 開啟這份原始碼，然後提出：
 
-> 使用 [`$temple-init`](docs/getting-started/core-skills.md#temple-init) 初始化 `/absolute/path/to/my-project`。先查看既有的開發與整合規範，提議 Agent 的名字與職責，只詢問缺少的選項。請提供設定摘要，等我確認後再寫入檔案。
+> 閱讀任務優先模式指南與我的專案指令。協助確認 Agent／Principal 身分、核准規則、工作目錄、可碰的檔案與工具，以及資料處理條件。先讓我確認設定，再初始化不依賴公司職稱的 Workkeel；保留既有專案檔案。
 
-初始化後，先處理工具提示的指令檔合併問題，並完成 bootstrap 檢查。接著在**已初始化的專案中開啟新對話**，確認專案指令已載入。安裝成功不代表目前的對話已讀過這些指令。詳見[首次初始化指南（英文）](docs/getting-started/usage.md#2-first-initialization)。
+[快速開始指南（英文）](docs/getting-started/workkeel.md)提供精簡政策、完整任務範例，以及認領、交付、驗收指令。每個專案有版本固定的 `workkeelw.mjs`；套件發布前，指南會說明如何使用經版本檢查的原始碼入口。不必全域安裝，也不必先架模型 Gateway。
 
-Temple 會導入各個專案，不必為每個產品 fork 整套框架。原本的程式碼、文件與版本庫代管規範都可以保留。
+## 四件事，各自處理
 
-<details>
-<summary>只安裝 CLI，或參與 Temple 開發</summary>
+- **任務與授權：** 核准成果、Agent／Principal 身分、範圍、允許的操作與驗收身分分離。
+- **環境與執行：** 工作目錄、讀寫範圍、工具、資源、網路與資料政策；由既有 coding agent 實際執行。
+- **專案方法：** 需要時才加入特定知識或流程的 Skill，不要求填寫模型的通用能力清單。
+- **模型連接：** 預設沿用原生設定；固定 Gateway 連接是選配，不與工具能力或任務驗收混在一起。
 
-```bash
-npm install --global @zsz1210/temple-ai-dev-org@next
-temple --version
-```
+目前 LiteLLM／Codex 選配路徑提供的是**唯讀執行設定計畫**，不會啟動模型、修改全域設定或讀取金鑰。真實 Gateway 的工具互動尚未完成驗證，自動派工到新模式也尚未啟用。自動選模與新的 Graph 引擎不在這次範圍內。
 
-這會安裝 CLI，但不會讓尚未初始化的專案預先取得 `$temple-init` Skill。設定與確認步驟請看[初始化指南（英文）](docs/getting-started/usage.md#2-first-initialization)；需要 AI 引導時，使用上面的原始碼方式。
+## 舊 Temple 專案保留歷史
 
-若要開發 Temple 本體，請依照[參與貢獻（英文）](CONTRIBUTING.md)與[測試指南（英文）](docs/getting-started/testing.md)。完整行為驗證與可選的全域連結屬於這個流程：
+Workkeel 是 Temple 的新名稱。`temple` 相容指令、`templew.mjs`、`temple.lock`、`temple.*` 格式識別與歷史證據仍保留，不做全域取代。
 
-```bash
-npm run verify
-npm link
-```
+既有專案在明確遷移之前，繼續使用原本的職位流程。只有已停止活動、採相容預設政策的一般 Solo 專案，才支援帶有雜湊確認的遷移。進行中、自訂政策、團隊、高風險與敏感資料工作繼續使用[舊模式指南（英文）](docs/getting-started/usage.md)。舊 Console、路由與高保證文件描述的是相容模式，不是新專案必填的設定。[遷移說明（英文）](docs/getting-started/workkeel.md#legacy-history-and-migration)。
 
-這些指令在 Temple 原始碼目錄執行，不是每項產品任務開始前都要做的例行工作。
+## 成熟度與參與開發
 
-</details>
+目前是適合有人監督之本機工作的 Early Alpha。任務生命週期與拒絕情境有離線測試，但不代表正式環境成熟度、經認證的多人協作、分散式鎖定、真實 Gateway 支援，或所有專案都能節省時間與 token。同一位擁有者下的不同代理，也不是獨立人類驗證。
 
-## 實際工作時怎麼用
+開發框架時依照[測試指南（英文）](docs/getting-started/testing.md)：修改期間做相關檢查，最終行為版本做完整驗證。初始化產品專案不需要每次重跑框架整套測試；既有測試指令與失敗紀錄都保留。
 
-在完成初始化的專案中，先提出一項具體需求：
+[文件導覽](docs/README.md) · [任務契約](docs/concepts/task-contract.md) · [設計決策](docs/adr/0072-task-first-lifecycle.md) · [更新紀錄](CHANGELOG.md) · [參與貢獻](CONTRIBUTING.md) · [治理](GOVERNANCE.md) · [行為準則](CODE_OF_CONDUCT.md) · [安全回報](SECURITY.md)
 
-> 修正套用折扣後的結帳金額。只修改計算邏輯與相關測試，不要部署。使用 Temple 記錄核准範圍、完成修正，再交給另一位 Agent 驗證。只有缺少必要決策或授權時才詢問我。
-
-成果還不明確時，先用 [`$decision-interview`](docs/getting-started/core-skills.md#decision-interview) 釐清；若範圍與驗收條件已核准，就用 [`$temple-work`](docs/getting-started/core-skills.md#temple-work) 接續工作，不必重新訪談。
-
-- **Lean：** 範圍清楚、低風險、可復原的工作，由不同的驗證者確認結果。
-- **Standard：** 需要評估與獨立 QA 的產品交付。
-- **High-Assurance：** 風險較高，需要更強的驗證依據與人類核准。
-
-可選用的 [Autonomous Delivery（英文）](docs/operations/autonomous-delivery.md) 讓協調工作的 AI 在授權範圍內接續實作、驗證與有限次數的修正，由 CLI 協助固定檢查與紀錄。它是一種執行方式，不是背景管理員：不會啟動模型或增加權限，也不要求每個階段另開一次模型對話。必要的職責與獨立判斷仍然保留。
-
-Console、Observer 與使用量收集都是**選配**。不啟用它們，也能查看工作狀態：
-
-```bash
-node ./templew.mjs doctor .
-node ./templew.mjs status .
-node ./templew.mjs observe .
-```
-
-第一次可以從 [Solo 指南（英文）](docs/getting-started/solo.md)或[逐步操作指南（英文）](docs/getting-started/core-path.md)開始。Solo 描述由誰主導工作；工作流程則描述各項變更需要怎樣的驗證。
-
-## Temple Concept Layers
-
-<picture>
-  <source media="(max-width: 640px)" srcset="docs/assets/temple-layers-mobile.zh-TW.svg">
-  <img alt="Temple 把人類方向放在最上層，依序連接責任、有邊界的工作、資料與執行引導、協作、保證、記憶與學習，並由版本庫中的組織記憶支撐所有分層。" src="docs/assets/temple-layers.zh-TW.svg">
-</picture>
-
-Temple 是一套分層的運作模式，不是一段巨大的 prompt，也不是一個全權自主的 Agent。人類方向位於最上層，版本庫中可長期保存的狀態則是底層基礎；中間各層把責任、核准的工作、方法、協作、驗證與學習連接起來，同時避免把它們混成同一件事。
-
-引導層刻意保留兩種不同的路由。**Context Routing** 回答目前的 Position 與步驟該讀什麼；**Adaptive Execution Routing** 則依據 Task Shape、所需能力、限制與專案方針，回答這個有邊界的步驟該怎麼執行。目前的 Alpha 只會產生可解釋的建議設定，不會啟動 Provider，也不會在背後自行切換模型。詳情請看[系統架構（英文）](docs/concepts/architecture.md#three-routes-three-decisions)與[模型路由指南（英文）](docs/getting-started/model-routing.md)。
-
-## Temple 為專案補上什麼
-
-- **穩定的職責：** Position 定義長期存在的責任與權限，不會綁死在某一個人或 AI 身上。
-- **有邊界的工作：** 每項變更都成為 Work Item，清楚記錄範圍、相依關係、驗收條件與狀態。
-- **只提供需要的資料：** Context Routing 依照目前的 Position 與步驟，把規格、決策、Skill 與驗證紀錄導向正確的執行者。
-- **精簡閱讀證據（main 尚未發布）：** 可選的[閱讀視圖（英文）](docs/operations/compact-evidence.md)縮短已保存的測試日誌與 JSON，同時保留失敗細節、限制說明及原文位置與雜湊。
-- **能解釋的執行選擇：** Adaptive Execution Routing 依據步驟所需能力，挑出符合條件且由專案管理的 execution profile；不會把 Position 綁死在特定模型上。
-- **有證據才能前進：** 實作、評估、Independent QA 與發布準備是不同結論，不能互相取代。
-- **安全的平行開發：** 互不依賴的工作可以同時進行；可能互相影響的工作，必須先協調並指定整合負責者。
-- **經得起驗證的學習：** Lesson 會先被重新驗證，再由人決定是否升級成 Practice 或 Skill，不會因為一次成功就自動變成規則。
-
-這些約定都和程式碼放在一起。Jira、GitHub Projects、Figma、既有規格與公司文件仍然可以管理它們原本負責的資訊，不必全部轉換成 Temple 格式。
-
-## 一項 Work Item 如何通過 Temple
-
-<picture>
-  <source media="(max-width: 640px)" srcset="docs/assets/temple-delivery-path.zh-TW-mobile.svg">
-  <img alt="一項 Work Item 從核准的成果出發，經過作法規劃、成果產出、評估、符合風險程度的獨立審查與結案。每個階段會分別解析負責的 Position、所需 Context 與符合條件的 Execution Route，並持續在版本庫累積依據。" src="docs/assets/temple-delivery-path.zh-TW.svg">
-</picture>
-
-Work Item 只有在下一階段需要的依據都準備好之後，才會繼續前進。Workflow Profile 與風險會決定需要多深的獨立審查與發布準備。Temple 會在每個階段分別解析負責的 Position、所需 Context，以及符合條件的 Execution Route。
-
-這些階段描述的是責任，不是固定職稱。Temple 目前提供的是核心開發 Position；自訂 Position 與 Workflow 仍在規劃中。未來不同領域可以改由其他 Position 負責，而不必更換整套運作模型。
-
-## 同一套運作模式，可以用在不同規模
-
-- **Solo** — 由一個人主導 AI 輔助開發。少數 Agent Identity 可以兼任多個 Position，但 Developer 與 Independent QA 必須分開。
-- **Collaborative** — 多位成員各自使用 AI。專案會明確記錄人類授權、可承接工作的成員、共享資源、claim 與整合責任。
-- **High-Assurance** — 適用於失敗會帶來較高營運或商業影響的工作。Temple 會依照風險增加驗證要求、身分分離、復原準備與不同人類的核准。
-
-無論規模多大，核心概念都不變。團隊只在風險真的需要時增加分離與驗證，不必換掉整套工作方式。
-
-## 可以擴充工作方法，但不能繞過權限
-
-Temple Skill 是可以重用的工程方法，能協助產品探索、領域建模、UI、實作、測試、審查、文件整理，或其他範圍清楚的工作。每個專案也能加入自己的 Skill，並把它和程式碼放在一起維護。
-
-Skill 不會授予權限、核准依賴套件，也不能跳過交付階段。記錄一項 Lesson，也不代表它立刻成為整個專案的規則。Temple 將觀察、重新驗證、刻意升級與權限分開，讓組織可以學習，又不會把每次成功都變成永久政策。
-
-進一步請參考[能力目錄（英文）](docs/extensions/capability-catalog.md)、[Skill 建立指南（英文）](docs/extensions/skill-authoring.md)與[工程學習流程（英文）](docs/extensions/engineering-learning.md)。
-
-## 目前的成熟度
-
-Temple 目前是 **Early Alpha**，適合在有人監督的情況下，用於低風險的本機專案與範圍明確的試行。
-
-- **現在可以使用：** 以版本庫為核心的 Solo 流程、依風險選擇的工作流程、可選的自主交付方式、穩定的 Position、Work Item、可重現的資料與 Capability 導引、可解釋且不會直接執行 Provider 的 Adaptive Execution Routing、受到管理的 Skill 與學習、生命週期證據、Auditable Self-Hosting Profile、本機狀態以及升級界線。
-- **仍屬實驗或有限驗證：** Collaborative 與 High-Assurance 契約、平行開發規劃、Provider 觀測與校準、本機 Control Plane、外部追蹤工具協調，以及逐 Work Item 的使用量歸屬。
-- **尚未宣稱完成：** 大型多人與多台電腦的充分驗證、正式環境監測或修復、無人值守的外部寫入、自動模型路由、受法規管制環境的驗收，以及對所有專案都成立的時間或 Token 節省數據。
-
-Temple 會保留尚未解決的驗證缺口，不會把一次本機測試通過包裝成企業級證明。
-
-## 接下來可以閱讀
-
-- [使用指南（英文）](docs/getting-started/usage.md) — 導入、運作、升級與疑難排解。
-- [Temple 術語表（英文）](docs/concepts/terminology.md) — Position、Agent Identity、Work Item、Evidence 與運作模式。
-- [系統架構（英文）](docs/concepts/architecture.md) — 版本庫界線與正式狀態。
-- [可稽核的自我開發紀錄（英文）](docs/operations/auditable-self-hosting.md) — 查看 Temple 本身如何開發；這些紀錄不會複製到你的專案。
-- [加入既有團隊（英文）](docs/getting-started/team-entry.md) — 第一次操作、任務歸屬，以及被擋住時的處理方式。
-- [文件導覽（英文）](docs/README.md) — 多人協作、UI 模式、外部追蹤、品質保證、學習、驗證與決策。
-- [參與貢獻（英文）](CONTRIBUTING.md)、[行為準則（英文）](CODE_OF_CONDUCT.md)與[安全回報方式（英文）](SECURITY.md) — 說明如何參與，以及遇到行為事件或安全問題時該從哪個非公開管道聯絡。
-
-## 最終決定仍由人類負責
-
-Temple 可以協調工作並保存驗證依據，但不會自行決定商業事實、優先順序、認證資訊、支出、不可逆的外部操作、正式環境修復或高風險核准。
-
-## 授權條款
-
-[MIT](LICENSE)。第三方來源與採用界線記錄在 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
+[MIT](LICENSE)。選配整合的來源與採用界線見[第三方聲明](THIRD_PARTY_NOTICES.md)。

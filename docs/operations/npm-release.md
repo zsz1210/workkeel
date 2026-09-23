@@ -1,27 +1,32 @@
 # npm release operations
 
-Temple publishes npm packages only after a maintainer deliberately publishes a GitHub Release. Pull requests, pushes, merges, and draft Releases do not publish anything.
+Workkeel publishes npm packages only after a maintainer deliberately publishes a GitHub Release. Pull requests, pushes, merges, and draft Releases do not publish anything.
+
+The Workkeel source rename is not an npm publication. Existing Temple Alpha.33
+releases and package pins remain historical; do not replace their archives or tags.
+The new package's Trusted Publisher is **not configured by the rename**. Its setup
+and first publication require separate owner authorization and live qualification.
 
 ## One-time npm setup
 
-The package owner creates one [npm Trusted Publisher](https://docs.npmjs.com/trusted-publishers/) connection for `@zsz1210/temple-ai-dev-org` with these exact values:
+The package owner creates one [npm Trusted Publisher](https://docs.npmjs.com/trusted-publishers/) connection for `@zsz1210/workkeel` with these exact values:
 
 | Field | Value |
 | --- | --- |
 | Provider | GitHub Actions |
 | Organization or user | `zsz1210` |
-| Repository | `temple-ai-dev-org` |
+| Repository | `workkeel` |
 | Workflow filename | `publish-npm.yml` |
 | Environment | none |
 | Allowed action | direct `npm publish` |
 
-The filename is case-sensitive and names only the file inside `.github/workflows/`. Do not add an npm write token to GitHub. Trusted Publishing requires npm CLI 11.5.1 or newer; Temple's release packaging uses the stricter qualified toolchain below.
+The filename is case-sensitive and names only the file inside `.github/workflows/`. Do not add an npm write token to GitHub. Trusted Publishing requires npm CLI 11.5.1 or newer; Workkeel's release packaging uses the stricter qualified toolchain below.
 
 After `publish-npm.yml` reaches the repository's default branch, an authenticated maintainer can create the relationship with the npm CLI:
 
 ```bash
-npm trust github @zsz1210/temple-ai-dev-org \
-  --repo zsz1210/temple-ai-dev-org \
+npm trust github @zsz1210/workkeel \
+  --repo zsz1210/workkeel \
   --file publish-npm.yml \
   --allow-publish \
   --yes
@@ -84,8 +89,8 @@ Publishing the Release triggers `.github/workflows/publish-npm.yml`. GitHub reco
 After the workflow succeeds, verify the immutable version and channel separately:
 
 ```bash
-npm view @zsz1210/temple-ai-dev-org@<version> version dist.shasum dist.integrity
-npm view @zsz1210/temple-ai-dev-org dist-tags --json
+npm view @zsz1210/workkeel@<version> version dist.shasum dist.integrity
+npm view @zsz1210/workkeel dist-tags --json
 ```
 
 Also inspect the npm package page for provenance and perform a clean installation from the intended dist-tag. A green GitHub job alone is not proof that consumers can retrieve and execute the package.

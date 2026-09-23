@@ -133,10 +133,8 @@ export async function runAgentLedOnboardingValidation(options) {
     const cliPath = path.join(
       projectPath,
       "node_modules",
-      "@zsz1210",
-      "temple-ai-dev-org",
-      "bin",
-      "temple.mjs"
+      sourcePackage.name,
+      sourcePackage.bin.temple
     );
     const initialized = run(process.execPath, [cliPath, "init", ".", "--config", configPath, "--json"], {
       cwd: projectPath

@@ -1,5 +1,26 @@
 # Vision and operating model
 
+## Workkeel direction
+
+Workkeel is a repository-native task coordination framework for coding agents.
+It preserves the approved goal, scope, Agent/Principal identities, working and
+data conditions, dependencies, handoff and exact-candidate acceptance across
+conversations. Company titles and generic AI skill inventories are not prerequisites.
+Use specific project Skills when they add needed knowledge or procedure.
+
+Execution stays with the existing host agent. Runtime tools, scoped permission
+and optional fixed-model connections are different concerns. Native settings are
+the default; LiteLLM configuration is currently a read-only plan, not a validated
+live connection or automatic dispatcher. A new Graph engine, per-request routing
+and large framework comparisons are deferred.
+
+The [task-first guide](../getting-started/workkeel.md) describes implemented source
+behavior and limits. The remainder preserves the **legacy Temple operating model**;
+its ten Positions and seven layers are not requirements for new task-first projects.
+Historical qualification does not transfer automatically to this redesign.
+
+## Legacy operating model
+
 Temple is a repository-native, extensible framework for turning product intent into trustworthy software through role-based AI collaboration, composable engineering methods, durable project state, and evidence-gated delivery.
 
 It does not try to make every AI conversation remember everything. It gives every Position a shared operating model and a recoverable source of truth, so work can continue across tasks, Agents, and time without reconstructing the development organization.
