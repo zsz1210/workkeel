@@ -1,0 +1,14 @@
+{
+  "schema_version": "temple.finish-observation/v1",
+  "authority": "observation-only",
+  "work_item_id": "WI-0261",
+  "operation_id": "wi0261-package-handoff-01",
+  "candidate_revision": "c84f1b5599a210dcf42647f9c54ff9ffa8b14324",
+  "request_digest": "5250b36bfb761687ba2130c9327c5a2871aa9ba4c80af90b857e78a984598c59",
+  "plan_digest": "d08e38cd0c3d315a7ae8719490bd27e2b8012e9ebdea49d40ae1019838a9e7fc",
+  "receipt_sha256": "4cde9c7a9d8b82449a05213305775a78e7cc488ab0584a4f22884233631f8119",
+  "status": "passed",
+  "observed_at": "2026-09-23T15:37:05.417Z",
+  "errors": [],
+  "recovery_authority": "origin-checkout-journal-required"
+}

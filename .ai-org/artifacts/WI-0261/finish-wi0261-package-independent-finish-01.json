@@ -1,0 +1,41 @@
+{
+  "schema_version": "temple.lean-finish-receipt/v1",
+  "request_digest": "ccf6a41e5f1571b8a84e997fc7d417c6610564224f469479412a77a9563f90fe",
+  "request": {
+    "schema_version": "temple.lean-finish-request/v1",
+    "operation_id": "wi0261-package-independent-finish-01",
+    "work_item_id": "WI-0261",
+    "claim_id": "claim-20260923154538-45d31495",
+    "agent_id": "agent-lulu",
+    "principal_id": "human",
+    "candidate_revision": "c84f1b5599a210dcf42647f9c54ff9ffa8b14324",
+    "completed": [],
+    "evidence": [
+      ".ai-org/artifacts/WI-0261/independent-package-review-agent-lulu.md"
+    ],
+    "unresolved": [],
+    "position": "quality_evaluator",
+    "judgment": "pass",
+    "test_evidence": [
+      ".ai-org/artifacts/WI-0261/independent-package-review-agent-lulu.md"
+    ],
+    "lean_closeout": [
+      ".ai-org/artifacts/WI-0261/independent-package-review-agent-lulu.md"
+    ]
+  },
+  "result": {
+    "schema_version": "temple.lean-finish-lifecycle/v1",
+    "operation_id": "wi0261-package-independent-finish-01",
+    "work_item_id": "WI-0261",
+    "candidate_revision": "c84f1b5599a210dcf42647f9c54ff9ffa8b14324",
+    "plan_digest": "184cb49418312056a1aaddda45d6902663071282fc7a2ace6935ef55e5a611e3",
+    "handoff": null,
+    "receipt": ".ai-org/artifacts/WI-0261/finish-wi0261-package-independent-finish-01.json",
+    "resulting_state": "done",
+    "next_action": "Lean acceptance is recorded; no external release is authorized.",
+    "testing_performed": false,
+    "external_action_performed": false
+  },
+  "applied_at": "2026-09-23T15:46:13.627Z",
+  "diagnostics_observation": ".ai-org/artifacts/WI-0261/diagnostics-wi0261-package-independent-finish-01.json"
+}

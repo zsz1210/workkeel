@@ -4,7 +4,11 @@ Development evidence as of 2026-09-23. This page separates offline tests, local
 process tests and real model execution; it is not a production-readiness claim.
 Full offline verification passed at `2481c93f5524929558a85ddc82383b5cfb60b021`.
 The final authorized live check failed; no additional model test is authorized.
-Independent review remains pending. Automatic execution is experimental.
+Independent review accepted the experimental/local implementation at
+`c84f1b5599a210dcf42647f9c54ff9ffa8b14324`, with fresh 35-case focused and 59-case
+fast checks. This does not qualify reliable live automation. The named judgments
+and exact evidence are retained in the repository's WI-0260 review and release
+records; external publication was not performed.
 
 ## Observed results
 

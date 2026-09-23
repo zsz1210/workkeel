@@ -2,11 +2,11 @@
   "schema_version": "temple.work-item/v1",
   "id": "WI-0260",
   "title": "Implement Workkeel workflows, model routing and user-facing delivery",
-  "state": "build",
-  "owner_position": "developer",
-  "assigned_agent_id": "agent-rikku",
+  "state": "done",
+  "owner_position": "engineering_manager",
+  "assigned_agent_id": "agent-mog",
   "created_at": "2026-09-23T13:17:10.180Z",
-  "updated_at": "2026-09-23T13:22:22.449Z",
+  "updated_at": "2026-09-23T15:49:48.930Z",
   "scope": [
     "Deliver the approved P01-P10 Workkeel automation, native onboarding, terminology, skills, docs, OSS and cleanup plan. No publication or paid live provider use without configured authority."
   ],
@@ -57,18 +57,18 @@
   "dependencies": [],
   "required_disciplines": [],
   "stage_requirements": {},
-  "base_revision": "f2d0554023fa186f27d7b0d7bd98bd4368dfd111",
-  "parallel_mode": "pending",
-  "integration_owner_agent_id": null,
+  "base_revision": "c84f1b5599a210dcf42647f9c54ff9ffa8b14324",
+  "parallel_mode": "parallel",
+  "integration_owner_agent_id": "agent-mog",
   "planned_agent_id": null,
   "shared_contract_refs": [],
   "contract_status": "not_required",
   "overlap_resolution": [],
   "claim": {
-    "id": "claim-20260923132222-6bc97f70",
-    "status": "active",
+    "id": "claim-20260923154918-2fedb06c",
+    "status": "released",
     "principal_id": "human",
-    "agent_id": "agent-rikku",
+    "agent_id": "agent-mog",
     "actor_provenance": {
       "selection": "explicit-agent",
       "principal_source": "explicit-principal",
@@ -77,12 +77,13 @@
       "provider_authenticated": false,
       "externally_supplied_evidence": false
     },
-    "position_id": "developer",
-    "base_revision": "f2d0554023fa186f27d7b0d7bd98bd4368dfd111",
+    "position_id": "release_manager",
+    "base_revision": "c84f1b5599a210dcf42647f9c54ff9ffa8b14324",
     "branch": "codex/workkeel-automation",
-    "worktree": ".",
-    "claimed_at": "2026-09-23T13:22:22.449Z",
-    "released_at": null
+    "worktree": null,
+    "claimed_at": "2026-09-23T15:49:18.760Z",
+    "released_at": "2026-09-23T15:49:48.930Z",
+    "release_reason": "work_item_closed"
   },
   "claims": [
     {
@@ -156,7 +157,7 @@
     },
     {
       "id": "claim-20260923132222-6bc97f70",
-      "status": "active",
+      "status": "released",
       "principal_id": "human",
       "agent_id": "agent-rikku",
       "actor_provenance": {
@@ -172,7 +173,119 @@
       "branch": "codex/workkeel-automation",
       "worktree": ".",
       "claimed_at": "2026-09-23T13:22:22.449Z",
-      "released_at": null
+      "released_at": "2026-09-23T15:36:29.258Z",
+      "release_reason": [
+        "Freeze tested product; sequentially hand off the supporting package task before main review."
+      ]
+    },
+    {
+      "id": "claim-20260923153737-78aaaf61",
+      "status": "released",
+      "principal_id": "human",
+      "agent_id": "agent-rikku",
+      "actor_provenance": {
+        "selection": "explicit-agent",
+        "principal_source": "explicit-principal",
+        "verification_class": "attributed",
+        "evidence_ref": null,
+        "provider_authenticated": false,
+        "externally_supplied_evidence": false
+      },
+      "position_id": "developer",
+      "base_revision": "c84f1b5599a210dcf42647f9c54ff9ffa8b14324",
+      "branch": "codex/workkeel-automation",
+      "worktree": null,
+      "claimed_at": "2026-09-23T15:37:37.392Z",
+      "released_at": "2026-09-23T15:37:38.671Z",
+      "release_reason": [
+        "Exact candidate and full evidence handed to a distinct reviewer; no further live qualification authorized."
+      ]
+    },
+    {
+      "id": "claim-20260923153823-8fbc146a",
+      "status": "released",
+      "principal_id": "human",
+      "agent_id": "agent-lulu",
+      "actor_provenance": {
+        "selection": "explicit-agent",
+        "principal_source": "explicit-principal",
+        "verification_class": "attributed",
+        "evidence_ref": null,
+        "provider_authenticated": false,
+        "externally_supplied_evidence": false
+      },
+      "position_id": "quality_evaluator",
+      "base_revision": "c84f1b5599a210dcf42647f9c54ff9ffa8b14324",
+      "branch": "codex/workkeel-automation",
+      "worktree": null,
+      "claimed_at": "2026-09-23T15:38:23.384Z",
+      "released_at": "2026-09-23T15:45:24.849Z",
+      "release_reason": [
+        "Independent Test, Evaluation and QA judgment recorded for exact candidate; return lifecycle advancement to the integration owner."
+      ]
+    },
+    {
+      "id": "claim-20260923154742-440c659f",
+      "status": "released",
+      "principal_id": "human",
+      "agent_id": "agent-lulu",
+      "actor_provenance": {
+        "selection": "explicit-agent",
+        "principal_source": "explicit-principal",
+        "verification_class": "attributed",
+        "evidence_ref": null,
+        "provider_authenticated": false,
+        "externally_supplied_evidence": false
+      },
+      "position_id": "quality_evaluator",
+      "base_revision": "c84f1b5599a210dcf42647f9c54ff9ffa8b14324",
+      "branch": "codex/workkeel-automation",
+      "worktree": null,
+      "claimed_at": "2026-09-23T15:47:42.802Z",
+      "released_at": "2026-09-23T15:47:59.250Z",
+      "release_reason": "position_transition"
+    },
+    {
+      "id": "claim-20260923154826-097db013",
+      "status": "released",
+      "principal_id": "human",
+      "agent_id": "agent-lulu",
+      "actor_provenance": {
+        "selection": "explicit-agent",
+        "principal_source": "explicit-principal",
+        "verification_class": "attributed",
+        "evidence_ref": null,
+        "provider_authenticated": false,
+        "externally_supplied_evidence": false
+      },
+      "position_id": "independent_qa",
+      "base_revision": "c84f1b5599a210dcf42647f9c54ff9ffa8b14324",
+      "branch": "codex/workkeel-automation",
+      "worktree": null,
+      "claimed_at": "2026-09-23T15:48:26.097Z",
+      "released_at": "2026-09-23T15:48:26.579Z",
+      "release_reason": "position_transition"
+    },
+    {
+      "id": "claim-20260923154918-2fedb06c",
+      "status": "released",
+      "principal_id": "human",
+      "agent_id": "agent-mog",
+      "actor_provenance": {
+        "selection": "explicit-agent",
+        "principal_source": "explicit-principal",
+        "verification_class": "attributed",
+        "evidence_ref": null,
+        "provider_authenticated": false,
+        "externally_supplied_evidence": false
+      },
+      "position_id": "release_manager",
+      "base_revision": "c84f1b5599a210dcf42647f9c54ff9ffa8b14324",
+      "branch": "codex/workkeel-automation",
+      "worktree": null,
+      "claimed_at": "2026-09-23T15:49:18.760Z",
+      "released_at": "2026-09-23T15:49:48.930Z",
+      "release_reason": "work_item_closed"
     }
   ],
   "gate_evidence": {
@@ -190,13 +303,73 @@
     ],
     "risk_review": [
       ".ai-org/artifacts/WI-0260/work-order.md"
+    ],
+    "developer_handoff": [
+      ".ai-org/artifacts/WI-0260/handoff-001-developer-to-quality_evaluator.md"
+    ],
+    "developer_evidence": [
+      ".ai-org/artifacts/WI-0260/developer-verification.md"
+    ],
+    "test_evidence": [
+      ".ai-org/artifacts/WI-0260/independent-review-agent-lulu.md"
+    ],
+    "evaluation_report": [
+      ".ai-org/artifacts/WI-0260/independent-review-agent-lulu.md"
+    ],
+    "independent_qa_pass": [
+      ".ai-org/artifacts/WI-0260/independent-review-agent-lulu.md"
+    ],
+    "accepted_scope": [
+      ".ai-org/artifacts/WI-0260/specification.md"
+    ],
+    "independent_qa_report": [
+      ".ai-org/artifacts/WI-0260/independent-review-agent-lulu.md"
+    ],
+    "rollback_plan": [
+      ".ai-org/artifacts/WI-0260/release-record.md"
+    ],
+    "required_human_approval": [
+      "not-required"
     ]
   },
   "evidence": [
     ".ai-org/artifacts/WI-0260/work-order.md",
     ".ai-org/artifacts/WI-0260/specification.md",
-    "docs/adr/0073-opt-in-workflow-execution.md"
+    "docs/adr/0073-opt-in-workflow-execution.md",
+    ".ai-org/artifacts/WI-0260/handoff-001-developer-to-quality_evaluator.md",
+    ".ai-org/artifacts/WI-0260/developer-verification.md",
+    ".ai-org/artifacts/WI-0260/independent-review-agent-lulu.md",
+    ".ai-org/artifacts/WI-0260/release-record.md",
+    ".ai-org/artifacts/WI-0260/integration-join.md"
   ],
   "unresolved": [],
-  "next_position": "quality_evaluator"
+  "next_position": null,
+  "handoffs": [
+    {
+      "from_position": "developer",
+      "to_position": "quality_evaluator",
+      "actor": "agent-rikku",
+      "principal_id": "human",
+      "actor_provenance": {
+        "selection": "active-claim",
+        "principal_source": "active-claim",
+        "verification_class": "attributed",
+        "evidence_ref": null,
+        "provider_authenticated": false,
+        "externally_supplied_evidence": false
+      },
+      "input_revision": "c84f1b5599a210dcf42647f9c54ff9ffa8b14324",
+      "artifact": ".ai-org/artifacts/WI-0260/handoff-001-developer-to-quality_evaluator.md",
+      "created_at": "2026-09-23T15:37:38.077Z"
+    }
+  ],
+  "developer_candidate_revision": "c84f1b5599a210dcf42647f9c54ff9ffa8b14324",
+  "tested_revision": "c84f1b5599a210dcf42647f9c54ff9ffa8b14324",
+  "release_gate_result": "go",
+  "lifecycle_outcome": "accepted",
+  "closeout_reasons": [
+    "Internal acceptance only for reviewed experimental/local implementation. Final subscription qualification remains failed; reliable automation, live gateway, savings, publication and deployment are not accepted or authorized."
+  ],
+  "external_release_status": "not_performed",
+  "approval_record": "not-required"
 }

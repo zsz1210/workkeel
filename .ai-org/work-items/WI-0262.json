@@ -1,0 +1,121 @@
+{
+  "schema_version": "temple.work-item/v1",
+  "id": "WI-0262",
+  "title": "Record final Workkeel local acceptance status",
+  "state": "build",
+  "owner_position": "developer",
+  "assigned_agent_id": "agent-rikku",
+  "created_at": "2026-09-23T15:50:48.682Z",
+  "updated_at": "2026-09-23T15:51:55.331Z",
+  "scope": [
+    "Synchronize documentation and decision status with completed WI-0260 local acceptance while preserving the failed live qualification. No product behavior, experiment, publication or test-suite change."
+  ],
+  "acceptance_criteria": [
+    "Public validation and ADR status distinguish accepted local implementation from failed live qualification; provenance links point to exact existing evidence and current instructions remain unchanged."
+  ],
+  "affected_paths": [
+    "docs/validation/workkeel-automation.md",
+    "docs/adr/0073-opt-in-workflow-execution.md",
+    ".ai-org/decisions/DEC-0009-workkeel-executable-workflows.md"
+  ],
+  "context_refs": [],
+  "spec_refs": [],
+  "ux_refs": [],
+  "ui_refs": [],
+  "contract_refs": [],
+  "specification_mode": "gate-evidence",
+  "ui_delivery_mode": "not-applicable",
+  "workflow_profile": "lean",
+  "risk_tier": "low",
+  "profile_assessment": {
+    "requested_profile": "lean",
+    "effective_profile": "lean",
+    "scope_class": "bounded",
+    "escalation_triggers": [],
+    "rationale": "Bounded prose/evidence status correction only; no UI, code, dependencies or authority changes.",
+    "evidence_refs": [],
+    "evaluated_at": "2026-09-23T15:50:48.670Z",
+    "escalated": false
+  },
+  "parent_work_item_id": null,
+  "tracker_visibility": "team-visible",
+  "tracker_refs": [],
+  "tracker_reconciliations": [],
+  "dependencies": [],
+  "required_disciplines": [],
+  "stage_requirements": {},
+  "base_revision": "c84f1b5599a210dcf42647f9c54ff9ffa8b14324",
+  "parallel_mode": "pending",
+  "integration_owner_agent_id": null,
+  "planned_agent_id": null,
+  "shared_contract_refs": [],
+  "contract_status": "not_required",
+  "overlap_resolution": [],
+  "claim": {
+    "id": "claim-20260923155155-14820c7f",
+    "status": "active",
+    "principal_id": "human",
+    "agent_id": "agent-rikku",
+    "actor_provenance": {
+      "selection": "explicit-agent",
+      "principal_source": "explicit-principal",
+      "verification_class": "attributed",
+      "evidence_ref": null,
+      "provider_authenticated": false,
+      "externally_supplied_evidence": false
+    },
+    "position_id": "developer",
+    "base_revision": "c84f1b5599a210dcf42647f9c54ff9ffa8b14324",
+    "branch": "codex/workkeel-automation",
+    "worktree": null,
+    "claimed_at": "2026-09-23T15:51:55.331Z",
+    "released_at": null
+  },
+  "claims": [
+    {
+      "id": "claim-20260923155155-14820c7f",
+      "status": "active",
+      "principal_id": "human",
+      "agent_id": "agent-rikku",
+      "actor_provenance": {
+        "selection": "explicit-agent",
+        "principal_source": "explicit-principal",
+        "verification_class": "attributed",
+        "evidence_ref": null,
+        "provider_authenticated": false,
+        "externally_supplied_evidence": false
+      },
+      "position_id": "developer",
+      "base_revision": "c84f1b5599a210dcf42647f9c54ff9ffa8b14324",
+      "branch": "codex/workkeel-automation",
+      "worktree": null,
+      "claimed_at": "2026-09-23T15:51:55.331Z",
+      "released_at": null
+    }
+  ],
+  "gate_evidence": {
+    "work_order": [
+      ".ai-org/artifacts/WI-0262/work-order.md"
+    ],
+    "approved_scope": [
+      ".ai-org/artifacts/WI-0262/work-order.md"
+    ],
+    "acceptance_criteria": [
+      ".ai-org/artifacts/WI-0262/work-order.md"
+    ],
+    "technical_design": [
+      ".ai-org/artifacts/WI-0262/work-order.md"
+    ],
+    "risk_review": [
+      ".ai-org/artifacts/WI-0262/work-order.md"
+    ],
+    "profile_eligibility": [
+      ".ai-org/artifacts/WI-0262/work-order.md"
+    ]
+  },
+  "evidence": [
+    ".ai-org/artifacts/WI-0262/work-order.md"
+  ],
+  "unresolved": [],
+  "next_position": "quality_evaluator"
+}
