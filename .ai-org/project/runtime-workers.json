@@ -3048,7 +3048,7 @@
     {
       "id": "worker-20260923113129-92b5fae3",
       "runtime_kind": "internal-subagent",
-      "status": "reserved",
+      "status": "completed",
       "work_item_id": "WI-0259",
       "position_id": "quality_evaluator",
       "agent_id": "agent-lulu",
@@ -3061,15 +3061,17 @@
       "plan_digest": "69d7fa2081e8342d1ed1758829784c21480e66daa7d726c9514c3400ec1151e5",
       "preparation_fingerprint": "8d674e05b86589b89401e6368cd9c3274e2b4c42b5de9ae9442f49fd9418e065",
       "wave_id": "wave-001",
-      "runtime_id": null,
+      "runtime_id": "/root/workkeel_brand_acceptance",
       "task_id": null,
       "resource_reservation_ids": [],
-      "current_revision": null,
-      "evidence": [],
+      "current_revision": "1c1d57bf4d9a0981739d91b046fc3aa6027df027",
+      "evidence": [
+        ".ai-org/artifacts/WI-0259/workkeel-brand-review-attempt-2.md"
+      ],
       "reserved_at": "2026-09-23T11:31:29.689Z",
-      "attached_at": null,
-      "completed_at": null,
-      "updated_at": "2026-09-23T11:31:29.689Z"
+      "attached_at": "2026-09-23T11:33:02.686Z",
+      "completed_at": "2026-09-23T11:35:22.580Z",
+      "updated_at": "2026-09-23T11:35:22.580Z"
     }
   ]
 }

@@ -3,11 +3,11 @@
 - Project ID: `temple`
 - Organization system version: `0.1.0-alpha.33`
 - Active Agent Identities: 5
-- Collaboration profile: `solo` (0 Human Principals, 1 active claims)
-- Parallel plan: 1 wave(s), fresh=false
-- Work items: 259 total, 1 active
+- Collaboration profile: `solo` (0 Human Principals, 0 active claims)
+- Parallel plan: 0 wave(s), fresh=true
+- Work items: 259 total, 0 active
 - Codex tasks: 14 registered, 14 archive-ready
-- Runtime workers: 109 registered, 1 reserved, 0 active
+- Runtime workers: 109 registered, 0 reserved, 0 active
 - Shared resources: 0 defined, 0 active reservation(s)
 - Optional Skill packs: 0 installed
 - Repository capabilities: 6 available, 0 invalid
@@ -18,7 +18,7 @@
 - Specifications: 2 indexed, 2 approved (hybrid)
 - Tracker: `repository-only` (0 active provider(s), 0 linked Work Item(s))
 - Repository integration: `confirmed` (Develop focused changes on short-lived branches and submit them through pull requests; the maintainer owns final integration and release decisions.)
-- Attention signals: 27
+- Attention signals: 26
 
 ## Collaboration
 
@@ -27,7 +27,7 @@
 - Human Principals: 0
 - Agent sponsorships: 0
 - Active Position memberships: 10
-- Active Work Item claims: 1
+- Active Work Item claims: 0
 - Active Human Authority Grants: 0
 - Governance recovery: `not_configured`
 - Real Collaborative validation: `not_run` (.ai-org/templates/collaborative-large-scale-test-plan.md)
@@ -37,11 +37,11 @@
 - Generated plan: `.ai-org/views/parallel-plan.json`
 - Installed: yes
 - Valid: yes
-- Fresh: no
-- Safe waves: 1
-- Dispatchable Work Items: 1
+- Fresh: yes
+- Safe waves: 0
+- Dispatchable Work Items: 0
 - Active / sequential / blocked: 0 / 0 / 0
-- Next wave: WI-0259
+- Next wave: none
 - Codex tasks, claims, or external actions performed by planning: no
 
 ## Work items
@@ -306,12 +306,10 @@
 | WI-0256 | Qualify baseline test harness repair | done | Engineering Manager | Mog | sequential | internal | 0 | gate-evidence | not-applicable | 0 | 0 | 0 | — | `4ac435d8` | 0 | 5 | 0 |
 | WI-0257 | Deliver the role-free Workkeel lifecycle and runtime connection boundary | cancelled | Engineering Manager | Mog | sequential | team-visible | 0 | gate-evidence | not-applicable | 0 | 0 | 0 | — | `—` | 0 | 2 | 0 |
 | WI-0258 | Implement the Workkeel task-first lifecycle | done | Engineering Manager | Mog | parallel | team-visible | 0 | gate-evidence | not-applicable | 0 | 0 | 0 | — | `6bb9c98e` | 0 | 9 | 0 |
-| WI-0259 | Rename and reframe the public Workkeel framework | test | Quality & Evaluation Engineer | Lulu | parallel | team-visible | 0 | gate-evidence | not-applicable | 0 | 0 | 0 | claim-20260923113129-be41cbb4 | `1c1d57bf` | 0 | 5 | 0 |
+| WI-0259 | Rename and reframe the public Workkeel framework | done | Engineering Manager | Mog | parallel | team-visible | 0 | gate-evidence | not-applicable | 0 | 0 | 0 | — | `1c1d57bf` | 0 | 9 | 0 |
 
 ## Delivery attention
 
-- WI-0259: awaiting-owner — The recorded owner can continue the scoped work; no attached active worker is recorded.
-  - owner: No attached active runtime is recorded for this claim.
 
 ## Codex task registry
 
@@ -444,7 +442,7 @@
 | worker-20260923103738-489eacc0 | internal-subagent | WI-0258 | Quality & Evaluation Engineer / Lulu | completed | /root/workkeel_lifecycle_review | `3dfb3094` | 0 |
 | worker-20260923111127-c847b9d2 | internal-subagent | WI-0258 | Quality & Evaluation Engineer / Lulu | completed | /root/workkeel_rework_acceptance | `6bb9c98e` | 0 |
 | worker-20260923112426-33caa43a | internal-subagent | WI-0259 | Quality & Evaluation Engineer / Lulu | completed | /root/workkeel_brand_review | `6bb9c98e` | 0 |
-| worker-20260923113129-92b5fae3 | internal-subagent | WI-0259 | Quality & Evaluation Engineer / Lulu | reserved | reserved | `—` | 0 |
+| worker-20260923113129-92b5fae3 | internal-subagent | WI-0259 | Quality & Evaluation Engineer / Lulu | completed | /root/workkeel_brand_acceptance | `1c1d57bf` | 0 |
 
 - Shared resource registry: `.ai-org/project/resources.json`
 - Runtime worker registry: `.ai-org/project/runtime-workers.json`
@@ -478,7 +476,6 @@
 - worker-20260915174040-464e550f is failed
 - worker-20260915175330-3e16bfe8 is failed
 - worker-20260915233053-33b568eb is failed
-- Generated parallel plan is stale; rebuild it before dispatch
 
 ## External tracker coordination
 
@@ -559,14 +556,14 @@
 
 | Time | Event | Work item | Actor |
 |---|---|---|---|
-| 2026-09-23T11:31:29.689Z | runtime_worker_reserved | WI-0259 | human |
-| 2026-09-23T11:31:29.726Z | work_item_claimed | WI-0259 | human |
-| 2026-09-23T11:31:18.116Z | work_item_coordination_configured | WI-0259 | agent-lulu |
-| 2026-09-23T11:31:17.645Z | work_item_transitioned | WI-0259 | agent-rikku |
-| 2026-09-23T11:31:17.152Z | work_item_claim_released | WI-0259 | human |
-| 2026-09-23T11:31:04.740Z | handoff_created | WI-0259 | agent-rikku |
-| 2026-09-23T11:29:29.591Z | work_item_claimed | WI-0259 | human |
-| 2026-09-23T11:29:29.033Z | work_item_coordination_configured | WI-0259 | agent-rikku |
+| 2026-09-23T11:37:24.295Z | work_item_closed | WI-0259 | agent-mog |
+| 2026-09-23T11:37:24.295Z | release_gate_completed | WI-0259 | agent-mog |
+| 2026-09-23T11:37:23.804Z | work_item_claimed | WI-0259 | human |
+| 2026-09-23T11:35:45.661Z | work_item_transitioned | WI-0259 | agent-lulu |
+| 2026-09-23T11:35:45.173Z | work_item_claim_released | WI-0259 | human |
+| 2026-09-23T11:35:44.703Z | handoff_created | WI-0259 | agent-lulu |
+| 2026-09-23T11:35:44.189Z | work_item_claimed | WI-0259 | human |
+| 2026-09-23T11:35:24.590Z | work_item_transitioned | WI-0259 | agent-lulu |
 
 ## Assignments
 

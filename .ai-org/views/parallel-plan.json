@@ -1,87 +1,22 @@
 {
   "schema_version": "temple.parallel-plan/v1",
-  "generated_at": "2026-09-23T11:31:18.701Z",
-  "source_fingerprint": "605a7d3ba37c364bb5507119e221655998ff875ba4e5f64d49877fedd2392e8d",
+  "generated_at": "2026-09-23T11:37:24.795Z",
+  "source_fingerprint": "cfd43b0163724108cfd86780825f0538abe0f61a9222f3acba3b159e72319cd4",
   "scope": {
     "mode": "all-active",
     "parent_work_item_id": null,
-    "selected_work_item_ids": [
-      "WI-0259"
-    ]
+    "selected_work_item_ids": []
   },
   "max_workers": null,
   "summary": {
-    "selected": 1,
-    "dispatchable": 1,
+    "selected": 0,
+    "dispatchable": 0,
     "active": 0,
     "sequential": 0,
     "blocked": 0,
-    "waves": 1
+    "waves": 0
   },
-  "waves": [
-    {
-      "id": "wave-001",
-      "order": 1,
-      "dispatch": [
-        {
-          "work_item_id": "WI-0259",
-          "title": "Rename and reframe the public Workkeel framework",
-          "position_id": "quality_evaluator",
-          "agent_id": "agent-lulu",
-          "agent_name": "Lulu",
-          "suggested_task_title": "WI-0259 · Rename a… · Quality & Evaluation Engineer (Lulu)",
-          "base_revision": "1c1d57bf4d9a0981739d91b046fc3aa6027df027",
-          "affected_paths": [
-            "README.md",
-            "README.zh-TW.md",
-            "README.ja.md",
-            "package.json",
-            "package-lock.json",
-            "src/constants.mjs",
-            "src/bootstrap.mjs",
-            "src/workkeel-project.mjs",
-            "src/cli.mjs",
-            "test/workflow.test.mjs",
-            "test/workkeel-branding.test.mjs",
-            "docs",
-            "CONTRIBUTING.md",
-            "GOVERNANCE.md",
-            "SECURITY.md",
-            "CODE_OF_CONDUCT.md",
-            "CHANGELOG.md",
-            "AGENTS.md",
-            ".github/ISSUE_TEMPLATE"
-          ],
-          "dependencies": [],
-          "required_disciplines": [],
-          "active_requirements": {
-            "stage": "test",
-            "disciplines": [],
-            "resources": []
-          },
-          "preparation_fingerprint": "8d674e05b86589b89401e6368cd9c3274e2b4c42b5de9ae9442f49fd9418e065",
-          "integration_owner_agent_id": "agent-mog",
-          "context_command": "node ./templew.mjs context resolve . --work-item WI-0259 --position quality_evaluator --no-write --json",
-          "claim_required_before_work": true,
-          "task_registration_required_after_creation": true,
-          "task_creation_performed": false,
-          "claim_performed": false,
-          "external_action_performed": false
-        }
-      ],
-      "join_gate": {
-        "integration_owner_agent_ids": [
-          "agent-mog"
-        ],
-        "required_evidence": [
-          "exact_candidate_revision",
-          "verification_results",
-          "unresolved_items"
-        ],
-        "rule": "Join every dispatched Work Item through its Integration Owner before dispatching dependent work or advancing the lifecycle."
-      }
-    }
-  ],
+  "waves": [],
   "active": [],
   "sequential": [],
   "blocked": [],
