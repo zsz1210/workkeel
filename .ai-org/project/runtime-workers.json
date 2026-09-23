@@ -2932,6 +2932,34 @@
       "attached_at": "2026-09-17T16:14:03.665Z",
       "completed_at": "2026-09-17T16:16:59.503Z",
       "updated_at": "2026-09-17T16:16:59.503Z"
+    },
+    {
+      "id": "worker-20260923094720-9641150a",
+      "runtime_kind": "internal-subagent",
+      "status": "completed",
+      "work_item_id": "WI-0255",
+      "position_id": "quality_evaluator",
+      "agent_id": "agent-lulu",
+      "principal_id": "human",
+      "claim_id": "claim-20260923094720-c5541156",
+      "base_revision": "8165774f97f98e4609dbd021620f1e9852967c36",
+      "branch": "codex/workkeel-reframe",
+      "worktree": "/Users/zsz1210/Documents/Codex/2026-09-23/chatgpt-tempo-github-tempo-clone/work/workkeel",
+      "plan_fingerprint": "8c859c08fb7590686b8493af666db9d542e3ca4ae233a760befd1f96c90ba1c6",
+      "plan_digest": "3b1c742a59731015356cdc39cc28191dd689e9753c784c1c5d61d250e38796c2",
+      "preparation_fingerprint": "52f3626332cbe6b03381561198cb0d4e21d6e22e339a2fe998b7fb9ac1bf800f",
+      "wave_id": "wave-001",
+      "runtime_id": "/root/workkeel_contract_review",
+      "task_id": null,
+      "resource_reservation_ids": [],
+      "current_revision": "8165774f97f98e4609dbd021620f1e9852967c36",
+      "evidence": [
+        ".ai-org/artifacts/WI-0255/independent-review.md"
+      ],
+      "reserved_at": "2026-09-23T09:47:20.951Z",
+      "attached_at": "2026-09-23T09:47:54.781Z",
+      "completed_at": "2026-09-23T09:51:03.715Z",
+      "updated_at": "2026-09-23T09:51:03.715Z"
     }
   ]
 }

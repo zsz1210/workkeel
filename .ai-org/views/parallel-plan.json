@@ -1,26 +1,133 @@
 {
   "schema_version": "temple.parallel-plan/v1",
-  "generated_at": "2026-09-18T01:29:02.234Z",
-  "source_fingerprint": "9b4e46bd2e74283c01a9f238d1d383a49287bf999edc620b80a0740a30d8a84e",
+  "generated_at": "2026-09-23T09:47:20.201Z",
+  "source_fingerprint": "8c859c08fb7590686b8493af666db9d542e3ca4ae233a760befd1f96c90ba1c6",
   "scope": {
     "mode": "all-active",
     "parent_work_item_id": null,
-    "selected_work_item_ids": []
+    "selected_work_item_ids": [
+      "WI-0253",
+      "WI-0254",
+      "WI-0255"
+    ]
   },
   "max_workers": 1,
   "summary": {
-    "selected": 0,
-    "dispatchable": 0,
+    "selected": 3,
+    "dispatchable": 1,
     "active": 0,
-    "sequential": 0,
+    "sequential": 2,
     "blocked": 0,
-    "waves": 0
+    "waves": 1
   },
-  "waves": [],
+  "waves": [
+    {
+      "id": "wave-001",
+      "order": 1,
+      "dispatch": [
+        {
+          "work_item_id": "WI-0255",
+          "title": "Define Workkeel task and execution contracts",
+          "position_id": "quality_evaluator",
+          "agent_id": "agent-lulu",
+          "agent_name": "Lulu",
+          "suggested_task_title": "WI-0255 · Define W… · Quality & Evaluation Engineer (Lulu)",
+          "base_revision": "8165774f97f98e4609dbd021620f1e9852967c36",
+          "affected_paths": [
+            "src/task-contract.mjs",
+            "src/cli.mjs",
+            "test/task-contract.test.mjs",
+            "docs/concepts/task-contract.md",
+            "docs/adr/0071-workkeel-task-contract.md",
+            "docs/adr/README.md",
+            ".ai-org/artifacts/WI-0255"
+          ],
+          "dependencies": [],
+          "required_disciplines": [],
+          "active_requirements": {
+            "stage": "test",
+            "disciplines": [],
+            "resources": []
+          },
+          "preparation_fingerprint": "52f3626332cbe6b03381561198cb0d4e21d6e22e339a2fe998b7fb9ac1bf800f",
+          "integration_owner_agent_id": "agent-rikku",
+          "context_command": "node ./templew.mjs context resolve . --work-item WI-0255 --position quality_evaluator --no-write --json",
+          "claim_required_before_work": true,
+          "task_registration_required_after_creation": true,
+          "task_creation_performed": false,
+          "claim_performed": false,
+          "external_action_performed": false
+        }
+      ],
+      "join_gate": {
+        "integration_owner_agent_ids": [
+          "agent-rikku"
+        ],
+        "required_evidence": [
+          "exact_candidate_revision",
+          "verification_results",
+          "unresolved_items"
+        ],
+        "rule": "Join every dispatched Work Item through its Integration Owner before dispatching dependent work or advancing the lifecycle."
+      }
+    }
+  ],
   "active": [],
-  "sequential": [],
+  "sequential": [
+    {
+      "work_item_id": "WI-0253",
+      "title": "Slim the test suite without weakening safety coverage",
+      "disposition": "sequential",
+      "position_id": "quality_evaluator",
+      "agent_id": "agent-lulu",
+      "integration_owner_agent_id": null,
+      "reasons": [
+        "integration_owner_assigned"
+      ]
+    },
+    {
+      "work_item_id": "WI-0254",
+      "title": "Repair baseline test harness failures",
+      "disposition": "sequential",
+      "position_id": "quality_evaluator",
+      "agent_id": "agent-lulu",
+      "integration_owner_agent_id": null,
+      "reasons": [
+        "integration_owner_assigned"
+      ]
+    }
+  ],
   "blocked": [],
-  "conflicts": [],
+  "conflicts": [
+    {
+      "kind": "affected-path",
+      "left_work_item_id": "WI-0253",
+      "right_work_item_id": "WI-0254",
+      "paths": [
+        {
+          "left_path": "test",
+          "right_path": "test/continuity-live-runner.test.mjs"
+        },
+        {
+          "left_path": "test",
+          "right_path": "test/delivery-control-pair.test.mjs"
+        }
+      ],
+      "resolution": "separate-waves"
+    },
+    {
+      "kind": "affected-path",
+      "left_work_item_id": "WI-0253",
+      "right_work_item_id": "WI-0255",
+      "paths": [
+        {
+          "left_path": "test",
+          "right_path": "test/task-contract.test.mjs"
+        }
+      ],
+      "resolution": "separate-waves"
+    }
+  ],
   "execution_policy": {
     "parallel_by_default_when_safe": true,
     "runtime_capacity_limit": 1,
