@@ -17,4 +17,3 @@ necessarily changed that canonical file. The resulting `GUARD_REJECTED` reported
 Do not bypass the guard, rewrite history, repoint gates, or claim that the rejected
 finish accepted the Work Item. Cancel WI-0254 while retaining its passing QA
 evidence and this configuration defect for a separately governed correction.
-

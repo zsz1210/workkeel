@@ -29,4 +29,3 @@ merge a branch, accept WI-0253, publish, deploy, or approve a release. Any later
 product/test change invalidates this judgment and requires a new candidate review.
 Rollback remains a normal revert of candidate `b863ee4976…`; retained Developer
 and verifier evidence must not be rewritten.
-

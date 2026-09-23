@@ -62,4 +62,3 @@ clean detached worktree whose HEAD was exactly the candidate SHA above.
 All three WI-0254 acceptance criteria pass on the exact candidate. No blocking
 defect or unresolved scoped risk was found. No product or test implementation file
 was modified during verification.
-

@@ -58,4 +58,3 @@ No UI/browser, hosted CI, remote provider, separate-machine, independent-human,
 publication, deployment, PR, or merge validation was performed. Release Manager
 must assess release readiness and integration policy separately. Any later change
 inside the affected scope invalidates this judgment.
-

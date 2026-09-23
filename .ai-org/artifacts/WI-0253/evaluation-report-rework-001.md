@@ -45,4 +45,3 @@ external-system behavior enters this candidate.
 
 Recommend advancing this exact candidate to Independent QA. Any affected product
 or test change invalidates this report and requires a new attempt.
-

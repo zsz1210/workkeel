@@ -30,4 +30,3 @@ merge a branch, accept WI-0253, publish, deploy, or approve a release. A later
 product/test change requires fresh verification. Rollback remains a normal revert
 of the bounded harness repair; all historical WI-0254 and WI-0256 evidence must
 remain intact.
-
