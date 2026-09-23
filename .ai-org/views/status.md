@@ -300,7 +300,7 @@
 | WI-0250 | Automate measurement closeout and clarify task readiness | done | Engineering Manager | Mog | pending | team-visible | 0 | gate-evidence | not-applicable | 0 | 0 | 0 | — | `9148bd64` | 1 | 10 | 0 |
 | WI-0251 | Include reviewed closeout files in package boundary | done | Engineering Manager | Mog | pending | team-visible | 0 | gate-evidence | not-applicable | 0 | 0 | 0 | — | `41a1a4f7` | 0 | 4 | 0 |
 | WI-0252 | Integrate collaboration recovery and measured closeout | done | Engineering Manager | Mog | pending | team-visible | 0 | gate-evidence | not-applicable | 0 | 0 | 0 | — | `8f7ab5f0` | 1 | 14 | 0 |
-| WI-0253 | Slim the test suite without weakening safety coverage | test | Quality & Evaluation Engineer | Lulu | pending | internal | 0 | gate-evidence | not-applicable | 0 | 0 | 0 | — | `b0fe9161` | 0 | 3 | 0 |
+| WI-0253 | Slim the test suite without weakening safety coverage | build | Developer | Rikku | pending | internal | 0 | gate-evidence | not-applicable | 0 | 0 | 0 | — | `—` | 0 | 3 | 0 |
 | WI-0254 | Repair baseline test harness failures | cancelled | Engineering Manager | Mog | pending | internal | 0 | gate-evidence | not-applicable | 0 | 0 | 0 | — | `b863ee49` | 0 | 5 | 0 |
 | WI-0255 | Define Workkeel task and execution contracts | build | Developer | Rikku | pending | team-visible | 0 | gate-evidence | not-applicable | 0 | 0 | 0 | claim-20260923085932-89b9be4b | `—` | 0 | 1 | 0 |
 | WI-0256 | Qualify baseline test harness repair | done | Engineering Manager | Mog | sequential | internal | 0 | gate-evidence | not-applicable | 0 | 0 | 0 | — | `4ac435d8` | 0 | 5 | 0 |
@@ -552,14 +552,14 @@
 
 | Time | Event | Work item | Actor |
 |---|---|---|---|
+| 2026-09-23T10:14:26.507Z | work_item_reworked | WI-0253 | agent-lulu |
+| 2026-09-23T10:14:16.884Z | work_item_claimed | WI-0253 | human |
 | 2026-09-23T10:09:29.680Z | work_item_closed | WI-0256 | agent-lulu |
 | 2026-09-23T10:09:29.680Z | work_item_transitioned | WI-0256 | agent-lulu |
 | 2026-09-23T10:09:29.666Z | work_item_claim_released | WI-0256 | human |
 | 2026-09-23T10:08:55.830Z | work_item_claimed | WI-0256 | human |
 | 2026-09-23T10:08:55.289Z | work_item_claim_released | WI-0256 | human |
 | 2026-09-23T10:04:29.159Z | work_item_claimed | WI-0256 | human |
-| 2026-09-23T10:02:13.539Z | work_item_transitioned | WI-0256 | agent-rikku |
-| 2026-09-23T10:01:59.829Z | handoff_created | WI-0256 | agent-rikku |
 
 ## Assignments
 

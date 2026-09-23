@@ -1,7 +1,7 @@
 {
   "schema_version": "temple.parallel-plan/v1",
-  "generated_at": "2026-09-23T10:09:30.409Z",
-  "source_fingerprint": "8a336877db1cb051fcc4930d42cb7bcba1ddb4407912b337a9af261791c95c04",
+  "generated_at": "2026-09-23T10:14:43.467Z",
+  "source_fingerprint": "5db099d33da6720a56b0727ee88777c7e3174ffae4df6b2fb4f818281495ee71",
   "scope": {
     "mode": "all-active",
     "parent_work_item_id": null,
@@ -41,8 +41,8 @@
       "work_item_id": "WI-0253",
       "title": "Slim the test suite without weakening safety coverage",
       "disposition": "sequential",
-      "position_id": "quality_evaluator",
-      "agent_id": "agent-lulu",
+      "position_id": "developer",
+      "agent_id": "agent-rikku",
       "integration_owner_agent_id": null,
       "reasons": [
         "integration_owner_assigned"

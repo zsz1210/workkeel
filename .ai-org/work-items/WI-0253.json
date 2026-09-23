@@ -2,11 +2,11 @@
   "schema_version": "temple.work-item/v1",
   "id": "WI-0253",
   "title": "Slim the test suite without weakening safety coverage",
-  "state": "test",
-  "owner_position": "quality_evaluator",
-  "assigned_agent_id": "agent-lulu",
+  "state": "build",
+  "owner_position": "developer",
+  "assigned_agent_id": "agent-rikku",
   "created_at": "2026-09-23T07:07:40.621Z",
-  "updated_at": "2026-09-23T07:55:31.387Z",
+  "updated_at": "2026-09-23T10:14:26.507Z",
   "scope": [
     "Evaluate the current test inventory, remove or merge only evidence-backed duplication, reduce routine execution time and success-output volume, and preserve regression, authority, recovery, security, failure diagnostics, and full release verification boundaries."
   ],
@@ -48,7 +48,7 @@
   "dependencies": [],
   "required_disciplines": [],
   "stage_requirements": {},
-  "base_revision": "2c5daa45afd756cf6ff18a31fdf13d8e03720828",
+  "base_revision": "b0fe9161f654a17aaeefd53373770249efee0ceb",
   "parallel_mode": "pending",
   "integration_owner_agent_id": null,
   "planned_agent_id": null,
@@ -56,10 +56,10 @@
   "contract_status": "not_required",
   "overlap_resolution": [],
   "claim": {
-    "id": "claim-20260923071021-2919ade6",
+    "id": "claim-20260923101416-14aa5ede",
     "status": "released",
     "principal_id": "human",
-    "agent_id": "agent-rikku",
+    "agent_id": "agent-lulu",
     "actor_provenance": {
       "selection": "explicit-agent",
       "principal_source": "explicit-principal",
@@ -68,15 +68,13 @@
       "provider_authenticated": false,
       "externally_supplied_evidence": false
     },
-    "position_id": "developer",
-    "base_revision": "2c5daa45afd756cf6ff18a31fdf13d8e03720828",
-    "branch": "codex/test-suite-slimming",
-    "worktree": null,
-    "claimed_at": "2026-09-23T07:10:21.834Z",
-    "released_at": "2026-09-23T07:55:30.881Z",
-    "release_reason": [
-      "Behavioral candidate b0fe9161f654a17aaeefd53373770249efee0ceb and Developer evidence handed to Quality Evaluator"
-    ]
+    "position_id": "quality_evaluator",
+    "base_revision": "b0fe9161f654a17aaeefd53373770249efee0ceb",
+    "branch": "codex/fix-test-harness-baselines",
+    "worktree": "/Users/zsz1210/Documents/Codex/2026-09-23/temple-test-slimming/work/temple-test-baseline-fixes",
+    "claimed_at": "2026-09-23T10:14:16.884Z",
+    "released_at": "2026-09-23T10:14:26.507Z",
+    "release_reason": "review_rework"
   },
   "claims": [
     {
@@ -124,6 +122,27 @@
       "release_reason": [
         "Behavioral candidate b0fe9161f654a17aaeefd53373770249efee0ceb and Developer evidence handed to Quality Evaluator"
       ]
+    },
+    {
+      "id": "claim-20260923101416-14aa5ede",
+      "status": "released",
+      "principal_id": "human",
+      "agent_id": "agent-lulu",
+      "actor_provenance": {
+        "selection": "explicit-agent",
+        "principal_source": "explicit-principal",
+        "verification_class": "attributed",
+        "evidence_ref": null,
+        "provider_authenticated": false,
+        "externally_supplied_evidence": false
+      },
+      "position_id": "quality_evaluator",
+      "base_revision": "b0fe9161f654a17aaeefd53373770249efee0ceb",
+      "branch": "codex/fix-test-harness-baselines",
+      "worktree": "/Users/zsz1210/Documents/Codex/2026-09-23/temple-test-slimming/work/temple-test-baseline-fixes",
+      "claimed_at": "2026-09-23T10:14:16.884Z",
+      "released_at": "2026-09-23T10:14:26.507Z",
+      "release_reason": "review_rework"
     }
   ],
   "gate_evidence": {
@@ -140,13 +159,6 @@
       ".ai-org/artifacts/WI-0253/design.md"
     ],
     "risk_review": [
-      ".ai-org/artifacts/WI-0253/design.md"
-    ],
-    "developer_handoff": [
-      ".ai-org/artifacts/WI-0253/handoff-001-developer-to-quality_evaluator.md"
-    ],
-    "developer_evidence": [
-      ".ai-org/artifacts/WI-0253/developer-evidence.md",
       ".ai-org/artifacts/WI-0253/design.md"
     ]
   },
@@ -176,5 +188,43 @@
       "created_at": "2026-09-23T07:55:15.291Z"
     }
   ],
-  "developer_candidate_revision": "b0fe9161f654a17aaeefd53373770249efee0ceb"
+  "rework_history": [
+    {
+      "sequence": 1,
+      "returned_at": "2026-09-23T10:14:26.507Z",
+      "from_state": "test",
+      "reviewer_agent_id": "agent-lulu",
+      "reviewer_claim_id": "claim-20260923101416-14aa5ede",
+      "rejected_revision": "b0fe9161f654a17aaeefd53373770249efee0ceb",
+      "reason": [
+        "Required full verification remained red on six retained baseline harness failure positions; include the separately qualified bounded repair and produce a fresh exact candidate."
+      ],
+      "findings": [
+        ".ai-org/artifacts/WI-0253/rework-findings-001.md"
+      ],
+      "scope_digest": "fd73d653218bb68f8dc2bd8365d40aff2d1b9a2ec3a3d5a32e073673bcd54752",
+      "retained_requirements": [
+        "work_order",
+        "approved_scope",
+        "acceptance_criteria",
+        "technical_design",
+        "risk_review"
+      ],
+      "retired_gate_evidence": {
+        "developer_handoff": [
+          ".ai-org/artifacts/WI-0253/handoff-001-developer-to-quality_evaluator.md"
+        ],
+        "developer_evidence": [
+          ".ai-org/artifacts/WI-0253/developer-evidence.md",
+          ".ai-org/artifacts/WI-0253/design.md"
+        ]
+      },
+      "retired_candidate_fields": {
+        "developer_candidate_revision": "b0fe9161f654a17aaeefd53373770249efee0ceb"
+      },
+      "handoff_refs": [
+        ".ai-org/artifacts/WI-0253/handoff-001-developer-to-quality_evaluator.md"
+      ]
+    }
+  ]
 }
