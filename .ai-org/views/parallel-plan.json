@@ -1,7 +1,7 @@
 {
   "schema_version": "temple.parallel-plan/v1",
-  "generated_at": "2026-09-23T10:55:44.102Z",
-  "source_fingerprint": "8abfbf9fee071b59c52416064adaf24c26f1225f61f86cc0600e3deb7f38f3d0",
+  "generated_at": "2026-09-23T11:11:15.305Z",
+  "source_fingerprint": "d96cfe98111043f117eac788537db2342005dfb7ea5aa69ca117493697676179",
   "scope": {
     "mode": "all-active",
     "parent_work_item_id": null,
@@ -13,36 +13,74 @@
   "max_workers": null,
   "summary": {
     "selected": 2,
-    "dispatchable": 0,
-    "active": 1,
+    "dispatchable": 1,
+    "active": 0,
     "sequential": 1,
     "blocked": 0,
-    "waves": 0
+    "waves": 1
   },
-  "waves": [],
-  "active": [
+  "waves": [
+    {
+      "id": "wave-001",
+      "order": 1,
+      "dispatch": [
+        {
+          "work_item_id": "WI-0258",
+          "title": "Implement the Workkeel task-first lifecycle",
+          "position_id": "quality_evaluator",
+          "agent_id": "agent-lulu",
+          "agent_name": "Lulu",
+          "suggested_task_title": "WI-0258 · Implemen… · Quality & Evaluation Engineer (Lulu)",
+          "base_revision": "6bb9c98e25fe6056621ba4189ce0ed640e8f4438",
+          "affected_paths": [
+            "src",
+            "bin",
+            "test/workkeel-lifecycle.test.mjs",
+            "test/workkeel-runtime.test.mjs",
+            "docs",
+            "scripts/check-package.mjs",
+            "package.json",
+            "package-lock.json",
+            ".ai-org/project/domain-glossary.md"
+          ],
+          "dependencies": [],
+          "required_disciplines": [],
+          "active_requirements": {
+            "stage": "test",
+            "disciplines": [],
+            "resources": []
+          },
+          "preparation_fingerprint": "7c4bfb6b0b9b261fd23913094218c75e78b7ba7c3af948de2dc965700551c384",
+          "integration_owner_agent_id": "agent-mog",
+          "context_command": "node ./templew.mjs context resolve . --work-item WI-0258 --position quality_evaluator --no-write --json",
+          "claim_required_before_work": true,
+          "task_registration_required_after_creation": true,
+          "task_creation_performed": false,
+          "claim_performed": false,
+          "external_action_performed": false
+        }
+      ],
+      "join_gate": {
+        "integration_owner_agent_ids": [
+          "agent-mog"
+        ],
+        "required_evidence": [
+          "exact_candidate_revision",
+          "verification_results",
+          "unresolved_items"
+        ],
+        "rule": "Join every dispatched Work Item through its Integration Owner before dispatching dependent work or advancing the lifecycle."
+      }
+    }
+  ],
+  "active": [],
+  "sequential": [
     {
       "work_item_id": "WI-0259",
       "title": "Rename and reframe the public Workkeel framework",
-      "disposition": "active",
-      "position_id": "developer",
-      "agent_id": "agent-rikku",
-      "integration_owner_agent_id": "agent-mog",
-      "reasons": [],
-      "claim_id": "claim-20260923105005-8f8d4e92",
-      "principal_id": "human",
-      "branch": "codex/workkeel-reframe",
-      "worktree": ".",
-      "base_revision": "fa1491f3"
-    }
-  ],
-  "sequential": [
-    {
-      "work_item_id": "WI-0258",
-      "title": "Implement the Workkeel task-first lifecycle",
       "disposition": "sequential",
-      "position_id": "developer",
-      "agent_id": "agent-rikku",
+      "position_id": "quality_evaluator",
+      "agent_id": "agent-lulu",
       "integration_owner_agent_id": "agent-mog",
       "reasons": [
         "requested_mode_sequential"
