@@ -1,0 +1,14 @@
+{
+  "schema_version": "temple.finish-observation/v1",
+  "authority": "observation-only",
+  "work_item_id": "WI-0262",
+  "operation_id": "wi0262-status-independent-finish-01",
+  "candidate_revision": "dcd95179b7dbe327af5b87ef436f3ce1d04f8ddf",
+  "request_digest": "f8460ebf9abd6a4c5ce59d16af3d54e4de0caa791f854dc6763f6ffe641104f8",
+  "plan_digest": "d5cafc571bddadcb2d5b178acb353e7035d9cff99f8ae214e33363fef5d10e60",
+  "receipt_sha256": "cb9a7d8d7437387464946f73b6a80348293ffe6afdf286b67010cff104e184ee",
+  "status": "passed",
+  "observed_at": "2026-09-23T15:55:27.727Z",
+  "errors": [],
+  "recovery_authority": "origin-checkout-journal-required"
+}

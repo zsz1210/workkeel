@@ -1,80 +1,22 @@
 {
   "schema_version": "temple.parallel-plan/v1",
-  "generated_at": "2026-09-23T15:46:14.074Z",
-  "source_fingerprint": "a27b53958350240c4a435572a3027ca2609bad30d70953f7e556f9c34a35c87e",
+  "generated_at": "2026-09-23T15:55:20.486Z",
+  "source_fingerprint": "fe329f0bf23e289964eb81239ed71d1b0a02160b85739af496bfdf33fba3f4e6",
   "scope": {
     "mode": "all-active",
     "parent_work_item_id": null,
-    "selected_work_item_ids": [
-      "WI-0260"
-    ]
+    "selected_work_item_ids": []
   },
   "max_workers": 1,
   "summary": {
-    "selected": 1,
-    "dispatchable": 1,
+    "selected": 0,
+    "dispatchable": 0,
     "active": 0,
     "sequential": 0,
     "blocked": 0,
-    "waves": 1
+    "waves": 0
   },
-  "waves": [
-    {
-      "id": "wave-001",
-      "order": 1,
-      "dispatch": [
-        {
-          "work_item_id": "WI-0260",
-          "title": "Implement Workkeel workflows, model routing and user-facing delivery",
-          "position_id": "quality_evaluator",
-          "agent_id": "agent-lulu",
-          "agent_name": "Lulu",
-          "suggested_task_title": "WI-0260 · Implemen… · Quality & Evaluation Engineer (Lulu)",
-          "base_revision": "c84f1b5599a210dcf42647f9c54ff9ffa8b14324",
-          "affected_paths": [
-            "src",
-            "test",
-            "docs",
-            "project-overlay",
-            "package.json",
-            "package-lock.json",
-            "README.md",
-            "README.zh-TW.md",
-            "README.ja.md",
-            "THIRD_PARTY_NOTICES.md",
-            ".ai-org/project/domain-glossary.md",
-            ".ai-org/decisions"
-          ],
-          "dependencies": [],
-          "required_disciplines": [],
-          "active_requirements": {
-            "stage": "test",
-            "disciplines": [],
-            "resources": []
-          },
-          "preparation_fingerprint": "71fcb6e2ab83980d073e22d93de79a764182ed94bb2bf7480495488530902a48",
-          "integration_owner_agent_id": "agent-mog",
-          "context_command": "node ./templew.mjs context resolve . --work-item WI-0260 --position quality_evaluator --no-write --json",
-          "claim_required_before_work": true,
-          "task_registration_required_after_creation": true,
-          "task_creation_performed": false,
-          "claim_performed": false,
-          "external_action_performed": false
-        }
-      ],
-      "join_gate": {
-        "integration_owner_agent_ids": [
-          "agent-mog"
-        ],
-        "required_evidence": [
-          "exact_candidate_revision",
-          "verification_results",
-          "unresolved_items"
-        ],
-        "rule": "Join every dispatched Work Item through its Integration Owner before dispatching dependent work or advancing the lifecycle."
-      }
-    }
-  ],
+  "waves": [],
   "active": [],
   "sequential": [],
   "blocked": [],
