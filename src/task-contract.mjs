@@ -19,6 +19,9 @@ const identifiers = { type: "array", items: identifier, uniqueItems: true };
 const actor = object({ agent_id: identifier, principal_id: nullable(identifier) });
 const revision = { type: "string", pattern: "^(?:[a-f0-9]{40}|[a-f0-9]{64})$" };
 const nativeModel = object({ kind: { const: "native" } });
+const routedModel = object({ kind: { const: "policy" }, policy_ref: text });
+const subscriptionModel = object({ kind: { const: "codex-subscription" }, model: identifier,
+  effort: choice("low", "medium", "high", "xhigh", "max", "ultra") });
 const gatewayModel = object({
   kind: { const: "gateway" }, provider: choice("litellm", "openai-compatible"),
   base_url: text, model: text, selection: { const: "fixed" },
@@ -55,7 +58,7 @@ export const taskContractSchema = object({
   skills: strings,
   execution: object({
     runtime: object({ kind: choice("host-owned", "adapter"), adapter_id: nullable(identifier), required_features: identifiers }),
-    model_connection: { oneOf: [nativeModel, gatewayModel] }
+    model_connection: { oneOf: [nativeModel, gatewayModel, routedModel, subscriptionModel] }
   }),
   legacy: nullable(object({ schema_version: { const: "temple.work-item/v1" }, source_ref: text,
     source_sha256: { type: "string", pattern: "^[a-f0-9]{64}$" }, owner_position: nullable(text), assigned_agent_id: nullable(text) }))
@@ -128,6 +131,11 @@ export function validateTaskContract(document, { now = new Date() } = {}) {
     if (document.skills.some((value) => !repositoryPath(value))) errors.push("/skills must contain repository-relative Skill paths");
     if (runtime.kind === "host-owned" && runtime.adapter_id !== null || runtime.kind === "adapter" && runtime.adapter_id === null) errors.push("/execution/runtime/adapter_id must match runtime kind");
     const model = document.execution.model_connection;
+    if (model.kind === "codex-subscription" && (runtime.adapter_id !== "codex-app-server" || env?.data.model_access !== "approved-connection")) errors.push("/execution/model_connection Codex subscription requires its adapter and approved model data access");
+    if (model.kind === "policy") {
+      if (!repositoryPath(model.policy_ref) || !env?.data.policy_refs.includes(model.policy_ref)) errors.push("/execution/model_connection policy must be a pinned task data-policy reference");
+      if (runtime.kind !== "adapter") errors.push("/execution/model_connection policy requires a registered runtime adapter");
+    }
     if (model.kind === "gateway") {
       const urlValid = validGatewayUrl(model.base_url);
       if (!urlValid) errors.push("/execution/model_connection/base_url requires HTTPS or loopback HTTP, with no credentials, query or fragment");
@@ -145,7 +153,7 @@ export function validateTaskContract(document, { now = new Date() } = {}) {
 }
 
 /** Bounded input reader: no traversal, symlinks, devices or oversized JSON. */
-export async function readTaskFile(target, source) {
+export async function readTaskFile(target, source, { preserveBom = false } = {}) {
   if (!repositoryPath(source)) throw new Error("Contract input must be a normalized repository-relative file path");
   const root = await fs.realpath(target);
   let current = root;
@@ -174,9 +182,9 @@ export async function readTaskFile(target, source) {
       info.size !== after.size || info.mtimeMs !== after.mtimeMs || info.ctimeMs !== after.ctimeMs ||
       await fs.realpath(current) !== current) throw new Error("Contract input changed while reading");
     let content;
-    try { content = new TextDecoder("utf-8", { fatal: true }).decode(buffer.subarray(0, length)); }
+    try { content = new TextDecoder("utf-8", { fatal: true, ignoreBOM: preserveBom }).decode(buffer.subarray(0, length)); }
     catch { throw new Error("Contract input is not valid UTF-8"); }
-    return { content, digest: sha256(content) };
+    return { content, digest: sha256(content), bytes_digest: sha256(buffer.subarray(0, length)) };
   } finally { await file.close(); }
 }
 

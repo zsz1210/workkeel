@@ -8,6 +8,7 @@ Start with these records to understand the conclusions. The catalog below also i
 
 | Question | Current result | Read next |
 | --- | --- | --- |
+| Can Workkeel execute a graph using an existing Codex subscription? | Offline execution and nine permission probes passed; final live check failed on a model refusal, so reliable automatic execution remains unqualified | [Workkeel automation qualification](workkeel-automation.md) |
 | Does Temple improve small coding tasks? | WI-0135: equal observed quality, 19.77% lower candidate time, 1.76% more Operational Tokens across two pairs; neutral against the registered threshold | [Lean comparison result](lean-routing-effectiveness-result.md) |
 | Does it help multi-repository delivery? | WI-0136 v16: equal observed quality; small Token and latency reductions, but slower integration and greater artifact volume in one pair | [Multi-repository comparison](representative-microservice-comparison.md) |
 | Does routed context reduce resource use? | WI-0143: eight correct candidates; opposing per-shape resource changes and failed cache balance prevent a causal savings claim | [Successor design and predecessor findings](context-capsule-successor-evaluations.md) |

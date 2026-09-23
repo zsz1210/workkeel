@@ -1,0 +1,260 @@
+{
+  "schema_version": "temple.work-item/v1",
+  "id": "WI-0264",
+  "title": "Record per-task model usage and execution timing",
+  "state": "done",
+  "owner_position": "engineering_manager",
+  "assigned_agent_id": "agent-mog",
+  "created_at": "2026-09-23T16:49:01.782Z",
+  "updated_at": "2026-09-23T17:07:12.419Z",
+  "scope": [
+    "Add read-only task and workflow measurements with durable per-attempt observations and monotonic timing; offline validation only"
+  ],
+  "acceptance_criteria": [
+    "Requested runtime-confirmed and observed models remain distinct; token totals never double-count snapshots or unknown values; failures and retries retain measurements; task query is read-only; native unobserved execution remains unknown"
+  ],
+  "affected_paths": [
+    "src/workkeel-measurements.mjs",
+    "src/workkeel-workflows.mjs",
+    "src/workkeel-codex-runtime.mjs",
+    "src/workkeel-cli.mjs",
+    "test/workkeel-workflows.test.mjs",
+    "test/workkeel-codex-runtime.test.mjs",
+    "test/workkeel-measurements.test.mjs",
+    "docs/operations/workkeel-measurements.md",
+    "docs/operations/workkeel-workflows.md",
+    "README.md",
+    "README.zh-TW.md",
+    "README.ja.md",
+    "scripts/check-package.mjs"
+  ],
+  "context_refs": [],
+  "spec_refs": [],
+  "ux_refs": [],
+  "ui_refs": [],
+  "contract_refs": [],
+  "specification_mode": "gate-evidence",
+  "ui_delivery_mode": "not-applicable",
+  "workflow_profile": "standard",
+  "risk_tier": "standard",
+  "profile_assessment": {
+    "requested_profile": "standard",
+    "effective_profile": "standard",
+    "scope_class": "ordinary",
+    "escalation_triggers": [],
+    "rationale": "Additive local observability contract across runner and adapter; no UI security policy or model routing changes",
+    "evidence_refs": [],
+    "evaluated_at": "2026-09-23T16:49:01.771Z",
+    "escalated": false
+  },
+  "parent_work_item_id": null,
+  "tracker_visibility": "team-visible",
+  "tracker_refs": [],
+  "tracker_reconciliations": [],
+  "dependencies": [],
+  "required_disciplines": [],
+  "stage_requirements": {},
+  "base_revision": "c901c420080326965a62ec483328fb7bd44a047f",
+  "parallel_mode": "parallel",
+  "integration_owner_agent_id": "agent-mog",
+  "planned_agent_id": null,
+  "shared_contract_refs": [],
+  "contract_status": "not_required",
+  "overlap_resolution": [],
+  "claim": {
+    "id": "claim-20260923170617-9ee9e712",
+    "status": "released",
+    "principal_id": "human",
+    "agent_id": "agent-mog",
+    "actor_provenance": {
+      "selection": "explicit-agent",
+      "principal_source": "explicit-principal",
+      "verification_class": "attributed",
+      "evidence_ref": null,
+      "provider_authenticated": false,
+      "externally_supplied_evidence": false
+    },
+    "position_id": "release_manager",
+    "base_revision": "c901c420080326965a62ec483328fb7bd44a047f",
+    "branch": "codex/workkeel-automation",
+    "worktree": null,
+    "claimed_at": "2026-09-23T17:06:17.117Z",
+    "released_at": "2026-09-23T17:07:12.419Z",
+    "release_reason": "work_item_closed"
+  },
+  "claims": [
+    {
+      "id": "claim-20260923164952-c3bb699e",
+      "status": "released",
+      "principal_id": "human",
+      "agent_id": "agent-mog",
+      "actor_provenance": {
+        "selection": "explicit-agent",
+        "principal_source": "explicit-principal",
+        "verification_class": "attributed",
+        "evidence_ref": null,
+        "provider_authenticated": false,
+        "externally_supplied_evidence": false
+      },
+      "position_id": "engineering_manager",
+      "base_revision": "5729bd91bbfe973b7ebfc83ddf8097a727d52a2d",
+      "branch": "codex/workkeel-automation",
+      "worktree": null,
+      "claimed_at": "2026-09-23T16:49:52.103Z",
+      "released_at": "2026-09-23T16:50:11.380Z",
+      "release_reason": [
+        "Approved work order recorded"
+      ]
+    },
+    {
+      "id": "claim-20260923165013-08496a22",
+      "status": "released",
+      "principal_id": "human",
+      "agent_id": "agent-rikku",
+      "actor_provenance": {
+        "selection": "explicit-agent",
+        "principal_source": "explicit-principal",
+        "verification_class": "attributed",
+        "evidence_ref": null,
+        "provider_authenticated": false,
+        "externally_supplied_evidence": false
+      },
+      "position_id": "developer",
+      "base_revision": "5729bd91bbfe973b7ebfc83ddf8097a727d52a2d",
+      "branch": "codex/workkeel-automation",
+      "worktree": null,
+      "claimed_at": "2026-09-23T16:50:13.749Z",
+      "released_at": "2026-09-23T16:59:28.519Z",
+      "release_reason": [
+        "Exact candidate ready for independent verification; full suite still running"
+      ]
+    },
+    {
+      "id": "claim-20260923170011-bc0262d7",
+      "status": "released",
+      "principal_id": "human",
+      "agent_id": "agent-lulu",
+      "actor_provenance": {
+        "selection": "explicit-agent",
+        "principal_source": "explicit-principal",
+        "verification_class": "attributed",
+        "evidence_ref": null,
+        "provider_authenticated": false,
+        "externally_supplied_evidence": false
+      },
+      "position_id": "quality_evaluator",
+      "base_revision": "c901c420080326965a62ec483328fb7bd44a047f",
+      "branch": "codex/workkeel-automation",
+      "worktree": null,
+      "claimed_at": "2026-09-23T17:00:11.259Z",
+      "released_at": "2026-09-23T17:06:14.750Z",
+      "release_reason": [
+        "Distinct review passed exact candidate after full offline verification"
+      ]
+    },
+    {
+      "id": "claim-20260923170617-9ee9e712",
+      "status": "released",
+      "principal_id": "human",
+      "agent_id": "agent-mog",
+      "actor_provenance": {
+        "selection": "explicit-agent",
+        "principal_source": "explicit-principal",
+        "verification_class": "attributed",
+        "evidence_ref": null,
+        "provider_authenticated": false,
+        "externally_supplied_evidence": false
+      },
+      "position_id": "release_manager",
+      "base_revision": "c901c420080326965a62ec483328fb7bd44a047f",
+      "branch": "codex/workkeel-automation",
+      "worktree": null,
+      "claimed_at": "2026-09-23T17:06:17.117Z",
+      "released_at": "2026-09-23T17:07:12.419Z",
+      "release_reason": "work_item_closed"
+    }
+  ],
+  "gate_evidence": {
+    "work_order": [
+      ".ai-org/artifacts/WI-0264/work-order.md"
+    ],
+    "approved_scope": [
+      ".ai-org/artifacts/WI-0264/work-order.md"
+    ],
+    "acceptance_criteria": [
+      ".ai-org/artifacts/WI-0264/work-order.md"
+    ],
+    "technical_design": [
+      ".ai-org/artifacts/WI-0264/work-order.md"
+    ],
+    "risk_review": [
+      ".ai-org/artifacts/WI-0264/work-order.md"
+    ],
+    "developer_handoff": [
+      ".ai-org/artifacts/WI-0264/handoff-001-developer-to-quality_evaluator.md"
+    ],
+    "developer_evidence": [
+      ".ai-org/artifacts/WI-0264/developer-verification.md"
+    ],
+    "test_evidence": [
+      ".ai-org/artifacts/WI-0264/full-verification-completion.md"
+    ],
+    "evaluation_report": [
+      ".ai-org/artifacts/WI-0264/independent-review.md"
+    ],
+    "independent_qa_pass": [
+      ".ai-org/artifacts/WI-0264/independent-review.md"
+    ],
+    "accepted_scope": [
+      ".ai-org/artifacts/WI-0264/work-order.md"
+    ],
+    "independent_qa_report": [
+      ".ai-org/artifacts/WI-0264/independent-review.md"
+    ],
+    "release_record": [
+      ".ai-org/artifacts/WI-0264/release-record.md"
+    ],
+    "rollback_plan": [
+      ".ai-org/artifacts/WI-0264/release-record.md"
+    ],
+    "required_human_approval": [
+      "Maintainer explicitly approved local task model token and duration records; no external release"
+    ]
+  },
+  "evidence": [
+    ".ai-org/artifacts/WI-0264/work-order.md",
+    ".ai-org/artifacts/WI-0264/handoff-001-developer-to-quality_evaluator.md",
+    ".ai-org/artifacts/WI-0264/developer-verification.md",
+    ".ai-org/artifacts/WI-0264/full-verification-completion.md",
+    ".ai-org/artifacts/WI-0264/independent-review.md",
+    ".ai-org/artifacts/WI-0264/release-record.md"
+  ],
+  "unresolved": [],
+  "next_position": null,
+  "handoffs": [
+    {
+      "from_position": "developer",
+      "to_position": "quality_evaluator",
+      "actor": "agent-rikku",
+      "principal_id": "human",
+      "actor_provenance": {
+        "selection": "active-claim",
+        "principal_source": "active-claim",
+        "verification_class": "attributed",
+        "evidence_ref": null,
+        "provider_authenticated": false,
+        "externally_supplied_evidence": false
+      },
+      "input_revision": "c901c420080326965a62ec483328fb7bd44a047f",
+      "artifact": ".ai-org/artifacts/WI-0264/handoff-001-developer-to-quality_evaluator.md",
+      "created_at": "2026-09-23T16:59:26.951Z"
+    }
+  ],
+  "developer_candidate_revision": "c901c420080326965a62ec483328fb7bd44a047f",
+  "tested_revision": "c901c420080326965a62ec483328fb7bd44a047f",
+  "release_gate_result": "go",
+  "lifecycle_outcome": "accepted",
+  "closeout_reasons": [],
+  "external_release_status": "not_performed",
+  "approval_record": "Maintainer explicitly approved local task model token and duration records; no external release"
+}

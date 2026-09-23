@@ -1,0 +1,182 @@
+{
+  "schema_version": "temple.work-item/v1",
+  "id": "WI-0262",
+  "title": "Record final Workkeel local acceptance status",
+  "state": "done",
+  "owner_position": "engineering_manager",
+  "assigned_agent_id": "agent-mog",
+  "created_at": "2026-09-23T15:50:48.682Z",
+  "updated_at": "2026-09-23T15:55:20.037Z",
+  "scope": [
+    "Synchronize documentation and decision status with completed WI-0260 local acceptance while preserving the failed live qualification. No product behavior, experiment, publication or test-suite change."
+  ],
+  "acceptance_criteria": [
+    "Public validation and ADR status distinguish accepted local implementation from failed live qualification; provenance links point to exact existing evidence and current instructions remain unchanged."
+  ],
+  "affected_paths": [
+    "docs/validation/workkeel-automation.md",
+    "docs/adr/0073-opt-in-workflow-execution.md",
+    ".ai-org/decisions/DEC-0009-workkeel-executable-workflows.md"
+  ],
+  "context_refs": [],
+  "spec_refs": [],
+  "ux_refs": [],
+  "ui_refs": [],
+  "contract_refs": [],
+  "specification_mode": "gate-evidence",
+  "ui_delivery_mode": "not-applicable",
+  "workflow_profile": "lean",
+  "risk_tier": "low",
+  "profile_assessment": {
+    "requested_profile": "lean",
+    "effective_profile": "lean",
+    "scope_class": "bounded",
+    "escalation_triggers": [],
+    "rationale": "Bounded prose/evidence status correction only; no UI, code, dependencies or authority changes.",
+    "evidence_refs": [],
+    "evaluated_at": "2026-09-23T15:50:48.670Z",
+    "escalated": false
+  },
+  "parent_work_item_id": null,
+  "tracker_visibility": "team-visible",
+  "tracker_refs": [],
+  "tracker_reconciliations": [],
+  "dependencies": [],
+  "required_disciplines": [],
+  "stage_requirements": {},
+  "base_revision": "dcd95179b7dbe327af5b87ef436f3ce1d04f8ddf",
+  "parallel_mode": "parallel",
+  "integration_owner_agent_id": "agent-mog",
+  "planned_agent_id": null,
+  "shared_contract_refs": [],
+  "contract_status": "not_required",
+  "overlap_resolution": [],
+  "claim": {
+    "id": "claim-20260923155342-658afe5f",
+    "status": "released",
+    "principal_id": "human",
+    "agent_id": "agent-lulu",
+    "actor_provenance": {
+      "selection": "explicit-agent",
+      "principal_source": "explicit-principal",
+      "verification_class": "attributed",
+      "evidence_ref": null,
+      "provider_authenticated": false,
+      "externally_supplied_evidence": false
+    },
+    "position_id": "quality_evaluator",
+    "base_revision": "dcd95179b7dbe327af5b87ef436f3ce1d04f8ddf",
+    "branch": "codex/workkeel-automation",
+    "worktree": null,
+    "claimed_at": "2026-09-23T15:53:42.184Z",
+    "released_at": "2026-09-23T15:55:20.022Z",
+    "release_reason": "completed"
+  },
+  "claims": [
+    {
+      "id": "claim-20260923155155-14820c7f",
+      "status": "released",
+      "principal_id": "human",
+      "agent_id": "agent-rikku",
+      "actor_provenance": {
+        "selection": "explicit-agent",
+        "principal_source": "explicit-principal",
+        "verification_class": "attributed",
+        "evidence_ref": null,
+        "provider_authenticated": false,
+        "externally_supplied_evidence": false
+      },
+      "position_id": "developer",
+      "base_revision": "c84f1b5599a210dcf42647f9c54ff9ffa8b14324",
+      "branch": "codex/workkeel-automation",
+      "worktree": null,
+      "claimed_at": "2026-09-23T15:51:55.331Z",
+      "released_at": "2026-09-23T15:53:15.410Z",
+      "release_reason": "developer_delivery"
+    },
+    {
+      "id": "claim-20260923155342-658afe5f",
+      "status": "released",
+      "principal_id": "human",
+      "agent_id": "agent-lulu",
+      "actor_provenance": {
+        "selection": "explicit-agent",
+        "principal_source": "explicit-principal",
+        "verification_class": "attributed",
+        "evidence_ref": null,
+        "provider_authenticated": false,
+        "externally_supplied_evidence": false
+      },
+      "position_id": "quality_evaluator",
+      "base_revision": "dcd95179b7dbe327af5b87ef436f3ce1d04f8ddf",
+      "branch": "codex/workkeel-automation",
+      "worktree": null,
+      "claimed_at": "2026-09-23T15:53:42.184Z",
+      "released_at": "2026-09-23T15:55:20.022Z",
+      "release_reason": "completed"
+    }
+  ],
+  "gate_evidence": {
+    "work_order": [
+      ".ai-org/artifacts/WI-0262/work-order.md"
+    ],
+    "approved_scope": [
+      ".ai-org/artifacts/WI-0262/work-order.md"
+    ],
+    "acceptance_criteria": [
+      ".ai-org/artifacts/WI-0262/work-order.md"
+    ],
+    "technical_design": [
+      ".ai-org/artifacts/WI-0262/work-order.md"
+    ],
+    "risk_review": [
+      ".ai-org/artifacts/WI-0262/work-order.md"
+    ],
+    "profile_eligibility": [
+      ".ai-org/artifacts/WI-0262/work-order.md"
+    ],
+    "developer_handoff": [
+      ".ai-org/artifacts/WI-0262/handoff-001-developer-to-quality_evaluator.md"
+    ],
+    "developer_evidence": [
+      ".ai-org/artifacts/WI-0262/developer-evidence.md"
+    ],
+    "test_evidence": [
+      ".ai-org/artifacts/WI-0262/independent-acceptance-agent-lulu.md"
+    ],
+    "lean_closeout": [
+      ".ai-org/artifacts/WI-0262/independent-acceptance-agent-lulu.md"
+    ]
+  },
+  "evidence": [
+    ".ai-org/artifacts/WI-0262/work-order.md",
+    ".ai-org/artifacts/WI-0262/handoff-001-developer-to-quality_evaluator.md",
+    ".ai-org/artifacts/WI-0262/developer-evidence.md",
+    ".ai-org/artifacts/WI-0262/independent-acceptance-agent-lulu.md"
+  ],
+  "unresolved": [],
+  "next_position": null,
+  "handoffs": [
+    {
+      "from_position": "developer",
+      "to_position": "quality_evaluator",
+      "actor": "agent-rikku",
+      "principal_id": "human",
+      "actor_provenance": {
+        "selection": "active-claim",
+        "principal_source": "active-claim",
+        "verification_class": "attributed",
+        "evidence_ref": null,
+        "provider_authenticated": false,
+        "externally_supplied_evidence": false
+      },
+      "input_revision": "dcd95179b7dbe327af5b87ef436f3ce1d04f8ddf",
+      "artifact": ".ai-org/artifacts/WI-0262/handoff-001-developer-to-quality_evaluator.md",
+      "created_at": "2026-09-23T15:53:15.409Z"
+    }
+  ],
+  "developer_candidate_revision": "dcd95179b7dbe327af5b87ef436f3ce1d04f8ddf",
+  "lifecycle_outcome": "accepted",
+  "closeout_reasons": [],
+  "external_release_status": "not_performed"
+}

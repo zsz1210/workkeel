@@ -4,6 +4,11 @@ import { sha256, formatJson } from "./files.mjs";
 /** Model transport only: it neither starts an agent nor widens its sandbox. */
 export function codexModelConnectionParams(connection) {
   if (connection?.kind === "native" && Object.keys(connection).length === 1) return {};
+  if (connection?.kind === "codex-subscription") {
+    if (Object.keys(connection).sort().join(",") !== "effort,kind,model" || !/^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(connection.model ?? "") ||
+        !["low", "medium", "high", "xhigh", "max", "ultra"].includes(connection.effort)) throw new Error("Codex subscription needs an explicit model and supported reasoning effort");
+    return { model: connection.model, modelProvider: "openai", config: { model_reasoning_effort: connection.effort } };
+  }
   const fields = ["base_url", "credential_env", "kind", "model", "provider", "selection"];
   if (!connection || Object.keys(connection).sort().join(",") !== fields.sort().join(",") ||
       connection.kind !== "gateway" || !["litellm", "openai-compatible"].includes(connection.provider) ||
@@ -25,6 +30,12 @@ export function planTaskRuntime(contract) {
   if (!validation.contract_complete) throw new Error("Runtime planning requires a complete current task contract");
   const runtime = contract.execution.runtime;
   if (runtime.kind === "adapter" && runtime.adapter_id !== "codex-app-server") throw new Error("Unsupported runtime adapter; native host-owned execution remains available");
+  if (contract.execution.model_connection.kind === "policy") return {
+    schema_version: "workkeel.runtime-plan/v1", authority: "observation-only", mutation_status: "no-write",
+    runtime, model_connection: contract.execution.model_connection, execution_authorized: false,
+    automatic_launch_supported: false, provider_contact: false, boundary_enforcement: "host-responsibility",
+    next_action: "Use workflow plan with the pinned policy and definition; execution requires a registered enforcing runtime host."
+  };
   const parameters = codexModelConnectionParams(contract.execution.model_connection);
   return { schema_version: "workkeel.runtime-plan/v1", authority: "observation-only", mutation_status: "no-write",
     runtime, model_connection: contract.execution.model_connection, connection_fingerprint: sha256(formatJson(contract.execution.model_connection)),

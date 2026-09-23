@@ -1,5 +1,9 @@
 # Temple Core Skills
 
+This catalog describes the retained compatibility distribution. Current Workkeel
+projects use [task-relevant Skill selection and outcome checks](../extensions/workkeel-context.md);
+the `temple-init` and `temple-work` identifiers below retain their original scope.
+
 Temple Core Skills are reusable methods for recurring development situations. They tell an Agent **how to approach a kind of work**; they do not grant permission, approve a dependency, or replace the project's Work Item lifecycle.
 
 ## What does `$skill-name` mean?

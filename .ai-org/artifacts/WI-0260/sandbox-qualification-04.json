@@ -1,0 +1,70 @@
+{
+  "schema_version": "workkeel.sandbox-qualification/v1",
+  "at": "2026-09-23T15:08:59.734Z",
+  "model_turns": 0,
+  "fixture_path": "/private/var/folders/xs/l6j01gy57xddczq_xyb044ww0000gn/T/workkeel-sandbox-IMy9W2",
+  "cases": [
+    {
+      "name": "approved-read",
+      "exit_code": 0,
+      "expected_success": true,
+      "pass": true
+    },
+    {
+      "name": "outside-read",
+      "exit_code": 1,
+      "expected_success": false,
+      "pass": true
+    },
+    {
+      "name": "runner-journal-read",
+      "exit_code": 1,
+      "expected_success": false,
+      "pass": true
+    },
+    {
+      "name": "approved-write",
+      "exit_code": 0,
+      "expected_success": true,
+      "pass": true
+    },
+    {
+      "name": "outside-write",
+      "exit_code": 1,
+      "expected_success": false,
+      "pass": true
+    },
+    {
+      "name": "authority-write",
+      "exit_code": 1,
+      "expected_success": false,
+      "pass": true
+    },
+    {
+      "name": "task-policy-write",
+      "exit_code": 1,
+      "expected_success": false,
+      "pass": true
+    },
+    {
+      "name": "approval-write",
+      "exit_code": 1,
+      "expected_success": false,
+      "pass": true
+    },
+    {
+      "name": "network",
+      "exit_code": 7,
+      "expected_success": false,
+      "pass": true
+    }
+  ],
+  "outcome": "pass",
+  "environment": {
+    "platform": "darwin",
+    "node": "v24.7.0",
+    "codex": "codex-cli 0.155.0-alpha.9.2"
+  },
+  "runtime_sha256": "aa348536c3204a6fc5d85edaa74cca424bd0f037e5907e73afb18229524dfea6",
+  "network_connections": 0
+}

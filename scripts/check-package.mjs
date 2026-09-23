@@ -14,6 +14,26 @@ export const REQUIRED_PACKAGE_PATHS = [
   "src/workkeel-project.mjs",
   "src/workkeel-tasks.mjs",
   "src/workkeel-runtime.mjs",
+  "src/workkeel-checkpoints.mjs",
+  "src/workkeel-codex-host.mjs",
+  "src/workkeel-codex-runtime.mjs",
+  "src/workkeel-execution-policy.mjs",
+  "src/workkeel-headroom.mjs",
+  "src/workkeel-onboarding.mjs",
+  "src/workkeel-skill-audit.mjs",
+  "src/workkeel-workflow-schema.mjs",
+  "src/workkeel-workflows.mjs",
+  "src/workkeel-measurements.mjs",
+  "docs/adr/0073-opt-in-workflow-execution.md",
+  "docs/extensions/workkeel-context.md",
+  "docs/operations/workkeel-workflows.md",
+  "docs/operations/workkeel-measurements.md",
+  "docs/validation/workkeel-automation.md",
+  "docs/assets/workkeel-workflow.svg",
+  "docs/assets/workkeel-workflow-mobile.svg",
+  "docs/assets/workkeel-architecture.svg",
+  "docs/assets/workkeel-architecture-mobile.svg",
+  "docs/assets/workkeel-flow.html",
   "docs/adr/0072-task-first-lifecycle.md",
   "docs/getting-started/workkeel.md",
   "src/task-contract.mjs",
@@ -104,7 +124,12 @@ const ALLOWED_TOP_LEVEL_DIRECTORIES = ["bin/", "docs/", "packs/", "project-overl
 // WI-0255 adds exactly the task-contract module, reference and migration ADR.
 // All three are required above; existing package roots and size limit remain.
 // WI-0258 adds the seven explicitly required task-first files above.
-const MAX_FILE_COUNT = 469;
+// WI-0260/0261 add exactly nine modules, four guides/ADR and eight diagram assets,
+// all required above; no new roots or increased size allowance.
+// WI-0263 replaces four obsolete Mermaid sources with one offline flow explorer.
+// Four SVGs remain; their dependency-free authoring script is not distributed.
+// WI-0264 adds the measurement module and its public operations guide.
+const MAX_FILE_COUNT = 489;
 const MAX_UNPACKED_SIZE = 8 * 1024 * 1024;
 
 export function validatePackageDryRun(pack) {

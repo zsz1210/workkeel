@@ -1,0 +1,14 @@
+{
+  "schema_version": "temple.finish-observation/v1",
+  "authority": "observation-only",
+  "work_item_id": "WI-0262",
+  "operation_id": "wi0262-doc-status-handoff-01",
+  "candidate_revision": "dcd95179b7dbe327af5b87ef436f3ce1d04f8ddf",
+  "request_digest": "f5ef26545d0e3d410c6cd87467ddb43319fa3832745e61957c44c22db194b657",
+  "plan_digest": "40a11c859d7e0f7c2561d9ec0a05799250fb7decf203d62ac4fb1578c98db44d",
+  "receipt_sha256": "78affa664ae9d062d8b278ad53dd03d6caacdacf54171d6701d98f0b59d807c9",
+  "status": "passed",
+  "observed_at": "2026-09-23T15:53:23.156Z",
+  "errors": [],
+  "recovery_authority": "origin-checkout-journal-required"
+}

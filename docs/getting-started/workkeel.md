@@ -1,9 +1,9 @@
-# Workkeel task-first quick start
+# Workkeel quick start
 
 Workkeel is a repository-native task coordination framework for coding agents.
 Your existing coding agent executes the work. The repository retains the approved
-task, identities, boundaries, handoff and acceptance. No company Positions or
-generic AI skill catalogue is required in task-first mode.
+task, identities, boundaries, handoff and acceptance. Optional executable workflows
+add explicit model routing and recoverable steps; start with the task lifecycle below.
 
 ## Availability and compatibility
 
@@ -44,9 +44,12 @@ WORKKEEL_CLI_PATH=/path/to/workkeel/bin/workkeel.mjs node ./workkeelw.mjs doctor
 ```
 
 Init creates `workkeel.lock`, `workkeelw.mjs` and `WORKKEEL.md`, refusing existing
-framework files. It preserves `AGENTS.md`; read `WORKKEEL.md` alongside native
-instructions. The source override above is version-checked and avoids depending
-on an unpublished package. Once released, the launcher uses its pinned package.
+framework files. It preserves native instructions. Preview and apply the additive
+[AGENTS/CLAUDE bridge](../extensions/workkeel-context.md#connect-native-instructions)
+so the coding agent can discover Workkeel. The source override is version-checked.
+The launcher uses a matching local package when present; it never silently fetches
+an unpublished package. Network package fetching requires the explicit
+`WORKKEEL_ALLOW_PACKAGE_FETCH=1` opt-in and an actually published pinned version.
 Commit policy, guidance and baseline product files before claiming work.
 
 Below, `workkeel` means the installed command or
@@ -155,12 +158,70 @@ For example, after creation returns version 1, prepare `claim.json`:
 
 ```sh
 workkeel task claim . --id WK-cart-total --request .ai-org/artifacts/WK-cart-total/claim.json
+```
+
+Implement within the approved roots, commit the product change and run the
+project's checks on that exact commit. Record real results in
+`.ai-org/artifacts/WK-cart-total/developer.md`; do not copy a passing assertion
+without running its check. Save `handoff.json` using the returned claim ID:
+
+```json
+{
+  "operation_id": "handoff-cart-v1", "expected_version": 2,
+  "actor": {"agent_id": "builder", "principal_id": "owner"},
+  "claim_id": "<returned-claim-id>", "revision": "<full-tested-git-commit>",
+  "summary": "Implemented the approved fix; see measured checks",
+  "evidence": [".ai-org/artifacts/WK-cart-total/developer.md"],
+  "unresolved": []
+}
+```
+
+```sh
 workkeel task handoff . --id WK-cart-total --request .ai-org/artifacts/WK-cart-total/handoff.json
+```
+
+The distinct reviewer inspects that candidate and records their own judgment in
+`review.md`. Only after a passing review, their `review.json` may be:
+
+```json
+{
+  "operation_id": "review-cart-v1", "expected_version": 3,
+  "actor": {"agent_id": "reviewer", "principal_id": "owner"},
+  "revision": "<same-full-tested-git-commit>", "judgment": "pass",
+  "summary": "Acceptance checked against this exact candidate",
+  "evidence": [".ai-org/artifacts/WK-cart-total/review.md"]
+}
+```
+
+```sh
 workkeel task review . --id WK-cart-total --request .ai-org/artifacts/WK-cart-total/review.json
+```
+
+The registered approver then records local acceptance in `close.json`. Do not use
+the reviewer's identity for work they did not perform. This single-owner example
+separates Agents, not humans; approval must still come from the actual owner.
+
+```json
+{
+  "operation_id": "close-cart-v1", "expected_version": 4,
+  "actor": {"agent_id": "builder", "principal_id": "owner"},
+  "revision": "<same-full-tested-git-commit>",
+  "summary": "Owner accepts the independently reviewed scope",
+  "rollback": "Revert the candidate through a new reviewed change",
+  "evidence": [".ai-org/artifacts/WK-cart-total/review.md"]
+}
+```
+
+```sh
 workkeel task close . --id WK-cart-total --request .ai-org/artifacts/WK-cart-total/close.json
 workkeel status .
 workkeel doctor .
 ```
+
+These versions assume no intervening operations. Inspect `task show` before each
+request; do not advance a stale version blindly. A failed review uses `rework`,
+retaining its evidence, followed by a fresh claim/candidate/review. Acceptance
+does not publish, deploy or merge a pull request.
 
 Run the project's actual required checks and record the exact tested candidate.
 The framework verifies bindings and lifecycle guards, not whether prose in an
@@ -191,11 +252,12 @@ global configuration or prove live compatibility. Preserve the same connection
 fingerprint on resume; no silent provider fallback. A fixed requested alias does
 not prove the server disabled its own fallback/routing.
 
-The existing provider cannot enforce every narrower filesystem root or hostname
-allowlist. Automatic task-first dispatch is therefore not enabled. The host must
-enforce actual boundaries. Live LiteLLM tools, model alias, routing and results
-remain unverified until a real service and explicit test authority are supplied.
-Runtime completion never equals task acceptance.
+For automatic execution, follow [executable workflows](../operations/workkeel-workflows.md).
+The qualified local Codex subscription host uses explicit models, read/write
+permission profiles and disabled tool networking. It does not require a gateway
+or an additional API key. Narrower unsupported conditions still block execution.
+Live LiteLLM behavior remains unverified until a real service and explicit test
+authority are supplied. Runtime completion never equals task acceptance.
 
 ## Legacy history and migration
 

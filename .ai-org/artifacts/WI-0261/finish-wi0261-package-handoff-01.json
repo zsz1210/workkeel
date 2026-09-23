@@ -1,0 +1,36 @@
+{
+  "schema_version": "temple.lean-finish-receipt/v1",
+  "request_digest": "5250b36bfb761687ba2130c9327c5a2871aa9ba4c80af90b857e78a984598c59",
+  "request": {
+    "schema_version": "temple.lean-finish-request/v1",
+    "operation_id": "wi0261-package-handoff-01",
+    "work_item_id": "WI-0261",
+    "claim_id": "claim-20260923153641-b985a70f",
+    "agent_id": "agent-rikku",
+    "principal_id": "human",
+    "candidate_revision": "c84f1b5599a210dcf42647f9c54ff9ffa8b14324",
+    "completed": [
+      "Reviewed 21 added distributable paths and 490-file package bound; forbidden roots and 8 MiB limit unchanged; full and fast checks plus installed tarball smoke passed."
+    ],
+    "evidence": [
+      ".ai-org/artifacts/WI-0260/developer-verification.md"
+    ],
+    "unresolved": [],
+    "position": "developer"
+  },
+  "result": {
+    "schema_version": "temple.lean-finish-lifecycle/v1",
+    "operation_id": "wi0261-package-handoff-01",
+    "work_item_id": "WI-0261",
+    "candidate_revision": "c84f1b5599a210dcf42647f9c54ff9ffa8b14324",
+    "plan_digest": "d08e38cd0c3d315a7ae8719490bd27e2b8012e9ebdea49d40ae1019838a9e7fc",
+    "handoff": ".ai-org/artifacts/WI-0261/handoff-001-developer-to-quality_evaluator.md",
+    "receipt": ".ai-org/artifacts/WI-0261/finish-wi0261-package-handoff-01.json",
+    "resulting_state": "test",
+    "next_action": "The assigned Quality Evaluator must claim Test and verify acceptance.",
+    "testing_performed": false,
+    "external_action_performed": false
+  },
+  "applied_at": "2026-09-23T15:36:57.402Z",
+  "diagnostics_observation": ".ai-org/artifacts/WI-0261/diagnostics-wi0261-package-handoff-01.json"
+}

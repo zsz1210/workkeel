@@ -1,0 +1,36 @@
+{
+  "schema_version": "temple.lean-finish-receipt/v1",
+  "request_digest": "f5ef26545d0e3d410c6cd87467ddb43319fa3832745e61957c44c22db194b657",
+  "request": {
+    "schema_version": "temple.lean-finish-request/v1",
+    "operation_id": "wi0262-doc-status-handoff-01",
+    "work_item_id": "WI-0262",
+    "claim_id": "claim-20260923155155-14820c7f",
+    "agent_id": "agent-rikku",
+    "principal_id": "human",
+    "candidate_revision": "dcd95179b7dbe327af5b87ef436f3ce1d04f8ddf",
+    "completed": [
+      "Updated only two public status passages to match actual independent local acceptance while preserving failed live qualification."
+    ],
+    "evidence": [
+      ".ai-org/artifacts/WI-0262/developer-evidence.md"
+    ],
+    "unresolved": [],
+    "position": "developer"
+  },
+  "result": {
+    "schema_version": "temple.lean-finish-lifecycle/v1",
+    "operation_id": "wi0262-doc-status-handoff-01",
+    "work_item_id": "WI-0262",
+    "candidate_revision": "dcd95179b7dbe327af5b87ef436f3ce1d04f8ddf",
+    "plan_digest": "40a11c859d7e0f7c2561d9ec0a05799250fb7decf203d62ac4fb1578c98db44d",
+    "handoff": ".ai-org/artifacts/WI-0262/handoff-001-developer-to-quality_evaluator.md",
+    "receipt": ".ai-org/artifacts/WI-0262/finish-wi0262-doc-status-handoff-01.json",
+    "resulting_state": "test",
+    "next_action": "The assigned Quality Evaluator must claim Test and verify acceptance.",
+    "testing_performed": false,
+    "external_action_performed": false
+  },
+  "applied_at": "2026-09-23T15:53:15.423Z",
+  "diagnostics_observation": ".ai-org/artifacts/WI-0262/diagnostics-wi0262-doc-status-handoff-01.json"
+}

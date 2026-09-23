@@ -1,5 +1,9 @@
 # Temple Core Path
 
+Compatibility guide for existing Temple-mode projects. New Workkeel projects
+start with the [Workkeel quick start](workkeel.md) and optional
+[executable workflows](../operations/workkeel-workflows.md).
+
 This is the shortest complete path from an initialized repository to a closed Work Item. It uses no Management Console, Observer daemon, Usage Collector, or automatic model execution.
 
 Use the repository launcher in every command:

@@ -344,7 +344,43 @@ Project-owned vocabulary for product decisions, implementation, tests, and hando
 - Related terms: Workkeel task contract; Agent Identity; Human Principal; model connection.
 - Last confirmed: 2026-09-23
 
-## Remaining migration terminology
+## Workkeel workflow orchestration
+
+- Status: implemented in WI-0260; final candidate qualification pending
+- Bounded context: Optional native-task execution
+- Definition: A versioned graph executed through LangGraph and registered trusted runtime adapters, with task/definition/policy pins, attributed approvals and durable progress.
+- Examples: Sequential Luna inspection and Sol implementation; direct disjoint parallel branches with one explicit join; a bounded outcome-driven loop.
+- Non-examples: A repository knowledge graph, a new inner coding-agent loop, task acceptance, distributed locking or exactly-once external effects.
+- Invariants: One run per claim; intent precedes dispatch; missing or ambiguous history blocks replay; a workflow cannot widen task authority; completion remains separate from review and acceptance.
+- Owner or authoritative source: Maintainer-approved WI-0260; ADR-0073; `src/workkeel-workflows.mjs` and `src/workkeel-workflow-schema.mjs`.
+- Related terms: Graph orchestration; state machine; durable execution; feedback loop; human-in-the-loop.
+- Last confirmed: 2026-09-23
+
+## Workkeel policy-based model routing
+
+- Status: implemented in WI-0260; bounded subscription smoke test observed
+- Bounded context: Model selection for a workflow node conversation
+- Definition: Deterministic selection from approved explicit, non-overlapping rule or default connections, checked against data policy and the host's actual model catalog.
+- Examples: Luna for a named bounded inspection node; Sol by default; an explicit approved Astra node.
+- Non-examples: Changing an already running desktop chat, a universal model-capability ranking, a second hidden gateway router or inferred subscription savings.
+- Invariants: Pin the conversation's selected connection; reject reported model drift; fallback requires confirmed zero dispatch; requested, runtime-confirmed and independently observed model values are distinct; unknown measurements remain null.
+- Owner or authoritative source: Maintainer subscription clarification; ADR-0073; `src/workkeel-execution-policy.mjs` and `src/workkeel-codex-runtime.mjs`.
+- Related terms: Policy-based routing; runtime adapter; model gateway; resource observation.
+- Last confirmed: 2026-09-23
+
+## Workkeel context engineering and Skill application
+
+- Status: confirmed for WI-0260
+- Bounded context: Task-relevant repository instructions and derived tool views
+- Definition: Selecting relevant project instructions, reading their complete requirements, applying them and checking the resulting output; optionally reducing eligible tool-output size without replacing originals.
+- Examples: Applying the documentation Skill to a README request even without an explicit Skill name; a host-owned lossless Headroom view with exact original readback.
+- Non-examples: Reading every installed Skill on every step, treating a nonempty record as quality proof, compressing authority, or claiming this Codex adapter compresses native tool output.
+- Invariants: Selection, reading, application and verification are distinct; Skill instructions grant no authority; Headroom is planned off/lossless and falls back to originals; the concrete Codex subscription host requires off.
+- Owner or authoritative source: `docs/extensions/workkeel-context.md`; native instruction bridge; Skill audit and Headroom modules.
+- Related terms: Context engineering; agent harness engineering; Skills; lossless compression.
+- Last confirmed: 2026-09-23
+
+## Unresolved compatibility migration questions
 
 | Conflict | Affected contexts | Decision owner | Evidence needed | Revisit trigger |
 |---|---|---|---|---|

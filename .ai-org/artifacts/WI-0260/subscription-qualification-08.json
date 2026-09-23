@@ -1,0 +1,62 @@
+{
+  "schema_version": "workkeel.subscription-qualification/v1",
+  "at": "2026-09-23T14:25:36.753Z",
+  "environment": {
+    "platform": "darwin",
+    "node": "v24.7.0"
+  },
+  "model_turn_limit": 2,
+  "mode": "live-chatgpt-subscription",
+  "api_key_used": false,
+  "dollars": null,
+  "outcome": "pass",
+  "elapsed_ms": 42076.850208,
+  "code_sha256": {
+    "workkeel-codex-host.mjs": "d64ad22fb02099f578fb3adf6e2be2225d335cbb7d7d0f618041b8bb732027ee",
+    "workkeel-codex-runtime.mjs": "c9c0019cd1caa5254cbe4d8d8053af4d84cc85961874d86faa463221a0ba64d1",
+    "workkeel-workflows.mjs": "e0b6ab36b5099efb922192d7b4869682fa6c211cb0dda7181a520596ee4071be",
+    "workkeel-checkpoints.mjs": "36298b415e68eea9d8b73848c05deeeb27ab7a84b0902257e37c24225cf6259d",
+    "workkeel-execution-policy.mjs": "7b152bdf901342dc1d0a4375a8b2c52654af82b6b6705f2c6ef212f408d883b8"
+  },
+  "observations": [
+    {
+      "node": "read",
+      "requested_model": "gpt-6-luna",
+      "selection_reason": "rule:small-read",
+      "runtime_model": "gpt-6-luna",
+      "observed_model": null,
+      "status": "completed",
+      "usage": {
+        "input_tokens": 11790,
+        "output_tokens": 10,
+        "cost_usd": null
+      }
+    },
+    {
+      "node": "write",
+      "requested_model": "gpt-6-sol",
+      "selection_reason": "default",
+      "runtime_model": "gpt-6-sol",
+      "observed_model": null,
+      "status": "completed",
+      "usage": {
+        "input_tokens": 12360,
+        "output_tokens": 6,
+        "cost_usd": null
+      }
+    }
+  ],
+  "limitations": [
+    "One synthetic local task; not production readiness or comparative quality/cost evidence.",
+    "Runtime-confirmed model is distinct from an independently observed backend model.",
+    "No subscription quota-to-dollar conversion is available."
+  ],
+  "output_sha256": "e54876a6e213f49c0602f2e7ae964f8a7164f6548fb78b2fcbb65b16869d6d0c",
+  "dispatches": 2,
+  "usage": {
+    "input_tokens": 24150,
+    "output_tokens": 16,
+    "cost_usd": null
+  },
+  "fixture_path": "/private/var/folders/xs/l6j01gy57xddczq_xyb044ww0000gn/T/workkeel-subscription-rikie2"
+}
