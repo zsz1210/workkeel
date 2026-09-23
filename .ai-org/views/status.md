@@ -4,8 +4,8 @@
 - Organization system version: `0.1.0-alpha.33`
 - Active Agent Identities: 5
 - Collaboration profile: `solo` (0 Human Principals, 1 active claims)
-- Parallel plan: 0 wave(s), fresh=false
-- Work items: 256 total, 3 active
+- Parallel plan: 0 wave(s), fresh=true
+- Work items: 256 total, 2 active
 - Codex tasks: 14 registered, 14 archive-ready
 - Runtime workers: 104 registered, 0 reserved, 0 active
 - Shared resources: 0 defined, 0 active reservation(s)
@@ -18,7 +18,7 @@
 - Specifications: 2 indexed, 2 approved (hybrid)
 - Tracker: `repository-only` (0 active provider(s), 0 linked Work Item(s))
 - Repository integration: `confirmed` (Develop focused changes on short-lived branches and submit them through pull requests; the maintainer owns final integration and release decisions.)
-- Attention signals: 27
+- Attention signals: 26
 
 ## Collaboration
 
@@ -37,10 +37,10 @@
 - Generated plan: `.ai-org/views/parallel-plan.json`
 - Installed: yes
 - Valid: yes
-- Fresh: no
+- Fresh: yes
 - Safe waves: 0
 - Dispatchable Work Items: 0
-- Active / sequential / blocked: 2 / 1 / 0
+- Active / sequential / blocked: 1 / 1 / 0
 - Next wave: none
 - Codex tasks, claims, or external actions performed by planning: no
 
@@ -303,7 +303,7 @@
 | WI-0253 | Slim the test suite without weakening safety coverage | test | Quality & Evaluation Engineer | Lulu | pending | internal | 0 | gate-evidence | not-applicable | 0 | 0 | 0 | — | `b0fe9161` | 0 | 3 | 0 |
 | WI-0254 | Repair baseline test harness failures | cancelled | Engineering Manager | Mog | pending | internal | 0 | gate-evidence | not-applicable | 0 | 0 | 0 | — | `b863ee49` | 0 | 5 | 0 |
 | WI-0255 | Define Workkeel task and execution contracts | build | Developer | Rikku | pending | team-visible | 0 | gate-evidence | not-applicable | 0 | 0 | 0 | claim-20260923085932-89b9be4b | `—` | 0 | 1 | 0 |
-| WI-0256 | Qualify baseline test harness repair | test | Quality & Evaluation Engineer | Lulu | sequential | internal | 0 | gate-evidence | not-applicable | 0 | 0 | 0 | — | `4ac435d8` | 0 | 3 | 0 |
+| WI-0256 | Qualify baseline test harness repair | done | Engineering Manager | Mog | sequential | internal | 0 | gate-evidence | not-applicable | 0 | 0 | 0 | — | `4ac435d8` | 0 | 5 | 0 |
 
 ## Delivery attention
 
@@ -311,8 +311,6 @@
   - owner: No active eligible ownership claim is recorded.
 - WI-0255: awaiting-owner — The recorded owner can continue the scoped work; no attached active worker is recorded.
   - owner: No attached active runtime is recorded for this claim.
-- WI-0256: awaiting-owner — Have the eligible owner claim or resume the next scoped responsibility.
-  - owner: No active eligible ownership claim is recorded.
 
 ## Codex task registry
 
@@ -474,7 +472,6 @@
 - worker-20260915174040-464e550f is failed
 - worker-20260915175330-3e16bfe8 is failed
 - worker-20260915233053-33b568eb is failed
-- Generated parallel plan is stale; rebuild it before dispatch
 
 ## External tracker coordination
 
@@ -555,14 +552,14 @@
 
 | Time | Event | Work item | Actor |
 |---|---|---|---|
+| 2026-09-23T10:09:29.680Z | work_item_closed | WI-0256 | agent-lulu |
+| 2026-09-23T10:09:29.680Z | work_item_transitioned | WI-0256 | agent-lulu |
+| 2026-09-23T10:09:29.666Z | work_item_claim_released | WI-0256 | human |
+| 2026-09-23T10:08:55.830Z | work_item_claimed | WI-0256 | human |
+| 2026-09-23T10:08:55.289Z | work_item_claim_released | WI-0256 | human |
+| 2026-09-23T10:04:29.159Z | work_item_claimed | WI-0256 | human |
 | 2026-09-23T10:02:13.539Z | work_item_transitioned | WI-0256 | agent-rikku |
 | 2026-09-23T10:01:59.829Z | handoff_created | WI-0256 | agent-rikku |
-| 2026-09-23T09:51:44.060Z | work_item_claimed | WI-0256 | human |
-| 2026-09-23T09:51:26.462Z | work_item_transitioned | WI-0256 | agent-mog |
-| 2026-09-23T09:51:10.926Z | work_item_coordination_configured | WI-0256 | agent-mog |
-| 2026-09-23T09:50:37.036Z | work_item_coordination_configured | WI-0256 | agent-mog |
-| 2026-09-23T09:50:15.084Z | work_item_claimed | WI-0256 | human |
-| 2026-09-23T09:48:28.197Z | work_item_created | WI-0256 | agent-mog |
 
 ## Assignments
 

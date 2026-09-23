@@ -1,21 +1,20 @@
 {
   "schema_version": "temple.parallel-plan/v1",
-  "generated_at": "2026-09-23T10:01:12.560Z",
-  "source_fingerprint": "a3a4c8df2ce6f3213f3620949d9e50f41a719c3c3fe74794b70aeb10892e19e3",
+  "generated_at": "2026-09-23T10:09:30.409Z",
+  "source_fingerprint": "8a336877db1cb051fcc4930d42cb7bcba1ddb4407912b337a9af261791c95c04",
   "scope": {
     "mode": "all-active",
     "parent_work_item_id": null,
     "selected_work_item_ids": [
       "WI-0253",
-      "WI-0255",
-      "WI-0256"
+      "WI-0255"
     ]
   },
   "max_workers": null,
   "summary": {
-    "selected": 3,
+    "selected": 2,
     "dispatchable": 0,
-    "active": 2,
+    "active": 1,
     "sequential": 1,
     "blocked": 0,
     "waves": 0
@@ -35,20 +34,6 @@
       "branch": "codex/workkeel-reframe",
       "worktree": "/Users/zsz1210/Documents/Codex/2026-09-23/chatgpt-tempo-github-tempo-clone/work/workkeel",
       "base_revision": "53d075bcf619f655cc5613046d5ff05b3e8ab767"
-    },
-    {
-      "work_item_id": "WI-0256",
-      "title": "Qualify baseline test harness repair",
-      "disposition": "active",
-      "position_id": "developer",
-      "agent_id": "agent-rikku",
-      "integration_owner_agent_id": "agent-mog",
-      "reasons": [],
-      "claim_id": "claim-20260923095144-92bb0fd8",
-      "principal_id": "human",
-      "branch": "codex/fix-test-harness-baselines",
-      "worktree": "/Users/zsz1210/Documents/Codex/2026-09-23/temple-test-slimming/work/temple-test-baseline-fixes",
-      "base_revision": "9273264ec1409cc0add81fcb346d61377edbdd18"
     }
   ],
   "sequential": [
@@ -74,22 +59,6 @@
         {
           "left_path": "test",
           "right_path": "test/task-contract.test.mjs"
-        }
-      ],
-      "resolution": "separate-waves"
-    },
-    {
-      "kind": "affected-path",
-      "left_work_item_id": "WI-0253",
-      "right_work_item_id": "WI-0256",
-      "paths": [
-        {
-          "left_path": "test",
-          "right_path": "test/continuity-live-runner.test.mjs"
-        },
-        {
-          "left_path": "test",
-          "right_path": "test/delivery-control-pair.test.mjs"
         }
       ],
       "resolution": "separate-waves"
