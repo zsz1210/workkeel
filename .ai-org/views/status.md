@@ -3,7 +3,7 @@
 - Project ID: `temple`
 - Organization system version: `0.1.0-alpha.33`
 - Active Agent Identities: 5
-- Collaboration profile: `solo` (0 Human Principals, 2 active claims)
+- Collaboration profile: `solo` (0 Human Principals, 1 active claims)
 - Parallel plan: 0 wave(s), fresh=false
 - Work items: 256 total, 3 active
 - Codex tasks: 14 registered, 14 archive-ready
@@ -27,7 +27,7 @@
 - Human Principals: 0
 - Agent sponsorships: 0
 - Active Position memberships: 10
-- Active Work Item claims: 2
+- Active Work Item claims: 1
 - Active Human Authority Grants: 0
 - Governance recovery: `not_configured`
 - Real Collaborative validation: `not_run` (.ai-org/templates/collaborative-large-scale-test-plan.md)
@@ -303,7 +303,7 @@
 | WI-0253 | Slim the test suite without weakening safety coverage | test | Quality & Evaluation Engineer | Lulu | pending | internal | 0 | gate-evidence | not-applicable | 0 | 0 | 0 | — | `b0fe9161` | 0 | 3 | 0 |
 | WI-0254 | Repair baseline test harness failures | cancelled | Engineering Manager | Mog | pending | internal | 0 | gate-evidence | not-applicable | 0 | 0 | 0 | — | `b863ee49` | 0 | 5 | 0 |
 | WI-0255 | Define Workkeel task and execution contracts | build | Developer | Rikku | pending | team-visible | 0 | gate-evidence | not-applicable | 0 | 0 | 0 | claim-20260923085932-89b9be4b | `—` | 0 | 1 | 0 |
-| WI-0256 | Qualify baseline test harness repair | build | Developer | Rikku | sequential | internal | 0 | gate-evidence | not-applicable | 0 | 0 | 0 | claim-20260923095144-92bb0fd8 | `—` | 0 | 1 | 0 |
+| WI-0256 | Qualify baseline test harness repair | test | Quality & Evaluation Engineer | Lulu | sequential | internal | 0 | gate-evidence | not-applicable | 0 | 0 | 0 | — | `4ac435d8` | 0 | 3 | 0 |
 
 ## Delivery attention
 
@@ -311,8 +311,8 @@
   - owner: No active eligible ownership claim is recorded.
 - WI-0255: awaiting-owner — The recorded owner can continue the scoped work; no attached active worker is recorded.
   - owner: No attached active runtime is recorded for this claim.
-- WI-0256: awaiting-owner — The recorded owner can continue the scoped work; no attached active worker is recorded.
-  - owner: No attached active runtime is recorded for this claim.
+- WI-0256: awaiting-owner — Have the eligible owner claim or resume the next scoped responsibility.
+  - owner: No active eligible ownership claim is recorded.
 
 ## Codex task registry
 
@@ -555,14 +555,14 @@
 
 | Time | Event | Work item | Actor |
 |---|---|---|---|
+| 2026-09-23T10:02:13.539Z | work_item_transitioned | WI-0256 | agent-rikku |
+| 2026-09-23T10:01:59.829Z | handoff_created | WI-0256 | agent-rikku |
 | 2026-09-23T09:51:44.060Z | work_item_claimed | WI-0256 | human |
 | 2026-09-23T09:51:26.462Z | work_item_transitioned | WI-0256 | agent-mog |
 | 2026-09-23T09:51:10.926Z | work_item_coordination_configured | WI-0256 | agent-mog |
 | 2026-09-23T09:50:37.036Z | work_item_coordination_configured | WI-0256 | agent-mog |
 | 2026-09-23T09:50:15.084Z | work_item_claimed | WI-0256 | human |
 | 2026-09-23T09:48:28.197Z | work_item_created | WI-0256 | agent-mog |
-| 2026-08-30T09:17:37.867Z | runtime_worker_reserved | WI-0026 | project-owner |
-| 2026-08-30T09:17:37.551Z | runtime_worker_reserved | WI-0025 | project-owner |
 
 ## Assignments
 
