@@ -1,0 +1,147 @@
+{
+  "schema_version": "temple.work-item/v1",
+  "id": "WI-0255",
+  "title": "Define Workkeel task and execution contracts",
+  "state": "build",
+  "owner_position": "developer",
+  "assigned_agent_id": "agent-rikku",
+  "created_at": "2026-09-23T08:57:50.185Z",
+  "updated_at": "2026-09-23T08:59:32.367Z",
+  "scope": [
+    "First migration slice: versioned role-free task contract, explicit operation and environment boundaries, read-only projection of existing Work Items, runtime/model separation and fixed optional gateway configuration validation. Preserve legacy lifecycle authority and historical records.",
+    "No test-suite slimming, context-reading optimization, company Position deletion, new graph engine, external provider calls, publication, or repository rename in this slice."
+  ],
+  "acceptance_criteria": [
+    "Role-free contracts validate without positions or generic model skill declarations; unsafe and incomplete boundaries fail closed.",
+    "Existing Work Items project into the new contract without canonical mutations or fabricated permissions; unresolved boundaries block execution readiness.",
+    "Runtime adapter capabilities and model connections remain separate; optional fixed LiteLLM configuration contains credential references only and makes no network calls.",
+    "Focused tests and full offline verification pass; documentation states migration limits accurately."
+  ],
+  "affected_paths": [
+    "src/task-contract.mjs",
+    "src/cli.mjs",
+    "test/task-contract.test.mjs",
+    "docs/concepts/task-contract.md",
+    "docs/adr/0071-workkeel-task-contract.md",
+    "docs/adr/README.md",
+    ".ai-org/artifacts/WI-0255"
+  ],
+  "context_refs": [],
+  "spec_refs": [],
+  "ux_refs": [],
+  "ui_refs": [],
+  "contract_refs": [],
+  "specification_mode": "gate-evidence",
+  "ui_delivery_mode": "not-applicable",
+  "workflow_profile": "standard",
+  "risk_tier": "standard",
+  "profile_assessment": {
+    "requested_profile": "standard",
+    "effective_profile": "standard",
+    "scope_class": "ordinary",
+    "escalation_triggers": [],
+    "rationale": "Versioned additive contract and legacy projection; existing mutation authority remains unchanged and independent review remains required.",
+    "evidence_refs": [],
+    "evaluated_at": "2026-09-23T08:57:50.165Z",
+    "escalated": false
+  },
+  "parent_work_item_id": null,
+  "tracker_visibility": "team-visible",
+  "tracker_refs": [],
+  "tracker_reconciliations": [],
+  "dependencies": [],
+  "required_disciplines": [],
+  "stage_requirements": {},
+  "base_revision": "53d075bcf619f655cc5613046d5ff05b3e8ab767",
+  "parallel_mode": "pending",
+  "integration_owner_agent_id": null,
+  "planned_agent_id": null,
+  "shared_contract_refs": [],
+  "contract_status": "not_required",
+  "overlap_resolution": [],
+  "claim": {
+    "id": "claim-20260923085932-89b9be4b",
+    "status": "active",
+    "principal_id": "human",
+    "agent_id": "agent-rikku",
+    "actor_provenance": {
+      "selection": "explicit-agent",
+      "principal_source": "explicit-principal",
+      "verification_class": "attributed",
+      "evidence_ref": null,
+      "provider_authenticated": false,
+      "externally_supplied_evidence": false
+    },
+    "position_id": "developer",
+    "base_revision": "53d075bcf619f655cc5613046d5ff05b3e8ab767",
+    "branch": "codex/workkeel-reframe",
+    "worktree": "/Users/zsz1210/Documents/Codex/2026-09-23/chatgpt-tempo-github-tempo-clone/work/workkeel",
+    "claimed_at": "2026-09-23T08:59:32.367Z",
+    "released_at": null
+  },
+  "claims": [
+    {
+      "id": "claim-20260923085812-7ea6e5d3",
+      "status": "released",
+      "principal_id": "human",
+      "agent_id": "agent-mog",
+      "actor_provenance": {
+        "selection": "explicit-agent",
+        "principal_source": "explicit-principal",
+        "verification_class": "attributed",
+        "evidence_ref": null,
+        "provider_authenticated": false,
+        "externally_supplied_evidence": false
+      },
+      "position_id": "engineering_manager",
+      "base_revision": "53d075bcf619f655cc5613046d5ff05b3e8ab767",
+      "branch": "codex/workkeel-reframe",
+      "worktree": "/Users/zsz1210/Documents/Codex/2026-09-23/chatgpt-tempo-github-tempo-clone/work/workkeel",
+      "claimed_at": "2026-09-23T08:58:12.161Z",
+      "released_at": "2026-09-23T08:59:30.399Z",
+      "release_reason": "position_transition"
+    },
+    {
+      "id": "claim-20260923085932-89b9be4b",
+      "status": "active",
+      "principal_id": "human",
+      "agent_id": "agent-rikku",
+      "actor_provenance": {
+        "selection": "explicit-agent",
+        "principal_source": "explicit-principal",
+        "verification_class": "attributed",
+        "evidence_ref": null,
+        "provider_authenticated": false,
+        "externally_supplied_evidence": false
+      },
+      "position_id": "developer",
+      "base_revision": "53d075bcf619f655cc5613046d5ff05b3e8ab767",
+      "branch": "codex/workkeel-reframe",
+      "worktree": "/Users/zsz1210/Documents/Codex/2026-09-23/chatgpt-tempo-github-tempo-clone/work/workkeel",
+      "claimed_at": "2026-09-23T08:59:32.367Z",
+      "released_at": null
+    }
+  ],
+  "gate_evidence": {
+    "work_order": [
+      ".ai-org/artifacts/WI-0255/design.md"
+    ],
+    "approved_scope": [
+      ".ai-org/artifacts/WI-0255/design.md"
+    ],
+    "acceptance_criteria": [
+      ".ai-org/artifacts/WI-0255/design.md"
+    ],
+    "technical_design": [
+      ".ai-org/artifacts/WI-0255/design.md"
+    ],
+    "risk_review": [
+      ".ai-org/artifacts/WI-0255/design.md"
+    ]
+  },
+  "evidence": [
+    ".ai-org/artifacts/WI-0255/design.md"
+  ],
+  "unresolved": [],
+  "next_position": "quality_evaluator"
+}
