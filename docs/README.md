@@ -1,15 +1,27 @@
 # Workkeel documentation
 
-Start with the [Workkeel task-first guide](getting-started/workkeel.md) for new
-projects without company Positions. The [task contract](concepts/task-contract.md)
-defines task, authority, environment and model-connection boundaries.
+Start with the [quick start](getting-started/workkeel.md). Workkeel keeps approved
+tasks, execution and review evidence together in your repository.
+
+## Current Workkeel guides
+
+| Goal | Read |
+| --- | --- |
+| Understand the framework and its concepts | [README](../README.md), [terminology](concepts/terminology.md), [architecture](concepts/architecture.md) |
+| Initialize, claim, hand off and accept a task | [Quick start](getting-started/workkeel.md), [task contract](concepts/task-contract.md) |
+| Execute a graph using the Codex subscription and selected models | [Workflow and routing guide](operations/workkeel-workflows.md) |
+| Connect Codex/Claude instructions, check Skill use, plan Headroom | [Project context](extensions/workkeel-context.md) |
+| Inspect measurements and qualification limits | [Automation validation](validation/workkeel-automation.md), [testing policy](getting-started/testing.md) |
+| Review dependencies and licenses | [Third-party notices](../THIRD_PARTY_NOTICES.md), [execution ADR](adr/0073-opt-in-workflow-execution.md) |
+
+## Compatibility reference library
 
 Most of the detailed catalog below documents the retained **Temple compatibility
 mode**. Its organization, Console, capability-routing and assurance setup is not
 required by task-first projects. Historical ADRs and validation records retain
 their original names and revision-specific claims; they do not qualify new behavior.
 
-## Start with your goal
+### Find an existing compatibility workflow
 
 For a preapproved literal correction in a non-normative note, see the opt-in
 [mechanical completion](operations/mechanical-completion.md) route. This is not
@@ -45,7 +57,7 @@ a general small-code-change or Independent QA shortcut.
 
 ### Getting started
 
-- [Task-first quick start](getting-started/workkeel.md) — the current Workkeel source path; role-free tasks, exact evidence, explicit migration and read-only runtime plans.
+- [Quick start](getting-started/workkeel.md) — the current Workkeel source path; task agreements, exact evidence, review and explicit migration.
 - [Core Path](getting-started/core-path.md) — the shortest Console-free journey from an initialized project to a closed Work Item.
 - [Usage guide](getting-started/usage.md) — initialize, adopt, operate, self-host, upgrade, and troubleshoot.
 - [Temple Core Skills](getting-started/core-skills.md) — human-facing triggers, outcomes, examples, and authority limits for the six repository Core Skills.

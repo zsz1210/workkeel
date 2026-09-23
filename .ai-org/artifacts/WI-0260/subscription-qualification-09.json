@@ -1,0 +1,59 @@
+{
+  "schema_version": "workkeel.subscription-qualification/v1",
+  "at": "2026-09-23T15:03:40.143Z",
+  "environment": {
+    "platform": "darwin",
+    "node": "v24.7.0",
+    "codex": "codex-cli 0.155.0-alpha.9.2"
+  },
+  "workflow_dispatch_limit": 2,
+  "mode": "live-chatgpt-subscription",
+  "api_key_used": false,
+  "dollars": null,
+  "outcome": "fail",
+  "elapsed_ms": 27320.978333000003,
+  "code_sha256": {
+    "workkeel-codex-host.mjs": "d64ad22fb02099f578fb3adf6e2be2225d335cbb7d7d0f618041b8bb732027ee",
+    "workkeel-codex-runtime.mjs": "0762946b371657dfac5acaab284c9c96ad802bc8cae8494306bd8e601e42861b",
+    "workkeel-workflows.mjs": "41f224b5357ae59ef6038de1e4361edeb9f7568feaefdff7d14f2e05dd00af0e",
+    "workkeel-checkpoints.mjs": "36298b415e68eea9d8b73848c05deeeb27ab7a84b0902257e37c24225cf6259d",
+    "workkeel-execution-policy.mjs": "7b152bdf901342dc1d0a4375a8b2c52654af82b6b6705f2c6ef212f408d883b8"
+  },
+  "observations": [
+    {
+      "node": "read",
+      "requested_model": "gpt-6-luna",
+      "selection_reason": "rule:small-read",
+      "runtime_model": "gpt-6-luna",
+      "observed_model": null,
+      "status": "completed",
+      "usage": {
+        "input_tokens": 45350,
+        "output_tokens": 252,
+        "cost_usd": null
+      }
+    },
+    {
+      "node": "write",
+      "requested_model": "gpt-6-sol",
+      "selection_reason": "default",
+      "runtime_model": "gpt-6-sol",
+      "observed_model": null,
+      "status": "completed",
+      "usage": {
+        "input_tokens": 23719,
+        "output_tokens": 391,
+        "cost_usd": null
+      }
+    }
+  ],
+  "limitations": [
+    "One synthetic local task; not production readiness or comparative quality/cost evidence.",
+    "Runtime-confirmed model is distinct from an independently observed backend model.",
+    "No subscription quota-to-dollar conversion is available."
+  ],
+  "failure": "Error",
+  "protocol_code": null,
+  "experimental_protocol_rejected": false,
+  "fixture_path": "/private/var/folders/xs/l6j01gy57xddczq_xyb044ww0000gn/T/workkeel-subscription-EH3waK"
+}

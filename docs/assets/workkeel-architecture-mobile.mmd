@@ -1,0 +1,31 @@
+---
+config:
+  theme: base
+  fontFamily: "Arial, sans-serif"
+  themeVariables:
+    primaryTextColor: "#183c40"
+    lineColor: "#59787c"
+    fontSize: "18px"
+  flowchart:
+    htmlLabels: false
+    curve: basis
+    nodeSpacing: 20
+    rankSpacing: 24
+---
+flowchart TB
+  P[("PROJECT REPOSITORY<br/>Task + Skills + policy<br/>Review evidence")]
+  T("WORKKEEL TASK LIFECYCLE<br/>Claim · handoff · review")
+  G("OPTIONAL WORKFLOW RUNNER<br/>LangGraph + model routing<br/>Checkpoints + dispatch journal")
+  R("CODING RUNTIME<br/>Codex subscription<br/>Pinned Luna / Sol")
+  F("HOST TOOLS<br/>Scoped files + commands<br/>Enforced permissions")
+  P --> T
+  T -->|approved scope| G
+  G -->|start / resume / cancel| R
+  R --> F
+  R -.->|results + usage| G
+  classDef repo fill:#edf4f3,stroke:#aac6c3,color:#183c40,stroke-width:1.5px;
+  classDef main fill:#076b67,stroke:#076b67,color:#ffffff,stroke-width:2px;
+  classDef runtime fill:#fff1dc,stroke:#c9944b,color:#553814,stroke-width:1.5px;
+  class P,T repo
+  class G main
+  class R,F runtime

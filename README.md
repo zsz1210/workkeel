@@ -1,115 +1,110 @@
 # Workkeel
 
-A repository-native task coordination framework for coding agents.
+A repository-native workflow framework for coding agents.
 
-Keep the work moving when the conversation, agent or model changes.
+**Keep tasks, model choices and verified results connected—even when conversations change.**
 
 English · [繁體中文](README.zh-TW.md) · [日本語](README.ja.md)
 
 [![CI](https://github.com/zsz1210/workkeel/actions/workflows/ci.yml/badge.svg)](https://github.com/zsz1210/workkeel/actions/workflows/ci.yml)
 Early Alpha · Node.js 24+ · [MIT](LICENSE)
 
-## Coordinate the work, not an imaginary company
+## Why Workkeel?
 
-Coding agents can already plan, implement and test. What a new conversation often
-loses is the agreement around that work: what was approved, who is doing it, which
-files and tools are allowed, what was handed over, and which exact result passed
-review.
+Coding agents can implement a change. Delivering it across several steps or
+conversations introduces different problems: lost decisions, duplicated work,
+unclear permissions, expensive default models and results nobody actually reviewed.
 
-Workkeel keeps that agreement beside the code. Its task-first mode needs no CEO,
-PM or engineer titles, and no catalogue of generic skills to tell an AI that it
-can code. You use your existing coding agent; Workkeel records scope, identities,
-operation boundaries, dependencies, evidence and acceptance.
+Workkeel keeps the task agreement beside your code and connects it to execution
+and evidence. Use it to:
 
-It is not an application framework, a model, a new agent execution engine or an
-autonomous manager. Your repository's architecture, tools and human authority stay
-yours. An AI-company configuration remains a legacy option, not the new core.
+- **Resume with context:** preserve approved scope, ownership, handoffs and failures.
+- **Control execution:** define dependencies, approvals, bounded retries and recovery.
+- **Choose models deliberately:** route suitable steps to Luna or Sol through your
+  existing Codex subscription, with explicit overrides and no silent Astra fallback.
+- **Review what was delivered:** bind checks and a distinct Agent's review to an
+  exact Git revision before accepting it.
 
-## One task, from approval to verified handoff
+Your coding runtime still owns the coding loop and tools. Workkeel coordinates
+work around it; it is not an application framework or a replacement model.
 
-1. Approve the goal, scope, acceptance criteria and actual working conditions.
-2. Let the assigned Agent claim the task and work in the existing coding runtime.
-3. Hand off an exact Git revision with evidence and no unresolved work.
-4. Have a different registered Agent review it; reject and rework when necessary.
-5. Accept the reviewed candidate explicitly. Acceptance does not publish or deploy.
+## From request to accepted change
 
-The approved contract stays immutable. Progress, claims, failed attempts and review
-results are recorded separately. Version checks prevent stale updates; evidence
-digests expose changed reports. A directory called “artifacts” is not a loophole
-for unreviewed code. The host remains responsible for actual tool/network sandbox
-enforcement—metadata validation never grants permission.
+<picture>
+  <source media="(max-width: 640px)" srcset="docs/assets/workkeel-workflow-mobile.svg">
+  <img src="docs/assets/workkeel-workflow.svg" alt="Approve goal and boundaries, plan steps and models, execute, review the exact candidate, then accept; failed review returns to implementation.">
+</picture>
 
-## Start from the development source
+For example: inspect a cart-total bug with Luna, pause for the approved approach,
+then implement and test with Sol. Preserve evidence, hand off the candidate, and
+have a different Agent review it. A graph finishing is not approval, acceptance
+or deployment. [Complete workflow guide →](docs/operations/workkeel-workflows.md)
 
-This Workkeel redesign is **unreleased source**, not the previously published
-Temple Alpha.33 package. A renamed repository or package manifest does not publish
-an npm version. Requirements: Git, Node.js 24+, and an existing Git project.
+## Start from source
+
+Requires Git, Node.js 24+ and an existing coding agent. This development source is
+not yet a published Workkeel npm release.
 
 ```sh
 git clone https://github.com/zsz1210/workkeel.git
 cd workkeel
-npm ci --ignore-scripts
+npm ci --omit=optional --ignore-scripts
 node bin/workkeel.mjs help
 ```
 
-Open this source in your coding agent and ask:
+Follow the [quick start](docs/getting-started/workkeel.md) to initialize your
+project, approve a task, claim it and record review. The previewable
+[AGENTS/CLAUDE bridge](docs/extensions/workkeel-context.md) preserves existing
+instructions. Native coordination works with your current coding agent.
 
-> Read the task-first guide and my project's native instructions. Help me confirm
-> the Agent/Principal identities, approval policy, working directory, allowed
-> files/tools, and data-handling conditions. Show the setup for confirmation, then
-> initialize Workkeel without company titles. Keep existing project files intact.
+For automatic graph execution, install optional dependencies with
+`npm ci --include=optional --ignore-scripts` and follow the
+[Codex subscription setup](docs/operations/workkeel-workflows.md#choose-how-to-run).
+The qualified profile currently targets macOS and a pinned Codex version; no extra
+API key or LiteLLM server is required. It selects models for Workkeel-launched
+steps, not existing desktop conversations or your global model default.
 
-Follow the [task-first quick start](docs/getting-started/workkeel.md) for the small
-policy, complete task example and claim/handoff/review commands. Each project gets
-its own pinned `workkeelw.mjs`; the guide explains the version-checked source
-override until a package is released. No global install or model gateway is needed.
+## Architecture
 
-## Keep four different concerns separate
+<picture>
+  <source media="(max-width: 640px)" srcset="docs/assets/workkeel-architecture-mobile.svg">
+  <img src="docs/assets/workkeel-architecture.svg" alt="Repository contracts feed Workkeel task coordination and optional LangGraph execution. A model-pinned coding runtime uses host-enforced tools and returns results; local checkpoints and acceptance records remain separate.">
+</picture>
 
-- **Task and authority:** the approved outcome, Agent/Principal identities, scope,
-  permitted operations and review separation.
-- **Environment and runtime:** working directory, readable/writable roots, tools,
-  resources, network and data policy. The host coding agent performs execution.
-- **Project methods:** optional Skills for project-specific knowledge or procedures,
-  not a mandatory inventory of general model abilities.
-- **Model connection:** native host settings by default; an optional fixed gateway
-  connection is separate from runtime tools and lifecycle acceptance.
+The repository holds task authority and review evidence. The optional runner
+handles graph progress and model policy. Codex executes inside host-enforced
+permissions. SQLite checkpoints and a dispatch journal support recovery; uncertain
+side effects stop for reconciliation instead of blind replay.
 
-The optional LiteLLM/Codex configuration path currently produces a **read-only
-runtime plan**. It does not launch a model, modify global settings or read keys.
-Actual gateway/tool interaction and automatic task-first dispatch are not yet
-qualified or enabled. Automatic model routing and a new Graph engine are not part
-of this release scope.
+## Concepts used
 
-## Existing Temple projects keep their history
+| Related concept | How Workkeel applies it |
+| --- | --- |
+| Agent harness engineering | Explicit task boundaries, runtime contracts and evidence checks around the coding agent |
+| Context engineering | Task-specific instructions, relevant Skills and bounded evidence; optional lossless tool-output views |
+| State machines and graph orchestration | Guarded task states; LangGraph sequences, branches, direct joins and checkpoints |
+| Feedback loops and human-in-the-loop | Bounded continuation, approval interrupts and review/rework cycles |
+| Policy-based model routing | Approved model rules, explainable selection and conversation-pinned settings |
 
-Workkeel is the new name of Temple.
-The `temple` CLI alias, `templew.mjs`, `temple.lock`, `temple.*` schema IDs and
-historical evidence remain compatible. Do not globally rename canonical records.
+See [terminology](docs/concepts/terminology.md) and [architecture](docs/concepts/architecture.md).
+Skills provide project methods; recording that a Skill was read does not prove it
+was applied well. [Selection and outcome checks →](docs/extensions/workkeel-context.md)
 
-Existing projects keep their original Position-based workflow until explicitly
-migrated. A fingerprinted migration is available only for quiescent, ordinary Solo
-projects with compatible default policies. Active, customized, team, high-risk and
-sensitive-data workflows retain the [legacy guides](docs/getting-started/usage.md).
-Legacy Console, routing and assurance documents describe that mode, not mandatory
-task-first setup. [Migration details](docs/getting-started/workkeel.md#legacy-history-and-migration).
+## Evidence and limits
 
-## Maturity and development
+A real two-step subscription test selected Luna then Sol and produced the expected
+file in about 42 seconds. Seven local sandbox checks passed. These are small
+functional samples, not proof of general quality, speed or subscription savings.
+[Methods, results and remaining qualification →](docs/validation/workkeel-automation.md)
 
-Early Alpha, intended for supervised local work. Task-first lifecycle and rejection
-paths have offline tests; that is not proof of production readiness, authenticated
-multi-human operation, distributed locking, live gateway support, or universal time
-and token savings. A distinct Agent under one owner is not an independent human.
+Headroom preserves exact originals, but this adapter cannot automatically compress
+Codex native tool output. LiteLLM is optional, with live qualification pending.
+Locks are local and identities are attributed; this Alpha does not promise
+distributed coordination or authenticated human approval.
 
-For development, use the [testing guide](docs/getting-started/testing.md): focused
-checks while editing and full verification for the final behavioral candidate.
-Initializing a product project does not require rerunning the framework's full
-suite. Existing test scripts and failure evidence are preserved.
+[Documentation](docs/README.md) · [Testing](docs/getting-started/testing.md) ·
+[Contributing](CONTRIBUTING.md) · [Security](SECURITY.md) ·
+[Compatibility and migration](docs/getting-started/workkeel.md#legacy-history-and-migration)
 
-[Documentation](docs/README.md) · [Task contract](docs/concepts/task-contract.md) ·
-[Design decision](docs/adr/0072-task-first-lifecycle.md) · [Changelog](CHANGELOG.md) ·
-[Contributing](CONTRIBUTING.md) · [Governance](GOVERNANCE.md) ·
-[Code of Conduct](CODE_OF_CONDUCT.md) · [Security](SECURITY.md)
-
-[MIT](LICENSE). See [third-party notices](THIRD_PARTY_NOTICES.md) for optional
-integration provenance and adoption limits.
+[MIT](LICENSE). See [third-party notices](THIRD_PARTY_NOTICES.md) for dependency
+licenses and optional integration provenance.

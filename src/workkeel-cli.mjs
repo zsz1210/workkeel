@@ -4,6 +4,7 @@ import { readTaskContractInput } from "./task-contract.mjs";
 import { initializeTaskProject, previewLegacyMigration, existsEntry } from "./workkeel-project.mjs";
 import { createNativeTask, mutateNativeTask, readNativeTask, listTaskItems, diagnoseTaskProject } from "./workkeel-tasks.mjs";
 import { planTaskRuntime } from "./workkeel-runtime.mjs";
+import { previewInstructions, applyInstructions } from "./workkeel-onboarding.mjs";
 
 const HELP = `Workkeel — repository-native task coordination for coding agents
 
@@ -15,16 +16,24 @@ workkeel task create [target] --source contract.json --request request.json
 workkeel task show [target] --id task-id
 workkeel task claim|release|handoff|review|rework|close|cancel [target] --id task-id --request request.json
 workkeel runtime plan [target] --id task-id
+workkeel instructions preview|apply [target] [--fingerprint sha256]
+workkeel workflow plan [target] --request workflow-request.json
+workkeel workflow run [target] --request workflow-run.json
+workkeel workflow show [target] --id run-id
+workkeel workflow cancel|recover-lock [target] --id run-id --request actor.json
+workkeel headroom view|read [target] --request tool-view-request.json
+workkeel skills audit [target] --request skill-use.json
 workkeel legacy <original Temple arguments>
 
-All task-first commands return JSON. Requests contain operation_id, expected_version,
-and actor {agent_id, principal_id}; see docs/getting-started/workkeel.md.
+All task commands return JSON. Lifecycle mutation requests contain operation_id,
+expected_version and actor; workflow requests use a stable run_id and active claim.
+See docs/getting-started/workkeel.md and docs/operations/workkeel-workflows.md.
 Native host execution is the default. Runtime plans do not launch models or grant
-permissions. Existing Temple projects retain their original commands and history.
+permissions. Workflow run explicitly launches the qualified Codex subscription host.
 `;
 function parse(args) {
   const rest = [...args]; const command = rest.shift() ?? "help";
-  const action = ["task", "migration", "runtime"].includes(command) ? rest.shift() : null;
+  const action = ["task", "migration", "runtime", "instructions", "workflow", "headroom", "skills"].includes(command) ? rest.shift() : null;
   const target = rest[0] && !rest[0].startsWith("--") ? rest.shift() : ".";
   const options = {};
   while (rest.length) {
@@ -74,6 +83,45 @@ export async function workkeelMain(args) {
     allow(options, ["--id"]);
     const item = await readNativeTask(target, required(options, "--id"));
     output = planTaskRuntime(item.contract);
+  } else if (command === "skills" && action === "audit") {
+    allow(options, ["--request"]);
+    const { auditSkillUse } = await import("./workkeel-skill-audit.mjs");
+    output = await auditSkillUse(target, (await readTaskContractInput(target, required(options, "--request"))).document);
+  } else if (command === "instructions") {
+    allow(options, action === "preview" ? [] : ["--fingerprint"]);
+    if (action === "preview") output = await previewInstructions(target);
+    else if (action === "apply") output = await applyInstructions(target, required(options, "--fingerprint"));
+    else throw new Error("Instructions requires preview or apply");
+  } else if (command === "workflow") {
+    const { planWorkflow, readWorkflowRun, cancelWorkflow, recoverWorkflowLock } = await import("./workkeel-workflows.mjs");
+    if (action === "show") { allow(options, ["--id"]); output = await readWorkflowRun(target, required(options, "--id")); }
+    else {
+      allow(options, ["plan", "run"].includes(action) ? ["--request"] : ["--id", "--request"]);
+      const request = (await readTaskContractInput(target, required(options, "--request"))).document;
+      if (action === "plan") output = await planWorkflow(target, request);
+      else if (action === "run") {
+        const { executeWorkflow } = await import("./workkeel-workflows.mjs");
+        const { createLocalCodexSubscriptionRuntime } = await import("./workkeel-codex-host.mjs");
+        const { exactKeys } = await import("./workkeel-execution-policy.mjs");
+        exactKeys(request, ["run"], ["approvals", "reconciliations"]);
+        const runtime = await createLocalCodexSubscriptionRuntime(target);
+        const controller = new AbortController(); const stop = () => controller.abort();
+        process.once("SIGINT", stop); process.once("SIGTERM", stop);
+        try { output = await executeWorkflow(target, request.run, { adapters: [runtime], approvals: request.approvals,
+          reconciliations: request.reconciliations, signal: controller.signal }); }
+        finally { process.removeListener("SIGINT", stop); process.removeListener("SIGTERM", stop); }
+      }
+      else if (action === "cancel") output = await cancelWorkflow(target, required(options, "--id"), request);
+      else if (action === "recover-lock") output = await recoverWorkflowLock(target, required(options, "--id"), request);
+      else throw new Error("Workflow requires plan, run, show, cancel or recover-lock");
+    }
+  } else if (command === "headroom") {
+    allow(options, ["--request"]);
+    const request = (await readTaskContractInput(target, required(options, "--request"))).document;
+    const { workkeelToolView, workkeelOriginal } = await import("./workkeel-headroom.mjs");
+    if (action === "view") output = await workkeelToolView(target, request);
+    else if (action === "read") output = await workkeelOriginal(target, request);
+    else throw new Error("Headroom requires view or read");
   } else throw new Error("Unsupported task-first command; legacy writers cannot mutate task-first projects");
   console.log(JSON.stringify(output, null, 2));
   return output.valid === false ? 1 : 0;

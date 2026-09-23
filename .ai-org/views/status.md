@@ -3,9 +3,9 @@
 - Project ID: `temple`
 - Organization system version: `0.1.0-alpha.33`
 - Active Agent Identities: 5
-- Collaboration profile: `solo` (0 Human Principals, 0 active claims)
-- Parallel plan: 0 wave(s), fresh=true
-- Work items: 259 total, 0 active
+- Collaboration profile: `solo` (0 Human Principals, 1 active claims)
+- Parallel plan: 0 wave(s), fresh=false
+- Work items: 261 total, 2 active
 - Codex tasks: 14 registered, 14 archive-ready
 - Runtime workers: 109 registered, 0 reserved, 0 active
 - Shared resources: 0 defined, 0 active reservation(s)
@@ -18,7 +18,7 @@
 - Specifications: 2 indexed, 2 approved (hybrid)
 - Tracker: `repository-only` (0 active provider(s), 0 linked Work Item(s))
 - Repository integration: `confirmed` (Develop focused changes on short-lived branches and submit them through pull requests; the maintainer owns final integration and release decisions.)
-- Attention signals: 26
+- Attention signals: 27
 
 ## Collaboration
 
@@ -27,7 +27,7 @@
 - Human Principals: 0
 - Agent sponsorships: 0
 - Active Position memberships: 10
-- Active Work Item claims: 0
+- Active Work Item claims: 1
 - Active Human Authority Grants: 0
 - Governance recovery: `not_configured`
 - Real Collaborative validation: `not_run` (.ai-org/templates/collaborative-large-scale-test-plan.md)
@@ -37,7 +37,7 @@
 - Generated plan: `.ai-org/views/parallel-plan.json`
 - Installed: yes
 - Valid: yes
-- Fresh: yes
+- Fresh: no
 - Safe waves: 0
 - Dispatchable Work Items: 0
 - Active / sequential / blocked: 0 / 0 / 0
@@ -307,9 +307,15 @@
 | WI-0257 | Deliver the role-free Workkeel lifecycle and runtime connection boundary | cancelled | Engineering Manager | Mog | sequential | team-visible | 0 | gate-evidence | not-applicable | 0 | 0 | 0 | — | `—` | 0 | 2 | 0 |
 | WI-0258 | Implement the Workkeel task-first lifecycle | done | Engineering Manager | Mog | parallel | team-visible | 0 | gate-evidence | not-applicable | 0 | 0 | 0 | — | `6bb9c98e` | 0 | 9 | 0 |
 | WI-0259 | Rename and reframe the public Workkeel framework | done | Engineering Manager | Mog | parallel | team-visible | 0 | gate-evidence | not-applicable | 0 | 0 | 0 | — | `1c1d57bf` | 0 | 9 | 0 |
+| WI-0260 | Implement Workkeel workflows, model routing and user-facing delivery | build | Developer | Rikku | pending | internal | 0 | gate-evidence | not-applicable | 0 | 0 | 0 | claim-20260923132222-6bc97f70 | `—` | 0 | 3 | 0 |
+| WI-0261 | Qualify Workkeel automation package additions | build | Developer | Rikku | sequential | team-visible | 0 | gate-evidence | not-applicable | 0 | 0 | 0 | — | `—` | 0 | 1 | 0 |
 
 ## Delivery attention
 
+- WI-0260: awaiting-owner — The recorded owner can continue the scoped work; no attached active worker is recorded.
+  - owner: No attached active runtime is recorded for this claim.
+- WI-0261: awaiting-owner — Have the eligible owner claim or resume the next scoped responsibility.
+  - owner: No active eligible ownership claim is recorded.
 
 ## Codex task registry
 
@@ -476,13 +482,14 @@
 - worker-20260915174040-464e550f is failed
 - worker-20260915175330-3e16bfe8 is failed
 - worker-20260915233053-33b568eb is failed
+- Generated parallel plan is stale; rebuild it before dispatch
 
 ## External tracker coordination
 
 - Profile: `repository-only`
 - Sync granularity: `team-visible`
 - Active providers: 0
-- Team-visible Work Items: 105
+- Team-visible Work Items: 106
 - Linked Work Items: 0
 - Observed external items: 0
 - Reconciliation actions: 0
@@ -556,14 +563,14 @@
 
 | Time | Event | Work item | Actor |
 |---|---|---|---|
-| 2026-09-23T11:37:24.295Z | work_item_closed | WI-0259 | agent-mog |
-| 2026-09-23T11:37:24.295Z | release_gate_completed | WI-0259 | agent-mog |
-| 2026-09-23T11:37:23.804Z | work_item_claimed | WI-0259 | human |
-| 2026-09-23T11:35:45.661Z | work_item_transitioned | WI-0259 | agent-lulu |
-| 2026-09-23T11:35:45.173Z | work_item_claim_released | WI-0259 | human |
-| 2026-09-23T11:35:44.703Z | handoff_created | WI-0259 | agent-lulu |
-| 2026-09-23T11:35:44.189Z | work_item_claimed | WI-0259 | human |
-| 2026-09-23T11:35:24.590Z | work_item_transitioned | WI-0259 | agent-lulu |
+| 2026-09-23T14:54:54.084Z | work_item_claim_released | WI-0261 | human |
+| 2026-09-23T14:51:56.926Z | work_item_claimed | WI-0261 | human |
+| 2026-09-23T14:51:56.421Z | work_item_transitioned | WI-0261 | agent-mog |
+| 2026-09-23T14:51:55.869Z | work_item_coordination_configured | WI-0261 | agent-mog |
+| 2026-09-23T14:45:18.638Z | work_item_created | WI-0261 | agent-mog |
+| 2026-09-23T13:22:22.449Z | work_item_claimed | WI-0260 | human |
+| 2026-09-23T13:22:21.932Z | work_item_transitioned | WI-0260 | agent-tidus |
+| 2026-09-23T13:22:21.410Z | work_item_claim_released | WI-0260 | human |
 
 ## Assignments
 

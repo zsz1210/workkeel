@@ -13,8 +13,8 @@ a task or authorizes its execution.
 
 ## What is implemented
 
-`workkeel.task-contract/v1` describes work without company titles or a manual
-list of generic AI skills. The executable schema and semantic validator are in
+`workkeel.task-contract/v1` describes approved work, boundaries and acceptance.
+The executable schema and semantic validator are in
 `src/task-contract.mjs`. The existing CLI can validate a proposed local document
 or project an existing Work Item. In a legacy checkout, both operations below
 are strictly read-only:
@@ -35,7 +35,7 @@ The input file must be repository-relative, valid UTF-8 JSON, a regular file no
 larger than 1 MiB, with no symlink components. Ordinary replacement/change while
 reading is rejected. This reader is not a hostile-filesystem sandbox.
 
-## Descriptor-validation example without Positions
+## Descriptor-validation example
 
 This JSON illustrates a descriptor accepted by the standalone validator. It is
 **not a native task-create payload**: its build state and populated implementer
@@ -136,6 +136,14 @@ the quick start. Legacy projects retain their existing lifecycle gates. Neither
 path authenticates a human merely from an attributed identity.
 
 ## Optional fixed gateway descriptor
+
+For executable workflows, `execution.model_connection` can instead be
+`{"kind":"policy","policy_ref":"docs/model-policy.json"}`. The policy reference
+must be an approved `environment.data.policy_refs` entry. An explicit subscription
+connection is `{"kind":"codex-subscription","model":"gpt-6-sol","effort":"medium"}`;
+it requires the Codex adapter and approved model-data access. See the
+[workflow reference](../operations/workkeel-workflows.md) for routing and actual
+host enforcement. A descriptor or read-only runtime plan alone never executes it.
 
 Model selection belongs to the adapter/model connection, not a job title. A
 gateway descriptor has this shape:

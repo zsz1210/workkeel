@@ -146,8 +146,49 @@ export async function initializeTaskProject(targetInput, policy, { migrationFing
       manifest = preview.legacy_manifest;
     } else if (migrationFingerprint || await existsEntry(target, ".ai-org")) throw new Error("Existing unrecognized .ai-org state must be resolved before initialization");
     const project = { schema_version: TASK_PROJECT_SCHEMA, cli: { package_name: WORKKEEL_PACKAGE, version: TEMPLATE_VERSION }, policy, legacy_manifest: manifest };
-    const launcher = `import { spawnSync } from "node:child_process";\nimport fs from "node:fs";\nimport path from "node:path";\nimport { fileURLToPath } from "node:url";\nconst root=path.dirname(fileURLToPath(import.meta.url));\nconst pin=JSON.parse(fs.readFileSync(path.join(root,"workkeel.lock"),"utf8")).cli;\nif(pin.package_name!==${JSON.stringify(WORKKEEL_PACKAGE)}||pin.version!==${JSON.stringify(TEMPLATE_VERSION)}) throw Error("Workkeel pin mismatch");\nconst override=process.env.WORKKEEL_CLI_PATH;\nif(override){const check=spawnSync(process.execPath,[override,"version"],{encoding:"utf8"});if(check.status!==0||check.stdout.trim()!==pin.version)throw Error("Workkeel override version mismatch");}\nconst run=override?spawnSync(process.execPath,[override,...process.argv.slice(2)],{stdio:"inherit"}):spawnSync("npm",["exec","--yes","--package",pin.package_name+"@"+pin.version,"--","workkeel",...process.argv.slice(2)],{stdio:"inherit"});\nprocess.exitCode=run.status??1;\n`;
-    const instructions = "# Workkeel task-first project\n\nRead native repository instructions and the approved task contract. Use the pinned `node ./workkeelw.mjs`; do not hand-edit canonical task records. `status` and `doctor` are read-only. Claim before implementation, record exact candidate/evidence, obtain a distinct Agent review, then close through an authorized Principal. Never treat metadata validation as execution permission or a sandbox. Actual tool, filesystem, network and data controls belong to the host coding agent. External publication and model spending require separate authorization. Legacy records are historical, not new grants.\n";
+    const launcher = `import { spawnSync } from "node:child_process";
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+const root = path.dirname(fileURLToPath(import.meta.url));
+const pin = JSON.parse(fs.readFileSync(path.join(root, "workkeel.lock"), "utf8")).cli;
+if (pin.package_name !== ${JSON.stringify(WORKKEEL_PACKAGE)} || pin.version !== ${JSON.stringify(TEMPLATE_VERSION)}) throw Error("Workkeel pin mismatch");
+const installed = path.join(root, "node_modules", "@zsz1210", "workkeel", "bin", "workkeel.mjs");
+const source = process.env.WORKKEEL_CLI_PATH || (fs.existsSync(installed) ? installed : null);
+if (source) {
+  const check = spawnSync(process.execPath, [source, "version"], { cwd: root, encoding: "utf8" });
+  if (check.status !== 0 || check.stdout.trim() !== pin.version) throw Error("Workkeel override version mismatch");
+} else if (process.env.WORKKEEL_ALLOW_PACKAGE_FETCH !== "1") {
+  throw Error("Pinned Workkeel CLI is not installed. Set WORKKEEL_CLI_PATH to the matching source bin/workkeel.mjs, or explicitly allow a published package fetch with WORKKEEL_ALLOW_PACKAGE_FETCH=1. No download was attempted.");
+}
+const run = source
+  ? spawnSync(process.execPath, [source, ...process.argv.slice(2)], { cwd: root, stdio: "inherit" })
+  : spawnSync("npm", ["exec", "--yes", "--package", pin.package_name + "@" + pin.version, "--", "workkeel", ...process.argv.slice(2)], { cwd: root, stdio: "inherit" });
+process.exitCode = run.status ?? 1;
+`;
+    const instructions = `# Workkeel project instructions
+
+Read native project instructions and the approved task contract. Use the pinned
+\`node ./workkeelw.mjs\`; never hand-edit canonical task records.
+
+Before acting, match the request to available Skill descriptions and any explicitly
+named Skills. Read applicable instructions completely, including required references.
+Load only task-relevant material, not the whole Skill catalog. A missing required
+Skill or authority source must be reported; do not pretend it was applied.
+
+\`status\` and \`doctor\` are read-only. Claim before implementation. Stay inside the
+approved working directory, paths, tools, network, data and spending boundaries.
+The runtime host must actually enforce these conditions; metadata is not a sandbox.
+Workflow progress, approval interrupts and model routing cannot enlarge authority.
+
+Hand off an exact Git candidate with verification evidence and unresolved work
+clearly stated. A different registered Agent reviews the candidate before an
+authorized Principal closes the task. Completion does not publish or deploy.
+
+At handoff, identify the relevant Skills, what was applied, the resulting artifacts
+and checks, and anything unverified. Reading claims or file hashes alone do not
+prove Skill application or quality. Finish with the recommended next step.
+`;
     const created = [];
     try {
       for (const [ref, content] of [["WORKKEEL.md", instructions], ["workkeelw.mjs", launcher], ["workkeel.lock", formatJson(project)]]) {

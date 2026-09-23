@@ -125,6 +125,18 @@ async function context(target, item, project) {
   await assertPins(target, item.authority_pins);
   await safeDirectory(target, item.contract.environment.cwd);
 }
+
+/** Execution is allowed only under the current implementation claim and unchanged authority. */
+export async function assertTaskExecutionContext(target, id, { actor, claim_id, contract_sha256 = null }) {
+  const project = await readTaskProject(target);
+  const item = await readNativeTask(target, id);
+  assertActor(project.policy, actor);
+  if (item.state !== "build" || !item.claim || item.claim.id !== claim_id || !sameActor(item.claim.actor, actor)) throw new Error("Execution requires the current matching implementation claim");
+  if (contract_sha256 !== null && contract_sha256 !== item.contract_sha256) throw new Error("Execution contract changed");
+  await context(target, item, project);
+  await dependencies(target, item);
+  return item;
+}
 function append(item, action, request) {
   item.version += 1;
   const event = { sequence: item.version, action, operation_id: request.operation_id,

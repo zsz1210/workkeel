@@ -181,12 +181,16 @@ function validWorker(result, originalHash) {
     [result.input_tokens, result.output_tokens].every((x) => Number.isSafeInteger(x) && x >= 0);
 }
 
-function safeSnapshot(filename) {
+function safeSnapshot(filename, artifactRoot = null) {
   if (typeof filename !== "string" || !path.isAbsolute(filename)) return false;
+  if (artifactRoot && path.isAbsolute(artifactRoot) && /[/\\]\.ai-org[/\\]artifacts[/\\][A-Za-z0-9._-]+[/\\]headroom$/.test(artifactRoot)) {
+    const relative = path.relative(artifactRoot, filename);
+    if (relative && !path.isAbsolute(relative) && !relative.split(path.sep).some(p => p === ".." || [".git", ".ai-org", ".agents", ".codex"].includes(p.toLowerCase()))) return true;
+  }
   return !path.resolve(filename).split(path.sep).some((part) => [".git", ".ai-org", ".agents", ".codex"].includes(part.toLowerCase()));
 }
 
-function writeSnapshot({ parent, device, inode, name, content }) {
+function writeSnapshot({ parent, device, inode, name, content, artifactRoot }) {
   const snapshot = path.join(parent, name);
   const args = [adapterFile, "--snapshot-writer"];
   let command = process.execPath;
@@ -196,7 +200,7 @@ function writeSnapshot({ parent, device, inode, name, content }) {
   }
   const result = spawnSync(command, args, {
     cwd: parent, env: { PATH: "/usr/bin:/bin" }, encoding: "utf8",
-    input: JSON.stringify({ parent, device, inode, name, content }),
+    input: JSON.stringify({ parent, device, inode, name, content, artifactRoot }),
     timeout: HEADROOM_CONTRACT.timeoutMs, killSignal: "SIGKILL", maxBuffer: 16384
   });
   try {
@@ -218,7 +222,7 @@ export async function createHeadroomPayload(options, dependencies) {
   return { text, diagnostics };
 }
 
-async function buildHeadroomView({ input, kind, enabled = false, python, snapshot, query = "", allowLossy = false }, { runWorker = runHeadroomWorker } = {}, payload = false) {
+async function buildHeadroomView({ input, kind, enabled = false, python, snapshot, query = "", allowLossy = false, artifactRoot = null }, { runWorker = runHeadroomWorker } = {}, payload = false) {
   if (typeof allowLossy !== "boolean") throw new Error("allowLossy must be a boolean");
   const started = performance.now();
   const bytes = await readBoundedFile(input);
@@ -238,7 +242,7 @@ async function buildHeadroomView({ input, kind, enabled = false, python, snapsho
   };
   if (enabled !== true) return finish();
   const physicalInput = await fs.realpath(input);
-  if (!safeSnapshot(physicalInput) || ["AGENTS.MD", "TEMPLE.MD", "CLAUDE.MD"].includes(path.basename(physicalInput).toUpperCase())) {
+  if (!safeSnapshot(physicalInput) || ["WORKKEEL.MD", "AGENTS.MD", "TEMPLE.MD", "CLAUDE.MD"].includes(path.basename(physicalInput).toUpperCase())) {
     output.reason = "protected-source"; return finish();
   }
   if (!["log", "json"].includes(kind)) { output.reason = "unsupported-kind"; return finish(); }
@@ -248,12 +252,12 @@ async function buildHeadroomView({ input, kind, enabled = false, python, snapsho
   if (bytes.length < HEADROOM_CONTRACT.minimumBytes) { output.reason = "below-threshold"; return finish(); }
   if (!allowLossy && kind !== "json") { output.reason = "lossless-json-only"; return finish(); }
   if (typeof query !== "string" || byteLength(query) > 4096) throw new Error("Query must be UTF-8 text no larger than 4 KiB");
-  if (!safeSnapshot(snapshot)) { output.reason = "snapshot-unconfigured"; return finish(); }
+  if (!safeSnapshot(snapshot, artifactRoot)) { output.reason = "snapshot-unconfigured"; return finish(); }
   let snapshotParent;
   // Reject a symlinked parent resolving into canonical organization state as well.
   try {
     const parent = await fs.realpath(path.dirname(snapshot));
-    if (!safeSnapshot(path.join(parent, path.basename(snapshot)))) throw new Error("protected parent");
+    if (!safeSnapshot(path.join(parent, path.basename(snapshot)), artifactRoot)) throw new Error("protected parent");
     const stat = await fs.stat(parent, { bigint: true });
     snapshotParent = { parent, device: stat.dev.toString(), inode: stat.ino.toString(), name: path.basename(snapshot) };
     try { await fs.lstat(snapshot); output.reason = "snapshot-exists"; return finish(); }
@@ -312,7 +316,7 @@ async function buildHeadroomView({ input, kind, enabled = false, python, snapsho
   } else if (envelopeBytes(candidate) >= envelopeBytes(output) || result.output_tokens >= result.input_tokens) {
     output.reason = "no-net-reduction"; return finish();
   }
-  const receipt = writeSnapshot({ ...snapshotParent, content });
+  const receipt = writeSnapshot({ ...snapshotParent, content, artifactRoot });
   if (receipt.written !== true || receipt.sha256 !== originalHash || receipt.bytes !== bytes.length) {
     if (receipt.partial_possible) output.metrics.snapshot_bytes = null;
     output.reason = "snapshot-write-failed";
@@ -348,9 +352,9 @@ function writeSnapshotInAnchoredDirectory() {
     const cwd = process.cwd();
     const stat = fsSync.statSync(".", { bigint: true });
     if (cwd !== request.parent || stat.dev.toString() !== request.device || stat.ino.toString() !== request.inode ||
-        !safeSnapshot(cwd) || typeof request.name !== "string" || !request.name ||
+        typeof request.name !== "string" || !request.name ||
         [".", ".."].includes(request.name) || path.basename(request.name) !== request.name ||
-        typeof request.content !== "string") throw new Error("snapshot parent or leaf mismatch");
+        typeof request.content !== "string" || !safeSnapshot(path.join(cwd, request.name), request.artifactRoot)) throw new Error("snapshot parent or leaf mismatch");
     const bytes = Buffer.from(request.content, "utf8");
     if (bytes.length > HEADROOM_CONTRACT.maximumBytes) throw new Error("snapshot size limit");
     handle = fsSync.openSync(request.name, "wx", 0o600); created = true;

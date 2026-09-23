@@ -1,6 +1,6 @@
 # Architecture
 
-## Workkeel task-first boundary
+## Workkeel execution and authority boundaries
 
 The current opt-in mode coordinates approved tasks in the repository. A
 `workkeel.lock` pins the CLI and explicit Agent/Principal approval policy. Each
@@ -10,10 +10,29 @@ candidate, evidence digests, review, closeout and failed-attempt history.
 The host coding agent executes the work and enforces actual tool, filesystem,
 network and data controls. Optional project Skills supply specific procedures;
 they are not authority or a mandatory generic model-capability catalog. Model
-transport is separate: native settings are the default and a fixed gateway can
-be described in a read-only plan. There is no new execution loop or automatic
-task-first provider launch. See the [guide](../getting-started/workkeel.md) and
-[ADR-0072](../adr/0072-task-first-lifecycle.md).
+transport is separate. Native coordination uses the existing coding agent; opt-in
+workflows use LangGraph to orchestrate a registered runtime, not replace the
+runtime's internal coding loop. The concrete Codex host uses the existing ChatGPT
+subscription and explicitly selected models. See the
+[workflow guide](../operations/workkeel-workflows.md) and
+[execution ADR](../adr/0073-opt-in-workflow-execution.md).
+
+![Workkeel task records and optional graph execution connect to a host-enforced coding runtime; recovery state and acceptance evidence remain separate.](../assets/workkeel-architecture.svg)
+
+| Boundary | Authoritative source | Enforcement |
+| --- | --- | --- |
+| Task approval and acceptance | Immutable task contract; canonical task operations | Claim, scope, dependency, evidence and distinct-review guards |
+| Workflow progress | Pinned workflow/policy; local SQLite checkpoints and intent/result journal | One run per claim, bounded dispatch, integrity checks and explicit uncertain-state reconciliation |
+| Model selection | Approved node/rule/default policy; runtime catalog | Connection pinning, reported-model continuity and refusal of silent rerouting |
+| Files, tools and networking | Actual qualified coding host | Codex permission profiles and disabled unsupported tools; unsupported constraints stop launch |
+| Project context | Native instructions and selected Skill sources | Bounded selection, full reading and separate output review; prompts are not a sandbox |
+
+Recovery state is local and excluded from Git. It can include task outputs; retain
+it securely. A completed runtime operation is not a task review. A digest detects
+changed records, not malicious host behavior or authenticated human intent.
+Checkpoints do not establish exactly-once effects across external services.
+
+## Compatibility architecture
 
 The remaining sections describe **legacy Temple compatibility mode**, not the
 required setup for a new task-first project. This toolkit still self-hosts that

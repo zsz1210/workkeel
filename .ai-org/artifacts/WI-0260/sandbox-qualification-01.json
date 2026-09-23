@@ -1,0 +1,52 @@
+{
+  "schema_version": "workkeel.sandbox-qualification/v1",
+  "at": "2026-09-23T14:23:16.037Z",
+  "model_turns": 0,
+  "fixture_path": "/private/var/folders/xs/l6j01gy57xddczq_xyb044ww0000gn/T/workkeel-sandbox-fe94i1",
+  "cases": [
+    {
+      "name": "approved-read",
+      "exit_code": 0,
+      "expected_success": true,
+      "pass": true
+    },
+    {
+      "name": "outside-read",
+      "exit_code": 1,
+      "expected_success": false,
+      "pass": true
+    },
+    {
+      "name": "runner-journal-read",
+      "exit_code": 1,
+      "expected_success": false,
+      "pass": true
+    },
+    {
+      "name": "approved-write",
+      "exit_code": 0,
+      "expected_success": true,
+      "pass": true
+    },
+    {
+      "name": "outside-write",
+      "exit_code": 1,
+      "expected_success": false,
+      "pass": true
+    },
+    {
+      "name": "authority-write",
+      "exit_code": 1,
+      "expected_success": false,
+      "pass": true
+    },
+    {
+      "name": "network",
+      "exit_code": 7,
+      "expected_success": false,
+      "pass": true
+    }
+  ],
+  "outcome": "pass",
+  "network_connections": 0
+}

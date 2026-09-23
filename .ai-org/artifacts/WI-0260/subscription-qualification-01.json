@@ -1,0 +1,38 @@
+{
+  "schema_version": "workkeel.subscription-qualification/v1",
+  "at": "2026-09-23T14:01:02.207Z",
+  "environment": {
+    "platform": "darwin",
+    "node": "v24.7.0"
+  },
+  "model_turn_limit": 2,
+  "mode": "live-chatgpt-subscription",
+  "api_key_used": false,
+  "dollars": null,
+  "outcome": "fail",
+  "elapsed_ms": 747.2495,
+  "code_sha256": {
+    "workkeel-codex-host.mjs": "b1a9d5e2f3652d72c17e4b8bfe72e88ab75c1e2206064ec0ff68bdcf79b20bd4",
+    "workkeel-codex-runtime.mjs": "2c5ff094eb7193016b3abf7f7c22bd572a3adb28b54a9779787ba190813f0ea8",
+    "workkeel-workflows.mjs": "0ab74718bc2e4aca6efdf3a34fba1ae5a0ddcb888b07eaca73b256e016cc8e79",
+    "workkeel-checkpoints.mjs": "70861a94777561360d8538a7abda690a431ec7ee4d68b771cffd29fbaf8b1556",
+    "workkeel-execution-policy.mjs": "e65edc05dba24ce4fa3342339659cd2b514a8bddef372cff51ad04e632468a69"
+  },
+  "observations": [
+    {
+      "node": "read",
+      "requested_model": "gpt-6-luna",
+      "selection_reason": "rule:small-read",
+      "runtime_model": null,
+      "observed_model": null,
+      "status": "uncertain",
+      "usage": null
+    }
+  ],
+  "limitations": [
+    "One synthetic local task; not production readiness or comparative quality/cost evidence.",
+    "Runtime-confirmed model is distinct from an independently observed backend model.",
+    "No subscription quota-to-dollar conversion is available."
+  ],
+  "failure": "Codex App Server exited (1)"
+}

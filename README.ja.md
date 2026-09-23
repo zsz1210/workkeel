@@ -1,70 +1,104 @@
 # Workkeel
 
-コーディングエージェントのための、リポジトリ中心のタスク連携フレームワーク。
+コーディングエージェントのための、リポジトリを基盤としたワークフローフレームワーク。
 
-会話、エージェント、モデルが変わっても、仕事を続けられるように。
+**会話が変わっても、タスク・モデル選択・検証結果をつなぐ。**
 
 [English](README.md) · [繁體中文](README.zh-TW.md) · 日本語
 
 [![CI](https://github.com/zsz1210/workkeel/actions/workflows/ci.yml/badge.svg)](https://github.com/zsz1210/workkeel/actions/workflows/ci.yml)
 Early Alpha · Node.js 24+ · [MIT](LICENSE)
 
-## 架空の会社ではなく、仕事をつなぐ
+## なぜ Workkeel？
 
-今のコーディングエージェントは、計画、実装、テストを進められます。新しい会話で失われやすいのは、その仕事を取り巻く合意です。何が承認され、誰が担当し、どのファイルやツールを使え、何を引き継ぎ、どの正確なリビジョンが検証されたのか。
+コーディングエージェントは変更を実装できます。しかし、複数の工程や会話をまたぐと、
+決定事項の消失、作業の重複、曖昧な権限、高コストな既定モデルの使い続け、
+未レビューの成果を完了扱いするといった問題が起こります。
 
-Workkeel は、その合意をコードのそばに残します。新しいタスク優先モードに CEO、PM、エンジニアといった役職は不要です。AI に「コードを書ける」と伝えるための汎用スキル一覧も求めません。既存の coding agent を使いながら、スコープ、身元、操作の境界、依存関係、証拠、受け入れを記録します。
+Workkeel はタスクの合意をコードのそばに保存し、実行と証拠に結び付けます。
 
-アプリケーションフレームワーク、モデル、新しいエージェント実行エンジン、自律的な管理者ではありません。設計、ツール、人の決定権はプロジェクトに残ります。「AI の会社」は互換モードの選択肢であり、新しいコアの前提ではありません。
+- **文脈を引き継ぐ：**承認範囲、担当、引き継ぎ、失敗履歴を保持。
+- **実行を制御する：**依存関係、承認、上限付き再試行、中断からの復旧を定義。
+- **モデルを明確に選ぶ：**既存の Codex サブスクリプションで適切な工程を Luna や Sol に振り分け。
+  明示指定を保ち、黙って Astra に切り替えません。
+- **実際の成果をレビューする：**検証と別エージェントのレビューを、正確な Git リビジョンに紐付けて受け入れ。
 
-## 承認から、検証可能な引き継ぎまで
+コーディングループとツールは既存ランタイムが担当します。Workkeel は周囲の作業を調整するもので、
+アプリケーションフレームワークやモデルの代替ではありません。
 
-1. 目的、範囲、受け入れ条件、実際の作業環境を承認します。
-2. 指定した Agent がタスクを claim し、既存の coding runtime で作業します。
-3. 未解決事項を処理し、正確な Git リビジョンと証拠を渡します。
-4. 別の登録済み Agent がレビューします。不合格なら失敗の記録を残して修正します。
-5. 検証された候補を明示的に受け入れます。受け入れは公開やデプロイではありません。
+## 依頼から受け入れまで
 
-承認済み契約は変更せず、進捗、claim、失敗した試行、レビュー結果を別に記録します。バージョン照合で古い更新を防ぎ、ハッシュで証拠の変更を検出します。添付資料のディレクトリも、未検証コードを隠す抜け道にはなりません。実際のツール・ネットワーク隔離はホストの責任であり、形式の検証は許可を与えません。
+<picture>
+  <source media="(max-width: 640px)" srcset="docs/assets/workkeel-workflow-mobile.svg">
+  <img src="docs/assets/workkeel-workflow.svg" alt="目的と範囲を承認し、工程とモデルを計画、実行して正確な候補をレビューし、受け入れる。レビュー不合格なら実装に戻る。">
+</picture>
 
-## 開発中のソースから始める
+例：Luna でカート合計の不具合を調査し、方針の承認を待ってから Sol で実装・テスト。
+証拠を残して候補を引き継ぎ、別エージェントがレビューします。
+グラフの終了は承認、受け入れ、デプロイを意味しません。
+[ワークフローガイド →](docs/operations/workkeel-workflows.md)
 
-この Workkeel 改版は**未リリースのソース**であり、以前公開した Temple Alpha.33 パッケージとは異なります。リポジトリや manifest の改名だけでは npm に公開されません。Git、Node.js 24 以降、既存の Git プロジェクトが必要です。
+## ソースから始める
+
+Git、Node.js 24+、既存のコーディングエージェントが必要です。
+この開発ソースは、公開済み Workkeel npm リリースではありません。
 
 ```sh
 git clone https://github.com/zsz1210/workkeel.git
 cd workkeel
-npm ci --ignore-scripts
+npm ci --omit=optional --ignore-scripts
 node bin/workkeel.mjs help
 ```
 
-このソースを coding agent で開き、次のように依頼します。
+[クイックスタート](docs/getting-started/workkeel.md)に沿ってプロジェクトを初期化し、
+タスクを承認・取得してレビューを記録します。
+プレビュー可能な [AGENTS／CLAUDE ブリッジ](docs/extensions/workkeel-context.md)は既存の指示を保持します。
+基本的なタスク調整には、現在のコーディングエージェントを利用できます。
 
-> タスク優先モードのガイドと、私のプロジェクトの指示を読んでください。Agent／Principal、承認方針、作業ディレクトリ、許可するファイルとツール、データの取り扱いを確認してください。設定を私が確認した後、会社の役職に依存しない Workkeel を初期化し、既存ファイルは維持してください。
+グラフを自動実行する場合は `npm ci --include=optional --ignore-scripts` で任意依存を導入し、
+[Codex サブスクリプション設定](docs/operations/workkeel-workflows.md#choose-how-to-run)を参照してください。
+検証済みプロファイルは現在 macOS と固定 Codex バージョンが対象です。
+追加 API キーや LiteLLM サーバーは不要です。モデル選択は Workkeel が起動する工程に適用され、
+既存のデスクトップ会話やグローバル既定値は変更しません。
 
-[クイックスタート（英語）](docs/getting-started/workkeel.md)に小さなポリシー、完全なタスク例、claim・引き継ぎ・レビューのコマンドがあります。各プロジェクトはバージョン固定の `workkeelw.mjs` を持ちます。公開前のソース利用もバージョンを確認します。グローバルインストールやモデル Gateway は必須ではありません。
+## アーキテクチャ
 
-## 四つの関心事を分ける
+<picture>
+  <source media="(max-width: 640px)" srcset="docs/assets/workkeel-architecture-mobile.svg">
+  <img src="docs/assets/workkeel-architecture.svg" alt="リポジトリのタスク契約を Workkeel と任意の LangGraph 実行器が利用。モデルを固定したランタイムがホスト権限内でツールを使い、結果を返す。チェックポイントと受け入れ記録は別管理。">
+</picture>
 
-- **タスクと権限：** 承認された成果、Agent／Principal、範囲、許可する操作、レビュー担当の分離。
-- **環境と実行：** 作業場所、読み書きの範囲、ツール、リソース、ネットワーク、データ方針。既存の coding agent が実行します。
-- **プロジェクトの方法：** 必要な場合だけ、固有の知識や手順を Skill にします。一般的なモデル能力の一覧は不要です。
-- **モデル接続：** 原則としてホストのネイティブ設定を使用します。固定 Gateway は任意であり、ツール能力やタスクの受け入れとは別です。
+リポジトリはタスクの権限とレビュー証拠を保持し、任意の実行器がグラフの進行とモデル方針を管理。
+Codex はホストが実際に強制する権限内で作業します。SQLite チェックポイントと dispatch journal で
+復旧を支え、副作用が不明な場合は確認のため停止し、無条件に再実行しません。
 
-現在の LiteLLM／Codex オプションは**読み取り専用の実行設定プラン**です。モデルを起動せず、グローバル設定を変更せず、キーも読みません。実際の Gateway でのツール動作は未検証で、タスク優先モードへの自動ディスパッチも有効にしていません。自動モデル選択や新しい Graph エンジンは今回の範囲外です。
+## 採用している概念
 
-## 既存の Temple 履歴を保つ
+| 関連する概念 | Workkeel での適用 |
+| --- | --- |
+| Agent harness engineering | エージェントの周囲にタスク境界、ランタイム契約、証拠チェックを配置 |
+| Context engineering | 必要な指示、Skills、限定した証拠と、任意の可逆なツール出力ビュー |
+| State machines／graph orchestration | 条件付き状態遷移と LangGraph の順序、分岐、直接結合、チェックポイント |
+| Feedback loops／human-in-the-loop | 上限付き継続、承認のための中断、レビューと修正のループ |
+| Policy-based model routing | 承認済みルール、説明可能な選択、会話単位で固定するモデル設定 |
 
-Workkeel は Temple の新しい名前です。互換コマンド `temple`、`templew.mjs`、`temple.lock`、`temple.*` スキーマ、過去の証拠は維持します。正式な記録の一括置換はしません。
+[用語集](docs/concepts/terminology.md)と[設計](docs/concepts/architecture.md)を参照してください。
+Skills はプロジェクト固有の手順です。「読んだ」という記録だけでは適切な適用を証明できません。
+[選択と成果の確認 →](docs/extensions/workkeel-context.md)
 
-既存プロジェクトは、明示的に移行するまで元の Position ワークフローを使います。ハッシュ確認付きの移行は、停止済みで互換性のある標準ポリシーを使う通常の Solo プロジェクトだけが対象です。進行中、カスタム方針、チーム、高リスク、機密データの仕事は[従来モードのガイド（英語）](docs/getting-started/usage.md)に従います。従来の Console、ルーティング、保証の文書は互換モードを説明するもので、新規設定の必須項目ではありません。[移行の詳細（英語）](docs/getting-started/workkeel.md#legacy-history-and-migration)。
+## 検証データと制限
 
-## 成熟度と開発への参加
+実サブスクリプションの 2 工程テストで Luna、Sol を順に選択し、約 42 秒で期待どおりのファイルを生成。
+ローカルサンドボックスの 7 検査も通過しました。小規模な機能確認であり、一般的な品質、速度、
+利用枠の節約を示す比較結果ではありません。
+[方法・結果・未検証事項 →](docs/validation/workkeel-automation.md)
 
-有人監督のローカル作業を対象とする Early Alpha です。タスクのライフサイクルと拒否条件にはオフラインテストがありますが、本番運用、認証された複数人運用、分散ロック、実 Gateway 対応、普遍的な時間・トークン削減を証明するものではありません。同じ所有者の別 Agent は、独立した人による検証ではありません。
+Headroom は原文を保持しますが、このアダプターは Codex 標準ツール出力の自動圧縮に未対応です。
+LiteLLM は任意のゲートウェイ経路で、実サービスの検証は未完了です。
+ロックはローカル、身元は帰属記録です。分散調整や人間の認証済み承認は保証しません。
 
-開発では[テストガイド（英語）](docs/getting-started/testing.md)に従い、編集中は関連チェック、最終的な動作候補には完全検証を行います。プロダクトの初期化ごとにフレームワーク全体を再テストする必要はありません。既存のテストコマンドと失敗の記録は維持します。
+[ドキュメント](docs/README.md) · [テスト](docs/getting-started/testing.md) ·
+[貢献](CONTRIBUTING.md) · [セキュリティ](SECURITY.md) ·
+[互換性と移行](docs/getting-started/workkeel.md#legacy-history-and-migration)
 
-[文書](docs/README.md) · [タスク契約](docs/concepts/task-contract.md) · [設計判断](docs/adr/0072-task-first-lifecycle.md) · [変更履歴](CHANGELOG.md) · [貢献](CONTRIBUTING.md) · [ガバナンス](GOVERNANCE.md) · [行動規範](CODE_OF_CONDUCT.md) · [セキュリティ](SECURITY.md)
-
-[MIT](LICENSE)。任意の統合の出典と採用範囲は[第三者通知](THIRD_PARTY_NOTICES.md)を参照してください。
+[MIT](LICENSE)。依存関係と任意統合の出典・ライセンスは[第三者通知](THIRD_PARTY_NOTICES.md)に記載しています。

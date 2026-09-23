@@ -1,5 +1,7 @@
 # Architecture Decision Records
 
+- [ADR-0073: Opt-in workflow execution and model routing](0073-opt-in-workflow-execution.md)
+
 - [ADR-0072: Task-first lifecycle without company Positions](0072-task-first-lifecycle.md)
 
 - [ADR-0066: Demand-driven Learning review coverage](0066-demand-driven-learning-review-coverage.md)

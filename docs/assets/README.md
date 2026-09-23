@@ -1,11 +1,26 @@
 # Documentation assets
 
+The current Workkeel README uses two independently authored diagrams:
+`workkeel-workflow.mmd` and `workkeel-architecture.mmd`, each with a `-mobile`
+source. They use established workflow/runtime terms and omit historical migration
+details. Regenerate their SVGs using the pinned Mermaid CLI below, with the source
+glob `docs/assets/workkeel-*.mmd`. Use an installed browser through
+`PUPPETEER_EXECUTABLE_PATH`; no browser download is needed. Check both light/dark
+README backgrounds and desktop/narrow layouts before delivery.
+
+    for source in docs/assets/workkeel-*.mmd; do
+      PUPPETEER_SKIP_DOWNLOAD=true npx --yes @mermaid-js/mermaid-cli@11.10.1 \
+        -i "$source" -o "${source%.mmd}.svg" -b '#ffffff'
+    done
+
+## Retained compatibility diagrams
+
 The Temple delivery diagrams in this directory are static README assets generated from the adjacent Mermaid source files.
 
 - `temple-delivery-path.<locale>.mmd` is the desktop source.
 - `temple-delivery-path.<locale>-mobile.mmd` is the narrow-layout source.
-- The three root READMEs use a `<picture>` element to select the appropriate SVG.
-- Each README supplies localized alternative text because the pinned Mermaid block-diagram grammar does not accept the generic accessibility directives.
+- Earlier README revisions used these assets; current entrypoints use Workkeel diagrams.
+- Historical localized versions remain available for compatibility documentation.
 
 Regenerate all six SVGs with the pinned authoring tool:
 
