@@ -1,16 +1,23 @@
-# Workkeel task contract — migration foundation
+# Workkeel task contract reference
 
-Workkeel is the selected next name and task-first direction of this framework.
-This first implementation is an **opt-in, read-only contract boundary**, not a
-completed lifecycle or package migration. Existing `temple` commands and guarded
-Work Items continue to operate unchanged. There is no `workkeel` executable yet.
+Workkeel provides an opt-in task-first lifecycle through the `workkeel` executable.
+See the [task-first quick start](../getting-started/workkeel.md) for initialization,
+canonical creation, claiming, delivery, distinct-Agent review and closeout.
+The renamed package is unreleased source; legacy `temple` commands and guarded
+Work Items remain available in legacy mode.
+
+This page describes the **read-only descriptor validator and legacy projection**
+originally introduced as the migration foundation. These inspection operations
+are separate from the current native lifecycle; validation alone never creates
+a task or authorizes its execution.
 
 ## What is implemented
 
 `workkeel.task-contract/v1` describes work without company titles or a manual
 list of generic AI skills. The executable schema and semantic validator are in
 `src/task-contract.mjs`. The existing CLI can validate a proposed local document
-or project an existing Work Item. Both operations are strictly read-only:
+or project an existing Work Item. In a legacy checkout, both operations below
+are strictly read-only:
 
 ```bash
 node ./templew.mjs work-item contract . --work-item WI-0001 --no-write --json
@@ -28,11 +35,17 @@ The input file must be repository-relative, valid UTF-8 JSON, a regular file no
 larger than 1 MiB, with no symlink components. Ordinary replacement/change while
 reading is rejected. This reader is not a hostile-filesystem sandbox.
 
-## Example without Positions
+## Descriptor-validation example without Positions
 
-The references below are illustrative: create and review the actual project
-policy and approval artifacts before attempting a future execution path. A
-well-formed filename is not proof that the approval exists or is current.
+This JSON illustrates a descriptor accepted by the standalone validator. It is
+**not a native task-create payload**: its build state and populated implementer
+describe progress that the create operation does not allow callers to fabricate.
+Use the complete intake example in the
+[task-first quick start](../getting-started/workkeel.md) when creating a task.
+
+The references below are illustrative. Create and review the actual project
+policy and approval artifacts before using the native lifecycle. A well-formed
+filename is not proof that the approval exists or is current.
 
 ```json
 {
@@ -117,7 +130,10 @@ This validator does not resolve dependencies, verify acceptance evidence, match 
 review to a candidate, authenticate approvals, measure model quality or implement
 lifecycle transitions. Done-state descriptors need evidence, a candidate revision
 and the declared reviewer fields, but passing those structural checks is not an
-acceptance judgment. Existing lifecycle gates remain the authority.
+acceptance judgment. Native task operations separately check the approved contract,
+dependencies, exact candidates, evidence and lifecycle transitions as described in
+the quick start. Legacy projects retain their existing lifecycle gates. Neither
+path authenticates a human merely from an attributed identity.
 
 ## Optional fixed gateway descriptor
 
@@ -149,9 +165,12 @@ and data policies still need approval and runtime enforcement.
 
 This is **configuration validation only**. No LiteLLM client, service installation,
 credential access, automatic router, provider call or working adapter integration
-is delivered here. The existing runtime/provider interfaces remain intact. Later
-work must explicitly qualify model/tool compatibility, start/resume/cancel,
-result reporting and boundary enforcement before a live-support claim.
+is delivered by this validator. The current runtime planner, described in the
+[task-first quick start](../getting-started/workkeel.md), can produce read-only
+native or fixed-gateway plans without launching a provider. Existing legacy
+runtime/provider interfaces remain intact. Live model/tool compatibility,
+start/resume/cancel, result reporting and host boundary enforcement still require
+explicit qualification before a live-support claim.
 
 ## Legacy compatibility
 
@@ -168,5 +187,10 @@ must be deliberately supplied; original gates, historical claims and full handof
 artifacts must be reviewed during migration. Native/host-owned execution is a
 suggested baseline, not a claim about the legacy task's actual runtime.
 
-Position-free canonical creation, claiming, delivery and closeout are not yet
-implemented. See the [migration decision](../adr/0071-workkeel-task-contract.md).
+Position-free canonical creation, claiming, delivery and closeout are now
+available in the opt-in native lifecycle. The
+[task-first quick start](../getting-started/workkeel.md) also documents explicit,
+fingerprint-bound migration for compatible quiescent Solo projects. Read-only
+projection does not perform that migration or waive its restrictions. The
+[original migration decision](../adr/0071-workkeel-task-contract.md) preserves
+the scope and limitations of the earlier foundation slice.

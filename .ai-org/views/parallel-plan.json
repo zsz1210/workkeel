@@ -1,21 +1,20 @@
 {
   "schema_version": "temple.parallel-plan/v1",
-  "generated_at": "2026-09-23T11:11:15.305Z",
-  "source_fingerprint": "d96cfe98111043f117eac788537db2342005dfb7ea5aa69ca117493697676179",
+  "generated_at": "2026-09-23T11:24:13.634Z",
+  "source_fingerprint": "a207b6c1b41a09c4738815f3384de7dbd6238e9c59778e2b5bb28ad4d52e8eaa",
   "scope": {
     "mode": "all-active",
     "parent_work_item_id": null,
     "selected_work_item_ids": [
-      "WI-0258",
       "WI-0259"
     ]
   },
   "max_workers": null,
   "summary": {
-    "selected": 2,
+    "selected": 1,
     "dispatchable": 1,
     "active": 0,
-    "sequential": 1,
+    "sequential": 0,
     "blocked": 0,
     "waves": 1
   },
@@ -25,23 +24,33 @@
       "order": 1,
       "dispatch": [
         {
-          "work_item_id": "WI-0258",
-          "title": "Implement the Workkeel task-first lifecycle",
+          "work_item_id": "WI-0259",
+          "title": "Rename and reframe the public Workkeel framework",
           "position_id": "quality_evaluator",
           "agent_id": "agent-lulu",
           "agent_name": "Lulu",
-          "suggested_task_title": "WI-0258 · Implemen… · Quality & Evaluation Engineer (Lulu)",
+          "suggested_task_title": "WI-0259 · Rename a… · Quality & Evaluation Engineer (Lulu)",
           "base_revision": "6bb9c98e25fe6056621ba4189ce0ed640e8f4438",
           "affected_paths": [
-            "src",
-            "bin",
-            "test/workkeel-lifecycle.test.mjs",
-            "test/workkeel-runtime.test.mjs",
-            "docs",
-            "scripts/check-package.mjs",
+            "README.md",
+            "README.zh-TW.md",
+            "README.ja.md",
             "package.json",
             "package-lock.json",
-            ".ai-org/project/domain-glossary.md"
+            "src/constants.mjs",
+            "src/bootstrap.mjs",
+            "src/workkeel-project.mjs",
+            "src/cli.mjs",
+            "test/workflow.test.mjs",
+            "test/workkeel-branding.test.mjs",
+            "docs",
+            "CONTRIBUTING.md",
+            "GOVERNANCE.md",
+            "SECURITY.md",
+            "CODE_OF_CONDUCT.md",
+            "CHANGELOG.md",
+            "AGENTS.md",
+            ".github/ISSUE_TEMPLATE"
           ],
           "dependencies": [],
           "required_disciplines": [],
@@ -50,9 +59,9 @@
             "disciplines": [],
             "resources": []
           },
-          "preparation_fingerprint": "7c4bfb6b0b9b261fd23913094218c75e78b7ba7c3af948de2dc965700551c384",
+          "preparation_fingerprint": "1c553d6363a42466a1763e6480f99c155b620e905113b1456a797f91e9ae4d17",
           "integration_owner_agent_id": "agent-mog",
-          "context_command": "node ./templew.mjs context resolve . --work-item WI-0258 --position quality_evaluator --no-write --json",
+          "context_command": "node ./templew.mjs context resolve . --work-item WI-0259 --position quality_evaluator --no-write --json",
           "claim_required_before_work": true,
           "task_registration_required_after_creation": true,
           "task_creation_performed": false,
@@ -74,58 +83,9 @@
     }
   ],
   "active": [],
-  "sequential": [
-    {
-      "work_item_id": "WI-0259",
-      "title": "Rename and reframe the public Workkeel framework",
-      "disposition": "sequential",
-      "position_id": "quality_evaluator",
-      "agent_id": "agent-lulu",
-      "integration_owner_agent_id": "agent-mog",
-      "reasons": [
-        "requested_mode_sequential"
-      ]
-    }
-  ],
+  "sequential": [],
   "blocked": [],
-  "conflicts": [
-    {
-      "kind": "affected-path",
-      "left_work_item_id": "WI-0258",
-      "right_work_item_id": "WI-0259",
-      "paths": [
-        {
-          "left_path": "src",
-          "right_path": "src/constants.mjs"
-        },
-        {
-          "left_path": "src",
-          "right_path": "src/bootstrap.mjs"
-        },
-        {
-          "left_path": "src",
-          "right_path": "src/workkeel-project.mjs"
-        },
-        {
-          "left_path": "src",
-          "right_path": "src/cli.mjs"
-        },
-        {
-          "left_path": "docs",
-          "right_path": "docs"
-        },
-        {
-          "left_path": "package.json",
-          "right_path": "package.json"
-        },
-        {
-          "left_path": "package-lock.json",
-          "right_path": "package-lock.json"
-        }
-      ],
-      "resolution": "explicit-bidirectional"
-    }
-  ],
+  "conflicts": [],
   "execution_policy": {
     "parallel_by_default_when_safe": true,
     "runtime_capacity_limit": null,
