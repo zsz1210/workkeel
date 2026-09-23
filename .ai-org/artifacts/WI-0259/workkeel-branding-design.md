@@ -36,6 +36,13 @@ separate explicit old-name fixture preserves backward-compatibility coverage.
 Run documentation/package checks and exact-candidate full verification, then
 independent review. No test runner edits or test removal.
 
+Full verification exposed one additional naming impact in
+`scripts/validate-agent-led-onboarding.mjs`: its installed CLI path hard-codes the
+old scoped package segments. Within this same approved rename scope, derive that
+path from the already-read source package name and legacy bin entry. Preserve the
+other task's offline lock/install logic and every onboarding assertion. This is
+an affected compatibility-harness path, not test-suite slimming or a weaker gate.
+
 ## Risk and rollback
 
 Main risks: broken old pins, misleading installation commands, stale links,
