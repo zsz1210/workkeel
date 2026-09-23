@@ -6,7 +6,7 @@
   "owner_position": "developer",
   "assigned_agent_id": "agent-rikku",
   "created_at": "2026-09-23T07:07:40.621Z",
-  "updated_at": "2026-09-23T10:14:26.507Z",
+  "updated_at": "2026-09-23T10:22:35.284Z",
   "scope": [
     "Evaluate the current test inventory, remove or merge only evidence-backed duplication, reduce routine execution time and success-output volume, and preserve regression, authority, recovery, security, failure diagnostics, and full release verification boundaries."
   ],
@@ -48,18 +48,20 @@
   "dependencies": [],
   "required_disciplines": [],
   "stage_requirements": {},
-  "base_revision": "b0fe9161f654a17aaeefd53373770249efee0ceb",
-  "parallel_mode": "pending",
-  "integration_owner_agent_id": null,
+  "base_revision": "6676b5a24116a31b4c13cbdbaad3880c6f36d4fe",
+  "parallel_mode": "sequential",
+  "integration_owner_agent_id": "agent-rikku",
   "planned_agent_id": null,
   "shared_contract_refs": [],
   "contract_status": "not_required",
-  "overlap_resolution": [],
+  "overlap_resolution": [
+    "WI-0258 separate worktree and product slice; WI-0253 retains existing test runner files; full-suite windows coordinated"
+  ],
   "claim": {
-    "id": "claim-20260923101416-14aa5ede",
-    "status": "released",
+    "id": "claim-20260923102235-9665f137",
+    "status": "active",
     "principal_id": "human",
-    "agent_id": "agent-lulu",
+    "agent_id": "agent-rikku",
     "actor_provenance": {
       "selection": "explicit-agent",
       "principal_source": "explicit-principal",
@@ -68,13 +70,12 @@
       "provider_authenticated": false,
       "externally_supplied_evidence": false
     },
-    "position_id": "quality_evaluator",
-    "base_revision": "b0fe9161f654a17aaeefd53373770249efee0ceb",
+    "position_id": "developer",
+    "base_revision": "6676b5a24116a31b4c13cbdbaad3880c6f36d4fe",
     "branch": "codex/fix-test-harness-baselines",
     "worktree": "/Users/zsz1210/Documents/Codex/2026-09-23/temple-test-slimming/work/temple-test-baseline-fixes",
-    "claimed_at": "2026-09-23T10:14:16.884Z",
-    "released_at": "2026-09-23T10:14:26.507Z",
-    "release_reason": "review_rework"
+    "claimed_at": "2026-09-23T10:22:35.284Z",
+    "released_at": null
   },
   "claims": [
     {
@@ -143,6 +144,26 @@
       "claimed_at": "2026-09-23T10:14:16.884Z",
       "released_at": "2026-09-23T10:14:26.507Z",
       "release_reason": "review_rework"
+    },
+    {
+      "id": "claim-20260923102235-9665f137",
+      "status": "active",
+      "principal_id": "human",
+      "agent_id": "agent-rikku",
+      "actor_provenance": {
+        "selection": "explicit-agent",
+        "principal_source": "explicit-principal",
+        "verification_class": "attributed",
+        "evidence_ref": null,
+        "provider_authenticated": false,
+        "externally_supplied_evidence": false
+      },
+      "position_id": "developer",
+      "base_revision": "6676b5a24116a31b4c13cbdbaad3880c6f36d4fe",
+      "branch": "codex/fix-test-harness-baselines",
+      "worktree": "/Users/zsz1210/Documents/Codex/2026-09-23/temple-test-slimming/work/temple-test-baseline-fixes",
+      "claimed_at": "2026-09-23T10:22:35.284Z",
+      "released_at": null
     }
   ],
   "gate_evidence": {

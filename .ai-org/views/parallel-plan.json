@@ -1,7 +1,7 @@
 {
   "schema_version": "temple.parallel-plan/v1",
-  "generated_at": "2026-09-23T10:16:30.555Z",
-  "source_fingerprint": "3af343d3f65034dd25959d6bb230ffb04619199f7e5b1582bce1f98d4f69cdc6",
+  "generated_at": "2026-09-23T10:22:34.024Z",
+  "source_fingerprint": "06455bd15fe82b98e7ea7c27ab066e3ed1037bfd5b9457042bde3de377a82fa7",
   "scope": {
     "mode": "all-active",
     "parent_work_item_id": null,
@@ -43,9 +43,9 @@
       "disposition": "sequential",
       "position_id": "developer",
       "agent_id": "agent-rikku",
-      "integration_owner_agent_id": null,
+      "integration_owner_agent_id": "agent-rikku",
       "reasons": [
-        "integration_owner_assigned"
+        "requested_mode_sequential"
       ]
     }
   ],
