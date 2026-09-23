@@ -2,7 +2,7 @@
 
 ## Our pledge
 
-We as members, contributors, and leaders pledge to make participation in the Temple community a harassment-free experience for everyone, regardless of age, body size, visible or invisible disability, ethnicity, sex characteristics, gender identity and expression, level of experience, education, socio-economic status, nationality, personal appearance, race, caste, color, religion, or sexual identity and orientation.
+We as members, contributors, and leaders pledge to make participation in the Workkeel community a harassment-free experience for everyone, regardless of age, body size, visible or invisible disability, ethnicity, sex characteristics, gender identity and expression, level of experience, education, socio-economic status, nationality, personal appearance, race, caste, color, religion, or sexual identity and orientation.
 
 We pledge to act and interact in ways that contribute to an open, welcoming, diverse, inclusive, and healthy community.
 
@@ -32,13 +32,13 @@ The maintainer may remove, edit, or reject comments, commits, code, wiki edits, 
 
 ## Scope
 
-This Code of Conduct applies in all Temple community spaces. It also applies when someone officially represents the project in public, including through an official email address, social account, or online or offline event.
+This Code of Conduct applies in all Workkeel community spaces. It also applies when someone officially represents the project in public, including through an official email address, social account, or online or offline event.
 
 ## Reporting and enforcement
 
 Report abusive, harassing, or otherwise unacceptable behavior privately to `zsz1210+oss.temple@gmail.com` with the subject prefix `[Temple][CONDUCT]`. Do not include conduct reports or another person's private information in a public GitHub issue.
 
-The current maintainer monitors this project-scoped address. Reports will be reviewed privately, fairly, and as promptly as project capacity allows. The reporter's privacy and security will be respected. Temple is an early Alpha project and does not promise a response-time SLA.
+The legacy address and subject prefix are intentionally retained after the Workkeel rename. The current maintainer monitors this project-scoped address. Reports will be reviewed privately, fairly, and as promptly as project capacity allows. The reporter's privacy and security will be respected. Workkeel is an early Alpha project and does not promise a response-time SLA.
 
 ## Community impact guidelines
 
@@ -66,10 +66,10 @@ The maintainer will use these guidelines when determining consequences for behav
 
 **Community impact:** A pattern of violating community standards, including sustained inappropriate behavior, harassment, or aggression toward or disparagement of groups of people.
 
-**Consequence:** A permanent ban from public interaction within the Temple community.
+**Consequence:** A permanent ban from public interaction within the Workkeel community.
 
 ## Attribution and license
 
 This Code of Conduct is adapted from the [Contributor Covenant, version 2.1](https://www.contributor-covenant.org/version/2/1/code_of_conduct/). Its Community Impact Guidelines were inspired by [Mozilla's code of conduct enforcement ladder](https://github.com/mozilla/diversity).
 
-The adapted Code of Conduct text is available under the [Creative Commons Attribution 4.0 International license](https://creativecommons.org/licenses/by/4.0/). Temple's software remains licensed separately under the repository's [MIT License](LICENSE).
+The adapted Code of Conduct text is available under the [Creative Commons Attribution 4.0 International license](https://creativecommons.org/licenses/by/4.0/). Workkeel's software remains licensed separately under the repository's [MIT License](LICENSE).

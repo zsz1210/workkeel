@@ -16,27 +16,29 @@
     ".ai-org/project/domain-glossary.md"
   ],
   "assigned_agent_id": "agent-rikku",
-  "base_revision": "3dfb3094716b207cfc0c33a411ee7c506ba7dccf",
+  "base_revision": "fa1491f3",
   "claim": {
-    "actor_provenance": {
-      "evidence_ref": null,
-      "externally_supplied_evidence": false,
-      "principal_source": "explicit-principal",
-      "provider_authenticated": false,
-      "selection": "explicit-agent",
-      "verification_class": "attributed"
-    },
-    "agent_id": "agent-lulu",
-    "base_revision": "3dfb3094716b207cfc0c33a411ee7c506ba7dccf",
-    "branch": "codex/workkeel-reframe",
-    "claimed_at": "2026-09-23T10:37:38.147Z",
-    "id": "claim-20260923103738-49abc3e0",
-    "position_id": "quality_evaluator",
-    "principal_id": "human",
-    "release_reason": "review_rework",
-    "released_at": "2026-09-23T10:47:47.344Z",
+    "id": "claim-20260923105005-acff4d8f",
     "status": "released",
-    "worktree": "."
+    "principal_id": "human",
+    "agent_id": "agent-rikku",
+    "actor_provenance": {
+      "selection": "explicit-agent",
+      "principal_source": "explicit-principal",
+      "verification_class": "attributed",
+      "evidence_ref": null,
+      "provider_authenticated": false,
+      "externally_supplied_evidence": false
+    },
+    "position_id": "developer",
+    "base_revision": "fa1491f3",
+    "branch": "codex/workkeel-reframe",
+    "worktree": ".",
+    "claimed_at": "2026-09-23T10:50:05.441Z",
+    "released_at": "2026-09-23T10:55:43.474Z",
+    "release_reason": [
+      "Migration repair implemented and focused tests pass; remaining sequential branding owns this checkout until joint candidate verification, then Developer will reclaim for exact handoff."
+    ]
   },
   "claims": [
     {
@@ -82,6 +84,29 @@
       "released_at": "2026-09-23T10:47:47.344Z",
       "status": "released",
       "worktree": "."
+    },
+    {
+      "id": "claim-20260923105005-acff4d8f",
+      "status": "released",
+      "principal_id": "human",
+      "agent_id": "agent-rikku",
+      "actor_provenance": {
+        "selection": "explicit-agent",
+        "principal_source": "explicit-principal",
+        "verification_class": "attributed",
+        "evidence_ref": null,
+        "provider_authenticated": false,
+        "externally_supplied_evidence": false
+      },
+      "position_id": "developer",
+      "base_revision": "fa1491f3",
+      "branch": "codex/workkeel-reframe",
+      "worktree": ".",
+      "claimed_at": "2026-09-23T10:50:05.441Z",
+      "released_at": "2026-09-23T10:55:43.474Z",
+      "release_reason": [
+        "Migration repair implemented and focused tests pass; remaining sequential branding owns this checkout until joint candidate verification, then Developer will reclaim for exact handoff."
+      ]
     }
   ],
   "context_refs": [],
@@ -134,11 +159,10 @@
   "integration_owner_agent_id": "agent-mog",
   "next_position": "quality_evaluator",
   "overlap_resolution": [
-    "WI-0253: independent worktree and metadata-only QA; no existing test runner or test edits, full-suite timing coordinated",
-    "WI-0256: independent worktree and new focused files only; no shared harness edits or concurrent full suite"
+    "WI-0259: same implementer in one isolated worktree; finish migration repair before branding; shared final candidate and full verification, independent reviewer judges both scopes"
   ],
   "owner_position": "developer",
-  "parallel_mode": "parallel",
+  "parallel_mode": "sequential",
   "parent_work_item_id": null,
   "planned_agent_id": null,
   "profile_assessment": {
@@ -209,7 +233,7 @@
   "ui_delivery_mode": "not-applicable",
   "ui_refs": [],
   "unresolved": [],
-  "updated_at": "2026-09-23T10:47:47.344Z",
+  "updated_at": "2026-09-23T10:55:43.474Z",
   "ux_refs": [],
   "workflow_profile": "standard"
 }

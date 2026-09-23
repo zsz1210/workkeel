@@ -65,17 +65,22 @@ export async function readNativeTask(target, id) {
   return input.document;
 }
 export async function listTaskItems(target) {
-  await readTaskProject(target);
+  const project = await readTaskProject(target);
   if (!await existsEntry(target, ".ai-org/work-items")) return [];
   const dir = await safeDirectory(target, ".ai-org/work-items");
   const items = [];
   for (const entry of (await fs.readdir(dir)).sort()) {
+    if (entry === "README.md") {
+      const pin = project.legacy_manifest?.find(p => p.path === ".ai-org/work-items/README.md");
+      if (!pin) throw new Error("Unregistered legacy documentation in task-first store");
+      await assertPins(target, [pin]);
+      continue;
+    }
     if (!entry.endsWith(".json")) throw new Error("Unexpected file in task store");
     const id = entry.slice(0, -5);
     const { document: item } = await readTaskContractInput(target, fileRef(id));
     if (item.schema_version === "temple.work-item/v1") {
       if (item.id !== id) throw new Error("Legacy task ID differs from its filename");
-      const project = await readTaskProject(target);
       const pin = project.legacy_manifest?.find(p => p.path === fileRef(id));
       if (!pin) throw new Error("Unregistered legacy record in task-first store");
       await assertPins(target, [pin]);

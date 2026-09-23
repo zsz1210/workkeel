@@ -209,6 +209,48 @@ test("CLI init/create/claim and concurrent retries share the canonical task path
   await assert.rejects(readNativeTask(root, "WK-one"), /recorded operation/);
 });
 
+test("real legacy initialization migrates its pinned README without treating it as a task", async t => {
+  const root = await fixture(t, { init: false });
+  const config = fileURLToPath(new URL("../docs/getting-started/temple-init.example.json", import.meta.url));
+  const initialized = spawnSync(process.execPath, [legacyCli, "init", root, "--config", config, "--json"], { encoding: "utf8" });
+  assert.equal(initialized.status, 0, initialized.stderr);
+  const snapshot = async (directory = root) => {
+    const found = new Map();
+    for (const entry of await fs.readdir(directory, { withFileTypes: true })) {
+      if (entry.name === ".git") continue;
+      const file = path.join(directory, entry.name);
+      if (entry.isDirectory()) for (const [ref, bytes] of await snapshot(file)) found.set(ref, bytes);
+      else found.set(file, await fs.readFile(file));
+    }
+    return found;
+  };
+  const before = await snapshot();
+  const readme = path.join(root, ".ai-org/work-items/README.md");
+  const preview = await previewLegacyMigration(root, policy());
+  assert.deepEqual(await snapshot(), before, "preview writes nothing");
+  await fs.writeFile(readme, "Changed after preview");
+  await assert.rejects(initializeTaskProject(root, policy(), { migrationFingerprint: preview.fingerprint }), /Stale/);
+  await fs.writeFile(readme, before.get(readme));
+  const unexpected = path.join(root, ".ai-org/work-items/helper.mjs");
+  await fs.writeFile(unexpected, "Unrecognized store entry");
+  await assert.rejects(previewLegacyMigration(root, policy()), /Unexpected/);
+  await fs.unlink(unexpected);
+  await fs.unlink(readme); await fs.symlink("../../../../outside.md", readme);
+  await assert.rejects(previewLegacyMigration(root, policy()), /symlink/);
+  await fs.unlink(readme); await fs.writeFile(readme, before.get(readme));
+  const result = await initializeTaskProject(root, policy(), { migrationFingerprint: preview.fingerprint });
+  assert.equal(result.migrated_legacy_records, 0);
+  for (const [ref, bytes] of before) assert.deepEqual(await fs.readFile(ref), bytes);
+  const doctor = spawnSync(process.execPath, [path.join(root, "workkeelw.mjs"), "doctor", root], {
+    encoding: "utf8", env: { ...process.env, WORKKEEL_CLI_PATH: cli }
+  });
+  assert.equal(doctor.status, 0, doctor.stderr); assert.equal(JSON.parse(doctor.stdout).valid, true);
+  assert.deepEqual(await listTaskItems(root), []);
+  await fs.writeFile(readme, "Modified history");
+  await assert.rejects(listTaskItems(root), /changed/);
+  assert.equal((await diagnoseTaskProject(root)).valid, false);
+});
+
 test("artifact code, stale dependency evidence and unintegrated dependencies cannot pass acceptance", async t => {
   const root = await fixture(t);
   const helper = ".ai-org/artifacts/WK-one/helper.mjs";

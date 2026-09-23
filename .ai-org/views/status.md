@@ -3,8 +3,8 @@
 - Project ID: `temple`
 - Organization system version: `0.1.0-alpha.33`
 - Active Agent Identities: 5
-- Collaboration profile: `solo` (0 Human Principals, 0 active claims)
-- Parallel plan: 1 wave(s), fresh=true
+- Collaboration profile: `solo` (0 Human Principals, 1 active claims)
+- Parallel plan: 0 wave(s), fresh=true
 - Work items: 259 total, 2 active
 - Codex tasks: 14 registered, 14 archive-ready
 - Runtime workers: 106 registered, 0 reserved, 0 active
@@ -27,7 +27,7 @@
 - Human Principals: 0
 - Agent sponsorships: 0
 - Active Position memberships: 10
-- Active Work Item claims: 0
+- Active Work Item claims: 1
 - Active Human Authority Grants: 0
 - Governance recovery: `not_configured`
 - Real Collaborative validation: `not_run` (.ai-org/templates/collaborative-large-scale-test-plan.md)
@@ -38,10 +38,10 @@
 - Installed: yes
 - Valid: yes
 - Fresh: yes
-- Safe waves: 1
-- Dispatchable Work Items: 1
-- Active / sequential / blocked: 0 / 1 / 0
-- Next wave: WI-0258
+- Safe waves: 0
+- Dispatchable Work Items: 0
+- Active / sequential / blocked: 1 / 1 / 0
+- Next wave: none
 - Codex tasks, claims, or external actions performed by planning: no
 
 ## Work items
@@ -305,15 +305,15 @@
 | WI-0255 | Define Workkeel task and execution contracts | done | Engineering Manager | Mog | sequential | team-visible | 0 | gate-evidence | not-applicable | 0 | 0 | 0 | — | `8165774f` | 0 | 7 | 0 |
 | WI-0256 | Qualify baseline test harness repair | done | Engineering Manager | Mog | sequential | internal | 0 | gate-evidence | not-applicable | 0 | 0 | 0 | — | `4ac435d8` | 0 | 5 | 0 |
 | WI-0257 | Deliver the role-free Workkeel lifecycle and runtime connection boundary | cancelled | Engineering Manager | Mog | sequential | team-visible | 0 | gate-evidence | not-applicable | 0 | 0 | 0 | — | `—` | 0 | 2 | 0 |
-| WI-0258 | Implement the Workkeel task-first lifecycle | build | Developer | Rikku | parallel | team-visible | 0 | gate-evidence | not-applicable | 0 | 0 | 0 | — | `—` | 0 | 3 | 0 |
-| WI-0259 | Rename and reframe the public Workkeel framework | build | Developer | Rikku | sequential | team-visible | 0 | gate-evidence | not-applicable | 0 | 0 | 0 | — | `—` | 0 | 1 | 0 |
+| WI-0258 | Implement the Workkeel task-first lifecycle | build | Developer | Rikku | sequential | team-visible | 0 | gate-evidence | not-applicable | 0 | 0 | 0 | — | `—` | 0 | 3 | 0 |
+| WI-0259 | Rename and reframe the public Workkeel framework | build | Developer | Rikku | sequential | team-visible | 0 | gate-evidence | not-applicable | 0 | 0 | 0 | claim-20260923105005-8f8d4e92 | `—` | 0 | 1 | 0 |
 
 ## Delivery attention
 
 - WI-0258: awaiting-owner — Have the eligible owner claim or resume the next scoped responsibility.
   - owner: No active eligible ownership claim is recorded.
-- WI-0259: awaiting-owner — Have the eligible owner claim or resume the next scoped responsibility.
-  - owner: No active eligible ownership claim is recorded.
+- WI-0259: awaiting-owner — The recorded owner can continue the scoped work; no attached active worker is recorded.
+  - owner: No attached active runtime is recorded for this claim.
 
 ## Codex task registry
 
@@ -557,14 +557,14 @@
 
 | Time | Event | Work item | Actor |
 |---|---|---|---|
+| 2026-09-23T10:55:43.474Z | work_item_claim_released | WI-0258 | human |
+| 2026-09-23T10:50:05.976Z | work_item_claimed | WI-0259 | human |
+| 2026-09-23T10:50:05.441Z | work_item_claimed | WI-0258 | human |
+| 2026-09-23T10:50:04.852Z | work_item_coordination_configured | WI-0258 | agent-rikku |
 | 2026-08-30T09:17:37.867Z | runtime_worker_reserved | WI-0026 | project-owner |
 | 2026-08-30T09:17:37.551Z | runtime_worker_reserved | WI-0025 | project-owner |
 | 2026-08-30T09:11:23.500Z | runtime_worker_reserved | WI-0025 | project-owner |
 | 2026-08-30T09:11:23.831Z | runtime_worker_reserved | WI-0026 | project-owner |
-| 2026-08-30T09:01:03.015Z | runtime_worker_reserved | WI-0026 | project-owner |
-| 2026-08-30T09:01:02.738Z | runtime_worker_reserved | WI-0025 | project-owner |
-| 2026-08-30T08:44:54.577Z | runtime_worker_reserved | WI-0025 | project-owner |
-| 2026-08-30T08:44:54.849Z | runtime_worker_reserved | WI-0026 | project-owner |
 
 ## Assignments
 

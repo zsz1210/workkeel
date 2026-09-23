@@ -7,9 +7,9 @@ import Ajv from "ajv";
 import { assertSafeTarget, durableAtomicCreate, formatJson, sha256 } from "./files.mjs";
 import { withProjectMutationLock } from "./project.mjs";
 import { readTaskContractInput, readTaskFile } from "./task-contract.mjs";
-import { TEMPLATE_VERSION } from "./constants.mjs";
+import { PACKAGE_NAME, TEMPLATE_VERSION } from "./constants.mjs";
 
-export const WORKKEEL_PACKAGE = "@zsz1210/workkeel";
+export const WORKKEEL_PACKAGE = PACKAGE_NAME;
 export const TASK_PROJECT_SCHEMA = "workkeel.project/v1";
 const exec = promisify(execFile);
 async function assertGitRoot(target) {
@@ -101,6 +101,13 @@ export async function previewLegacyMigration(target, policy) {
   }
   const manifest = [];
   for (const entry of (await fs.readdir(directory)).sort()) {
+    // Legacy init installs this explanatory file beside records. Preserve and
+    // pin it as history, never parse it as a task or ignore arbitrary entries.
+    if (entry === "README.md") {
+      const ref = `.ai-org/work-items/${entry}`;
+      manifest.push({ path: ref, sha256: (await readTaskFile(target, ref)).digest });
+      continue;
+    }
     if (!entry.endsWith(".json")) throw new Error("Unexpected entry in legacy Work Item store");
     const ref = `.ai-org/work-items/${entry}`;
     const { document: item, digest } = await readTaskContractInput(target, ref);
@@ -151,7 +158,7 @@ export async function initializeTaskProject(targetInput, policy, { migrationFing
       for (const file of created.reverse()) if ((await readTaskFile(target, file.ref)).digest === file.digest) await fs.unlink(path.join(target, file.ref));
       throw error;
     }
-    return { schema_version: TASK_PROJECT_SCHEMA, initialized: true, mode: "task-first", migrated_legacy_records: manifest?.filter(e => e.path.startsWith(".ai-org/work-items/")).length ?? 0,
+    return { schema_version: TASK_PROJECT_SCHEMA, initialized: true, mode: "task-first", migrated_legacy_records: manifest?.filter(e => e.path.startsWith(".ai-org/work-items/") && e.path.endsWith(".json")).length ?? 0,
       execution_authorized: false, boundary_enforcement: "host-responsibility" };
   });
 }

@@ -1,4 +1,5 @@
 import path from "node:path";
+import { lstat } from "node:fs/promises";
 import process from "node:process";
 import readline from "node:readline/promises";
 import { stdin as input, stdout as output } from "node:process";
@@ -3297,8 +3298,11 @@ async function dispatch(argv) {
     return 0;
   }
   // A migrated project must never fall through to Position-based writers.
-  const { existsEntry } = await import("./workkeel-project.mjs");
-  if (await existsEntry(path.resolve(parsed.target ?? "."), "workkeel.lock")) {
+  const taskPin = await lstat(path.resolve(parsed.target ?? ".", "workkeel.lock")).catch(error => {
+    if (error.code === "ENOENT") return null;
+    throw error;
+  });
+  if (taskPin) {
     throw new Error("This project uses Workkeel task-first mode; use its pinned workkeelw.mjs launcher");
   }
   if (parsed.command === "chamber") {

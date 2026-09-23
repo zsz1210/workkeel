@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { TEMPLATE_VERSION } from "../src/constants.mjs";
+import { PACKAGE_NAME, TEMPLATE_VERSION } from "../src/constants.mjs";
 import crypto from "node:crypto";
 import fs from "node:fs/promises";
 import os from "node:os";
@@ -1460,7 +1460,7 @@ test("upgrade migrates legacy identity and safely removes obsolete managed skill
   const upgraded = run(["upgrade", target]);
   assert.equal(upgraded.status, 0, upgraded.stderr || upgraded.stdout);
   const upgradedLock = await fs.readFile(lockPath, "utf8");
-  assert.equal(JSON.parse(upgradedLock).template.name, "@zsz1210/temple-ai-dev-org");
+  assert.equal(JSON.parse(upgradedLock).template.name, PACKAGE_NAME);
   assert.equal(JSON.parse(upgradedLock).template.version, TEMPLATE_VERSION);
   assert.equal(JSON.parse(upgradedLock).capabilities.group_parallel_planning, true);
   assert.equal(JSON.parse(upgradedLock).capabilities.parallel_plan_freshness, true);

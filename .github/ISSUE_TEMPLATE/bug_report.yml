@@ -1,5 +1,5 @@
 name: Bug report
-description: Report a reproducible Temple defect with synthetic, non-sensitive evidence.
+description: Report a reproducible Workkeel defect with synthetic, non-sensitive evidence.
 title: "[Bug]: "
 labels:
   - bug
@@ -35,7 +35,7 @@ body:
   - type: input
     id: version
     attributes:
-      label: Temple version or commit
+      label: Workkeel version or commit (include task-first or legacy mode)
       placeholder: 0.1.0-alpha.x or a full Git revision
     validations:
       required: true
@@ -43,7 +43,7 @@ body:
     id: node
     attributes:
       label: Node.js version
-      placeholder: v22.x or v24.x
+      placeholder: v24.x or later
     validations:
       required: true
   - type: dropdown

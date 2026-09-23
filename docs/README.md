@@ -1,6 +1,13 @@
-# Temple documentation
+# Workkeel documentation
 
-The root README explains what Temple is and why it exists. This index routes implementation, adoption, and evidence questions to one authoritative document without making the public entry point carry the framework's history.
+Start with the [Workkeel task-first guide](getting-started/workkeel.md) for new
+projects without company Positions. The [task contract](concepts/task-contract.md)
+defines task, authority, environment and model-connection boundaries.
+
+Most of the detailed catalog below documents the retained **Temple compatibility
+mode**. Its organization, Console, capability-routing and assurance setup is not
+required by task-first projects. Historical ADRs and validation records retain
+their original names and revision-specific claims; they do not qualify new behavior.
 
 ## Start with your goal
 
@@ -10,6 +17,7 @@ a general small-code-change or Independent QA shortcut.
 
 | I want to… | Start here | Continue with |
 |---|---|---|
+| Start a task-first Workkeel project | [Task-first quick start](getting-started/workkeel.md) | [Task contract](concepts/task-contract.md), [Lifecycle decision](adr/0072-task-first-lifecycle.md) |
 | Evaluate the framework | [Vision and operating model](concepts/vision.md) | [Architecture](concepts/architecture.md), [Roadmap](planning/roadmap.md) |
 | Understand Temple terms or the `$name` methods used in prompts | [Temple terminology](concepts/terminology.md) | [Temple Core Skills](getting-started/core-skills.md), [Capability catalog](extensions/capability-catalog.md) |
 | Complete the first Work Item | [Core Path](getting-started/core-path.md) | [Usage guide](getting-started/usage.md), [Workflow profiles](concepts/workflow-profiles.md) |
@@ -37,6 +45,7 @@ a general small-code-change or Independent QA shortcut.
 
 ### Getting started
 
+- [Task-first quick start](getting-started/workkeel.md) — the current Workkeel source path; role-free tasks, exact evidence, explicit migration and read-only runtime plans.
 - [Core Path](getting-started/core-path.md) — the shortest Console-free journey from an initialized project to a closed Work Item.
 - [Usage guide](getting-started/usage.md) — initialize, adopt, operate, self-host, upgrade, and troubleshoot.
 - [Temple Core Skills](getting-started/core-skills.md) — human-facing triggers, outcomes, examples, and authority limits for the six repository Core Skills.

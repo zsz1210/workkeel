@@ -5,6 +5,14 @@
 Changes on `main` after Alpha.33; these are not included in the published
 `0.1.0-alpha.33` npm package. Merging does not publish a new version.
 
+- Renamed development-source branding and package metadata to Workkeel
+  (`@zsz1210/workkeel`), retaining exact legacy package pins, commands and schemas.
+  No Workkeel npm release is implied by this rename.
+- Added opt-in task-first initialization and role-free lifecycle records, scoped
+  approval, dependencies, exact-candidate handoff, distinct review and rework.
+  Explicit quiescent Solo migration preserves legacy records and explanatory files.
+- Separated runtime and model connection declarations. Fixed gateway configuration
+  currently produces read-only plans; live LiteLLM and automatic launch are unverified.
 - Added optional compact reading of saved test logs and JSON, with failure details,
   limitations and digest-bound original readback.
 - Added an opt-in, pinned Headroom tool-output adapter with exact snapshots,

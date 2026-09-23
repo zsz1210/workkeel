@@ -1,7 +1,7 @@
 {
   "schema_version": "temple.parallel-plan/v1",
-  "generated_at": "2026-09-23T10:49:31.867Z",
-  "source_fingerprint": "d88a07772119358070403c63bf744bdcd72e299167acd1fb758ec0100048b996",
+  "generated_at": "2026-09-23T10:55:44.102Z",
+  "source_fingerprint": "8abfbf9fee071b59c52416064adaf24c26f1225f61f86cc0600e3deb7f38f3d0",
   "scope": {
     "mode": "all-active",
     "parent_work_item_id": null,
@@ -13,71 +13,33 @@
   "max_workers": null,
   "summary": {
     "selected": 2,
-    "dispatchable": 1,
-    "active": 0,
+    "dispatchable": 0,
+    "active": 1,
     "sequential": 1,
     "blocked": 0,
-    "waves": 1
+    "waves": 0
   },
-  "waves": [
-    {
-      "id": "wave-001",
-      "order": 1,
-      "dispatch": [
-        {
-          "work_item_id": "WI-0258",
-          "title": "Implement the Workkeel task-first lifecycle",
-          "position_id": "developer",
-          "agent_id": "agent-rikku",
-          "agent_name": "Rikku",
-          "suggested_task_title": "WI-0258 · Implement the Workkeel task… · Developer (Rikku)",
-          "base_revision": "3dfb3094716b207cfc0c33a411ee7c506ba7dccf",
-          "affected_paths": [
-            "src",
-            "bin",
-            "test/workkeel-lifecycle.test.mjs",
-            "test/workkeel-runtime.test.mjs",
-            "docs",
-            "scripts/check-package.mjs",
-            "package.json",
-            "package-lock.json",
-            ".ai-org/project/domain-glossary.md"
-          ],
-          "dependencies": [],
-          "required_disciplines": [],
-          "active_requirements": {
-            "stage": "build",
-            "disciplines": [],
-            "resources": []
-          },
-          "preparation_fingerprint": "48d742b1b2c5589c19b0c02dd8274143aafdd55f07df7f89c2f233b1bf1005f1",
-          "integration_owner_agent_id": "agent-mog",
-          "context_command": "node ./templew.mjs context resolve . --work-item WI-0258 --position developer --no-write --json",
-          "claim_required_before_work": true,
-          "task_registration_required_after_creation": true,
-          "task_creation_performed": false,
-          "claim_performed": false,
-          "external_action_performed": false
-        }
-      ],
-      "join_gate": {
-        "integration_owner_agent_ids": [
-          "agent-mog"
-        ],
-        "required_evidence": [
-          "exact_candidate_revision",
-          "verification_results",
-          "unresolved_items"
-        ],
-        "rule": "Join every dispatched Work Item through its Integration Owner before dispatching dependent work or advancing the lifecycle."
-      }
-    }
-  ],
-  "active": [],
-  "sequential": [
+  "waves": [],
+  "active": [
     {
       "work_item_id": "WI-0259",
       "title": "Rename and reframe the public Workkeel framework",
+      "disposition": "active",
+      "position_id": "developer",
+      "agent_id": "agent-rikku",
+      "integration_owner_agent_id": "agent-mog",
+      "reasons": [],
+      "claim_id": "claim-20260923105005-8f8d4e92",
+      "principal_id": "human",
+      "branch": "codex/workkeel-reframe",
+      "worktree": ".",
+      "base_revision": "fa1491f3"
+    }
+  ],
+  "sequential": [
+    {
+      "work_item_id": "WI-0258",
+      "title": "Implement the Workkeel task-first lifecycle",
       "disposition": "sequential",
       "position_id": "developer",
       "agent_id": "agent-rikku",
@@ -123,7 +85,7 @@
           "right_path": "package-lock.json"
         }
       ],
-      "resolution": "separate-waves"
+      "resolution": "explicit-bidirectional"
     }
   ],
   "execution_policy": {

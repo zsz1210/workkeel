@@ -52,3 +52,19 @@ pretend to authenticate actors, sandbox tools, migrate active teams, or establis
 live model compatibility. Project instructions must be reviewed when opting in.
 Old artifacts, failed attempts and version pins are retained. No Graph engine,
 per-request auto router or large framework comparison is introduced.
+
+## Public naming and release boundary
+
+The owner selected Workkeel. The existing repository is renamed to
+`zsz1210/workkeel`, with source package `@zsz1210/workkeel` and primary `workkeel`
+CLI. Keep `temple`, `templew.mjs`, `temple.lock`, legacy schema IDs and historical
+records. Bootstrap validation accepts known old package names only at the exact
+installed version; it does not rewrite an existing project's pin.
+
+The toolkit continues its approved legacy self-hosting contract. New naming does
+not waive current contribution, review or release rules, migrate the toolkit,
+publish an npm version, replace a released archive, or rename local checkouts.
+Maintainer-approved security and conduct addresses and subject prefixes remain.
+Before any future npm release, separately qualify the new package and explicitly
+configure its Trusted Publisher for the renamed repository. Keep all public
+installation instructions labeled as development source until that release exists.

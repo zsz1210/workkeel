@@ -1,181 +1,70 @@
-<h1 align="center">Temple</h1>
+# Workkeel
 
-<p align="center"><strong>AI 開発組織フレームワーク</strong></p>
+コーディングエージェントのための、リポジトリ中心のタスク連携フレームワーク。
 
-<p align="center">一つひとつの変更に、責任者と進め方と根拠を。</p>
+会話、エージェント、モデルが変わっても、仕事を続けられるように。
 
-<p align="center"><a href="README.md">English</a> · <strong>日本語</strong> · <a href="README.zh-TW.md">繁體中文</a></p>
+[English](README.md) · [繁體中文](README.zh-TW.md) · 日本語
 
-<p align="center">
-  <a href="https://github.com/zsz1210/temple-ai-dev-org/actions/workflows/ci.yml"><img alt="CI の状態" src="https://github.com/zsz1210/temple-ai-dev-org/actions/workflows/ci.yml/badge.svg"></a>
-  &nbsp;·&nbsp; Early Alpha
-  &nbsp;·&nbsp; Node.js 24 以降
-  &nbsp;·&nbsp; <a href="LICENSE">MIT</a>
-</p>
+[![CI](https://github.com/zsz1210/workkeel/actions/workflows/ci.yml/badge.svg)](https://github.com/zsz1210/workkeel/actions/workflows/ci.yml)
+Early Alpha · Node.js 24+ · [MIT](LICENSE)
 
----
+## 架空の会社ではなく、仕事をつなぐ
 
-## AI で実装は速くなる。難しいのは、仕事をつなぐこと。
+今のコーディングエージェントは、計画、実装、テストを進められます。新しい会話で失われやすいのは、その仕事を取り巻く合意です。何が承認され、誰が担当し、どのファイルやツールを使え、何を引き継ぎ、どの正確なリビジョンが検証されたのか。
 
-AI は計画、実装、テスト、レビューを進められます。しかし、複数のタスク、会話、人、AI が同時に動き始めると、本当に難しいのは組織上の問いです。
+Workkeel は、その合意をコードのそばに残します。新しいタスク優先モードに CEO、PM、エンジニアといった役職は不要です。AI に「コードを書ける」と伝えるための汎用スキル一覧も求めません。既存の coding agent を使いながら、スコープ、身元、操作の境界、依存関係、証拠、受け入れを記録します。
 
-- この変更の責任者は誰か。
-- 実際に承認された範囲はどこまでか。
-- どの仕事なら安全に同時進行できるか。
-- どのリビジョンをテストしたのか。
-- 次の担当者は何を読み、何を無視してよいのか。
-- 今回の学びは再利用できるのか、それとも一度限りの事情だったのか。
+アプリケーションフレームワーク、モデル、新しいエージェント実行エンジン、自律的な管理者ではありません。設計、ツール、人の決定権はプロジェクトに残ります。「AI の会社」は互換モードの選択肢であり、新しいコアの前提ではありません。
 
-Temple は、開発組織をプロジェクトのリポジトリ内に残します。責任、作業状態、必要な文脈、仕事の進め方、引き継ぎ、検証記録、学びを会話の外に保存するため、別の人や AI が古いチャットを再構成せずに続きから作業できます。
+## 承認から、検証可能な引き継ぎまで
 
-Temple はアプリケーションフレームワークでも、課題管理ツールでも、自律的に指揮するマネージャーでもありません。プロジェクト固有のアーキテクチャ、技術スタック、文書、ツールはそのまま使い、Temple はその周囲で人と AI がどう協力するかを定めます。
+1. 目的、範囲、受け入れ条件、実際の作業環境を承認します。
+2. 指定した Agent がタスクを claim し、既存の coding runtime で作業します。
+3. 未解決事項を処理し、正確な Git リビジョンと証拠を渡します。
+4. 別の登録済み Agent がレビューします。不合格なら失敗の記録を残して修正します。
+5. 検証された候補を明示的に受け入れます。受け入れは公開やデプロイではありません。
 
-> **プロダクトをどう作るかは、プロジェクトが決めます。仕事をどう組織し、検証し、次へ残すかを Temple が整えます。**
+承認済み契約は変更せず、進捗、claim、失敗した試行、レビュー結果を別に記録します。バージョン照合で古い更新を防ぎ、ハッシュで証拠の変更を検出します。添付資料のディレクトリも、未検証コードを隠す抜け道にはなりません。実際のツール・ネットワーク隔離はホストの責任であり、形式の検証は許可を与えません。
 
-## 一つのプロジェクトから始める
+## 開発中のソースから始める
 
-Git、Node.js 24 以降、プロジェクトディレクトリ、案内付きセットアップ用の Codex を用意してください。公開プレビュー版は [Alpha.33](https://github.com/zsz1210/temple-ai-dev-org/releases/tag/v0.1.0-alpha.33) で、npm の `next` チャネルから入手できます。
+この Workkeel 改版は**未リリースのソース**であり、以前公開した Temple Alpha.33 パッケージとは異なります。リポジトリや manifest の改名だけでは npm に公開されません。Git、Node.js 24 以降、既存の Git プロジェクトが必要です。
 
-**導入元を選ぶ：** npm の `@next` は公開済みの Alpha.33 をインストールします。下記のソース取得は、[未リリースの変更](CHANGELOG.md#unreleased-changes)も含む `main` を使います。Compact evidence と任意の Headroom adapter は現在、この開発ソースが必要で、Alpha.33 には含まれません。公開版のソースを使う場合は、下記の clone コマンドを `git clone --branch v0.1.0-alpha.33 https://github.com/zsz1210/temple-ai-dev-org.git` に置き換えてください。
-
-### AI によるセットアップ
-
-Codex が初期化 Skill を読めるよう、Temple を一度クローンします。
-
-```bash
-git clone https://github.com/zsz1210/temple-ai-dev-org.git
-cd temple-ai-dev-org
-npm ci
+```sh
+git clone https://github.com/zsz1210/workkeel.git
+cd workkeel
+npm ci --ignore-scripts
+node bin/workkeel.mjs help
 ```
 
-このソースを Codex で開き、次のように依頼します。
+このソースを coding agent で開き、次のように依頼します。
 
-> [`$temple-init`](docs/getting-started/core-skills.md#temple-init) で `/absolute/path/to/my-project` を初期化してください。既存の開発・統合ルールを確認し、Agent の名前と担当を提案してください。足りない選択事項だけを質問し、設定の要約を見せて、私が確認するまでファイルを書き込まないでください。
+> タスク優先モードのガイドと、私のプロジェクトの指示を読んでください。Agent／Principal、承認方針、作業ディレクトリ、許可するファイルとツール、データの取り扱いを確認してください。設定を私が確認した後、会社の役職に依存しない Workkeel を初期化し、既存ファイルは維持してください。
 
-初期化後は、指摘された指示ファイルの競合を解消し、bootstrap の確認を完了します。その後、**初期化したプロジェクトで新しい会話を開き**、プロジェクトの指示が読み込まれたことを確認してください。インストール成功だけでは、現在の会話が指示を読んだとは限りません。詳しくは[初回初期化ガイド（英語）](docs/getting-started/usage.md#2-first-initialization)を参照してください。
+[クイックスタート（英語）](docs/getting-started/workkeel.md)に小さなポリシー、完全なタスク例、claim・引き継ぎ・レビューのコマンドがあります。各プロジェクトはバージョン固定の `workkeelw.mjs` を持ちます。公開前のソース利用もバージョンを確認します。グローバルインストールやモデル Gateway は必須ではありません。
 
-Temple は各プロジェクトに導入します。プロダクトごとにフレームワークを fork する必要はありません。既存のコード、文書、リポジトリの運用ルールは維持できます。
+## 四つの関心事を分ける
 
-<details>
-<summary>CLI のみの導入、または Temple への貢献</summary>
+- **タスクと権限：** 承認された成果、Agent／Principal、範囲、許可する操作、レビュー担当の分離。
+- **環境と実行：** 作業場所、読み書きの範囲、ツール、リソース、ネットワーク、データ方針。既存の coding agent が実行します。
+- **プロジェクトの方法：** 必要な場合だけ、固有の知識や手順を Skill にします。一般的なモデル能力の一覧は不要です。
+- **モデル接続：** 原則としてホストのネイティブ設定を使用します。固定 Gateway は任意であり、ツール能力やタスクの受け入れとは別です。
 
-```bash
-npm install --global @zsz1210/temple-ai-dev-org@next
-temple --version
-```
+現在の LiteLLM／Codex オプションは**読み取り専用の実行設定プラン**です。モデルを起動せず、グローバル設定を変更せず、キーも読みません。実際の Gateway でのツール動作は未検証で、タスク優先モードへの自動ディスパッチも有効にしていません。自動モデル選択や新しい Graph エンジンは今回の範囲外です。
 
-これは CLI のインストールであり、未初期化のプロジェクトに事前の `$temple-init` Skill を提供するものではありません。設定と確認は[初期化ガイド（英語）](docs/getting-started/usage.md#2-first-initialization)に従ってください。AI による案内には上記のソース版を使います。
+## 既存の Temple 履歴を保つ
 
-Temple 自体を開発する場合は、[Contributing（英語）](CONTRIBUTING.md)と[テストガイド（英語）](docs/getting-started/testing.md)に従ってください。動作変更の完全な検証と、任意のグローバルリンクは、その開発手順に含まれます。
+Workkeel は Temple の新しい名前です。互換コマンド `temple`、`templew.mjs`、`temple.lock`、`temple.*` スキーマ、過去の証拠は維持します。正式な記録の一括置換はしません。
 
-```bash
-npm run verify
-npm link
-```
+既存プロジェクトは、明示的に移行するまで元の Position ワークフローを使います。ハッシュ確認付きの移行は、停止済みで互換性のある標準ポリシーを使う通常の Solo プロジェクトだけが対象です。進行中、カスタム方針、チーム、高リスク、機密データの仕事は[従来モードのガイド（英語）](docs/getting-started/usage.md)に従います。従来の Console、ルーティング、保証の文書は互換モードを説明するもので、新規設定の必須項目ではありません。[移行の詳細（英語）](docs/getting-started/workkeel.md#legacy-history-and-migration)。
 
-Temple のソースディレクトリで実行するコマンドであり、プロダクトの作業ごとに繰り返す準備ではありません。
+## 成熟度と開発への参加
 
-</details>
+有人監督のローカル作業を対象とする Early Alpha です。タスクのライフサイクルと拒否条件にはオフラインテストがありますが、本番運用、認証された複数人運用、分散ロック、実 Gateway 対応、普遍的な時間・トークン削減を証明するものではありません。同じ所有者の別 Agent は、独立した人による検証ではありません。
 
-## 実際の仕事の進め方
+開発では[テストガイド（英語）](docs/getting-started/testing.md)に従い、編集中は関連チェック、最終的な動作候補には完全検証を行います。プロダクトの初期化ごとにフレームワーク全体を再テストする必要はありません。既存のテストコマンドと失敗の記録は維持します。
 
-初期化したプロジェクトで、具体的な依頼から始めます。
+[文書](docs/README.md) · [タスク契約](docs/concepts/task-contract.md) · [設計判断](docs/adr/0072-task-first-lifecycle.md) · [変更履歴](CHANGELOG.md) · [貢献](CONTRIBUTING.md) · [ガバナンス](GOVERNANCE.md) · [行動規範](CODE_OF_CONDUCT.md) · [セキュリティ](SECURITY.md)
 
-> 割引を適用したときの会計金額を修正してください。計算処理と関連テストだけを変更し、デプロイはしないでください。Temple で承認範囲を記録して修正し、別の Agent に検証してもらってください。必要な判断や許可が足りないときだけ質問してください。
-
-成果が曖昧な場合は、先に [`$decision-interview`](docs/getting-started/core-skills.md#decision-interview) で整理します。範囲と受け入れ条件が承認済みなら、ヒアリングを繰り返さず [`$temple-work`](docs/getting-started/core-skills.md#temple-work) で作業を進めます。
-
-- **Lean:** 範囲が明確で低リスク、元に戻せる作業を、別の検証者が確認します。
-- **Standard:** 評価と独立 QA が必要なプロダクトの変更に使います。
-- **High-Assurance:** より強い根拠と人の承認を必要とする、高リスクの作業に使います。
-
-任意の [Autonomous Delivery（英語）](docs/operations/autonomous-delivery.md) では、調整役の AI が承認範囲内で実装、検証、回数を限定した修正を続け、CLI が定型的なチェックと記録を支援します。これは実行方式であり、常駐マネージャーではありません。モデルを起動せず、権限も追加せず、各段階で別のモデル会話を開く必要もありません。必要な責任と独立した判断は維持します。
-
-Console、Observer、使用量の収集は**任意**です。使わなくても作業状態を確認できます。
-
-```bash
-node ./templew.mjs doctor .
-node ./templew.mjs status .
-node ./templew.mjs observe .
-```
-
-まずは [Solo ガイド（英語）](docs/getting-started/solo.md)か[手順別の Core Path（英語）](docs/getting-started/core-path.md)を参照してください。Solo は誰が仕事を主導するかを表し、ワークフローは個々の変更をどう検証するかを表します。
-
-## Temple Concept Layers
-
-<picture>
-  <source media="(max-width: 640px)" srcset="docs/assets/temple-layers-mobile.ja.svg">
-  <img alt="Temple は人の方針の下に、責任、範囲を持つ作業、コンテキストと実行のガイダンス、連携、保証、記憶と学習をつなぎ、リポジトリに残る組織の記憶で全体を支えます。" src="docs/assets/temple-layers.ja.svg">
-</picture>
-
-Temple は巨大な一つのプロンプトでも、自律的な一体の Agent でもありません。人の方針を最上位に置き、リポジトリに残る状態を土台にします。その間の各レイヤーが、責任、承認された作業、方法、連携、検証、学習をつなぎながら、同じものとして混ぜないようにします。
-
-ガイダンスには、意図的に二つの異なるルートがあります。**Context Routing** は、現在の Position と手順が何を読むべきかを決めます。**Adaptive Execution Routing** は、Task Shape、必要な能力、制約、プロジェクト方針から、その範囲内の手順をどう実行すべきかを決めます。現在の Alpha が返すのは説明可能な要求設定であり、Provider を起動したり、モデルを黙って切り替えたりはしません。詳しくは[アーキテクチャ（英語）](docs/concepts/architecture.md#three-routes-three-decisions)と[モデルルーティングガイド（英語）](docs/getting-started/model-routing.md)を参照してください。
-
-## Temple がプロジェクトに加えるもの
-
-- **変わらない責任の置き場所：** Position は、担当する人や AI が交代しても、責任と権限の境界を保ちます。
-- **範囲を持つ作業：** すべての変更を、スコープ、依存関係、受け入れ条件、状態を持つ Work Item として扱います。
-- **必要な文脈だけを渡す：** Context Routing が、現在の Position と手順に必要な仕様、判断、Skill、検証記録へ案内します。
-- **検証記録を簡潔に読む（未リリースの main）：** 任意の[読み取りビュー（英語）](docs/operations/compact-evidence.md)で保存済みのテストログや JSON を短く表示し、失敗の詳細、制約、原文の場所とハッシュを保持します。
-- **説明できる実行方法：** Adaptive Execution Routing は手順が必要とする能力から、条件に合うプロジェクト所有の実行プロファイルを選びます。Position にモデルを固定しません。
-- **根拠をそろえてから進む：** 実装、評価、Independent QA、リリース準備を別々の結論として記録します。
-- **安全な並行作業：** 独立した作業は同時に進め、重なる作業は調整と明確な統合責任者を待ちます。
-- **信頼できる学習：** Lesson は再検証を経て、必要なときだけ Practice や Skill へ昇格します。成功例が自動的に規則になることはありません。
-
-これらの約束はコードと同じリポジトリに残ります。Jira、GitHub Projects、Figma、既存の仕様書、社内文書は、それぞれが管理してきた情報の正式な保管場所であり続けられます。
-
-## 一つの Work Item が Temple を通る流れ
-
-<picture>
-  <source media="(max-width: 640px)" srcset="docs/assets/temple-delivery-path.ja-mobile.svg">
-  <img alt="一つの Work Item が、承認された目的から、進め方、成果物の作成、評価、リスクに応じた独立レビュー、完了判断へ進む流れ。各段階では、担当 Position、必要な Context、条件に合う Execution Route を別々に決め、リポジトリへ根拠を蓄積します。" src="docs/assets/temple-delivery-path.ja.svg">
-</picture>
-
-Work Item は、次の段階に必要な根拠がそろったときだけ先へ進みます。独立レビューとリリース準備の深さは、Workflow Profile とリスクに応じて変わります。各段階で Temple は、担当 Position、必要な Context、条件に合う Execution Route を別々に決めます。
-
-各段階が示すのは責任であり、固定された職種名ではありません。現在の Temple が提供するのは開発向けの Core Position です。Custom Position と Workflow はまだ計画段階ですが、将来の分野別構成でも、この運用モデルを変えずに別の Position を割り当てられます。
-
-## 一つの運用モデルを、異なる規模で使う
-
-- **Solo** — 一人が AI 支援開発を主導します。少数の Agent Identity で複数の Position を担当できますが、Developer と Independent QA は分けます。
-- **Collaborative** — 複数の人がそれぞれの AI を使います。スポンサー、担当資格、共有リソース、claim、統合責任を明示します。
-- **High-Assurance** — 障害時の事業・運用上の影響が大きい場合に使います。リスクに応じた検証、より強い身分分離、ロールバック準備、複数の人による承認を追加します。
-
-規模が変わっても中心概念は同じです。新しい工程へ総入れ替えするのではなく、リスクが必要とする分離と根拠だけを追加します。
-
-## 拡張するのは仕事の方法。権限ではない
-
-Temple の Skill は、再利用できるエンジニアリング手法です。プロダクト探索、ドメインモデリング、UI、実装、テスト、レビュー、文書作成など、範囲の明確な仕事を案内できます。プロジェクト独自の Skill をコードのそばに追加することもできます。
-
-Skill は許可を与えず、依存関係を承認せず、工程上のゲートを迂回しません。記録した Lesson も、それだけでプロジェクト全体の規則にはなりません。Temple は観察、再検証、意図的な昇格、権限を分けることで、成功例を無条件に恒久ルールへ変えずに学習します。
-
-[Capability catalog（英語）](docs/extensions/capability-catalog.md)、[Skill authoring guide（英語）](docs/extensions/skill-authoring.md)、[Engineering Learning Loop（英語）](docs/extensions/engineering-learning.md)も参照してください。
-
-## 現在の成熟度
-
-Temple は、有人監督のある低リスクなローカルプロジェクトと、範囲を限定した試行を対象とする **Early Alpha** です。
-
-- **現在利用できるもの：** リポジトリ中心の Solo ワークフロー、リスクに応じた工程、任意の Autonomous Delivery、安定した Position、Work Item、決定的なコンテキスト・Capability ルーティング、説明可能で実行を伴わない Adaptive Execution Routing、管理された Skill と学習、ライフサイクル証拠、Auditable Self-Hosting Profile、ローカル状態確認、アップグレード境界。
-- **実験中または限定的なもの：** Collaborative と High-Assurance の契約、並行計画、Provider の観測とキャリブレーション、ローカル Control Plane、外部トラッカー連携、Work Item 単位の使用量帰属。
-- **まだ保証していないもの：** 大規模な複数人・複数マシン運用、本番監視や自動修復、無人の外部書き込み、自動モデルルーティング、規制環境での受け入れ、あらゆるプロジェクトに共通する時間・Token 削減効果。
-
-ローカルテストに合格しただけで企業利用が証明されたとは扱わず、残っている検証不足もそのまま公開します。
-
-## 次に読むもの
-
-- [Usage guide（英語）](docs/getting-started/usage.md) — 導入、運用、アップグレード、トラブルシューティング。
-- [Temple terminology（英語）](docs/concepts/terminology.md) — Position、Agent Identity、Work Item、Evidence、運用プロファイル。
-- [Architecture（英語）](docs/concepts/architecture.md) — リポジトリ境界と正式な状態。
-- [Auditable Self-Hosting（英語）](docs/operations/auditable-self-hosting.md) — Temple 自身の開発記録を確認できます。導入先のプロジェクトにはコピーされません。
-- [既存のチームに参加する（英語）](docs/getting-started/team-entry.md) — 最初のコマンド、タスクの担当、行き詰まったときの案内。
-- [Documentation map（英語）](docs/README.md) — コラボレーション、UI モード、トラッカー、品質保証、学習、検証、意思決定。
-- [Contributing（英語）](CONTRIBUTING.md)、[Code of Conduct（英語）](CODE_OF_CONDUCT.md)、[Security（英語）](SECURITY.md) — 参加方法と、行為上の問題や脆弱性を非公開で報告する窓口。
-
-## 最終判断は人に残る
-
-Temple は仕事を調整し、根拠を保存できます。しかし、事業上の事実、優先順位、認証情報、支出、取り消せない外部操作、本番修復、高リスクな承認を自分で決めることはありません。
-
-## License
-
-[MIT](LICENSE)。第三者由来の情報と導入上の境界は [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) に記録しています。
+[MIT](LICENSE)。任意の統合の出典と採用範囲は[第三者通知](THIRD_PARTY_NOTICES.md)を参照してください。
