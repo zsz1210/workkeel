@@ -2,11 +2,11 @@
   "schema_version": "temple.work-item/v1",
   "id": "WI-0265",
   "title": "Bounded Luna/Sol pilot and optional development router assessment",
-  "state": "build",
-  "owner_position": "developer",
-  "assigned_agent_id": "agent-rikku",
+  "state": "done",
+  "owner_position": "engineering_manager",
+  "assigned_agent_id": "agent-mog",
   "created_at": "2026-09-23T17:21:00.339Z",
-  "updated_at": "2026-09-23T17:42:01.434Z",
+  "updated_at": "2026-09-23T17:50:38.234Z",
   "scope": [
     "Run three matched synthetic coding tasks per model with one bounded repair each; preserve measurements and assess LiteLLM Auto as an external personal opt-in tool, never core"
   ],
@@ -46,18 +46,18 @@
   "dependencies": [],
   "required_disciplines": [],
   "stage_requirements": {},
-  "base_revision": "8babea0956a0c71eeb48935c97093b9cf5627c71",
-  "parallel_mode": "pending",
-  "integration_owner_agent_id": null,
+  "base_revision": "a6d2f01967b27aa5bf7c6c0ed54247f107e91282",
+  "parallel_mode": "parallel",
+  "integration_owner_agent_id": "agent-mog",
   "planned_agent_id": null,
   "shared_contract_refs": [],
   "contract_status": "not_required",
   "overlap_resolution": [],
   "claim": {
-    "id": "claim-20260923174201-a9e841c9",
-    "status": "active",
+    "id": "claim-20260923175021-37bb70bf",
+    "status": "released",
     "principal_id": "human",
-    "agent_id": "agent-rikku",
+    "agent_id": "agent-mog",
     "actor_provenance": {
       "selection": "explicit-agent",
       "principal_source": "explicit-principal",
@@ -66,12 +66,13 @@
       "provider_authenticated": false,
       "externally_supplied_evidence": false
     },
-    "position_id": "developer",
-    "base_revision": "8babea0956a0c71eeb48935c97093b9cf5627c71",
+    "position_id": "release_manager",
+    "base_revision": "a6d2f01967b27aa5bf7c6c0ed54247f107e91282",
     "branch": "codex/workkeel-automation",
     "worktree": null,
-    "claimed_at": "2026-09-23T17:42:01.434Z",
-    "released_at": null
+    "claimed_at": "2026-09-23T17:50:21.606Z",
+    "released_at": "2026-09-23T17:50:38.234Z",
+    "release_reason": "work_item_closed"
   },
   "claims": [
     {
@@ -122,7 +123,7 @@
     },
     {
       "id": "claim-20260923174201-a9e841c9",
-      "status": "active",
+      "status": "released",
       "principal_id": "human",
       "agent_id": "agent-rikku",
       "actor_provenance": {
@@ -138,7 +139,54 @@
       "branch": "codex/workkeel-automation",
       "worktree": null,
       "claimed_at": "2026-09-23T17:42:01.434Z",
-      "released_at": null
+      "released_at": "2026-09-23T17:43:13.617Z",
+      "release_reason": [
+        "Final offline candidate handed to distinct reviewer"
+      ]
+    },
+    {
+      "id": "claim-20260923174321-88422f94",
+      "status": "released",
+      "principal_id": "human",
+      "agent_id": "agent-lulu",
+      "actor_provenance": {
+        "selection": "explicit-agent",
+        "principal_source": "explicit-principal",
+        "verification_class": "attributed",
+        "evidence_ref": null,
+        "provider_authenticated": false,
+        "externally_supplied_evidence": false
+      },
+      "position_id": "quality_evaluator",
+      "base_revision": "a6d2f019",
+      "branch": "codex/workkeel-automation",
+      "worktree": null,
+      "claimed_at": "2026-09-23T17:43:21.282Z",
+      "released_at": "2026-09-23T17:50:19.644Z",
+      "release_reason": [
+        "Independent candidate review passed for bounded local slice; benchmark remains inconclusive"
+      ]
+    },
+    {
+      "id": "claim-20260923175021-37bb70bf",
+      "status": "released",
+      "principal_id": "human",
+      "agent_id": "agent-mog",
+      "actor_provenance": {
+        "selection": "explicit-agent",
+        "principal_source": "explicit-principal",
+        "verification_class": "attributed",
+        "evidence_ref": null,
+        "provider_authenticated": false,
+        "externally_supplied_evidence": false
+      },
+      "position_id": "release_manager",
+      "base_revision": "a6d2f01967b27aa5bf7c6c0ed54247f107e91282",
+      "branch": "codex/workkeel-automation",
+      "worktree": null,
+      "claimed_at": "2026-09-23T17:50:21.606Z",
+      "released_at": "2026-09-23T17:50:38.234Z",
+      "release_reason": "work_item_closed"
     }
   ],
   "gate_evidence": {
@@ -158,21 +206,50 @@
       ".ai-org/artifacts/WI-0265/work-order.md"
     ],
     "developer_handoff": [
-      ".ai-org/artifacts/WI-0265/handoff-001-developer-to-quality_evaluator.md"
+      ".ai-org/artifacts/WI-0265/handoff-001-developer-to-quality_evaluator.md",
+      ".ai-org/artifacts/WI-0265/handoff-002-developer-to-quality_evaluator.md"
     ],
     "developer_evidence": [
       ".ai-org/artifacts/WI-0265/developer-verification.md",
       ".ai-org/artifacts/WI-0265/pilot-results.json"
+    ],
+    "test_evidence": [
+      ".ai-org/artifacts/WI-0265/full-verification-completion.md"
+    ],
+    "evaluation_report": [
+      ".ai-org/artifacts/WI-0265/independent-review.md"
+    ],
+    "independent_qa_pass": [
+      ".ai-org/artifacts/WI-0265/independent-review.md"
+    ],
+    "accepted_scope": [
+      ".ai-org/artifacts/WI-0265/release-record.md"
+    ],
+    "independent_qa_report": [
+      ".ai-org/artifacts/WI-0265/independent-review.md"
+    ],
+    "release_record": [
+      ".ai-org/artifacts/WI-0265/release-record.md"
+    ],
+    "required_human_approval": [
+      ".ai-org/artifacts/WI-0265/work-order.md"
+    ],
+    "rollback_plan": [
+      ".ai-org/artifacts/WI-0265/release-record.md"
     ]
   },
   "evidence": [
     ".ai-org/artifacts/WI-0265/work-order.md",
     ".ai-org/artifacts/WI-0265/handoff-001-developer-to-quality_evaluator.md",
     ".ai-org/artifacts/WI-0265/developer-verification.md",
-    ".ai-org/artifacts/WI-0265/pilot-results.json"
+    ".ai-org/artifacts/WI-0265/pilot-results.json",
+    ".ai-org/artifacts/WI-0265/handoff-002-developer-to-quality_evaluator.md",
+    ".ai-org/artifacts/WI-0265/full-verification-completion.md",
+    ".ai-org/artifacts/WI-0265/independent-review.md",
+    ".ai-org/artifacts/WI-0265/release-record.md"
   ],
   "unresolved": [],
-  "next_position": "quality_evaluator",
+  "next_position": null,
   "handoffs": [
     {
       "from_position": "developer",
@@ -190,7 +267,30 @@
       "input_revision": "8babea0956a0c71eeb48935c97093b9cf5627c71",
       "artifact": ".ai-org/artifacts/WI-0265/handoff-001-developer-to-quality_evaluator.md",
       "created_at": "2026-09-23T17:41:36.301Z"
+    },
+    {
+      "from_position": "developer",
+      "to_position": "quality_evaluator",
+      "actor": "agent-rikku",
+      "principal_id": "human",
+      "actor_provenance": {
+        "selection": "active-claim",
+        "principal_source": "active-claim",
+        "verification_class": "attributed",
+        "evidence_ref": null,
+        "provider_authenticated": false,
+        "externally_supplied_evidence": false
+      },
+      "input_revision": "a6d2f01967b27aa5bf7c6c0ed54247f107e91282",
+      "artifact": ".ai-org/artifacts/WI-0265/handoff-002-developer-to-quality_evaluator.md",
+      "created_at": "2026-09-23T17:43:12.243Z"
     }
   ],
-  "developer_candidate_revision": "8babea0956a0c71eeb48935c97093b9cf5627c71"
+  "developer_candidate_revision": "a6d2f01967b27aa5bf7c6c0ed54247f107e91282",
+  "tested_revision": "a6d2f01967b27aa5bf7c6c0ed54247f107e91282",
+  "release_gate_result": "go",
+  "lifecycle_outcome": "accepted",
+  "closeout_reasons": [],
+  "external_release_status": "not_performed",
+  "approval_record": ".ai-org/artifacts/WI-0265/work-order.md"
 }

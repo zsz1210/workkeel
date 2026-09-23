@@ -1,0 +1,50 @@
+{
+  "schema_version": "temple.parallel-plan/v1",
+  "generated_at": "2026-09-23T17:48:07.583Z",
+  "source_fingerprint": "5f87232c70d2167378d559e5b26f4135f70992e32befdf2eb2a1717cfe2ba941",
+  "scope": {
+    "mode": "all-active",
+    "parent_work_item_id": null,
+    "selected_work_item_ids": [
+      "WI-0265"
+    ]
+  },
+  "max_workers": null,
+  "summary": {
+    "selected": 1,
+    "dispatchable": 0,
+    "active": 1,
+    "sequential": 0,
+    "blocked": 0,
+    "waves": 0
+  },
+  "waves": [],
+  "active": [
+    {
+      "work_item_id": "WI-0265",
+      "title": "Bounded Luna/Sol pilot and optional development router assessment",
+      "disposition": "active",
+      "position_id": "quality_evaluator",
+      "agent_id": "agent-lulu",
+      "integration_owner_agent_id": "agent-mog",
+      "reasons": [],
+      "claim_id": "claim-20260923174321-88422f94",
+      "principal_id": "human",
+      "branch": "codex/workkeel-automation",
+      "worktree": null,
+      "base_revision": "a6d2f019"
+    }
+  ],
+  "sequential": [],
+  "blocked": [],
+  "conflicts": [],
+  "execution_policy": {
+    "parallel_by_default_when_safe": true,
+    "runtime_capacity_limit": null,
+    "fallback": "Execute each wave sequentially when concurrent task dispatch is unavailable.",
+    "replan_after_join": true,
+    "task_creation_performed": false,
+    "claim_performed": false,
+    "external_action_performed": false
+  }
+}

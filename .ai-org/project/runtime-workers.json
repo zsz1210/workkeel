@@ -3184,6 +3184,34 @@
       "attached_at": "2026-09-23T17:00:36.169Z",
       "completed_at": "2026-09-23T17:06:14.135Z",
       "updated_at": "2026-09-23T17:06:14.135Z"
+    },
+    {
+      "id": "worker-20260923174321-18dbead2",
+      "runtime_kind": "internal-subagent",
+      "status": "completed",
+      "work_item_id": "WI-0265",
+      "position_id": "quality_evaluator",
+      "agent_id": "agent-lulu",
+      "principal_id": "human",
+      "claim_id": "claim-20260923174321-88422f94",
+      "base_revision": "a6d2f019",
+      "branch": "codex/workkeel-automation",
+      "worktree": null,
+      "plan_fingerprint": "52e919489c2993e5800877f8d9d466d6751cb574346e21565b68686dbb5ef47f",
+      "plan_digest": "e832c3c040663fe35ec1dde8401f4af4ba3ce282574b9874bb01658276fa9760",
+      "preparation_fingerprint": "80c54bf3c283440d760e451b17ca8cb9955b419beae99df580a15c1cb48ecb5b",
+      "wave_id": "wave-001",
+      "runtime_id": "/root/pilot_optional_tool_review",
+      "task_id": null,
+      "resource_reservation_ids": [],
+      "current_revision": "a6d2f01967b27aa5bf7c6c0ed54247f107e91282",
+      "evidence": [
+        ".ai-org/artifacts/WI-0265/independent-review.md"
+      ],
+      "reserved_at": "2026-09-23T17:43:21.170Z",
+      "attached_at": "2026-09-23T17:43:52.372Z",
+      "completed_at": "2026-09-23T17:50:19.041Z",
+      "updated_at": "2026-09-23T17:50:19.041Z"
     }
   ]
 }

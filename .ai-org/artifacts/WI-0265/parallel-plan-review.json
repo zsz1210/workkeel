@@ -1,0 +1,84 @@
+{
+  "schema_version": "temple.parallel-plan/v1",
+  "generated_at": "2026-09-23T17:43:18.516Z",
+  "source_fingerprint": "52e919489c2993e5800877f8d9d466d6751cb574346e21565b68686dbb5ef47f",
+  "scope": {
+    "mode": "all-active",
+    "parent_work_item_id": null,
+    "selected_work_item_ids": [
+      "WI-0265"
+    ]
+  },
+  "max_workers": null,
+  "summary": {
+    "selected": 1,
+    "dispatchable": 1,
+    "active": 0,
+    "sequential": 0,
+    "blocked": 0,
+    "waves": 1
+  },
+  "waves": [
+    {
+      "id": "wave-001",
+      "order": 1,
+      "dispatch": [
+        {
+          "work_item_id": "WI-0265",
+          "title": "Bounded Luna/Sol pilot and optional development router assessment",
+          "position_id": "quality_evaluator",
+          "agent_id": "agent-lulu",
+          "agent_name": "Lulu",
+          "suggested_task_title": "WI-0265 · Bounded … · Quality & Evaluation Engineer (Lulu)",
+          "base_revision": "a6d2f019",
+          "affected_paths": [
+            "scripts/workkeel-model-pilot.mjs",
+            "test/workkeel-model-pilot.test.mjs",
+            "docs/operations/development-model-pilot.md",
+            "docs/adr",
+            ".ai-org/artifacts/WI-0265"
+          ],
+          "dependencies": [],
+          "required_disciplines": [],
+          "active_requirements": {
+            "stage": "test",
+            "disciplines": [],
+            "resources": []
+          },
+          "preparation_fingerprint": "80c54bf3c283440d760e451b17ca8cb9955b419beae99df580a15c1cb48ecb5b",
+          "integration_owner_agent_id": "agent-mog",
+          "context_command": "node ./templew.mjs context resolve . --work-item WI-0265 --position quality_evaluator --no-write --json",
+          "claim_required_before_work": true,
+          "task_registration_required_after_creation": true,
+          "task_creation_performed": false,
+          "claim_performed": false,
+          "external_action_performed": false
+        }
+      ],
+      "join_gate": {
+        "integration_owner_agent_ids": [
+          "agent-mog"
+        ],
+        "required_evidence": [
+          "exact_candidate_revision",
+          "verification_results",
+          "unresolved_items"
+        ],
+        "rule": "Join every dispatched Work Item through its Integration Owner before dispatching dependent work or advancing the lifecycle."
+      }
+    }
+  ],
+  "active": [],
+  "sequential": [],
+  "blocked": [],
+  "conflicts": [],
+  "execution_policy": {
+    "parallel_by_default_when_safe": true,
+    "runtime_capacity_limit": null,
+    "fallback": "Execute each wave sequentially when concurrent task dispatch is unavailable.",
+    "replan_after_join": true,
+    "task_creation_performed": false,
+    "claim_performed": false,
+    "external_action_performed": false
+  }
+}
