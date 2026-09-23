@@ -74,5 +74,6 @@
 - [ADR-0070: Optional compact evidence reading view](0070-compact-evidence-reading-view.md)
 
 - [ADR-0071: Opt-in tool-output compression](0071-opt-in-tool-output-compression.md)
+- [Workkeel task-contract migration](0071-workkeel-task-contract.md)
 
 An ADR is an Architecture Decision Record. It preserves the context, decision, rationale, and consequences of an important technical or organizational choice so that later Agents do not have to infer why it was made from chat memory.

@@ -9,6 +9,9 @@ const execFileAsync = promisify(execFile);
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
 export const REQUIRED_PACKAGE_PATHS = [
+  "src/task-contract.mjs",
+  "docs/concepts/task-contract.md",
+  "docs/adr/0071-workkeel-task-contract.md",
   "docs/getting-started/team-entry.md",
   "LICENSE",
   "README.md",
@@ -91,7 +94,9 @@ const ALLOWED_TOP_LEVEL_DIRECTORIES = ["bin/", "docs/", "packs/", "project-overl
 // Reviewed addition: bounded finish-recovery module and its operator guide.
 // WI-0250 adds the measurement report module and its ADR; no new package roots.
 // WI-0252 integrates two diagnostic modules and ADR-0068; roots unchanged.
-const MAX_FILE_COUNT = 459;
+// WI-0255 adds exactly the task-contract module, reference and migration ADR.
+// All three are required above; existing package roots and size limit remain.
+const MAX_FILE_COUNT = 462;
 const MAX_UNPACKED_SIZE = 8 * 1024 * 1024;
 
 export function validatePackageDryRun(pack) {

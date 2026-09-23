@@ -306,8 +306,33 @@ Project-owned vocabulary for product decisions, implementation, tests, and hando
 - Related terms: Matched evaluation; Execution Profile; Advisory recommendation.
 - Last confirmed: 2026-09-03
 
+## Workkeel task contract
+
+- Status: confirmed for the additive WI-0255 contract; lifecycle migration pending
+- Bounded context: Workkeel task description and legacy migration inspection
+- Definition: A role-free description of goal, scope, actor, state, dependencies, acceptance, review separation, handoff and explicit environment/operation constraints.
+- Examples: `workkeel.task-contract/v1` validated locally; a read-only legacy Work Item projection with unresolved environment and approval.
+- Non-examples: A canonical replacement Work Item, Position Membership, execution grant, verified approval or sandbox.
+- Invariants: Valid shape does not authorize execution. Unknown boundaries are unresolved. Actual implementer/reviewer identity separation remains necessary where required. Legacy roles and evidence are preserved rather than rewritten.
+- Owner or authoritative source: Human-approved task-first direction, DEC-0008, WI-0255 and `src/task-contract.mjs`.
+- Related terms: Agent Identity; Human Principal; Work claim; Task Shape (legacy execution routing, unchanged).
+- Last confirmed: 2026-09-23
+
+## Workkeel runtime requirements and model connection
+
+- Status: confirmed for descriptor validation only
+- Bounded context: Workkeel task-contract execution description
+- Definition: Runtime requirements describe the host/adapter and actual required runtime features; a separate connection describes native model handling or an optional fixed gateway model.
+- Examples: User-operated native coding agent; a declared adapter with an explicitly configured LiteLLM gateway alias and credential environment-variable name.
+- Non-examples: Generic AI coding/reasoning skill scores, company titles, model quality evidence, adapter support, live provider verification or permission to spend.
+- Invariants: Configuration never launches work or reads credentials. Permission/environment, project Skill references and model choice remain distinct. Existing Provider contracts and execution-routing authority remain unchanged.
+- Owner or authoritative source: DEC-0008 and WI-0255 contract reference.
+- Related terms: Execution Profile; Capability Route (legacy meanings, not removed); Resource Observation.
+- Last confirmed: 2026-09-23
+
 ## Unresolved terminology
 
 | Conflict | Affected contexts | Decision owner | Evidence needed | Revisit trigger |
 |---|---|---|---|---|
+| Mapping existing Position-based lifecycle ownership and review gates into task-level actor/approval contracts | Work Items, init, actor selection, workflow, Doctor and adapters | Human Principal and migration design owner | Reviewed writer migration, compatibility fixtures and exact-revision independent QA | Follow-up lifecycle migration after WI-0255 |
 | Whether a future App Server thread default constrains or is overridden by each turn | Provider launch, usage attribution, Workspace | Tech Lead | Versioned official and installed schema that acknowledges the effective value for a specific turn | App Server adds turn-effective reasoning metadata or changes override semantics |
