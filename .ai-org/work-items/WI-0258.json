@@ -1,0 +1,128 @@
+{
+  "schema_version": "temple.work-item/v1",
+  "id": "WI-0258",
+  "title": "Implement the Workkeel task-first lifecycle",
+  "state": "build",
+  "owner_position": "developer",
+  "assigned_agent_id": "agent-rikku",
+  "created_at": "2026-09-23T10:04:20.589Z",
+  "updated_at": "2026-09-23T10:04:23.251Z",
+  "scope": [
+    "Operationalize role-free contracts using versioned task-first project state, explicit legacy compatibility and optional fixed-model Codex gateway settings."
+  ],
+  "acceptance_criteria": [
+    "Fresh task-first projects complete initialization, diagnostics, creation, claim, exact-candidate handoff, distinct-agent review and closure without Positions.",
+    "Scope, identity, approvals, evidence, dependencies, stale writes and explicit compatibility are fail-closed; history is preserved.",
+    "Native and fixed gateway model settings remain separate from the existing execution runtime; offline tests pass and live LiteLLM limitations are explicit."
+  ],
+  "affected_paths": [
+    "src",
+    "bin",
+    "test/workkeel-lifecycle.test.mjs",
+    "test/workkeel-runtime.test.mjs",
+    "docs",
+    "scripts/check-package.mjs",
+    "package.json",
+    "package-lock.json",
+    ".ai-org/project/domain-glossary.md"
+  ],
+  "context_refs": [],
+  "spec_refs": [],
+  "ux_refs": [],
+  "ui_refs": [],
+  "contract_refs": [],
+  "specification_mode": "gate-evidence",
+  "ui_delivery_mode": "not-applicable",
+  "workflow_profile": "standard",
+  "risk_tier": "standard",
+  "profile_assessment": {
+    "requested_profile": "standard",
+    "effective_profile": "standard",
+    "scope_class": "cross-system",
+    "escalation_triggers": [
+      "schema-or-data-migration"
+    ],
+    "rationale": "Versioned opt-in metadata lifecycle, no new sandbox or production release; preserve legacy authority.",
+    "evidence_refs": [],
+    "evaluated_at": "2026-09-23T10:04:20.576Z",
+    "escalated": false
+  },
+  "parent_work_item_id": null,
+  "tracker_visibility": "team-visible",
+  "tracker_refs": [],
+  "tracker_reconciliations": [],
+  "dependencies": [],
+  "required_disciplines": [],
+  "stage_requirements": {},
+  "base_revision": "9d0f8547",
+  "parallel_mode": "sequential",
+  "integration_owner_agent_id": null,
+  "planned_agent_id": "agent-rikku",
+  "shared_contract_refs": [],
+  "contract_status": "not_required",
+  "overlap_resolution": [],
+  "claim": {
+    "id": "claim-20260923100423-76583879",
+    "status": "active",
+    "principal_id": "human",
+    "agent_id": "agent-rikku",
+    "actor_provenance": {
+      "selection": "explicit-agent",
+      "principal_source": "explicit-principal",
+      "verification_class": "attributed",
+      "evidence_ref": null,
+      "provider_authenticated": false,
+      "externally_supplied_evidence": false
+    },
+    "position_id": "developer",
+    "base_revision": "9d0f8547",
+    "branch": "codex/workkeel-reframe",
+    "worktree": ".",
+    "claimed_at": "2026-09-23T10:04:23.251Z",
+    "released_at": null
+  },
+  "claims": [
+    {
+      "id": "claim-20260923100423-76583879",
+      "status": "active",
+      "principal_id": "human",
+      "agent_id": "agent-rikku",
+      "actor_provenance": {
+        "selection": "explicit-agent",
+        "principal_source": "explicit-principal",
+        "verification_class": "attributed",
+        "evidence_ref": null,
+        "provider_authenticated": false,
+        "externally_supplied_evidence": false
+      },
+      "position_id": "developer",
+      "base_revision": "9d0f8547",
+      "branch": "codex/workkeel-reframe",
+      "worktree": ".",
+      "claimed_at": "2026-09-23T10:04:23.251Z",
+      "released_at": null
+    }
+  ],
+  "gate_evidence": {
+    "work_order": [
+      ".ai-org/artifacts/WI-0258/workkeel-design.md"
+    ],
+    "approved_scope": [
+      ".ai-org/artifacts/WI-0258/workkeel-design.md"
+    ],
+    "acceptance_criteria": [
+      ".ai-org/artifacts/WI-0258/workkeel-design.md"
+    ],
+    "technical_design": [
+      ".ai-org/artifacts/WI-0258/workkeel-design.md"
+    ],
+    "risk_review": [
+      ".ai-org/artifacts/WI-0258/workkeel-design.md"
+    ]
+  },
+  "evidence": [
+    ".ai-org/artifacts/WI-0258/workkeel-design.md"
+  ],
+  "unresolved": [],
+  "next_position": "quality_evaluator"
+}

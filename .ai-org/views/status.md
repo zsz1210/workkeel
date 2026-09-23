@@ -3,9 +3,9 @@
 - Project ID: `temple`
 - Organization system version: `0.1.0-alpha.33`
 - Active Agent Identities: 5
-- Collaboration profile: `solo` (0 Human Principals, 0 active claims)
-- Parallel plan: 1 wave(s), fresh=false
-- Work items: 255 total, 2 active
+- Collaboration profile: `solo` (0 Human Principals, 1 active claims)
+- Parallel plan: 0 wave(s), fresh=false
+- Work items: 258 total, 4 active
 - Codex tasks: 14 registered, 14 archive-ready
 - Runtime workers: 105 registered, 0 reserved, 0 active
 - Shared resources: 0 defined, 0 active reservation(s)
@@ -27,7 +27,7 @@
 - Human Principals: 0
 - Agent sponsorships: 0
 - Active Position memberships: 10
-- Active Work Item claims: 0
+- Active Work Item claims: 1
 - Active Human Authority Grants: 0
 - Governance recovery: `not_configured`
 - Real Collaborative validation: `not_run` (.ai-org/templates/collaborative-large-scale-test-plan.md)
@@ -38,10 +38,10 @@
 - Installed: yes
 - Valid: yes
 - Fresh: no
-- Safe waves: 1
-- Dispatchable Work Items: 1
-- Active / sequential / blocked: 0 / 2 / 0
-- Next wave: WI-0255
+- Safe waves: 0
+- Dispatchable Work Items: 0
+- Active / sequential / blocked: 0 / 3 / 0
+- Next wave: none
 - Codex tasks, claims, or external actions performed by planning: no
 
 ## Work items
@@ -303,6 +303,9 @@
 | WI-0253 | Slim the test suite without weakening safety coverage | test | Quality & Evaluation Engineer | Lulu | pending | internal | 0 | gate-evidence | not-applicable | 0 | 0 | 0 | — | `b0fe9161` | 0 | 3 | 0 |
 | WI-0254 | Repair baseline test harness failures | test | Quality & Evaluation Engineer | Lulu | pending | internal | 0 | gate-evidence | not-applicable | 0 | 0 | 0 | — | `b863ee49` | 0 | 4 | 0 |
 | WI-0255 | Define Workkeel task and execution contracts | done | Engineering Manager | Mog | sequential | team-visible | 0 | gate-evidence | not-applicable | 0 | 0 | 0 | — | `8165774f` | 0 | 7 | 0 |
+| WI-0256 | Qualify baseline test harness repair | intake | Engineering Manager | Mog | pending | internal | 0 | gate-evidence | not-applicable | 0 | 0 | 0 | — | `—` | 0 | 0 | 0 |
+| WI-0257 | Deliver the role-free Workkeel lifecycle and runtime connection boundary | cancelled | Engineering Manager | Mog | sequential | team-visible | 0 | gate-evidence | not-applicable | 0 | 0 | 0 | — | `—` | 0 | 2 | 0 |
+| WI-0258 | Implement the Workkeel task-first lifecycle | build | Developer | Rikku | sequential | team-visible | 0 | gate-evidence | not-applicable | 0 | 0 | 0 | claim-20260923100423-76583879 | `—` | 0 | 1 | 0 |
 
 ## Delivery attention
 
@@ -310,6 +313,10 @@
   - owner: No active eligible ownership claim is recorded.
 - WI-0254: awaiting-owner — Have the eligible owner claim or resume the next scoped responsibility.
   - owner: No active eligible ownership claim is recorded.
+- WI-0256: awaiting-owner — Have the eligible owner claim or resume the next scoped responsibility.
+  - owner: No active eligible ownership claim is recorded.
+- WI-0258: awaiting-owner — The recorded owner can continue the scoped work; no attached active worker is recorded.
+  - owner: No attached active runtime is recorded for this claim.
 
 ## Codex task registry
 
@@ -479,7 +486,7 @@
 - Profile: `repository-only`
 - Sync granularity: `team-visible`
 - Active providers: 0
-- Team-visible Work Items: 102
+- Team-visible Work Items: 104
 - Linked Work Items: 0
 - Observed external items: 0
 - Reconciliation actions: 0
@@ -553,14 +560,14 @@
 
 | Time | Event | Work item | Actor |
 |---|---|---|---|
-| 2026-09-23T09:54:01.334Z | work_item_closed | WI-0255 | agent-mog |
-| 2026-09-23T09:54:01.334Z | release_gate_completed | WI-0255 | agent-mog |
-| 2026-09-23T09:54:00.097Z | work_item_claimed | WI-0255 | human |
-| 2026-09-23T09:53:58.344Z | work_item_coordination_configured | WI-0255 | agent-mog |
-| 2026-09-23T09:51:59.747Z | work_item_transitioned | WI-0255 | agent-lulu |
-| 2026-09-23T09:51:59.244Z | work_item_claim_released | WI-0255 | human |
-| 2026-09-23T09:51:58.730Z | handoff_created | WI-0255 | agent-lulu |
-| 2026-09-23T09:51:30.275Z | work_item_claimed | WI-0255 | human |
+| 2026-09-23T10:04:23.251Z | work_item_claimed | WI-0258 | human |
+| 2026-09-23T10:04:22.691Z | work_item_coordination_configured | WI-0258 | agent-rikku |
+| 2026-09-23T10:04:22.218Z | work_item_transitioned | WI-0258 | agent-tidus |
+| 2026-09-23T10:04:21.730Z | work_item_transitioned | WI-0258 | agent-yuna |
+| 2026-09-23T10:04:21.245Z | work_item_transitioned | WI-0258 | agent-mog |
+| 2026-09-23T10:04:20.589Z | work_item_created | WI-0258 | agent-mog |
+| 2026-09-23T10:04:20.099Z | work_item_transitioned | WI-0257 | agent-rikku |
+| 2026-09-23T10:04:19.572Z | work_item_claim_released | WI-0257 | human |
 
 ## Assignments
 
