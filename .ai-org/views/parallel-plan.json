@@ -1,26 +1,80 @@
 {
   "schema_version": "temple.parallel-plan/v1",
-  "generated_at": "2026-09-23T10:00:35.331Z",
-  "source_fingerprint": "2933bcb70a44e64908c10bbbec70cc203edb2e250c37e8fed9a3ad9b76776fb5",
+  "generated_at": "2026-09-23T10:37:26.087Z",
+  "source_fingerprint": "8da863fba9a010558958dcfc18b0fbe51fabf8a8465fdb2b90da7f758c502fa1",
   "scope": {
     "mode": "all-active",
     "parent_work_item_id": null,
     "selected_work_item_ids": [
       "WI-0253",
       "WI-0254",
-      "WI-0256"
+      "WI-0256",
+      "WI-0258"
     ]
   },
-  "max_workers": 1,
+  "max_workers": null,
   "summary": {
-    "selected": 3,
-    "dispatchable": 0,
+    "selected": 4,
+    "dispatchable": 1,
     "active": 0,
     "sequential": 3,
     "blocked": 0,
-    "waves": 0
+    "waves": 1
   },
-  "waves": [],
+  "waves": [
+    {
+      "id": "wave-001",
+      "order": 1,
+      "dispatch": [
+        {
+          "work_item_id": "WI-0258",
+          "title": "Implement the Workkeel task-first lifecycle",
+          "position_id": "quality_evaluator",
+          "agent_id": "agent-lulu",
+          "agent_name": "Lulu",
+          "suggested_task_title": "WI-0258 · Implemen… · Quality & Evaluation Engineer (Lulu)",
+          "base_revision": "3dfb3094716b207cfc0c33a411ee7c506ba7dccf",
+          "affected_paths": [
+            "src",
+            "bin",
+            "test/workkeel-lifecycle.test.mjs",
+            "test/workkeel-runtime.test.mjs",
+            "docs",
+            "scripts/check-package.mjs",
+            "package.json",
+            "package-lock.json",
+            ".ai-org/project/domain-glossary.md"
+          ],
+          "dependencies": [],
+          "required_disciplines": [],
+          "active_requirements": {
+            "stage": "test",
+            "disciplines": [],
+            "resources": []
+          },
+          "preparation_fingerprint": "d5b223a1a4cfcf558207494412b5bc92a8841bd45a065cb5480a64246ad1741c",
+          "integration_owner_agent_id": "agent-mog",
+          "context_command": "node ./templew.mjs context resolve . --work-item WI-0258 --position quality_evaluator --no-write --json",
+          "claim_required_before_work": true,
+          "task_registration_required_after_creation": true,
+          "task_creation_performed": false,
+          "claim_performed": false,
+          "external_action_performed": false
+        }
+      ],
+      "join_gate": {
+        "integration_owner_agent_ids": [
+          "agent-mog"
+        ],
+        "required_evidence": [
+          "exact_candidate_revision",
+          "verification_results",
+          "unresolved_items"
+        ],
+        "rule": "Join every dispatched Work Item through its Integration Owner before dispatching dependent work or advancing the lifecycle."
+      }
+    }
+  ],
   "active": [],
   "sequential": [
     {
@@ -94,6 +148,30 @@
     },
     {
       "kind": "affected-path",
+      "left_work_item_id": "WI-0253",
+      "right_work_item_id": "WI-0258",
+      "paths": [
+        {
+          "left_path": "package.json",
+          "right_path": "package.json"
+        },
+        {
+          "left_path": "docs/getting-started/testing.md",
+          "right_path": "docs"
+        },
+        {
+          "left_path": "test",
+          "right_path": "test/workkeel-lifecycle.test.mjs"
+        },
+        {
+          "left_path": "test",
+          "right_path": "test/workkeel-runtime.test.mjs"
+        }
+      ],
+      "resolution": "separate-waves"
+    },
+    {
+      "kind": "affected-path",
       "left_work_item_id": "WI-0254",
       "right_work_item_id": "WI-0256",
       "paths": [
@@ -115,7 +193,7 @@
   ],
   "execution_policy": {
     "parallel_by_default_when_safe": true,
-    "runtime_capacity_limit": 1,
+    "runtime_capacity_limit": null,
     "fallback": "Execute each wave sequentially when concurrent task dispatch is unavailable.",
     "replan_after_join": true,
     "task_creation_performed": false,

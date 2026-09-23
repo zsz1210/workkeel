@@ -2960,6 +2960,34 @@
       "attached_at": "2026-09-23T09:47:54.781Z",
       "completed_at": "2026-09-23T09:51:03.715Z",
       "updated_at": "2026-09-23T09:51:03.715Z"
+    },
+    {
+      "id": "worker-20260923103738-489eacc0",
+      "runtime_kind": "internal-subagent",
+      "status": "completed",
+      "work_item_id": "WI-0258",
+      "position_id": "quality_evaluator",
+      "agent_id": "agent-lulu",
+      "principal_id": "human",
+      "claim_id": "claim-20260923103738-49abc3e0",
+      "base_revision": "3dfb3094716b207cfc0c33a411ee7c506ba7dccf",
+      "branch": "codex/workkeel-reframe",
+      "worktree": ".",
+      "plan_fingerprint": "8da863fba9a010558958dcfc18b0fbe51fabf8a8465fdb2b90da7f758c502fa1",
+      "plan_digest": "77dd366a30a9224ef2168ac20315d43f760c6002f9befbda09767f706225e75c",
+      "preparation_fingerprint": "d5b223a1a4cfcf558207494412b5bc92a8841bd45a065cb5480a64246ad1741c",
+      "wave_id": "wave-001",
+      "runtime_id": "/root/workkeel_lifecycle_review",
+      "task_id": null,
+      "resource_reservation_ids": [],
+      "current_revision": "3dfb3094716b207cfc0c33a411ee7c506ba7dccf",
+      "evidence": [
+        ".ai-org/artifacts/WI-0258/workkeel-independent-review.md"
+      ],
+      "reserved_at": "2026-09-23T10:37:38.112Z",
+      "attached_at": "2026-09-23T10:41:59.493Z",
+      "completed_at": "2026-09-23T10:47:39.402Z",
+      "updated_at": "2026-09-23T10:47:39.402Z"
     }
   ]
 }

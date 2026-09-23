@@ -1,0 +1,99 @@
+{
+  "schema_version": "temple.work-item/v1",
+  "id": "WI-0259",
+  "title": "Rename and reframe the public Workkeel framework",
+  "state": "build",
+  "owner_position": "developer",
+  "assigned_agent_id": "agent-rikku",
+  "created_at": "2026-09-23T10:46:58.533Z",
+  "updated_at": "2026-09-23T10:48:01.524Z",
+  "scope": [
+    "Rename public package/repository entry points and three README languages while retaining legacy pins, policy, contacts and history; no npm release or main merge inferred."
+  ],
+  "acceptance_criteria": [
+    "Workkeel package and CLI names are consistent, old exact pins remain usable, task-first and legacy boundaries are accurately documented, and full candidate verification and independent review pass."
+  ],
+  "affected_paths": [
+    "README.md",
+    "README.zh-TW.md",
+    "README.ja.md",
+    "package.json",
+    "package-lock.json",
+    "src/constants.mjs",
+    "src/bootstrap.mjs",
+    "src/workkeel-project.mjs",
+    "src/cli.mjs",
+    "test/workflow.test.mjs",
+    "test/workkeel-branding.test.mjs",
+    "docs",
+    "CONTRIBUTING.md",
+    "GOVERNANCE.md",
+    "SECURITY.md",
+    "CODE_OF_CONDUCT.md",
+    "CHANGELOG.md",
+    "AGENTS.md",
+    ".github/ISSUE_TEMPLATE"
+  ],
+  "context_refs": [],
+  "spec_refs": [],
+  "ux_refs": [],
+  "ui_refs": [],
+  "contract_refs": [],
+  "specification_mode": "gate-evidence",
+  "ui_delivery_mode": "not-applicable",
+  "workflow_profile": "standard",
+  "risk_tier": "standard",
+  "profile_assessment": {
+    "requested_profile": "standard",
+    "effective_profile": "standard",
+    "scope_class": "ordinary",
+    "escalation_triggers": [
+      "external-write"
+    ],
+    "rationale": "Approved coordinated repository rename and backwards-compatible package metadata change; no production release.",
+    "evidence_refs": [],
+    "evaluated_at": "2026-09-23T10:46:58.519Z",
+    "escalated": false
+  },
+  "parent_work_item_id": null,
+  "tracker_visibility": "team-visible",
+  "tracker_refs": [],
+  "tracker_reconciliations": [],
+  "dependencies": [],
+  "required_disciplines": [],
+  "stage_requirements": {},
+  "base_revision": null,
+  "parallel_mode": "sequential",
+  "integration_owner_agent_id": "agent-mog",
+  "planned_agent_id": null,
+  "shared_contract_refs": [],
+  "contract_status": "not_required",
+  "overlap_resolution": [
+    "WI-0253: PR116 merged at 5ea9b969; integrate its exact main before brand edits; retain all runner changes",
+    "WI-0258: same root implementer, sequential rework then branding; combined final candidate receives exact full verification and separate review"
+  ],
+  "claim": null,
+  "claims": [],
+  "gate_evidence": {
+    "work_order": [
+      ".ai-org/artifacts/WI-0259/workkeel-branding-design.md"
+    ],
+    "approved_scope": [
+      ".ai-org/artifacts/WI-0259/workkeel-branding-design.md"
+    ],
+    "acceptance_criteria": [
+      ".ai-org/artifacts/WI-0259/workkeel-branding-design.md"
+    ],
+    "technical_design": [
+      ".ai-org/artifacts/WI-0259/workkeel-branding-design.md"
+    ],
+    "risk_review": [
+      ".ai-org/artifacts/WI-0259/workkeel-branding-design.md"
+    ]
+  },
+  "evidence": [
+    ".ai-org/artifacts/WI-0259/workkeel-branding-design.md"
+  ],
+  "unresolved": [],
+  "next_position": "quality_evaluator"
+}
