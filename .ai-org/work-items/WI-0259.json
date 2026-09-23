@@ -2,11 +2,11 @@
   "schema_version": "temple.work-item/v1",
   "id": "WI-0259",
   "title": "Rename and reframe the public Workkeel framework",
-  "state": "build",
-  "owner_position": "developer",
-  "assigned_agent_id": "agent-rikku",
+  "state": "test",
+  "owner_position": "quality_evaluator",
+  "assigned_agent_id": "agent-lulu",
   "created_at": "2026-09-23T10:46:58.533Z",
-  "updated_at": "2026-09-23T11:29:29.591Z",
+  "updated_at": "2026-09-23T11:31:29.726Z",
   "scope": [
     "Rename public package/repository entry points and three README languages while retaining legacy pins, policy, contacts and history; no npm release or main merge inferred."
   ],
@@ -62,10 +62,10 @@
   "dependencies": [],
   "required_disciplines": [],
   "stage_requirements": {},
-  "base_revision": "6bb9c98e25fe6056621ba4189ce0ed640e8f4438",
-  "parallel_mode": "sequential",
+  "base_revision": "1c1d57bf4d9a0981739d91b046fc3aa6027df027",
+  "parallel_mode": "parallel",
   "integration_owner_agent_id": "agent-mog",
-  "planned_agent_id": "agent-rikku",
+  "planned_agent_id": "agent-lulu",
   "shared_contract_refs": [],
   "contract_status": "not_required",
   "overlap_resolution": [
@@ -73,10 +73,10 @@
     "WI-0258: same root implementer, sequential rework then branding; combined final candidate receives exact full verification and separate review"
   ],
   "claim": {
-    "id": "claim-20260923112929-2ee122df",
+    "id": "claim-20260923113129-be41cbb4",
     "status": "active",
     "principal_id": "human",
-    "agent_id": "agent-rikku",
+    "agent_id": "agent-lulu",
     "actor_provenance": {
       "selection": "explicit-agent",
       "principal_source": "explicit-principal",
@@ -85,11 +85,11 @@
       "provider_authenticated": false,
       "externally_supplied_evidence": false
     },
-    "position_id": "developer",
-    "base_revision": "6bb9c98e25fe6056621ba4189ce0ed640e8f4438",
+    "position_id": "quality_evaluator",
+    "base_revision": "1c1d57bf4d9a0981739d91b046fc3aa6027df027",
     "branch": "codex/workkeel-reframe",
     "worktree": ".",
-    "claimed_at": "2026-09-23T11:29:29.591Z",
+    "claimed_at": "2026-09-23T11:31:29.726Z",
     "released_at": null
   },
   "claims": [
@@ -139,7 +139,7 @@
     },
     {
       "id": "claim-20260923112929-2ee122df",
-      "status": "active",
+      "status": "released",
       "principal_id": "human",
       "agent_id": "agent-rikku",
       "actor_provenance": {
@@ -155,6 +155,29 @@
       "branch": "codex/workkeel-reframe",
       "worktree": ".",
       "claimed_at": "2026-09-23T11:29:29.591Z",
+      "released_at": "2026-09-23T11:31:17.152Z",
+      "release_reason": [
+        "Corrected prose candidate handed off for separate exact-candidate acceptance."
+      ]
+    },
+    {
+      "id": "claim-20260923113129-be41cbb4",
+      "status": "active",
+      "principal_id": "human",
+      "agent_id": "agent-lulu",
+      "actor_provenance": {
+        "selection": "explicit-agent",
+        "principal_source": "explicit-principal",
+        "verification_class": "attributed",
+        "evidence_ref": null,
+        "provider_authenticated": false,
+        "externally_supplied_evidence": false
+      },
+      "position_id": "quality_evaluator",
+      "base_revision": "1c1d57bf4d9a0981739d91b046fc3aa6027df027",
+      "branch": "codex/workkeel-reframe",
+      "worktree": ".",
+      "claimed_at": "2026-09-23T11:31:29.726Z",
       "released_at": null
     }
   ],
@@ -173,12 +196,20 @@
     ],
     "risk_review": [
       ".ai-org/artifacts/WI-0259/workkeel-branding-design.md"
+    ],
+    "developer_handoff": [
+      ".ai-org/artifacts/WI-0259/handoff-002-developer-to-quality_evaluator.md"
+    ],
+    "developer_evidence": [
+      ".ai-org/artifacts/WI-0259/workkeel-developer-evidence-attempt-2.md"
     ]
   },
   "evidence": [
     ".ai-org/artifacts/WI-0259/workkeel-branding-design.md",
     ".ai-org/artifacts/WI-0259/handoff-001-developer-to-quality_evaluator.md",
-    ".ai-org/artifacts/WI-0259/workkeel-developer-evidence.md"
+    ".ai-org/artifacts/WI-0259/workkeel-developer-evidence.md",
+    ".ai-org/artifacts/WI-0259/handoff-002-developer-to-quality_evaluator.md",
+    ".ai-org/artifacts/WI-0259/workkeel-developer-evidence-attempt-2.md"
   ],
   "unresolved": [],
   "next_position": "quality_evaluator",
@@ -199,6 +230,23 @@
       "input_revision": "6bb9c98e25fe6056621ba4189ce0ed640e8f4438",
       "artifact": ".ai-org/artifacts/WI-0259/handoff-001-developer-to-quality_evaluator.md",
       "created_at": "2026-09-23T11:10:28.399Z"
+    },
+    {
+      "from_position": "developer",
+      "to_position": "quality_evaluator",
+      "actor": "agent-rikku",
+      "principal_id": "human",
+      "actor_provenance": {
+        "selection": "active-claim",
+        "principal_source": "active-claim",
+        "verification_class": "attributed",
+        "evidence_ref": null,
+        "provider_authenticated": false,
+        "externally_supplied_evidence": false
+      },
+      "input_revision": "1c1d57bf4d9a0981739d91b046fc3aa6027df027",
+      "artifact": ".ai-org/artifacts/WI-0259/handoff-002-developer-to-quality_evaluator.md",
+      "created_at": "2026-09-23T11:31:04.740Z"
     }
   ],
   "rework_history": [
@@ -238,5 +286,6 @@
         ".ai-org/artifacts/WI-0259/handoff-001-developer-to-quality_evaluator.md"
       ]
     }
-  ]
+  ],
+  "developer_candidate_revision": "1c1d57bf4d9a0981739d91b046fc3aa6027df027"
 }

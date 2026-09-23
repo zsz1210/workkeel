@@ -1,7 +1,7 @@
 {
   "schema_version": "temple.parallel-plan/v1",
-  "generated_at": "2026-09-23T11:24:13.634Z",
-  "source_fingerprint": "a207b6c1b41a09c4738815f3384de7dbd6238e9c59778e2b5bb28ad4d52e8eaa",
+  "generated_at": "2026-09-23T11:31:18.701Z",
+  "source_fingerprint": "605a7d3ba37c364bb5507119e221655998ff875ba4e5f64d49877fedd2392e8d",
   "scope": {
     "mode": "all-active",
     "parent_work_item_id": null,
@@ -30,7 +30,7 @@
           "agent_id": "agent-lulu",
           "agent_name": "Lulu",
           "suggested_task_title": "WI-0259 · Rename a… · Quality & Evaluation Engineer (Lulu)",
-          "base_revision": "6bb9c98e25fe6056621ba4189ce0ed640e8f4438",
+          "base_revision": "1c1d57bf4d9a0981739d91b046fc3aa6027df027",
           "affected_paths": [
             "README.md",
             "README.zh-TW.md",
@@ -59,7 +59,7 @@
             "disciplines": [],
             "resources": []
           },
-          "preparation_fingerprint": "1c553d6363a42466a1763e6480f99c155b620e905113b1456a797f91e9ae4d17",
+          "preparation_fingerprint": "8d674e05b86589b89401e6368cd9c3274e2b4c42b5de9ae9442f49fd9418e065",
           "integration_owner_agent_id": "agent-mog",
           "context_command": "node ./templew.mjs context resolve . --work-item WI-0259 --position quality_evaluator --no-write --json",
           "claim_required_before_work": true,
