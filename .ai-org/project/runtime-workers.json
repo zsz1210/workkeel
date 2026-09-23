@@ -3156,6 +3156,34 @@
       "attached_at": "2026-09-23T16:30:23.899Z",
       "completed_at": "2026-09-23T16:33:29.387Z",
       "updated_at": "2026-09-23T16:33:29.387Z"
+    },
+    {
+      "id": "worker-20260923170011-9c4e3ee0",
+      "runtime_kind": "internal-subagent",
+      "status": "completed",
+      "work_item_id": "WI-0264",
+      "position_id": "quality_evaluator",
+      "agent_id": "agent-lulu",
+      "principal_id": "human",
+      "claim_id": "claim-20260923170011-bc0262d7",
+      "base_revision": "c901c420080326965a62ec483328fb7bd44a047f",
+      "branch": "codex/workkeel-automation",
+      "worktree": null,
+      "plan_fingerprint": "0f4b079abd420f54ed80a32fda650e881ef205df8d64aa27305e03db8ee7505b",
+      "plan_digest": "79ba5c8db0e04cfa018ab55272c7943eadd8220bd0006431b8e857df89814252",
+      "preparation_fingerprint": "a939783f5e2cf3d86a472b26ce4cc5521f6a49a6ea7da642aa1d64fa00773c0a",
+      "wave_id": "wave-001",
+      "runtime_id": "/root/workkeel_measurement_review",
+      "task_id": null,
+      "resource_reservation_ids": [],
+      "current_revision": "c901c420080326965a62ec483328fb7bd44a047f",
+      "evidence": [
+        ".ai-org/artifacts/WI-0264/independent-review.md"
+      ],
+      "reserved_at": "2026-09-23T17:00:11.144Z",
+      "attached_at": "2026-09-23T17:00:36.169Z",
+      "completed_at": "2026-09-23T17:06:14.135Z",
+      "updated_at": "2026-09-23T17:06:14.135Z"
     }
   ]
 }

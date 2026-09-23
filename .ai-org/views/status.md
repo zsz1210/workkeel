@@ -3,11 +3,11 @@
 - Project ID: `temple`
 - Organization system version: `0.1.0-alpha.33`
 - Active Agent Identities: 5
-- Collaboration profile: `solo` (0 Human Principals, 1 active claims)
+- Collaboration profile: `solo` (0 Human Principals, 0 active claims)
 - Parallel plan: 0 wave(s), fresh=true
-- Work items: 264 total, 1 active
+- Work items: 264 total, 0 active
 - Codex tasks: 14 registered, 14 archive-ready
-- Runtime workers: 112 registered, 0 reserved, 0 active
+- Runtime workers: 113 registered, 0 reserved, 0 active
 - Shared resources: 0 defined, 0 active reservation(s)
 - Optional Skill packs: 0 installed
 - Repository capabilities: 6 available, 0 invalid
@@ -27,7 +27,7 @@
 - Human Principals: 0
 - Agent sponsorships: 0
 - Active Position memberships: 10
-- Active Work Item claims: 1
+- Active Work Item claims: 0
 - Active Human Authority Grants: 0
 - Governance recovery: `not_configured`
 - Real Collaborative validation: `not_run` (.ai-org/templates/collaborative-large-scale-test-plan.md)
@@ -40,7 +40,7 @@
 - Fresh: yes
 - Safe waves: 0
 - Dispatchable Work Items: 0
-- Active / sequential / blocked: 1 / 0 / 0
+- Active / sequential / blocked: 0 / 0 / 0
 - Next wave: none
 - Codex tasks, claims, or external actions performed by planning: no
 
@@ -311,12 +311,10 @@
 | WI-0261 | Qualify Workkeel automation package additions | done | Engineering Manager | Mog | sequential | team-visible | 0 | gate-evidence | not-applicable | 0 | 0 | 0 | — | `c84f1b55` | 0 | 4 | 0 |
 | WI-0262 | Record final Workkeel local acceptance status | done | Engineering Manager | Mog | parallel | team-visible | 0 | gate-evidence | not-applicable | 0 | 0 | 0 | — | `dcd95179` | 0 | 4 | 0 |
 | WI-0263 | Clarify execution handoff and Workkeel visual guides | done | Engineering Manager | Mog | parallel | team-visible | 0 | gate-evidence | code-first | 0 | 0 | 0 | — | `7cb080b0` | 0 | 6 | 0 |
-| WI-0264 | Record per-task model usage and execution timing | build | Developer | Rikku | parallel | team-visible | 0 | gate-evidence | not-applicable | 0 | 0 | 0 | claim-20260923165013-08496a22 | `—` | 0 | 1 | 0 |
+| WI-0264 | Record per-task model usage and execution timing | done | Engineering Manager | Mog | parallel | team-visible | 0 | gate-evidence | not-applicable | 0 | 0 | 0 | — | `c901c420` | 0 | 6 | 0 |
 
 ## Delivery attention
 
-- WI-0264: awaiting-owner — The recorded owner can continue the scoped work; no attached active worker is recorded.
-  - owner: No attached active runtime is recorded for this claim.
 
 ## Codex task registry
 
@@ -453,6 +451,7 @@
 | worker-20260923153823-79859e22 | internal-subagent | WI-0260 | Quality & Evaluation Engineer / Lulu | completed | /root/workkeel_final_review | `c84f1b55` | 0 |
 | worker-20260923155342-dbdd75d4 | internal-subagent | WI-0262 | Quality & Evaluation Engineer / Lulu | completed | /root/workkeel_status_verifier | `dcd95179` | 0 |
 | worker-20260923162947-cce80e55 | internal-subagent | WI-0263 | Independent QA / Lulu | completed | /root/workkeel_visual_handoff_qa | `7cb080b0` | 0 |
+| worker-20260923170011-9c4e3ee0 | internal-subagent | WI-0264 | Quality & Evaluation Engineer / Lulu | completed | /root/workkeel_measurement_review | `c901c420` | 0 |
 
 - Shared resource registry: `.ai-org/project/resources.json`
 - Runtime worker registry: `.ai-org/project/runtime-workers.json`
@@ -566,14 +565,14 @@
 
 | Time | Event | Work item | Actor |
 |---|---|---|---|
-| 2026-09-23T16:57:20.676Z | work_item_coordination_configured | WI-0264 | agent-rikku |
-| 2026-09-23T16:50:13.749Z | work_item_claimed | WI-0264 | human |
-| 2026-09-23T16:50:13.145Z | work_item_transitioned | WI-0264 | agent-tidus |
-| 2026-09-23T16:50:12.570Z | work_item_transitioned | WI-0264 | agent-yuna |
-| 2026-09-23T16:50:11.966Z | work_item_transitioned | WI-0264 | agent-mog |
-| 2026-09-23T16:50:11.380Z | work_item_claim_released | WI-0264 | human |
-| 2026-09-23T16:49:52.103Z | work_item_claimed | WI-0264 | human |
-| 2026-09-23T16:49:01.782Z | work_item_created | WI-0264 | agent-mog |
+| 2026-09-23T17:07:12.419Z | work_item_closed | WI-0264 | agent-mog |
+| 2026-09-23T17:07:12.419Z | release_gate_completed | WI-0264 | agent-mog |
+| 2026-09-23T17:06:17.117Z | work_item_claimed | WI-0264 | human |
+| 2026-09-23T17:06:16.508Z | work_item_transitioned | WI-0264 | agent-lulu |
+| 2026-09-23T17:06:15.929Z | work_item_transitioned | WI-0264 | agent-lulu |
+| 2026-09-23T17:06:15.345Z | work_item_transitioned | WI-0264 | agent-lulu |
+| 2026-09-23T17:06:14.750Z | work_item_claim_released | WI-0264 | human |
+| 2026-09-23T17:06:14.135Z | runtime_worker_status_changed | WI-0264 | agent-lulu |
 
 ## Assignments
 

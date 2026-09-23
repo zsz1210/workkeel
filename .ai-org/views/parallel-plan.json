@@ -1,40 +1,23 @@
 {
   "schema_version": "temple.parallel-plan/v1",
-  "generated_at": "2026-09-23T16:57:43.524Z",
-  "source_fingerprint": "4f5ff0e5f6c2cab313ad549cfc40387f77cf758514a807e6af78a5b809462c1d",
+  "generated_at": "2026-09-23T17:07:13.035Z",
+  "source_fingerprint": "06a3871594735a19c95ff25645cf679b66936ac096bf9d7021e53f3abbd9020e",
   "scope": {
     "mode": "all-active",
     "parent_work_item_id": null,
-    "selected_work_item_ids": [
-      "WI-0264"
-    ]
+    "selected_work_item_ids": []
   },
   "max_workers": 1,
   "summary": {
-    "selected": 1,
+    "selected": 0,
     "dispatchable": 0,
-    "active": 1,
+    "active": 0,
     "sequential": 0,
     "blocked": 0,
     "waves": 0
   },
   "waves": [],
-  "active": [
-    {
-      "work_item_id": "WI-0264",
-      "title": "Record per-task model usage and execution timing",
-      "disposition": "active",
-      "position_id": "developer",
-      "agent_id": "agent-rikku",
-      "integration_owner_agent_id": "agent-mog",
-      "reasons": [],
-      "claim_id": "claim-20260923165013-08496a22",
-      "principal_id": "human",
-      "branch": "codex/workkeel-automation",
-      "worktree": null,
-      "base_revision": "5729bd91bbfe973b7ebfc83ddf8097a727d52a2d"
-    }
-  ],
+  "active": [],
   "sequential": [],
   "blocked": [],
   "conflicts": [],
