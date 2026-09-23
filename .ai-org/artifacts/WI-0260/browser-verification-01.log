@@ -1,0 +1,15 @@
+
+> @zsz1210/workkeel@0.1.0-alpha.33 test:browser
+> node scripts/verify-console-browser.mjs
+
+Chrome 154.0.8037.58 · http://127.0.0.1:63627
+PASS mobile    390x844 · 6 views
+PASS tablet    768x1024 · 6 views
+PASS desktop   1440x1000 · 6 views
+PASS ultrawide 3440x1440 · 6 views
+PASS reduced-motion · sidebar, backdrop, and live indicator motion disabled
+PASS field attention · 6 synthetic states, actionable next step, no false running review
+Management Console browser gate passed (4 viewports, 6 primary views).
+real 116.86
+user 43.80
+sys 33.34

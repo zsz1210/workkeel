@@ -5,6 +5,11 @@ steps. The optional LangGraph engine supplies execution order, branches, bounded
 loops, direct parallel joins, approval interrupts and durable checkpoints.
 Finishing a graph does **not** review, accept, publish or deploy its result.
 
+The Codex subscription path is experimental: offline checks passed, but the final
+authorized live check failed on a model's incorrect authorization-expiry refusal.
+It is not yet qualified as a reliable automatic workflow. See the
+[measured validation and limits](../validation/workkeel-automation.md).
+
 ## Choose how to run
 
 | Path | What it does | Requirements |

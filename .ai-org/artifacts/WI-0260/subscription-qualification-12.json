@@ -1,0 +1,46 @@
+{
+  "schema_version": "workkeel.subscription-qualification/v1",
+  "at": "2026-09-23T15:32:16.019Z",
+  "environment": {
+    "platform": "darwin",
+    "node": "v24.7.0",
+    "codex": "codex-cli 0.155.0-alpha.9.2"
+  },
+  "workflow_dispatch_limit": 2,
+  "mode": "live-chatgpt-subscription",
+  "api_key_used": false,
+  "dollars": null,
+  "outcome": "fail",
+  "elapsed_ms": 11313.029791,
+  "code_sha256": {
+    "workkeel-codex-host.mjs": "bde899ed5e82e3861fb7e15cca7d7eaf454465646f96eb79141155e7e63bcd7c",
+    "workkeel-codex-runtime.mjs": "8d3d73ed26524fa833a0ca127464294f23bfc5ee644acc7fda0d11fd78508206",
+    "workkeel-workflows.mjs": "ac07dcb565776e14317f222da89845dfd850db08d1cbf47e2781191f3af42fcf",
+    "workkeel-checkpoints.mjs": "36298b415e68eea9d8b73848c05deeeb27ab7a84b0902257e37c24225cf6259d",
+    "workkeel-execution-policy.mjs": "7b152bdf901342dc1d0a4375a8b2c52654af82b6b6705f2c6ef212f408d883b8"
+  },
+  "observations": [
+    {
+      "node": "read",
+      "requested_model": "gpt-6-luna",
+      "selection_reason": "rule:small-read",
+      "runtime_model": "gpt-6-luna",
+      "observed_model": null,
+      "status": "failed",
+      "usage": {
+        "input_tokens": 23628,
+        "output_tokens": 160,
+        "cost_usd": null
+      }
+    }
+  ],
+  "limitations": [
+    "One synthetic local task; not production readiness or comparative quality/cost evidence.",
+    "Runtime-confirmed model is distinct from an independently observed backend model.",
+    "No subscription quota-to-dollar conversion is available."
+  ],
+  "failure": "Error",
+  "protocol_code": null,
+  "experimental_protocol_rejected": false,
+  "fixture_path": "/private/var/folders/xs/l6j01gy57xddczq_xyb044ww0000gn/T/workkeel-subscription-rVgDTg"
+}

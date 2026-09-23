@@ -1,7 +1,7 @@
 # Opt-in workflow execution with explicit model and context policies
 
 - Date: 2026-09-23
-- Status: accepted implementation design; verification and live qualification pending
+- Status: accepted implementation design; offline verification passed; live functional qualification failed; independent review pending
 - Scope: Workkeel workflow orchestration, not a replacement coding-agent harness
 
 ## Decision

@@ -31,3 +31,15 @@ precise subscription-credit cost remains unavailable. No Astra, account changes,
 credits reset/purchase or subscription changes. Stop additional live model checks
 after this attempt regardless of success or failure. Preserve its report and every
 earlier result; a protocol-only probe is not model qualification.
+
+Dispatch intent: after full offline verification of
+`2481c93f5524929558a85ddc82383b5cfb60b021` passed (347.69 seconds), the final
+authorization is reserved for `subscription-qualification-12.json`. Do not retry
+if the process fails before recording its result; inspect preserved state instead.
+
+Consumed: report 12 failed after 11.31 seconds. One Luna dispatch returned an
+incorrect expiry refusal; structured attention stopped the graph, with no Sol
+dispatch. No further live model run is authorized or planned. Preserve this
+failure. Source, timestamp, cumulative observed usage and fixture path are in the
+report; backend model identity, dollars and subscription-credit consumption are
+unknown. Offline tests passing does not repair this functional qualification.

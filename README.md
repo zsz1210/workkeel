@@ -60,7 +60,7 @@ instructions. Native coordination works with your current coding agent.
 For automatic graph execution, install optional dependencies with
 `npm ci --include=optional --ignore-scripts` and follow the
 [Codex subscription setup](docs/operations/workkeel-workflows.md#choose-how-to-run).
-The qualified profile currently targets macOS and a pinned Codex version; no extra
+The experimental profile currently targets macOS and a pinned Codex version; no extra
 API key or LiteLLM server is required. It selects models for Workkeel-launched
 steps, not existing desktop conversations or your global model default.
 
@@ -92,9 +92,10 @@ was applied well. [Selection and outcome checks →](docs/extensions/workkeel-co
 
 ## Evidence and limits
 
-A real two-step subscription test selected Luna then Sol and produced the expected
-file in about 42 seconds. Seven local sandbox checks passed. These are small
-functional samples, not proof of general quality, speed or subscription savings.
+Offline verification passed 1,387 cases, with nine model-free sandbox checks.
+The final subscription check failed after Luna incorrectly rejected a still-valid
+authorization; execution stopped before Sol. Automatic execution remains experimental,
+not a qualified reliable workflow or evidence of subscription savings.
 [Methods, results and remaining qualification →](docs/validation/workkeel-automation.md)
 
 Headroom preserves exact originals, but this adapter cannot automatically compress

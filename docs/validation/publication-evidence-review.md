@@ -1,6 +1,9 @@
 # Publication evidence review
 
-Status: current-tree text remediation and exact-candidate Independent QA complete for WI-0162
+Status: historical exact-candidate review for WI-0162, not current-tree clearance.
+The results below apply to the recorded revision only. Later repository changes
+require a fresh audit; this report does not establish that today's tree is safe
+to publish.
 
 Work Items: `WI-0160` through `WI-0162`
 

@@ -54,7 +54,7 @@ node bin/workkeel.mjs help
 
 要自動執行 Graph，使用 `npm ci --include=optional --ignore-scripts` 安裝選配依賴，
 再依照 [Codex 訂閱設定](docs/operations/workkeel-workflows.md#choose-how-to-run)操作。
-目前完成驗證的設定限定 macOS 與指定 Codex 版本，不需要額外 API key 或 LiteLLM 伺服器。
+目前的實驗性設定限定 macOS 與指定 Codex 版本，不需要額外 API key 或 LiteLLM 伺服器。
 選模適用於 Workkeel 啟動的步驟，不會更動既有桌面對話或全域預設模型。
 
 ## 架構
@@ -84,8 +84,9 @@ Skills 提供專案方法；記錄「已讀」不代表真正運用得好。
 
 ## 驗證資料與限制
 
-一次真實訂閱測試依序選用 Luna、Sol，約 42 秒產生符合預期的檔案；七項本機沙箱檢查通過。
-這是小型功能樣本，不代表普遍的品質、速度或月費額度節省。
+離線驗證通過 1,387 個案例，另有九項不呼叫模型的沙箱檢查通過。
+最後一次訂閱實測中，Luna 把仍有效的授權誤判為過期，流程在呼叫 Sol 前停止。
+自動執行仍屬實驗性功能，尚不能宣稱可靠可用或能節省月費額度。
 [測試方法、結果與待驗證項目 →](docs/validation/workkeel-automation.md)
 
 Headroom 保留完整原始資料，但目前的 adapter 不支援自動壓縮 Codex 原生工具輸出。

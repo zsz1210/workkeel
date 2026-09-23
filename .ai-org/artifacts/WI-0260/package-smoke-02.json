@@ -1,0 +1,20 @@
+{
+  "schema_version": "workkeel.package-smoke/v1",
+  "at": "2026-09-23T15:27:24.223Z",
+  "node": "v24.7.0",
+  "outcome": "pass",
+  "optional_graph_installed": false,
+  "package_files": 490,
+  "package_size": 1107886,
+  "unpacked_size": 4315292,
+  "checks": [
+    "exact-tarball-install",
+    "core-without-optional-graph",
+    "init",
+    "doctor",
+    "status",
+    "help"
+  ],
+  "elapsed_ms": 6313.952208000001,
+  "fixture_retained": true
+}
