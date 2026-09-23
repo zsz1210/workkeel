@@ -2988,6 +2988,34 @@
       "attached_at": "2026-09-23T10:41:59.493Z",
       "completed_at": "2026-09-23T10:47:39.402Z",
       "updated_at": "2026-09-23T10:47:39.402Z"
+    },
+    {
+      "id": "worker-20260923111127-c847b9d2",
+      "runtime_kind": "internal-subagent",
+      "status": "completed",
+      "work_item_id": "WI-0258",
+      "position_id": "quality_evaluator",
+      "agent_id": "agent-lulu",
+      "principal_id": "human",
+      "claim_id": "claim-20260923111127-e6230ca3",
+      "base_revision": "6bb9c98e25fe6056621ba4189ce0ed640e8f4438",
+      "branch": "codex/workkeel-reframe",
+      "worktree": ".",
+      "plan_fingerprint": "d96cfe98111043f117eac788537db2342005dfb7ea5aa69ca117493697676179",
+      "plan_digest": "0372b833ed54ac87a9d0162602111ba163c809319a3f2f3b24d6ecd56987e31f",
+      "preparation_fingerprint": "7c4bfb6b0b9b261fd23913094218c75e78b7ba7c3af948de2dc965700551c384",
+      "wave_id": "wave-001",
+      "runtime_id": "/root/workkeel_rework_acceptance",
+      "task_id": null,
+      "resource_reservation_ids": [],
+      "current_revision": "6bb9c98e25fe6056621ba4189ce0ed640e8f4438",
+      "evidence": [
+        ".ai-org/artifacts/WI-0258/workkeel-independent-review-attempt-2.md"
+      ],
+      "reserved_at": "2026-09-23T11:11:27.329Z",
+      "attached_at": "2026-09-23T11:13:07.014Z",
+      "completed_at": "2026-09-23T11:17:38.630Z",
+      "updated_at": "2026-09-23T11:17:38.630Z"
     }
   ]
 }
