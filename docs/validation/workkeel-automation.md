@@ -33,8 +33,18 @@ versions, general task reliability or an independent acceptance judgment.
 
 The initial complete suite attempt used a shallow checkout: three historical
 experiment checks could not resolve their pinned Git objects. That attempt was
-not a passing full-verification result. Integration must use the complete history
-and record fresh full-verification results for the submitted candidate.
+not a passing full-verification result. After the missing history was fetched,
+complete `npm run verify` passed on PR candidate
+`b65db1dd435d60dc52f9a348aaf7ef3dd21d7d36`: 139 test files, exit 0, including
+repository, documentation-link and package-boundary checks.
+[PR #122](https://github.com/zsz1210/workkeel/pull/122) merged as
+`979fc2a0fc1e8c8219696a0ebe3256a7e86a932c`, with the same source tree as that
+candidate. Required PR CI and the
+[merged main CI](https://github.com/zsz1210/workkeel/actions/runs/35967236428)
+passed. The personal launcher was then repinned to the merge, with 5 doctor checks,
+33 offline tests and 21 manifest entries verified; no extra model call was made.
+This records the completed integration; it does not replace the earlier failed
+attempt or claim a separate independent-agent review for #122.
 
 ### Earlier development-routing samples
 
@@ -55,7 +65,7 @@ fast checks. This does not qualify reliable live automation. The named judgments
 and exact evidence are retained in the repository's WI-0260 review and release
 records; external publication was not performed.
 
-## Latest offline follow-up
+## Historical WI-0263 offline follow-up
 
 The maintainer authorized an offline handoff improvement and revised visual guides
 in WI-0263. Executable candidate:
@@ -77,8 +87,10 @@ in WI-0263. Executable candidate:
 These are developer verification measurements; exact logs and rendered evidence
 are retained with WI-0263. The complete task contract remains model-visible;
 numeric expiry observations are separate from node work and do not grant authority.
-No additional subscription or LiteLLM call was made. Whether the revised handoff
-prevents the model's mistaken refusal is still unverified in a live run.
+No additional subscription or LiteLLM call was made in that WI-0263 follow-up.
+Later bounded development-routing and Mac Mini samples are recorded above. Their
+success does not establish that the revised handoff prevents every mistaken
+refusal; the original failed attempt remains part of the evidence.
 
 ## Initial automation results
 

@@ -54,11 +54,12 @@ node bin/workkeel.mjs help
 
 依照[快速開始](docs/getting-started/workkeel.md)初始化專案、核准任務、認領工作及記錄審查。
 可預覽的 [AGENTS／CLAUDE 指令橋接](docs/extensions/workkeel-context.md)會保留既有指令；
-基本任務協調可搭配目前使用的 Coding Agent。
+基本任務協調可搭配目前使用的 Coding Agent。新任務專案使用 `WORKKEEL.md` 與
+`workkeel` CLI；保留的 `TEMPLE.md`／`temple-work` 指令供舊模式相容使用，不是新任務模式的設定前提。
 
 要自動執行 Graph，使用 `npm ci --include=optional --ignore-scripts` 安裝選配依賴，
 再依照 [Codex 訂閱設定](docs/operations/workkeel-workflows.md#choose-how-to-run)操作。
-目前的實驗性設定限定 macOS 與指定 Codex 版本，不需要額外 API key 或 LiteLLM 伺服器。
+目前的實驗性設定需要 macOS 與 Codex `0.155.0-alpha.9.2` 或更新版本，不需要額外 API key 或 LiteLLM 伺服器。
 選模適用於 Workkeel 啟動的步驟，不會更動既有桌面對話或全域預設模型。
 
 ## 預設、選配與支援範圍
@@ -69,7 +70,7 @@ node bin/workkeel.mjs help
 | Coding Agent | 使用既有 Agent | Codex、Claude Code 或其他能遵循指令的 Agent；原生使用不會替它選模型 |
 | Graph 引擎 | 關閉／選配 | 安裝 LangGraph 依賴並核准流程；支援順序、分支、直接匯合與檢查點 |
 | 自動選模 | 關閉／選配 | Workkeel 政策：步驟明確指定 → 符合的規則 → 核准的預設；不另呼叫模型分類 |
-| Codex 月費 | 選配／實驗性 | 既有 ChatGPT 登入、macOS 與指定 Codex 版本；有限的 Luna／Sol 樣本已通過，不代表普遍可靠性 |
+| Codex 月費 | 選配／實驗性 | 既有 ChatGPT 登入、macOS 與 Codex ≥ `0.155.0-alpha.9.2`；有限的 Luna／Sol 樣本已通過，不代表普遍可靠性 |
 | LiteLLM gateway | 關閉／選配 | 固定且核准的連線；不內附伺服器；真實服務驗證待完成 |
 | LiteLLM Auto Router | 尚未整合 | 與 Workkeel 規則選模不同；啟用 gateway 不代表啟用 Auto |
 | Headroom | 關閉 | 主機自有整合可用無損檢視；不支援攔截 Codex 原生工具輸出 |
@@ -110,9 +111,11 @@ Skills 提供專案方法；記錄「已讀」不代表真正運用得好。
 
 ## 驗證資料與限制
 
-最新離線驗證通過 1,403 個案例；先前的自動化基準版本另有九項不呼叫模型的沙箱檢查通過。
-最後一次訂閱實測中，Luna 把仍有效的授權誤判為過期，流程在呼叫 Sol 前停止。
-自動執行仍屬實驗性功能，尚不能宣稱可靠可用或能節省月費額度。
+2026-09-24 的 Codex 相容性修改通過完整離線驗證，共 139 個測試檔。
+Mac Mini 使用 Codex `0.155.0-alpha.16.3` 的單次錯字任務也成功；先前的 Luna／Sol
+比較與監看模組實作／審查，亦在各自記錄的範圍通過。較早 Luna 把有效授權誤判為過期、
+在呼叫 Sol 前停止的失敗證據仍保留。自動執行仍屬實驗性：這些樣本不能證明普遍可靠性、
+月費節省，或所有未來 Codex 版本的相容性。版本允許啟動與真實驗證是不同結果。
 [測試方法、結果與待驗證項目 →](docs/validation/workkeel-automation.md)
 
 Headroom 保留完整原始資料，但目前的 adapter 不支援自動壓縮 Codex 原生工具輸出。

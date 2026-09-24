@@ -19,8 +19,10 @@ remain recorded. These do not qualify general workflow reliability. See the
 | Embedded runtime adapter | Connect an enforcing host using `start`, `resume`, `cancel` | Application-owned adapter and its own qualification |
 | LiteLLM gateway | Describe a fixed, approved gateway connection | Separately operated gateway and enforcing host; live qualification still pending |
 
-The concrete subscription profile was tested on macOS with
-`codex-cli 0.155.0-alpha.9.2`. The local host accepts that version or a newer
+The concrete subscription profile has bounded macOS samples on
+`codex-cli 0.155.0-alpha.9.2` and `0.155.0-alpha.16.3`; see the
+[version-specific evidence](../validation/workkeel-automation.md#mac-mini-handoff-with-newer-codex).
+The local host accepts `0.155.0-alpha.9.2` or a newer
 semantic version on macOS, while retaining its App Server, model and sandbox
 control checks. A newer version passing the version gate is not itself a live
 qualification; record version-specific offline and live results separately.
@@ -211,8 +213,10 @@ observation immediately before dispatch. Initialization is followed by another
 expiry check; expired or missing authorization prevents a model turn. This
 snapshot grants no new permission, does not extend expiry and is not acceptance.
 The coordinator owns lifecycle administration; the model receives the actual
-node work separately. This offline handoff improvement has not been requalified
-with live subscription calls.
+node work separately. The original handoff improvement was verified offline;
+later bounded Luna/Sol work and the Mac Mini sample succeeded, as recorded in the
+[validation history](../validation/workkeel-automation.md). Those samples do not
+prove that all future model refusals or date misinterpretations are eliminated.
 Cycles and retries share the configured dispatch and
 elapsed-time bounds. `retry:true` permits only a reported failed/retry continuation
 of the same conversation, never an uncertain fresh attempt.

@@ -60,12 +60,14 @@ node bin/workkeel.mjs help
 Follow the [quick start](docs/getting-started/workkeel.md) to initialize your
 project, approve a task, claim it and record review. The previewable
 [AGENTS/CLAUDE bridge](docs/extensions/workkeel-context.md) preserves existing
-instructions. Native coordination works with your current coding agent.
+instructions. Native coordination works with your current coding agent. Task-first
+projects use `WORKKEEL.md` and the `workkeel` CLI; retained `TEMPLE.md` and
+`temple-work` instructions serve legacy compatibility, not task-first setup.
 
 For automatic graph execution, install optional dependencies with
 `npm ci --include=optional --ignore-scripts` and follow the
 [Codex subscription setup](docs/operations/workkeel-workflows.md#choose-how-to-run).
-The experimental profile currently targets macOS and a pinned Codex version; no extra
+The experimental profile requires macOS and Codex `0.155.0-alpha.9.2` or newer; no extra
 API key or LiteLLM server is required. It selects models for Workkeel-launched
 steps, not existing desktop conversations or your global model default.
 
@@ -77,7 +79,7 @@ steps, not existing desktop conversations or your global model default.
 | Coding agent | Your existing agent | Codex, Claude Code or another instruction-following agent; native use does not select its model |
 | Graph engine | Off / opt-in | LangGraph packages plus an approved workflow; sequences, branches, direct joins and checkpoints |
 | Automatic model selection | Off / opt-in | Workkeel policy: node override → matching rule → approved default; no classifier model call |
-| Codex monthly subscription | Opt-in / experimental | Existing ChatGPT login; macOS and pinned Codex host; bounded Luna/Sol samples passed, not general reliability qualification |
+| Codex monthly subscription | Opt-in / experimental | Existing ChatGPT login; macOS and Codex ≥ `0.155.0-alpha.9.2`; bounded Luna/Sol samples passed, not general reliability qualification |
 | LiteLLM gateway | Off / optional | Fixed approved connection only; no bundled server; live qualification pending |
 | LiteLLM Auto Router | Not integrated | Distinct from Workkeel policy routing; not enabled by the gateway option |
 | Headroom | Off | Lossless views via a host-owned integration; no native Codex tool-output interception |
@@ -121,10 +123,14 @@ was applied well. [Selection and outcome checks →](docs/extensions/workkeel-co
 
 ## Evidence and limits
 
-Latest offline verification passed 1,403 cases; the earlier automation baseline also passed nine model-free sandbox checks.
-The final subscription check failed after Luna incorrectly rejected a still-valid
-authorization; execution stopped before Sol. Automatic execution remains experimental,
-not a qualified reliable workflow or evidence of subscription savings.
+The 2026-09-24 Codex compatibility change passed complete offline verification across
+139 test files. A bounded Mac Mini typo task also passed with Codex
+`0.155.0-alpha.16.3`; earlier Luna/Sol comparisons and a monitor-helper
+implementation/review passed in their recorded scopes. The older failed attempt,
+where Luna rejected a still-valid authorization and stopped before Sol, remains
+part of the evidence. Automatic execution remains experimental: these samples do
+not establish general reliability, subscription savings or compatibility with all
+future Codex versions. Version acceptance and live qualification are separate.
 [Methods, results and remaining qualification →](docs/validation/workkeel-automation.md)
 
 Headroom preserves exact originals, but this adapter cannot automatically compress
