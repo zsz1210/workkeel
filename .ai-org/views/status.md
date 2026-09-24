@@ -4,8 +4,8 @@
 - Organization system version: `0.1.0-alpha.33`
 - Active Agent Identities: 5
 - Collaboration profile: `solo` (0 Human Principals, 0 active claims)
-- Parallel plan: 0 wave(s), fresh=true
-- Work items: 268 total, 0 active
+- Parallel plan: 0 wave(s), fresh=false
+- Work items: 269 total, 0 active
 - Codex tasks: 14 registered, 14 archive-ready
 - Runtime workers: 118 registered, 0 reserved, 0 active
 - Shared resources: 0 defined, 0 active reservation(s)
@@ -18,7 +18,7 @@
 - Specifications: 2 indexed, 2 approved (hybrid)
 - Tracker: `repository-only` (0 active provider(s), 0 linked Work Item(s))
 - Repository integration: `confirmed` (Develop focused changes on short-lived branches and submit them through pull requests; the maintainer owns final integration and release decisions.)
-- Attention signals: 26
+- Attention signals: 27
 
 ## Collaboration
 
@@ -37,7 +37,7 @@
 - Generated plan: `.ai-org/views/parallel-plan.json`
 - Installed: yes
 - Valid: yes
-- Fresh: yes
+- Fresh: no
 - Safe waves: 0
 - Dispatchable Work Items: 0
 - Active / sequential / blocked: 0 / 0 / 0
@@ -316,6 +316,7 @@
 | WI-0266 | Normalize local evidence and complete bounded model comparison | done | Engineering Manager | Mog | parallel | team-visible | 0 | gate-evidence | not-applicable | 0 | 0 | 0 | — | `e37f416f` | 0 | 5 | 0 |
 | WI-0267 | Complete bounded development routing and task monitor | done | Engineering Manager | Mog | parallel | team-visible | 0 | gate-evidence | code-first | 0 | 0 | 0 | — | `0c35fd44` | 0 | 8 | 0 |
 | WI-0268 | Bounded publication scanning and digest-bound binary review | done | Engineering Manager | Mog | parallel | team-visible | 0 | gate-evidence | not-applicable | 0 | 0 | 0 | — | `0c35fd44` | 0 | 7 | 0 |
+| WI-0269 | Integrate daily task intake and evidence-first observer | done | Engineering Manager | Mog | pending | team-visible | 0 | gate-evidence | code-first | 0 | 0 | 0 | — | `2dcd9552` | 0 | 10 | 0 |
 
 ## Delivery attention
 
@@ -494,13 +495,14 @@
 - worker-20260915174040-464e550f is failed
 - worker-20260915175330-3e16bfe8 is failed
 - worker-20260915233053-33b568eb is failed
+- Generated parallel plan is stale; rebuild it before dispatch
 
 ## External tracker coordination
 
 - Profile: `repository-only`
 - Sync granularity: `team-visible`
 - Active providers: 0
-- Team-visible Work Items: 113
+- Team-visible Work Items: 114
 - Linked Work Items: 0
 - Observed external items: 0
 - Reconciliation actions: 0
@@ -574,14 +576,14 @@
 
 | Time | Event | Work item | Actor |
 |---|---|---|---|
-| 2026-09-24T01:38:21.693Z | work_item_closed | WI-0268 | agent-mog |
-| 2026-09-24T01:38:21.693Z | release_gate_completed | WI-0268 | agent-mog |
-| 2026-09-24T01:38:21.176Z | work_item_claimed | WI-0268 | human |
-| 2026-09-24T01:38:20.493Z | work_item_closed | WI-0267 | agent-mog |
-| 2026-09-24T01:38:20.493Z | release_gate_completed | WI-0267 | agent-mog |
-| 2026-09-24T01:37:46.171Z | work_item_claim_released | WI-0268 | human |
-| 2026-09-24T01:36:14.094Z | work_item_claimed | WI-0268 | human |
-| 2026-09-24T01:36:13.417Z | work_item_transitioned | WI-0268 | agent-lulu |
+| 2026-09-24T23:32:37.985Z | work_item_closed | WI-0269 | agent-mog |
+| 2026-09-24T23:32:37.985Z | release_gate_completed | WI-0269 | agent-mog |
+| 2026-09-24T23:31:58.304Z | work_item_claimed | WI-0269 | human |
+| 2026-09-24T23:31:57.882Z | work_item_transitioned | WI-0269 | agent-lulu |
+| 2026-09-24T23:31:57.488Z | work_item_claim_released | WI-0269 | human |
+| 2026-09-24T23:31:57.110Z | work_item_claimed | WI-0269 | human |
+| 2026-09-24T23:31:56.688Z | work_item_transitioned | WI-0269 | agent-lulu |
+| 2026-09-24T23:31:56.289Z | work_item_claim_released | WI-0269 | human |
 
 ## Assignments
 

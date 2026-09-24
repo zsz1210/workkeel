@@ -9,6 +9,7 @@ tasks, execution and review evidence together in your repository.
 | --- | --- |
 | Understand the framework and its concepts | [README](../README.md), [terminology](concepts/terminology.md), [architecture](concepts/architecture.md) |
 | Initialize, claim, hand off and accept a task | [Quick start](getting-started/workkeel.md), [task contract](concepts/task-contract.md) |
+| Prepare a daily brief, resume a handoff and observe delivery | [Daily work](operations/workkeel-daily-work.md) |
 | Execute a graph using the Codex subscription and selected models | [Workflow and routing guide](operations/workkeel-workflows.md) |
 | Connect Codex/Claude instructions, check Skill use, plan Headroom | [Project context](extensions/workkeel-context.md) |
 | Inspect measurements and qualification limits | [Automation validation](validation/workkeel-automation.md), [testing policy](getting-started/testing.md) |

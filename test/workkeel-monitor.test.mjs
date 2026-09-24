@@ -44,7 +44,10 @@ test('monitor serves read-only redacted measurements and protects its local API'
  const html=await fetch(url.origin);assert.match(html.headers.get('content-security-policy'),/frame-ancestors 'none'/);
  assert.ok(!(await html.text()).includes(url.hash.slice(1)));assert.deepEqual(await fingerprint(root),before);
  await fs.writeFile(path.join(root,'.ai-org/execution/completed/status.json'),'corrupt');
- assert.equal((await fetch(api,{headers})).status,503);
+ const degraded=await fetch(api,{headers});assert.equal(degraded.status,200);
+ const partial=await degraded.json();assert.equal(partial.complete,false);
+ assert.equal(partial.tasks.find(t=>t.id==='WK-completed').usage.input_tokens.total,null);
+ assert.equal(partial.tasks.find(t=>t.id==='WK-unobserved').read_status,'available');
 });
 test('empty project stays empty and legacy/uninitialized projects are not migrated',async t=>{
  const root=await createMonitorFixture({empty:true});t.after(()=>fs.rm(root,{recursive:true,force:true}));

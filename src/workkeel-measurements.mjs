@@ -120,3 +120,42 @@ export async function readTaskMeasurements(target, id) {
       "Partial snapshots are not final totals. No token-to-subscription-quota or dollar conversion.",
       "Measurements do not accept tasks or establish model quality."] };
 }
+
+/** One validated inventory per observer refresh. Strict per-task metrics stay unchanged. */
+export async function readProjectMeasurements(target) {
+  const byTask=new Map(), errors=[];
+  const ref='.ai-org/execution';
+  if(!await existsEntry(target,ref))return {byTask,errors,index_reads:0};
+  const directory=await safeDirectory(target,ref);
+  const names=(await fs.readdir(directory)).sort();
+  if(names.length>4096)throw Error('Execution inventory limit exceeded; use per-task metrics');
+  let indexReads=0;
+  for(const entry of names){
+    if(['.gitignore','claims'].includes(entry))continue;
+    let taskId=null;
+    try{
+      if(!validId(entry))throw Error('Invalid execution entry');
+      indexReads++;
+      const run=await record(target,`${ref}/${entry}/run.json`);
+      if(run.run_id!==entry||run.request?.run_id!==entry||! /^[A-Za-z0-9][A-Za-z0-9._-]{0,95}$/.test(run.request?.task_id??''))throw Error('Invalid run identity');
+      taskId=run.request.task_id;
+      const measurement=await readWorkflowMeasurements(target,entry);
+      if(measurement.task_id!==taskId)throw Error('Run attribution changed');
+      if(!byTask.has(taskId))byTask.set(taskId,[]);
+      byTask.get(taskId).push(measurement);
+    }catch{errors.push({run_id:validId(entry)?entry:null,task_id:taskId,code:'journal-unavailable'});}
+  }
+  if(JSON.stringify(names)!==JSON.stringify((await fs.readdir(directory)).sort()))errors.push({run_id:null,task_id:null,code:'inventory-changed'});
+  return {byTask,errors,index_reads:indexReads};
+}
+
+export function projectTaskMeasurements(task, index) {
+  const runs=index.byTask.get(task.id)??[],errors=index.errors.filter(e=>e.task_id===null||e.task_id===task.id);
+  const totals=summarizeMeasurements(runs.flatMap(r=>r.operations),{observed:runs.length>0});
+  if(errors.length){
+    for(const metric of Object.values(totals.usage)){metric.total=null;metric.complete=false;}
+    totals.timing.adapter_work_ms=null;
+  }
+  return {task_id:task.id,task_state:task.state,coverage:errors.length?'incomplete-journal':runs.length?'recorded-workflow-runs-only':'unobserved',
+    ...totals,runs,measurement_errors:errors};
+}

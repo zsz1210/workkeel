@@ -15,6 +15,10 @@ workkeel status|doctor [target]
 workkeel task create [target] --source contract.json --request request.json
 workkeel task show [target] --id task-id
 workkeel task metrics [target] --id task-id
+workkeel task summary [target] --id task-id
+workkeel task observe [target] --id task-id --request observation.json
+workkeel intake preview [target] --request brief.json
+workkeel intake apply [target] --request brief.json --fingerprint sha256
 workkeel task claim|release|handoff|review|rework|close|cancel [target] --id task-id --request request.json
 workkeel runtime plan [target] --id task-id
 workkeel instructions preview|apply [target] [--fingerprint sha256]
@@ -35,7 +39,7 @@ permissions. Workflow run explicitly launches the qualified Codex subscription h
 `;
 function parse(args) {
   const rest = [...args]; const command = rest.shift() ?? "help";
-  const action = ["task", "migration", "runtime", "instructions", "workflow", "headroom", "skills"].includes(command) ? rest.shift() : null;
+  const action = ["task", "intake", "migration", "runtime", "instructions", "workflow", "headroom", "skills"].includes(command) ? rest.shift() : null;
   const target = rest[0] && !rest[0].startsWith("--") ? rest.shift() : ".";
   const options = {};
   while (rest.length) {
@@ -73,8 +77,20 @@ export async function workkeelMain(args) {
     output = command === "doctor" ? await diagnoseTaskProject(target) : {
       schema_version: "workkeel.status/v1", tasks: await listTaskItems(target), authority: "observation-only", mutation_status: "no-write"
     };
+  } else if (command === 'intake') {
+    allow(options, action==='preview' ? ['--request'] : ['--request','--fingerprint']);
+    const {previewTaskIntake,applyTaskIntake}=await import('./workkeel-intake.mjs');
+    const brief=(await readTaskContractInput(target,required(options,'--request'))).document;
+    if(action==='preview')output=await previewTaskIntake(target,brief);
+    else if(action==='apply')output=await applyTaskIntake(target,brief,required(options,'--fingerprint'));
+    else throw Error('Intake requires preview or apply');
   } else if (command === "task") {
-    if (action === "metrics") {
+    if(action==='summary'||action==='observe'){
+      allow(options,action==='summary'?['--id']:['--id','--request']);
+      const {readTaskSummary,recordTaskObservation}=await import('./workkeel-task-summary.mjs');
+      output=action==='summary'?await readTaskSummary(target,required(options,'--id')):
+        await recordTaskObservation(target,required(options,'--id'),(await readTaskContractInput(target,required(options,'--request'))).document);
+    } else if (action === "metrics") {
       allow(options, ["--id"]);
       const { readTaskMeasurements } = await import("./workkeel-measurements.mjs");
       output = await readTaskMeasurements(target, required(options, "--id"));

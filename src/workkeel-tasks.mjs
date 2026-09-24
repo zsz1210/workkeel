@@ -64,7 +64,7 @@ export async function readNativeTask(target, id) {
   assertRecord(input.document, id);
   return input.document;
 }
-export async function listTaskItems(target) {
+export async function listTaskItems(target, { isolateErrors = false } = {}) {
   const project = await readTaskProject(target);
   if (!await existsEntry(target, ".ai-org/work-items")) return [];
   const dir = await safeDirectory(target, ".ai-org/work-items");
@@ -78,6 +78,8 @@ export async function listTaskItems(target) {
     }
     if (!entry.endsWith(".json")) throw new Error("Unexpected file in task store");
     const id = entry.slice(0, -5);
+    if (!ID.test(id)) throw new Error('Invalid task filename');
+    try {
     const { document: item } = await readTaskContractInput(target, fileRef(id));
     if (item.schema_version === "temple.work-item/v1") {
       if (item.id !== id) throw new Error("Legacy task ID differs from its filename");
@@ -89,6 +91,10 @@ export async function listTaskItems(target) {
       assertRecord(item, id);
       items.push({ id, state: item.state, title: item.contract.goal, mode: "task-first", version: item.version,
         actor: item.claim?.actor ?? null, candidate_revision: item.delivery?.revision ?? null });
+    }
+    } catch (error) {
+      if (!isolateErrors) throw error;
+      items.push({id,title:id,mode:'unavailable',state:'unknown'});
     }
   }
   return items;
@@ -162,7 +168,7 @@ function result(item, replayed = false) {
     boundary_enforcement: "host-responsibility", external_release: "not-performed" };
 }
 
-export async function createNativeTask(targetInput, contract, request) {
+export async function createNativeTask(targetInput, contract, request, { expectedPolicyDigest = null, expectedAuthorityPins = null } = {}) {
   const target = await fs.realpath(targetInput);
   assertRequest(request, []);
   if (request.expected_version !== 0) throw new Error("Task creation expects version zero");
@@ -170,8 +176,10 @@ export async function createNativeTask(targetInput, contract, request) {
   return withProjectMutationLock(target, async () => {
     const project = await readTaskProject(target);
     assertApprover(project.policy, request.actor);
+    if (expectedPolicyDigest !== null && digest(project.policy) !== expectedPolicyDigest) throw new Error('Intake policy changed; inspect a fresh preview');
     if (await existsEntry(target, ref)) {
       const existing = await readNativeTask(target, contract.id);
+      if (expectedAuthorityPins !== null && digest(existing.authority_pins) !== digest(expectedAuthorityPins)) throw new Error('Existing task authority differs from the preview; inspect the original task');
       if (digest(existing.contract) !== digest(contract) || !replay(existing, "create", request)) throw new Error("Task ID already exists");
       return result(existing, true);
     }
@@ -186,6 +194,7 @@ export async function createNativeTask(targetInput, contract, request) {
       contract: structuredClone(contract), contract_sha256: digest(contract), policy_sha256: digest(project.policy),
       authority_pins: await evidence(target, authorityRefs), claim: null, base_revision: null,
       dependency_pins: null, delivery: null, review: null, closeout: null, attempts: [], history: [] };
+    if (expectedAuthorityPins !== null && digest(item.authority_pins) !== digest(expectedAuthorityPins)) throw new Error('Intake authority changed; inspect a fresh preview');
     await context(target, item, project);
     append(item, "create", request);
     if (Buffer.byteLength(formatJson(item)) > 1024 * 1024) throw new Error("New task exceeds the bounded record size");

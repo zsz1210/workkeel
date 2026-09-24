@@ -83,7 +83,8 @@ steps, not existing desktop conversations or your global model default.
 | LiteLLM gateway | Off / optional | Fixed approved connection only; no bundled server; live qualification pending |
 | LiteLLM Auto Router | Not integrated | Distinct from Workkeel policy routing; not enabled by the gateway option |
 | Headroom | Off | Lossless views via a host-owned integration; no native Codex tool-output interception |
-| Task monitor | Off / optional | `workkeel monitor /path/to/project`: on-demand, read-only task/run view; no model calls or background service. [Guide](docs/operations/workkeel-measurements.md#optional-task-monitor) |
+| Daily task entry | Explicit preview / apply | One approved brief produces the native contract; handoff and review remain required. [Guide](docs/operations/workkeel-daily-work.md) |
+| Task monitor | Off / optional | `workkeel monitor /path/to/project`: attention-first overview, task evidence and usage/quality; read-only, no model calls or background service. [Guide](docs/operations/workkeel-daily-work.md#observer-surfaces-and-limits) |
 | Task measurements | Recorded during workflow execution | Read-only model/token/time queries; native host sessions remain unobserved. [Guide](docs/operations/workkeel-measurements.md) |
 
 There is no universal Luna/Sol/Astra default: a native agent keeps its own setting;
