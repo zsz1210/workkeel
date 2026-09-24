@@ -62,6 +62,17 @@ npm run test:browser
 
 This command starts the repository-local Control Plane on loopback and opens four responsive layouts in an installed Google Chrome. It checks primary navigation, live rendering, browser errors, keyboard tabs, reduced-motion behavior, horizontal overflow, primary-text clipping, and named high-level layout regions. It does not download a browser or use the contributor's normal Chrome profile. A failure writes an actionable screenshot below `output/playwright/`.
 
+For the task-first monitor, also run its focused browser gate:
+
+```bash
+node scripts/verify-workkeel-monitor.mjs
+```
+
+It uses synthetic task journals and installed Chrome at desktop/mobile sizes,
+including unknown/partial data, changed snapshots, stale errors, read recovery,
+access-link handling, keyboard controls and escaped task text. It makes no model
+calls; its report distinguishes real journal states from injected UI projections.
+
 ## Continuous integration
 
 Ordinary GitHub Actions is intentionally a short remote consistency check, not Temple's complete test environment. Every pull request and push to `main` runs one Node.js 24 job with an eight-minute ceiling. The job uses a clean checkout and performs:
