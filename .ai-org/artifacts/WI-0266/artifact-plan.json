@@ -1,0 +1,100 @@
+{
+  "schema_version": "temple.publication-artifact-normalization-plan/v1",
+  "status": "changes-pending",
+  "source_revision": "bab9b8fe045ccc939635f45537ffcca20bff78ef",
+  "matched_values_retained": false,
+  "files": [
+    {
+      "path": ".ai-org/artifacts/WI-0252/full-attempt-01.log",
+      "before_sha256": "fdb38e14730d10ea72da7636d0b9f440155e014fd9359bd1284b9ab6f0ad674a",
+      "after_sha256": "09fb79b39aea8e2f2724f21e350970eb3303eaec4a901891aef18feeabda47cc",
+      "change_count": 1,
+      "changes": {
+        "maintainer-home-path-posix": 1
+      }
+    },
+    {
+      "path": ".ai-org/artifacts/WI-0253/test-evidence-rework-001.md",
+      "before_sha256": "8adf613a3e1d9464e583c13fb0c3b68a175ecbaf991ce97df27390edd5b1f475",
+      "after_sha256": "2d546d384e3c9461d7dfbe7b4e7f930965885a32e37d4af6eece4ab1e9a53d24",
+      "change_count": 1,
+      "changes": {
+        "maintainer-home-path-posix": 1
+      }
+    },
+    {
+      "path": ".ai-org/artifacts/WI-0254/verifier-evidence-agent-lulu.md",
+      "before_sha256": "f01376febfa8a5190b3e0f824d881982bf06417c56561dabac8ed2bc518a2af3",
+      "after_sha256": "31b4667470d5752ec04228adc31014739ff2be1a6c201179f5f3ad709441a52b",
+      "change_count": 1,
+      "changes": {
+        "maintainer-home-path-posix": 1
+      }
+    },
+    {
+      "path": ".ai-org/artifacts/WI-0256/verifier-evidence-agent-lulu.md",
+      "before_sha256": "0d4f099499858abede2dd7bddb11b636390a128197212a2f5c47b985c6a559a9",
+      "after_sha256": "a20824eb317067b523135d3400100d5650ba21feef7ae6717f685e2f611b495a",
+      "change_count": 1,
+      "changes": {
+        "maintainer-home-path-posix": 1
+      }
+    },
+    {
+      "path": ".ai-org/artifacts/WI-0257/qualification.md",
+      "before_sha256": "f7736ad8bebd573637b668ec614a01de1d40c559778c1c595ab02283ea72b276",
+      "after_sha256": "befb6982f7fb582beb9e7ccbeb72e216bd38efe4e95957360085169b974d4b1e",
+      "change_count": 1,
+      "changes": {
+        "maintainer-home-path-posix": 1
+      }
+    },
+    {
+      "path": ".ai-org/artifacts/WI-0257/verifier.md",
+      "before_sha256": "9c7c4a4ade2eae9ef9ec2708684b0afa968812a93a0ba2700f3ada46ad0207fd",
+      "after_sha256": "1e901b01a9609e1bf8fb65f07c6029d901ea5b179c40b00226b0b946b52b12ab",
+      "change_count": 1,
+      "changes": {
+        "maintainer-home-path-posix": 1
+      }
+    },
+    {
+      "path": ".ai-org/artifacts/WI-0258/developer-evidence.md",
+      "before_sha256": "2059c5d97ae3c1729ddf6fb7b90a71bef4c682844bcc389b958b242cc784e16b",
+      "after_sha256": "ad1edacab412dee11e153875b74a7176bb48683dfff181c5d7e3db45ae013ec0",
+      "change_count": 1,
+      "changes": {
+        "maintainer-home-path-posix": 1
+      }
+    },
+    {
+      "path": ".ai-org/artifacts/WI-0258/readiness-comparison.json",
+      "before_sha256": "880bc8c76a4532aefd6e1e43274e21fe99b0c2a3a5bfb48db4d58c611c665295",
+      "after_sha256": "ea7e9f6de60e1a60983dc814f98fef7f18b3fffbbd3aaf9e96e75c95238a7998",
+      "change_count": 1,
+      "changes": {
+        "maintainer-home-path-posix": 1
+      }
+    }
+  ],
+  "active_evidence_impacts": [],
+  "summary": {
+    "tracked_artifact_files": 3906,
+    "text_files": 3836,
+    "binary_files_skipped": 70,
+    "oversize_files_skipped": 0,
+    "changed_files": 8,
+    "change_count": 8,
+    "active_evidence_records_affected": 0,
+    "active_evidence_artifacts_affected": 0,
+    "changes": {
+      "maintainer-home-path-posix": 8
+    }
+  },
+  "authority": {
+    "git_history_changed": false,
+    "canonical_state_changed": false,
+    "publication_authorized": false
+  },
+  "plan_digest": "f1963f85e7c3b71ee5f40532195746dafbe9b0e79a955ec5eccac2ac8a688285"
+}

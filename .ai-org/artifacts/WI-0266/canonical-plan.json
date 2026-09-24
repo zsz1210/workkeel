@@ -1,0 +1,102 @@
+{
+  "schema_version": "temple.publication-normalization-plan/v1",
+  "status": "changes-pending",
+  "matched_values_retained": false,
+  "files": [
+    {
+      "path": ".ai-org/work-items/WI-0253.json",
+      "before_sha256": "15dffb78fc10152ac3c52e6f139be2b79112b4d52573db51ab41d79bdba62bde",
+      "after_sha256": "f2c985d4000f3e3007a9f5c25bc94bb083cf91508b22e412e6e59b3bbf71c959",
+      "change_count": 6,
+      "changes": {
+        "released-claim-worktree": 6
+      }
+    },
+    {
+      "path": ".ai-org/work-items/WI-0254.json",
+      "before_sha256": "a1e0df8ae907c7f83c4c262073961890269fa1b0b0974567bbe3faad7bab258e",
+      "after_sha256": "627b80da0042a6f12444c590c91cdf1be04eedffb8dbc48dda19517f8791d70a",
+      "change_count": 4,
+      "changes": {
+        "released-claim-worktree": 4
+      }
+    },
+    {
+      "path": ".ai-org/work-items/WI-0255.json",
+      "before_sha256": "286a25ed382cb6b267ed7e07010c781700b30b5e48085b607f0a31449b37edc4",
+      "after_sha256": "5c0f07848b6a53d700d93396907820a340352d052be62c31beaa3b364480c889",
+      "change_count": 6,
+      "changes": {
+        "released-claim-worktree": 6
+      }
+    },
+    {
+      "path": ".ai-org/work-items/WI-0256.json",
+      "before_sha256": "09a349d65f17dc075d66489504af1f9854f7773089f8094c85aecd57d931217a",
+      "after_sha256": "5182d95db0e1b401b248fc0186b49363a4386ee38be66d2a996435c6e2a3da03",
+      "change_count": 5,
+      "changes": {
+        "released-claim-worktree": 5
+      }
+    },
+    {
+      "path": ".ai-org/work-items/WI-0257.json",
+      "before_sha256": "d6af8af7a23578f9204356f83d7e642087fd134ab0974034355380e2b5d85600",
+      "after_sha256": "b07cbd686fb7070fecc48901378d68bc703ca80d0518aaab8819f0946650573d",
+      "change_count": 2,
+      "changes": {
+        "released-claim-worktree": 2
+      }
+    },
+    {
+      "path": ".ai-org/work-items/WI-0258.json",
+      "before_sha256": "c5ea4e51be685b4dd062f28d1f0fc719c960ab9c58685ca9cd2b48760079fcd6",
+      "after_sha256": "c1175aa7b8470b08889b364df98a6b9c5b78244b1f758160b3e27f6d37378a67",
+      "change_count": 8,
+      "changes": {
+        "released-claim-worktree": 8
+      }
+    },
+    {
+      "path": ".ai-org/work-items/WI-0259.json",
+      "before_sha256": "036b9c05586f3518ddb1a5dd9bbdeadea1908da4e1e5e646b6f95fcd6438e24c",
+      "after_sha256": "8638e69052756c7c0b228da858fbb9861b474e65bfde4ac45b8db4a71d335ce3",
+      "change_count": 7,
+      "changes": {
+        "released-claim-worktree": 7
+      }
+    },
+    {
+      "path": ".ai-org/work-items/WI-0260.json",
+      "before_sha256": "a45ae5c501f1f643b761816a761f200dfb4811e0e436cb972278e49ca62e2089",
+      "after_sha256": "d4ca1e13807b72c6633fb03680a4f5ffe7a9b292b8a603c431064e2253d120ae",
+      "change_count": 4,
+      "changes": {
+        "released-claim-worktree": 4
+      }
+    },
+    {
+      "path": ".ai-org/project/runtime-workers.json",
+      "before_sha256": "e73dc6fded2885da180a1fe17988ae20cc46deef6fc63a78193ef1c1a0c21cd4",
+      "after_sha256": "9eec9641720f525b2bcd4d600e62f43d7d448adc8d57ae8e0c350bd09ec8ca32",
+      "change_count": 5,
+      "changes": {
+        "terminal-worker-worktree": 5
+      }
+    }
+  ],
+  "summary": {
+    "changed_files": 9,
+    "change_count": 47,
+    "retained_active_coordinates": 0,
+    "changes": {
+      "released-claim-worktree": 42,
+      "terminal-worker-worktree": 5
+    }
+  },
+  "authority": {
+    "canonical_state_changed": false,
+    "publication_authorized": false
+  },
+  "plan_digest": "c6434a9131382940d94864e068bd07a5117dca3e7b4e57a3beabf8d64f8d2710"
+}

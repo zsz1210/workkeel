@@ -1,0 +1,15 @@
+{
+  "schema_version": "temple.publication-artifact-normalization-result/v1",
+  "applied": true,
+  "plan_digest": "f1963f85e7c3b71ee5f40532195746dafbe9b0e79a955ec5eccac2ac8a688285",
+  "source_revision": "bab9b8fe045ccc939635f45537ffcca20bff78ef",
+  "work_item_id": "WI-0266",
+  "changed_files": 8,
+  "change_count": 8,
+  "changes": {
+    "maintainer-home-path-posix": 8
+  },
+  "event_recorded": true,
+  "git_history_changed": false,
+  "publication_authorized": false
+}

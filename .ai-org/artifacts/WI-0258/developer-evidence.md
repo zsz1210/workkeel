@@ -2,7 +2,7 @@
 
 Developer agent-rikku. Frozen product candidate:
 `8518841bdb2b0d66529652507cb9d83516d8b813`, based on main `1a3b132d`.
-Isolated worktree: `/Users/zsz1210/Documents/ChatGPT/temple-team-entry`.
+Isolated worktree: `<LOCAL_HOME>/Documents/ChatGPT/temple-team-entry`.
 
 Reproduced old default readiness headline complete despite task_ready:false and
 exit 1 on terminal WI-0252. Dedicated default text now shows independent actor

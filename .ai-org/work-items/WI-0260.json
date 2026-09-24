@@ -102,7 +102,7 @@
       "position_id": "engineering_manager",
       "base_revision": "f2d0554023fa186f27d7b0d7bd98bd4368dfd111",
       "branch": "codex/workkeel-automation",
-      "worktree": ".",
+      "worktree": null,
       "claimed_at": "2026-09-23T13:17:35.549Z",
       "released_at": "2026-09-23T13:19:18.678Z",
       "release_reason": [
@@ -125,7 +125,7 @@
       "position_id": "product_manager",
       "base_revision": "f2d0554023fa186f27d7b0d7bd98bd4368dfd111",
       "branch": "codex/workkeel-automation",
-      "worktree": ".",
+      "worktree": null,
       "claimed_at": "2026-09-23T13:19:19.757Z",
       "released_at": "2026-09-23T13:20:46.963Z",
       "release_reason": [
@@ -148,7 +148,7 @@
       "position_id": "tech_lead",
       "base_revision": "f2d0554023fa186f27d7b0d7bd98bd4368dfd111",
       "branch": "codex/workkeel-automation",
-      "worktree": ".",
+      "worktree": null,
       "claimed_at": "2026-09-23T13:20:48.061Z",
       "released_at": "2026-09-23T13:22:21.410Z",
       "release_reason": [
@@ -171,7 +171,7 @@
       "position_id": "developer",
       "base_revision": "f2d0554023fa186f27d7b0d7bd98bd4368dfd111",
       "branch": "codex/workkeel-automation",
-      "worktree": ".",
+      "worktree": null,
       "claimed_at": "2026-09-23T13:22:22.449Z",
       "released_at": "2026-09-23T15:36:29.258Z",
       "release_reason": [

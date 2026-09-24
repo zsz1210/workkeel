@@ -18,7 +18,7 @@ authority gate.
 ## Exact-candidate and source review
 
 - A fresh detached worktree at
-  `/Users/zsz1210/Documents/Codex/2026-09-23/temple-test-slimming/work/wi0256-qa-exact`
+  `<LOCAL_HOME>/Documents/Codex/2026-09-23/temple-test-slimming/work/wi0256-qa-exact`
   reported HEAD exactly
   `4ac435d8fa47dc246609e296a2b224c8590da55b` and was clean before and after QA.
 - The three affected paths have identical Git blob IDs and `100644` modes in the

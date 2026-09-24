@@ -57,10 +57,10 @@ const git = (root,...args) => execFileSync("git",["-C",root,...args],{encoding:"
 const sourceFiles = ["scripts/workkeel-model-pilot.mjs","src/workkeel-codex-host.mjs","src/workkeel-codex-runtime.mjs","src/workkeel-workflows.mjs","src/workkeel-measurements.mjs","src/workkeel-execution-policy.mjs","src/workkeel-checkpoints.mjs"];
 async function hashes() { return Object.fromEntries(await Promise.all(sourceFiles.map(async name=>[name,sha256(await fs.readFile(path.join(repo,name)))]))); }
 
-export function assertBudget({ steps, startedAt, now, remaining }) {
+export function assertBudget({ steps, startedAt, now, remaining, quotaFloor = limits.quota_floor }) {
   if (!Number.isInteger(steps) || steps < 0 || steps >= limits.steps) throw new Error("Step budget exhausted");
   if (!Number.isFinite(now) || !Number.isFinite(startedAt) || now < startedAt || now-startedAt >= limits.elapsed_ms) throw new Error("Time budget exhausted");
-  if (!Number.isFinite(remaining) || remaining <= limits.quota_floor || remaining > 100) throw new Error("Quota brake reached or unavailable");
+  if (!Number.isFinite(quotaFloor) || quotaFloor < 30 || quotaFloor >= 100 || !Number.isFinite(remaining) || remaining <= quotaFloor || remaining > 100) throw new Error("Quota brake reached or unavailable");
 }
 
 // No imports or host objects are exposed to the module. A separate process has
@@ -83,23 +83,34 @@ export function evaluate(source,scenario) {
   } catch { return {pass:false,passed:0,total:scenario.checks.length,failed:["Module load or evaluation failure"]}; }
 }
 
-export async function prepare(directory) {
+async function approvalHash(reference) {
+  if (typeof reference !== "string" || !/^\.ai-org\/artifacts\/WI-\d{4,}\/work-order\.md$/.test(reference)) throw new Error("Explicit repository work-order approval is required");
+  const file=path.join(repo,reference);
+  const stat=await fs.lstat(file);
+  if(!stat.isFile()||stat.isSymbolicLink())throw new Error("Approval must be a regular work-order file");
+  return sha256(await fs.readFile(file));
+}
+
+export async function prepare(directory, {approvalRef, quotaRemaining} = {}) {
+  const approvalSha256=await approvalHash(approvalRef);
+  const quotaFloor=Math.max(30,quotaRemaining-3);
+  assertBudget({steps:0,startedAt:0,now:0,remaining:quotaRemaining,quotaFloor});
   await fs.mkdir(directory); // Must be a fresh, explicitly named directory.
-  const plan={schema_version:"workkeel.model-pilot/v1",at:new Date().toISOString(),limits,models:["gpt-6-luna","gpt-6-sol"],effort:"medium",order,
+  const plan={schema_version:"workkeel.model-pilot/v2",at:new Date().toISOString(),limits:{...limits,quota_floor:quotaFloor},models:["gpt-6-luna","gpt-6-sol"],effort:"medium",order,
     code_sha256:await hashes(),cases:cases.map(({id,prompt,starter,checks})=>({id,prompt_sha256:sha256(prompt),starter_sha256:sha256(starter),checks_sha256:sha256(JSON.stringify(checks)),checks:checks.length})),
-    approval:"WI-0265/work-order.md; explicit maintainer authority for one bounded pilot",codex:QUALIFIED_CODEX_VERSION,
-    extra_paid_spend:0,subscription_dollars:null,quota_start_remaining:45,limitations:["Three cases per model are diagnostic only","Account quota is shared; tokens are not credits","No independently observed backend model","No human answer edits between attempts"]};
+    approval_ref:approvalRef,approval_sha256:approvalSha256,codex:QUALIFIED_CODEX_VERSION,
+    extra_paid_spend:0,subscription_dollars:null,quota_start_remaining:quotaRemaining,limitations:["Three cases per model are diagnostic only","Account quota is shared; tokens are not credits","No independently observed backend model","No human answer edits between attempts"]};
   await create(path.join(directory,"plan.json"),plan);
   return plan;
 }
 
-async function fixture(scenario,model,attempt,input,priorSource) {
+async function fixture(scenario,model,attempt,input,priorSource,plan) {
   const root=await fs.realpath(await fs.mkdtemp(path.join(os.tmpdir(),"workkeel-paired-")));
   git(root,"init","-q");git(root,"config","user.name","Workkeel synthetic pilot");git(root,"config","user.email","pilot@example.invalid");
   await initializeTaskProject(root,{schema_version:"workkeel.task-policy/v1",principals:["owner"],agents:[actor],approvers:["owner"],review_separation:"distinct-agent"});
   await fs.mkdir(path.join(root,"src"));await fs.mkdir(path.join(root,"docs"));
   await fs.writeFile(path.join(root,"src/solution.mjs"),priorSource??scenario.starter);
-  await fs.writeFile(path.join(root,"docs/approval.md"),"Maintainer approved WI-0265 synthetic paired-model pilot. Only src may be modified; no network, publishing, credentials or external actions. One bounded step in this fixture.");
+  await fs.writeFile(path.join(root,"docs/approval.md"),`Maintainer approved synthetic paired-model pilot: ${plan.approval_ref}, SHA-256 ${plan.approval_sha256}. Only src may be modified; no network, publishing, credentials or external actions. One bounded step in this fixture.`);
   const policy={schema_version:"workkeel.execution-policy/v1",models:[{id:model,connection:{kind:"codex-subscription",model:`gpt-6-${model}`,effort:"medium"},data_classes:["public"]}],default_model:model,rules:[],limits:{steps:1,attempts_per_node:1,parallelism:1,timeout_ms:limits.step_ms,max_cost_usd:null},headroom:{mode:"off"}};
   const definition={schema_version:"workkeel.workflow/v1",nodes:[{id:"solve",kind:"runtime",write_paths:["src"],input:input+" Use tools to edit src/solution.mjs. Only src may be written. Do not read outside this fixture, use network or install anything. The restricted tool environment does not provide Node.js; the coordinator runs the independent tests outside it after submission. Submit the implementation without trying to install or find an external runtime, and state that you did not run tests. Finish with a concise summary."}],edges:[{from:"start",to:"solve"},{from:"solve",to:"end"}]};
   await fs.writeFile(path.join(root,"docs/policy.json"),formatJson(policy));await fs.writeFile(path.join(root,"docs/workflow.json"),formatJson(definition));
@@ -115,6 +126,10 @@ async function fixture(scenario,model,attempt,input,priorSource) {
 export async function runPair(directory,pair,remaining) {
   if (!Number.isInteger(pair)||pair<0||pair>=cases.length) throw new Error("Pair must be 0, 1 or 2");
   const plan=await json(path.join(directory,"plan.json"));
+  if(plan.schema_version!=="workkeel.model-pilot/v2" || plan.approval_sha256!==await approvalHash(plan.approval_ref)) throw new Error("Pilot approval changed or requires a fresh plan");
+  const quotaFloor=Math.max(30,plan.quota_start_remaining-3);
+  if(JSON.stringify(plan.limits)!==JSON.stringify({...limits,quota_floor:quotaFloor}))throw new Error("Pilot limits changed");
+  assertBudget({steps:0,startedAt:0,now:0,remaining:plan.quota_start_remaining,quotaFloor});
   if (JSON.stringify(plan.code_sha256)!==JSON.stringify(await hashes())) throw new Error("Pinned pilot source changed");
   const lock=await fs.open(path.join(directory,"running.lock"),"wx");
   try {
@@ -131,10 +146,10 @@ export async function runPair(directory,pair,remaining) {
     for (const model of order.slice(pair*2,pair*2+2)) {
       let prior=null;
       for(let attempt=0;attempt<2;attempt++) {
-        assertBudget({steps,startedAt:start.at,now:Date.now(),remaining});
+        assertBudget({steps,startedAt:start.at,now:Date.now(),remaining,quotaFloor});
         const input=scenario.prompt+(prior?`\nThe prior solution failed independent checks: ${prior.checks.failed.join(", ")}. Correct those cases without changing the contract.`:"");
-        const f=await fixture(scenario,model,attempt,input,prior?.source);
-        assertBudget({steps,startedAt:start.at,now:Date.now(),remaining});
+        const f=await fixture(scenario,model,attempt,input,prior?.source,plan);
+        assertBudget({steps,startedAt:start.at,now:Date.now(),remaining,quotaFloor});
         const id=`pair-${pair}-${model}-${attempt}`;
         await create(path.join(directory,`${id}.intent.json`),{at:new Date().toISOString(),fixture:f.root,model,attempt,remaining,source_sha256:sha256(prior?.source??scenario.starter)});steps++;
         const started=performance.now();const result={id,case:scenario.id,model:`gpt-6-${model}`,effort:"medium",attempt,fixture:f.root,infrastructure_failure:null,checks:null,measurements:null,cost_usd:null};
@@ -160,7 +175,7 @@ export async function runPair(directory,pair,remaining) {
 
 if(process.argv[1]&&path.resolve(process.argv[1])===fileURLToPath(import.meta.url)) {
   const [command,directory,flag,pair,remaining]=process.argv.slice(2);
-  if(command==="prepare"&&directory) console.log(JSON.stringify(await prepare(path.resolve(directory))));
+  if(command==="prepare"&&directory&&flag==="--approval") console.log(JSON.stringify(await prepare(path.resolve(directory),{approvalRef:pair,quotaRemaining:Number(remaining)})));
   else if(command==="run-pair"&&directory&&flag==="--use-subscription") await runPair(path.resolve(directory),Number(pair),remaining===undefined?NaN:Number(remaining));
-  else throw new Error("Usage: prepare FRESH_DIRECTORY | run-pair DIRECTORY --use-subscription PAIR WEEKLY_REMAINING_PERCENT; obtain fresh account quota before every pair");
+  else throw new Error("Usage: prepare FRESH_DIRECTORY --approval REPOSITORY_WORK_ORDER WEEKLY_REMAINING_PERCENT | run-pair DIRECTORY --use-subscription PAIR WEEKLY_REMAINING_PERCENT; obtain fresh account quota before preparation and every pair");
 }

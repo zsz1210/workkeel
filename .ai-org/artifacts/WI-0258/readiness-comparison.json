@@ -1,7 +1,7 @@
 {
   "base_revision": "1a3b132dc106ca9fb483443fdd2cbdcb0f8e9e7d",
   "candidate_revision": "8518841bdb2b0d66529652507cb9d83516d8b813",
-  "same_target": "/Users/zsz1210/Documents/ChatGPT/temple-compact-evidence",
+  "same_target": "<LOCAL_HOME>/Documents/ChatGPT/temple-compact-evidence",
   "tokenizer": "o200k_base",
   "additional_model_calls": 0,
   "canonical_source_hashes_unchanged": true,
