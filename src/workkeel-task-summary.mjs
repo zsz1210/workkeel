@@ -80,6 +80,8 @@ async function observation(target,task) {
 export async function readTaskSummary(target,id) {
   const task=await readNativeTask(target,id);
   const project=await readTaskProject(target),policyCurrent=executionDigest(project.policy)===task.policy_sha256;
+  const authorityExpired=task.contract.authorization.expires_at!==null&&Date.parse(task.contract.authorization.expires_at)<=Date.now();
+  const activeAuthorityExpired=authorityExpired&&!['done','cancelled'].includes(task.state);
   const rejected=task.attempts.filter(a=>a.kind==='rejected').length;
   let observed;
   try{observed=await observation(target,task);}catch{observed={status:'unavailable',value:null};}
@@ -94,15 +96,17 @@ export async function readTaskSummary(target,id) {
   }
   if(evidenceStatus.some(p=>p.status!=='verified'))next='Recover the exact recorded evidence before continuing this task.';
   if(!policyCurrent)next='Inspect the project policy change and re-establish task authority before continuing.';
+  if(activeAuthorityExpired)next='Task approval has expired. Obtain renewed approval through a new task before continuing.';
   return {schema_version:'workkeel.task-summary/v1',authority:'observation-only',mutation_status:'no-write',
     task_id:id,title:task.contract.goal,task_state:task.state,version:task.version,
-    display_state:runStates[task.state],needs_attention:!policyCurrent||['test','release_gate'].includes(task.state)||observed.status==='unavailable'||evidenceStatus.some(p=>p.status!=='verified'),
+    display_state:runStates[task.state],needs_attention:activeAuthorityExpired||!policyCurrent||['test','release_gate'].includes(task.state)||observed.status==='unavailable'||evidenceStatus.some(p=>p.status!=='verified'),
     next_action:next,updated_at:last.at,created_at:task.history[0].at,
     actor:task.claim?.actor??task.contract.actor,acceptance_criteria:task.contract.acceptance.criteria,
     candidate_revision:task.delivery?.revision??null,delivery:task.delivery,review:task.review,closeout:task.closeout,
     evidence:evidenceStatus,observation:observed,
     quality:{rework_count:rejected,review_judgment:task.review?.judgment??null,
-      first_review_pass:task.review?task.review.judgment==='pass'&&rejected===0:null,
+      first_review_pass:rejected>0?false:task.review?task.review.judgment==='pass':null,
+      approval_status:authorityExpired?'expired':'current',
       locally_accepted:task.state==='done',evidence_current:policyCurrent&&evidenceStatus.every(p=>p.status==='verified'),policy_current:policyCurrent,
       lifecycle_elapsed_ms:['done','cancelled'].includes(task.state)?Date.parse(last.at)-Date.parse(task.history[0].at):null},
     timeline:task.history.map(e=>({action:e.action,at:e.at,state:e.state,revision:e.revision})),

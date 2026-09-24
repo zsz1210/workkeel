@@ -316,7 +316,7 @@
 | WI-0266 | Normalize local evidence and complete bounded model comparison | done | Engineering Manager | Mog | parallel | team-visible | 0 | gate-evidence | not-applicable | 0 | 0 | 0 | — | `e37f416f` | 0 | 5 | 0 |
 | WI-0267 | Complete bounded development routing and task monitor | done | Engineering Manager | Mog | parallel | team-visible | 0 | gate-evidence | code-first | 0 | 0 | 0 | — | `0c35fd44` | 0 | 8 | 0 |
 | WI-0268 | Bounded publication scanning and digest-bound binary review | done | Engineering Manager | Mog | parallel | team-visible | 0 | gate-evidence | not-applicable | 0 | 0 | 0 | — | `0c35fd44` | 0 | 7 | 0 |
-| WI-0269 | Integrate daily task intake and evidence-first observer | build | Developer | Rikku | pending | team-visible | 0 | gate-evidence | code-first | 0 | 0 | 0 | claim-20260924224642-cf9aeff9 | `—` | 0 | 2 | 0 |
+| WI-0269 | Integrate daily task intake and evidence-first observer | build | Developer | Rikku | pending | team-visible | 0 | gate-evidence | code-first | 0 | 0 | 0 | claim-20260924231628-546359d0 | `—` | 0 | 3 | 0 |
 
 ## Delivery attention
 
@@ -578,14 +578,14 @@
 
 | Time | Event | Work item | Actor |
 |---|---|---|---|
+| 2026-09-24T23:16:28.338Z | work_item_claimed | WI-0269 | human |
+| 2026-09-24T23:16:02.453Z | work_item_reworked | WI-0269 | agent-lulu |
+| 2026-09-24T23:16:02.030Z | work_item_claimed | WI-0269 | human |
+| 2026-09-24T23:16:01.164Z | work_item_transitioned | WI-0269 | agent-rikku |
+| 2026-09-24T23:16:00.732Z | work_item_claim_released | WI-0269 | human |
+| 2026-09-24T23:15:22.062Z | handoff_created | WI-0269 | agent-rikku |
 | 2026-09-24T22:46:42.104Z | work_item_claimed | WI-0269 | human |
 | 2026-09-24T22:46:41.699Z | work_item_transitioned | WI-0269 | agent-tidus |
-| 2026-09-24T22:46:41.322Z | work_item_claim_released | WI-0269 | human |
-| 2026-09-24T22:46:40.960Z | work_item_claimed | WI-0269 | human |
-| 2026-09-24T22:46:40.559Z | work_item_transitioned | WI-0269 | agent-yuna |
-| 2026-09-24T22:46:40.183Z | work_item_claim_released | WI-0269 | human |
-| 2026-09-24T22:46:39.821Z | work_item_claimed | WI-0269 | human |
-| 2026-09-24T22:46:39.417Z | work_item_transitioned | WI-0269 | agent-mog |
 
 ## Assignments
 
