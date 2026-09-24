@@ -34,11 +34,23 @@ test("pilot has hard step/time and conservative quota brakes, not a token-to-dol
 test("pilot plan is exclusive and unknown quota or invalid pair never starts model execution",async()=>{
   const parent=await fs.mkdtemp(path.join(os.tmpdir(),"workkeel-pilot-test-"));const root=path.join(parent,"pilot");
   try{
-    const plan=await prepare(root);assert.equal(plan.effort,"medium");assert.equal(plan.subscription_dollars,null);assert.equal(plan.cases.length,3);
-    await assert.rejects(prepare(root));await assert.rejects(runPair(root,3,45));
+    const options={approvalRef:".ai-org/artifacts/WI-0265/work-order.md",quotaRemaining:38};
+    await assert.rejects(prepare(root),/approval/);
+    await assert.rejects(prepare(root,{...options,approvalRef:"../work-order.md"}),/approval/);
+    await assert.rejects(prepare(root,{...options,quotaRemaining:NaN}),/Quota/);
+    await assert.rejects(prepare(root,{...options,quotaRemaining:30}),/Quota/);
+    const plan=await prepare(root,options);assert.equal(plan.effort,"medium");assert.equal(plan.subscription_dollars,null);assert.equal(plan.cases.length,3);
+    assert.equal(plan.quota_start_remaining,38);assert.equal(plan.limits.quota_floor,35);assert.match(plan.approval_sha256,/^[a-f0-9]{64}$/);
+    await assert.rejects(prepare(root,options));await assert.rejects(runPair(root,3,38));
     await assert.rejects(runPair(root,0,NaN),/Quota/);
+    await assert.rejects(runPair(root,0,35),/Quota/);
     assert.equal((await fs.readdir(root)).some(n=>n.endsWith("intent.json")),false);
+    await fs.writeFile(path.join(root,"plan.json"),JSON.stringify({...plan,approval_sha256:"0".repeat(64)}));
+    await assert.rejects(runPair(root,0,38),/approval/);
+    await fs.writeFile(path.join(root,"plan.json"),JSON.stringify({...plan,limits:{...plan.limits,quota_floor:30}}));
+    await assert.rejects(runPair(root,0,38),/limits/);
+    await fs.writeFile(path.join(root,"plan.json"),JSON.stringify(plan));
     await fs.writeFile(path.join(root,"unfinished.intent.json"),"{}");
-    await assert.rejects(runPair(root,0,45),/Unfinished/);
+    await assert.rejects(runPair(root,0,38),/Unfinished/);
   }finally{await fs.rm(parent,{recursive:true,force:true});}
 });

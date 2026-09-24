@@ -33,7 +33,7 @@
     "release_reason": "work_item_closed",
     "released_at": "2026-09-23T10:42:27.403Z",
     "status": "released",
-    "worktree": "/Users/zsz1210/Documents/Codex/2026-09-23/temple-test-slimming/work/temple-test-baseline-fixes"
+    "worktree": null
   },
   "claims": [
     {
@@ -101,7 +101,7 @@
       "release_reason": "review_rework",
       "released_at": "2026-09-23T10:14:26.507Z",
       "status": "released",
-      "worktree": "/Users/zsz1210/Documents/Codex/2026-09-23/temple-test-slimming/work/temple-test-baseline-fixes"
+      "worktree": null
     },
     {
       "actor_provenance": {
@@ -122,7 +122,7 @@
       "release_reason": "position_transition",
       "released_at": "2026-09-23T10:30:30.567Z",
       "status": "released",
-      "worktree": "/Users/zsz1210/Documents/Codex/2026-09-23/temple-test-slimming/work/temple-test-baseline-fixes"
+      "worktree": null
     },
     {
       "actor_provenance": {
@@ -145,7 +145,7 @@
       ],
       "released_at": "2026-09-23T10:38:17.634Z",
       "status": "released",
-      "worktree": "/Users/zsz1210/Documents/Codex/2026-09-23/temple-test-slimming/work/temple-test-baseline-fixes"
+      "worktree": null
     },
     {
       "actor_provenance": {
@@ -168,7 +168,7 @@
       ],
       "released_at": "2026-09-23T10:39:37.853Z",
       "status": "released",
-      "worktree": "/Users/zsz1210/Documents/Codex/2026-09-23/temple-test-slimming/work/temple-test-baseline-fixes"
+      "worktree": null
     },
     {
       "actor_provenance": {
@@ -189,7 +189,7 @@
       "release_reason": "work_item_closed",
       "released_at": "2026-09-23T10:42:27.403Z",
       "status": "released",
-      "worktree": "/Users/zsz1210/Documents/Codex/2026-09-23/temple-test-slimming/work/temple-test-baseline-fixes"
+      "worktree": null
     }
   ],
   "closeout_reasons": [],

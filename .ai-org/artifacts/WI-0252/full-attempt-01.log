@@ -1351,7 +1351,7 @@ test at test/lean-delivery.test.mjs:76:1
   
   'Temple error: Product scope changed: actual bytes or mode differ from candidate\n'
   
-      at TestContext.<anonymous> (file:///Users/zsz1210/Documents/ChatGPT/temple-collaboration-integration/test/lean-delivery.test.mjs:81:10)
+      at TestContext.<anonymous> (file://<LOCAL_HOME>/Documents/ChatGPT/temple-collaboration-integration/test/lean-delivery.test.mjs:81:10)
       at async Test.run (node:internal/test_runner/test:1404:7)
       at async Test.processPendingSubtests (node:internal/test_runner/test:969:7) {
     generatedMessage: true,

@@ -6,7 +6,7 @@ it here without changing the judgment; full-suite evidence is recorded separatel
 
 **PASS — bounded independent verification** of `5a6e4f8ef4015a9b6ebdc9d865170da278186acd`, based on `9b2669df`.
 
-Identity: `agent-lulu`, Quality Evaluator, resolved from WI-0257’s active claim; Developer is `agent-rikku`. Runtime: Node `v24.20.0`, isolated checkout `/Users/zsz1210/Documents/ChatGPT/temple-compact-evidence`.
+Identity: `agent-lulu`, Quality Evaluator, resolved from WI-0257’s active claim; Developer is `agent-rikku`. Runtime: Node `v24.20.0`, isolated checkout `<LOCAL_HOME>/Documents/ChatGPT/temple-compact-evidence`.
 
 Commands and results:
 

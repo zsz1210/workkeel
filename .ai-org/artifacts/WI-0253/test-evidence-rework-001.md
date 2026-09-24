@@ -15,7 +15,7 @@ full-gate history and does not rewrite WI-0254 or WI-0256 evidence.
 ## Candidate integrity and review
 
 The fresh detached checkout
-`/Users/zsz1210/Documents/Codex/2026-09-23/temple-test-slimming/work/wi0253-qa-exact`
+`<LOCAL_HOME>/Documents/Codex/2026-09-23/temple-test-slimming/work/wi0253-qa-exact`
 reported HEAD exactly equal to the candidate and remained clean after testing.
 Git comparisons found no byte or mode difference between the candidate and the
 coordination branch anywhere in WI-0253's affected scope:

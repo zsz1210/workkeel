@@ -1,0 +1,14 @@
+{
+  "schema_version": "temple.publication-normalization-result/v1",
+  "applied": true,
+  "plan_digest": "c6434a9131382940d94864e068bd07a5117dca3e7b4e57a3beabf8d64f8d2710",
+  "work_item_id": "WI-0266",
+  "changed_files": 9,
+  "change_count": 47,
+  "changes": {
+    "released-claim-worktree": 42,
+    "terminal-worker-worktree": 5
+  },
+  "event_recorded": true,
+  "publication_authorized": false
+}

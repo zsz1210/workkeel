@@ -39,7 +39,7 @@
     ],
     "released_at": "2026-09-23T10:04:19.572Z",
     "status": "released",
-    "worktree": "."
+    "worktree": null
   },
   "claims": [
     {
@@ -63,7 +63,7 @@
       ],
       "released_at": "2026-09-23T10:04:19.572Z",
       "status": "released",
-      "worktree": "."
+      "worktree": null
     }
   ],
   "context_refs": [],

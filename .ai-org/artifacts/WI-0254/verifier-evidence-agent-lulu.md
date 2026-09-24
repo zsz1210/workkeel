@@ -45,7 +45,7 @@ clean detached worktree whose HEAD was exactly the candidate SHA above.
   122,440.591875 ms. All six former failure positions passed, including the four
   delivery-pair child scenarios and their parent.
 - In detached worktree
-  `/Users/zsz1210/Documents/Codex/2026-09-23/temple-test-slimming/work/wi0254-qa-exact`,
+  `<LOCAL_HOME>/Documents/Codex/2026-09-23/temple-test-slimming/work/wi0254-qa-exact`,
   `git rev-parse HEAD` returned the exact candidate and `git status --short` was
   empty before the full gate.
 - `npm ci --ignore-scripts --prefer-offline`: exit 0; 7 packages installed, 0

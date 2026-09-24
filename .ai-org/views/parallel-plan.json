@@ -1,23 +1,40 @@
 {
   "schema_version": "temple.parallel-plan/v1",
-  "generated_at": "2026-09-23T17:50:38.775Z",
-  "source_fingerprint": "48d6cc3bea1ce92cd3290fdb0941f0f655b723eedddfc401a1a1a081cc0ab31b",
+  "generated_at": "2026-09-24T00:08:12.677Z",
+  "source_fingerprint": "8a73960e9387b6e77134bcd0f7c723296ca23f075988f3a8021e5c807081cfc8",
   "scope": {
     "mode": "all-active",
     "parent_work_item_id": null,
-    "selected_work_item_ids": []
+    "selected_work_item_ids": [
+      "WI-0266"
+    ]
   },
   "max_workers": null,
   "summary": {
-    "selected": 0,
+    "selected": 1,
     "dispatchable": 0,
-    "active": 0,
+    "active": 1,
     "sequential": 0,
     "blocked": 0,
     "waves": 0
   },
   "waves": [],
-  "active": [],
+  "active": [
+    {
+      "work_item_id": "WI-0266",
+      "title": "Normalize local evidence and complete bounded model comparison",
+      "disposition": "active",
+      "position_id": "developer",
+      "agent_id": "agent-rikku",
+      "integration_owner_agent_id": null,
+      "reasons": [],
+      "claim_id": "claim-20260924000406-26ca61de",
+      "principal_id": "human",
+      "branch": "codex/workkeel-cleanup-pilot",
+      "worktree": null,
+      "base_revision": "bab9b8fe045ccc939635f45537ffcca20bff78ef"
+    }
+  ],
   "sequential": [],
   "blocked": [],
   "conflicts": [],

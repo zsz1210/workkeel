@@ -36,7 +36,7 @@
     "release_reason": "work_item_closed",
     "released_at": "2026-09-23T09:54:01.334Z",
     "status": "released",
-    "worktree": "/Users/zsz1210/Documents/Codex/2026-09-23/chatgpt-tempo-github-tempo-clone/work/workkeel"
+    "worktree": null
   },
   "claims": [
     {
@@ -58,7 +58,7 @@
       "release_reason": "position_transition",
       "released_at": "2026-09-23T08:59:30.399Z",
       "status": "released",
-      "worktree": "/Users/zsz1210/Documents/Codex/2026-09-23/chatgpt-tempo-github-tempo-clone/work/workkeel"
+      "worktree": null
     },
     {
       "actor_provenance": {
@@ -81,7 +81,7 @@
       ],
       "released_at": "2026-09-23T09:46:15.175Z",
       "status": "released",
-      "worktree": "/Users/zsz1210/Documents/Codex/2026-09-23/chatgpt-tempo-github-tempo-clone/work/workkeel"
+      "worktree": null
     },
     {
       "actor_provenance": {
@@ -104,7 +104,7 @@
       ],
       "released_at": "2026-09-23T09:51:29.282Z",
       "status": "released",
-      "worktree": "/Users/zsz1210/Documents/Codex/2026-09-23/chatgpt-tempo-github-tempo-clone/work/workkeel"
+      "worktree": null
     },
     {
       "actor_provenance": {
@@ -127,7 +127,7 @@
       ],
       "released_at": "2026-09-23T09:51:59.244Z",
       "status": "released",
-      "worktree": "/Users/zsz1210/Documents/Codex/2026-09-23/chatgpt-tempo-github-tempo-clone/work/workkeel"
+      "worktree": null
     },
     {
       "actor_provenance": {
@@ -148,7 +148,7 @@
       "release_reason": "work_item_closed",
       "released_at": "2026-09-23T09:54:01.334Z",
       "status": "released",
-      "worktree": "/Users/zsz1210/Documents/Codex/2026-09-23/chatgpt-tempo-github-tempo-clone/work/workkeel"
+      "worktree": null
     }
   ],
   "closeout_reasons": [],

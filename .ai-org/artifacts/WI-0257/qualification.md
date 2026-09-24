@@ -2,7 +2,7 @@
 
 Product candidate: `5a6e4f8ef4015a9b6ebdc9d865170da278186acd`.
 Base: `9b2669dfd7918393e9f241d8d71a0b917326ba35`.
-Checkout: `/Users/zsz1210/Documents/ChatGPT/temple-compact-evidence`.
+Checkout: `<LOCAL_HOME>/Documents/ChatGPT/temple-compact-evidence`.
 Branch: `codex/compact-evidence-output`. Node: `v24.20.0`.
 
 ## Exact candidate verification

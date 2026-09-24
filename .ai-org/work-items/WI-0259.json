@@ -88,7 +88,7 @@
     "position_id": "release_manager",
     "base_revision": "1c1d57bf4d9a0981739d91b046fc3aa6027df027",
     "branch": "codex/workkeel-reframe",
-    "worktree": ".",
+    "worktree": null,
     "claimed_at": "2026-09-23T11:37:23.804Z",
     "released_at": "2026-09-23T11:37:24.295Z",
     "release_reason": "work_item_closed"
@@ -110,7 +110,7 @@
       "position_id": "developer",
       "base_revision": "fa1491f3",
       "branch": "codex/workkeel-reframe",
-      "worktree": ".",
+      "worktree": null,
       "claimed_at": "2026-09-23T10:50:05.976Z",
       "released_at": "2026-09-23T11:10:28.913Z",
       "release_reason": [
@@ -133,7 +133,7 @@
       "position_id": "quality_evaluator",
       "base_revision": "6bb9c98e25fe6056621ba4189ce0ed640e8f4438",
       "branch": "codex/workkeel-reframe",
-      "worktree": ".",
+      "worktree": null,
       "claimed_at": "2026-09-23T11:24:26.473Z",
       "released_at": "2026-09-23T11:28:48.779Z",
       "release_reason": "review_rework"
@@ -154,7 +154,7 @@
       "position_id": "developer",
       "base_revision": "6bb9c98e25fe6056621ba4189ce0ed640e8f4438",
       "branch": "codex/workkeel-reframe",
-      "worktree": ".",
+      "worktree": null,
       "claimed_at": "2026-09-23T11:29:29.591Z",
       "released_at": "2026-09-23T11:31:17.152Z",
       "release_reason": [
@@ -177,7 +177,7 @@
       "position_id": "quality_evaluator",
       "base_revision": "1c1d57bf4d9a0981739d91b046fc3aa6027df027",
       "branch": "codex/workkeel-reframe",
-      "worktree": ".",
+      "worktree": null,
       "claimed_at": "2026-09-23T11:31:29.726Z",
       "released_at": "2026-09-23T11:35:24.091Z",
       "release_reason": [
@@ -200,7 +200,7 @@
       "position_id": "independent_qa",
       "base_revision": "1c1d57bf4d9a0981739d91b046fc3aa6027df027",
       "branch": "codex/workkeel-reframe",
-      "worktree": ".",
+      "worktree": null,
       "claimed_at": "2026-09-23T11:35:44.189Z",
       "released_at": "2026-09-23T11:35:45.173Z",
       "release_reason": [
@@ -223,7 +223,7 @@
       "position_id": "release_manager",
       "base_revision": "1c1d57bf4d9a0981739d91b046fc3aa6027df027",
       "branch": "codex/workkeel-reframe",
-      "worktree": ".",
+      "worktree": null,
       "claimed_at": "2026-09-23T11:37:23.804Z",
       "released_at": "2026-09-23T11:37:24.295Z",
       "release_reason": "work_item_closed"

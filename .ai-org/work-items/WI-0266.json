@@ -1,0 +1,191 @@
+{
+  "schema_version": "temple.work-item/v1",
+  "id": "WI-0266",
+  "title": "Normalize local evidence and complete bounded model comparison",
+  "state": "build",
+  "owner_position": "developer",
+  "assigned_agent_id": "agent-rikku",
+  "created_at": "2026-09-24T00:02:03.734Z",
+  "updated_at": "2026-09-24T00:04:06.684Z",
+  "scope": [
+    "Use supported digest-bound normalization to remove obsolete local execution coordinates and eight retained-artifact home paths, preserving history and evidence identity.",
+    "Run one corrected three-case Luna/Sol medium pilot after independent oracle review; cap 12 work steps, 90 seconds each, 20 minutes, no Astra or paid API."
+  ],
+  "acceptance_criteria": [
+    "Current text audit has zero local-path findings; exact before/after normalization evidence and event prefix are preserved.",
+    "Report all valid and invalid pilot attempts, repairs, observed tokens and timing without claiming statistical or billing savings; stop on infrastructure uncertainty or quota brake."
+  ],
+  "affected_paths": [
+    ".ai-org/work-items",
+    ".ai-org/project/runtime-workers.json",
+    ".ai-org/artifacts",
+    "scripts/workkeel-model-pilot.mjs",
+    "test/workkeel-model-pilot.test.mjs"
+  ],
+  "context_refs": [],
+  "spec_refs": [],
+  "ux_refs": [],
+  "ui_refs": [],
+  "contract_refs": [],
+  "specification_mode": "gate-evidence",
+  "ui_delivery_mode": "not-applicable",
+  "workflow_profile": "standard",
+  "risk_tier": "standard",
+  "profile_assessment": {
+    "requested_profile": "standard",
+    "effective_profile": "standard",
+    "scope_class": "ordinary",
+    "escalation_triggers": [],
+    "rationale": "",
+    "evidence_refs": [],
+    "evaluated_at": "2026-09-24T00:02:03.720Z",
+    "escalated": false
+  },
+  "parent_work_item_id": null,
+  "tracker_visibility": "team-visible",
+  "tracker_refs": [],
+  "tracker_reconciliations": [],
+  "dependencies": [],
+  "required_disciplines": [],
+  "stage_requirements": {},
+  "base_revision": "bab9b8fe045ccc939635f45537ffcca20bff78ef",
+  "parallel_mode": "pending",
+  "integration_owner_agent_id": null,
+  "planned_agent_id": null,
+  "shared_contract_refs": [],
+  "contract_status": "not_required",
+  "overlap_resolution": [],
+  "claim": {
+    "id": "claim-20260924000406-26ca61de",
+    "status": "active",
+    "principal_id": "human",
+    "agent_id": "agent-rikku",
+    "actor_provenance": {
+      "selection": "explicit-agent",
+      "principal_source": "explicit-principal",
+      "verification_class": "attributed",
+      "evidence_ref": null,
+      "provider_authenticated": false,
+      "externally_supplied_evidence": false
+    },
+    "position_id": "developer",
+    "base_revision": "bab9b8fe045ccc939635f45537ffcca20bff78ef",
+    "branch": "codex/workkeel-cleanup-pilot",
+    "worktree": null,
+    "claimed_at": "2026-09-24T00:04:06.684Z",
+    "released_at": null
+  },
+  "claims": [
+    {
+      "id": "claim-20260924000204-6e62a522",
+      "status": "released",
+      "principal_id": "human",
+      "agent_id": "agent-mog",
+      "actor_provenance": {
+        "selection": "explicit-agent",
+        "principal_source": "explicit-principal",
+        "verification_class": "attributed",
+        "evidence_ref": null,
+        "provider_authenticated": false,
+        "externally_supplied_evidence": false
+      },
+      "position_id": "engineering_manager",
+      "base_revision": "bab9b8fe045ccc939635f45537ffcca20bff78ef",
+      "branch": "codex/workkeel-cleanup-pilot",
+      "worktree": null,
+      "claimed_at": "2026-09-24T00:02:04.329Z",
+      "released_at": "2026-09-24T00:04:02.520Z",
+      "release_reason": [
+        "Approved bounded work order recorded"
+      ]
+    },
+    {
+      "id": "claim-20260924000403-30474af2",
+      "status": "released",
+      "principal_id": "human",
+      "agent_id": "agent-yuna",
+      "actor_provenance": {
+        "selection": "explicit-agent",
+        "principal_source": "explicit-principal",
+        "verification_class": "attributed",
+        "evidence_ref": null,
+        "provider_authenticated": false,
+        "externally_supplied_evidence": false
+      },
+      "position_id": "product_manager",
+      "base_revision": "bab9b8fe045ccc939635f45537ffcca20bff78ef",
+      "branch": "codex/workkeel-cleanup-pilot",
+      "worktree": null,
+      "claimed_at": "2026-09-24T00:04:03.626Z",
+      "released_at": "2026-09-24T00:04:04.110Z",
+      "release_reason": [
+        "Scope and acceptance specified in approved work order"
+      ]
+    },
+    {
+      "id": "claim-20260924000405-6171599c",
+      "status": "released",
+      "principal_id": "human",
+      "agent_id": "agent-tidus",
+      "actor_provenance": {
+        "selection": "explicit-agent",
+        "principal_source": "explicit-principal",
+        "verification_class": "attributed",
+        "evidence_ref": null,
+        "provider_authenticated": false,
+        "externally_supplied_evidence": false
+      },
+      "position_id": "tech_lead",
+      "base_revision": "bab9b8fe045ccc939635f45537ffcca20bff78ef",
+      "branch": "codex/workkeel-cleanup-pilot",
+      "worktree": null,
+      "claimed_at": "2026-09-24T00:04:05.154Z",
+      "released_at": "2026-09-24T00:04:05.639Z",
+      "release_reason": [
+        "Existing safe normalizers and bounded harness design reviewed"
+      ]
+    },
+    {
+      "id": "claim-20260924000406-26ca61de",
+      "status": "active",
+      "principal_id": "human",
+      "agent_id": "agent-rikku",
+      "actor_provenance": {
+        "selection": "explicit-agent",
+        "principal_source": "explicit-principal",
+        "verification_class": "attributed",
+        "evidence_ref": null,
+        "provider_authenticated": false,
+        "externally_supplied_evidence": false
+      },
+      "position_id": "developer",
+      "base_revision": "bab9b8fe045ccc939635f45537ffcca20bff78ef",
+      "branch": "codex/workkeel-cleanup-pilot",
+      "worktree": null,
+      "claimed_at": "2026-09-24T00:04:06.684Z",
+      "released_at": null
+    }
+  ],
+  "gate_evidence": {
+    "work_order": [
+      ".ai-org/artifacts/WI-0266/work-order.md"
+    ],
+    "approved_scope": [
+      ".ai-org/artifacts/WI-0266/work-order.md"
+    ],
+    "acceptance_criteria": [
+      ".ai-org/artifacts/WI-0266/work-order.md"
+    ],
+    "technical_design": [
+      ".ai-org/artifacts/WI-0266/work-order.md"
+    ],
+    "risk_review": [
+      ".ai-org/artifacts/WI-0266/work-order.md"
+    ]
+  },
+  "evidence": [
+    ".ai-org/artifacts/WI-0266/work-order.md"
+  ],
+  "unresolved": [],
+  "next_position": "quality_evaluator"
+}
