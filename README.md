@@ -77,16 +77,21 @@ steps, not existing desktop conversations or your global model default.
 | Coding agent | Your existing agent | Codex, Claude Code or another instruction-following agent; native use does not select its model |
 | Graph engine | Off / opt-in | LangGraph packages plus an approved workflow; sequences, branches, direct joins and checkpoints |
 | Automatic model selection | Off / opt-in | Workkeel policy: node override → matching rule → approved default; no classifier model call |
-| Codex monthly subscription | Opt-in / experimental | Existing ChatGPT login; macOS and pinned Codex host; final live qualification failed |
+| Codex monthly subscription | Opt-in / experimental | Existing ChatGPT login; macOS and pinned Codex host; bounded Luna/Sol samples passed, not general reliability qualification |
 | LiteLLM gateway | Off / optional | Fixed approved connection only; no bundled server; live qualification pending |
 | LiteLLM Auto Router | Not integrated | Distinct from Workkeel policy routing; not enabled by the gateway option |
 | Headroom | Off | Lossless views via a host-owned integration; no native Codex tool-output interception |
-| Console / observer | Optional | Existing local observation surface; new Workkeel task/graph dashboard integration is not implemented |
+| Task monitor | Off / optional | `workkeel monitor /path/to/project`: on-demand, read-only task/run view; no model calls or background service. [Guide](docs/operations/workkeel-measurements.md#optional-task-monitor) |
 | Task measurements | Recorded during workflow execution | Read-only model/token/time queries; native host sessions remain unobserved. [Guide](docs/operations/workkeel-measurements.md) |
 
 There is no universal Luna/Sol/Astra default: a native agent keeps its own setting;
 an automatic workflow must supply its approved policy. No macOS app or mandatory
 background daemon is installed. See [runtime setup and limits](docs/operations/workkeel-workflows.md).
+
+Personal development routing is separate from the framework: an external,
+opt-in LiteLLM heuristic can suggest Luna/Sol before a native Codex launch. It is
+not the LiteLLM Auto gateway, does not switch this app's existing conversations,
+and is not bundled. See [the bounded evaluation](docs/validation/workkeel-development-routing.md).
 
 ## Architecture
 

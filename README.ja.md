@@ -73,16 +73,21 @@ node bin/workkeel.mjs help
 | コーディングエージェント | 既存のエージェント | Codex、Claude Code など指示に従えるエージェント。ネイティブ利用ではモデルを選択しない |
 | Graph エンジン | 無効／任意 | LangGraph 依存と承認済みフロー。順序、分岐、直接結合、チェックポイント |
 | 自動モデル選択 | 無効／任意 | Workkeel 方針：工程の明示指定 → 一致ルール → 承認済み既定値。分類用モデル呼び出しなし |
-| Codex 月額契約 | 任意／実験段階 | 既存 ChatGPT ログイン、macOS、固定 Codex バージョン。最終実環境検証は失敗 |
+| Codex 月額契約 | 任意／実験段階 | 既存 ChatGPT ログイン、macOS、固定 Codex バージョン。限定的な Luna／Sol サンプルは成功。一般的な信頼性の認定ではない |
 | LiteLLM gateway | 無効／任意 | 固定の承認済み接続のみ。サーバー同梱なし。実環境検証は未完了 |
 | LiteLLM Auto Router | 未統合 | Workkeel のルール選択とは別。gateway を使っても Auto は有効にならない |
 | Headroom | 無効 | ホスト所有の統合で可逆ビューを利用。Codex 標準ツール出力の傍受は非対応 |
-| Console／observer | 任意 | ローカル観測画面あり。新 Workkeel タスク／Graph ダッシュボードとの統合は未実装 |
+| タスクモニター | 無効／任意 | `workkeel monitor /path/to/project`：必要時のみ起動する読み取り専用画面。モデル呼び出し・常駐サービスなし。[ガイド](docs/operations/workkeel-measurements.md#optional-task-monitor) |
 | タスク計測 | Workflow 実行中に記録 | モデル・token・所要時間の読み取り専用クエリ。ネイティブの作業セッションは未収集。[ガイド](docs/operations/workkeel-measurements.md) |
 
 Luna／Sol／Astra の共通既定値はありません。ネイティブエージェントは自身の設定を維持し、
 自動フローには承認済み方針が必要です。macOS app や必須の常駐サービスはインストールしません。
 [実行設定と制限](docs/operations/workkeel-workflows.md)を参照してください。
+
+個人開発用のモデル選択はフレームワーク外です。任意の外部ツールが LiteLLM のローカル
+ヒューリスティックで Luna／Sol を提案し、ネイティブ Codex を起動します。LiteLLM Auto
+gateway ではなく、既存の App 会話を切り替えず、同梱もしません。
+[限定サンプルの評価](docs/validation/workkeel-development-routing.md)を参照してください。
 
 ## アーキテクチャ
 

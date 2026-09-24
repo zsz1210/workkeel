@@ -5,9 +5,9 @@
 - Active Agent Identities: 5
 - Collaboration profile: `solo` (0 Human Principals, 0 active claims)
 - Parallel plan: 0 wave(s), fresh=true
-- Work items: 266 total, 0 active
+- Work items: 268 total, 0 active
 - Codex tasks: 14 registered, 14 archive-ready
-- Runtime workers: 115 registered, 0 reserved, 0 active
+- Runtime workers: 118 registered, 0 reserved, 0 active
 - Shared resources: 0 defined, 0 active reservation(s)
 - Optional Skill packs: 0 installed
 - Repository capabilities: 6 available, 0 invalid
@@ -314,6 +314,8 @@
 | WI-0264 | Record per-task model usage and execution timing | done | Engineering Manager | Mog | parallel | team-visible | 0 | gate-evidence | not-applicable | 0 | 0 | 0 | — | `c901c420` | 0 | 6 | 0 |
 | WI-0265 | Bounded Luna/Sol pilot and optional development router assessment | done | Engineering Manager | Mog | parallel | team-visible | 0 | gate-evidence | not-applicable | 0 | 0 | 0 | — | `a6d2f019` | 0 | 8 | 0 |
 | WI-0266 | Normalize local evidence and complete bounded model comparison | done | Engineering Manager | Mog | parallel | team-visible | 0 | gate-evidence | not-applicable | 0 | 0 | 0 | — | `e37f416f` | 0 | 5 | 0 |
+| WI-0267 | Complete bounded development routing and task monitor | done | Engineering Manager | Mog | parallel | team-visible | 0 | gate-evidence | code-first | 0 | 0 | 0 | — | `0c35fd44` | 0 | 8 | 0 |
+| WI-0268 | Bounded publication scanning and digest-bound binary review | done | Engineering Manager | Mog | parallel | team-visible | 0 | gate-evidence | not-applicable | 0 | 0 | 0 | — | `0c35fd44` | 0 | 7 | 0 |
 
 ## Delivery attention
 
@@ -456,6 +458,9 @@
 | worker-20260923170011-9c4e3ee0 | internal-subagent | WI-0264 | Quality & Evaluation Engineer / Lulu | completed | /root/workkeel_measurement_review | `c901c420` | 0 |
 | worker-20260923174321-18dbead2 | internal-subagent | WI-0265 | Quality & Evaluation Engineer / Lulu | completed | /root/pilot_optional_tool_review | `a6d2f019` | 0 |
 | worker-20260924002057-ece563c3 | internal-subagent | WI-0266 | Quality & Evaluation Engineer / Lulu | completed | /root/cleanup_pilot_independent_qa | `e37f416f` | 0 |
+| worker-20260924010940-2348f9b3 | internal-subagent | WI-0268 | Developer / Rikku | completed | /root/publication_stream_review | `0c35fd44` | 0 |
+| worker-20260924012844-de1d4d08 | internal-subagent | WI-0267 | Quality & Evaluation Engineer / Lulu | completed | /root/monitor_publication_independent_qa | `0c35fd44` | 0 |
+| worker-20260924012846-c970b566 | internal-subagent | WI-0268 | Quality & Evaluation Engineer / Lulu | completed | /root/publication_independent_qa | `0c35fd44` | 0 |
 
 - Shared resource registry: `.ai-org/project/resources.json`
 - Runtime worker registry: `.ai-org/project/runtime-workers.json`
@@ -495,7 +500,7 @@
 - Profile: `repository-only`
 - Sync granularity: `team-visible`
 - Active providers: 0
-- Team-visible Work Items: 111
+- Team-visible Work Items: 113
 - Linked Work Items: 0
 - Observed external items: 0
 - Reconciliation actions: 0
@@ -569,14 +574,14 @@
 
 | Time | Event | Work item | Actor |
 |---|---|---|---|
-| 2026-09-24T00:26:08.507Z | work_item_closed | WI-0266 | agent-mog |
-| 2026-09-24T00:26:08.507Z | release_gate_completed | WI-0266 | agent-mog |
-| 2026-09-24T00:25:31.580Z | work_item_claimed | WI-0266 | human |
-| 2026-09-24T00:25:31.034Z | work_item_transitioned | WI-0266 | agent-lulu |
-| 2026-09-24T00:25:30.521Z | work_item_transitioned | WI-0266 | agent-lulu |
-| 2026-09-24T00:25:30.010Z | work_item_transitioned | WI-0266 | agent-lulu |
-| 2026-09-24T00:25:29.492Z | work_item_claim_released | WI-0266 | human |
-| 2026-09-24T00:25:28.966Z | runtime_worker_status_changed | WI-0266 | agent-lulu |
+| 2026-09-24T01:38:21.693Z | work_item_closed | WI-0268 | agent-mog |
+| 2026-09-24T01:38:21.693Z | release_gate_completed | WI-0268 | agent-mog |
+| 2026-09-24T01:38:21.176Z | work_item_claimed | WI-0268 | human |
+| 2026-09-24T01:38:20.493Z | work_item_closed | WI-0267 | agent-mog |
+| 2026-09-24T01:38:20.493Z | release_gate_completed | WI-0267 | agent-mog |
+| 2026-09-24T01:37:46.171Z | work_item_claim_released | WI-0268 | human |
+| 2026-09-24T01:36:14.094Z | work_item_claimed | WI-0268 | human |
+| 2026-09-24T01:36:13.417Z | work_item_transitioned | WI-0268 | agent-lulu |
 
 ## Assignments
 

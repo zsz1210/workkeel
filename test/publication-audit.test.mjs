@@ -237,3 +237,106 @@ test("publication CLI is read-only and rejects an unknown surface", async (conte
   assert.equal(invalid.status, 1);
   assert.match(invalid.stderr, /Unknown publication surface/);
 });
+
+test("oversized current text streams exact matches, lines, UTF-8, and CIDR exceptions", async (context) => {
+  const { target } = await repositoryFixture(context, "stream-text");
+  const token = `sk-${"A".repeat(120000)}`;
+  const privateIp = [192, 168, 7, 9].join(".");
+  const keyHeader = ["-----BEGIN", "PRIVATE KEY-----"].join(" ");
+  const content = [
+    "safe".repeat(530000),
+    `prefix ${token}`,
+    `日本語 ${privateIp}/24 and ${privateIp}`,
+    `location ${["", "Users", "maintainer", "workspace"].join("/")}`,
+    keyHeader,
+    ["-----BEGIN", "PRIVATE KEY-----"].join("\n"),
+    "end"
+  ].join("\n");
+  assert.ok(Buffer.byteLength(content) > 2097152);
+  await fs.writeFile(path.join(target, "large.txt"), content);
+  git(target, ["add", "."]);
+
+  const result = await buildPublicationAudit(target, { surface: "repository", profileId: "public" });
+  const findings = result.surfaces[0].findings.filter((entry) => entry.path === "large.txt");
+  assert.deepEqual(findings.map((entry) => [entry.rule_id, entry.line, entry.count]), [
+    ["maintainer-home-path-posix", 4, 1],
+    ["openai-api-key", 2, 1],
+    ["private-ipv4", 3, 1],
+    ["private-key-header", 5, 1]
+  ]);
+  assert.equal(result.summary.text_files >= 1, true);
+  assert.equal(JSON.stringify(result).includes(token), false);
+});
+
+test("streamed files fail closed on late binary content and explicit byte and line bounds", async (context) => {
+  const { target } = await repositoryFixture(context, "stream-limits");
+  await fs.writeFile(path.join(target, "late-binary.bin"), Buffer.concat([
+    Buffer.from("safe\n".repeat(420000)), Buffer.from([0])
+  ]));
+  await fs.writeFile(path.join(target, "long-line.txt"), `safe\n${"x".repeat(4 * 1024 * 1024 + 1)}`);
+  const file = await fs.open(path.join(target, "too-large.txt"), "w");
+  await file.truncate(64 * 1024 * 1024 + 1);
+  await file.close();
+  git(target, ["add", "."]);
+
+  const result = await buildPublicationAudit(target, { surface: "repository" });
+  const findings = result.surfaces[0].findings;
+  assert.ok(findings.some((entry) => entry.path === "late-binary.bin" && entry.rule_id === "binary-review"));
+  assert.equal(findings.some((entry) => entry.path === "late-binary.bin" && entry.rule_id === "stream-limit-exceeded"), false);
+  assert.ok(findings.some((entry) => entry.path === "long-line.txt" && entry.rule_id === "stream-limit-exceeded" && entry.classification === "blocked"));
+  assert.ok(findings.some((entry) => entry.path === "too-large.txt" && entry.rule_id === "stream-limit-exceeded" && entry.classification === "blocked"));
+});
+
+test("streamed inspection blocks a file changed between metadata and open", async (context) => {
+  const { target } = await repositoryFixture(context, "stream-drift");
+  const filename = path.join(target, "changing.txt");
+  await fs.writeFile(filename, "safe\n".repeat(420000));
+  git(target, ["add", "."]);
+  const originalOpen = fs.open;
+  fs.open = async (...args) => {
+    const handle = await originalOpen(...args);
+    if (args[0] === filename) await fs.appendFile(filename, "changed\n");
+    return handle;
+  };
+  try {
+    const result = await buildPublicationAudit(target, { surface: "repository" });
+    assert.ok(result.surfaces[0].findings.some((entry) =>
+      entry.path === "changing.txt" && entry.rule_id === "tracked-file-drift" && entry.classification === "blocked"
+    ));
+  } finally {
+    fs.open = originalOpen;
+  }
+});
+
+test("streamed inspection blocks excessive findings without truncating the report", async (context) => {
+  const { target } = await repositoryFixture(context, "stream-findings");
+  const privateIp = [192, 168, 7, 9].join(".");
+  await fs.writeFile(path.join(target, "many.txt"), `${"safe".repeat(530000)}\n${(`value ${privateIp}\n`).repeat(10001)}`);
+  git(target, ["add", "."]);
+  const result = await buildPublicationAudit(target, { surface: "repository" });
+  assert.ok(result.surfaces[0].findings.some((entry) =>
+    entry.path === "many.txt" && entry.rule_id === "stream-limit-exceeded" && entry.classification === "blocked"
+  ));
+  assert.equal(result.surfaces[0].findings.some((entry) => entry.path === "many.txt" && entry.rule_id === "private-ipv4"), false);
+});
+
+test("small-file reads block growth after initial size inspection", async (context) => {
+  const { target } = await repositoryFixture(context, "small-drift");
+  const filename = path.join(target, "changing.txt");
+  await fs.writeFile(filename, "safe\n");
+  git(target, ["add", "."]);
+  const originalOpen = fs.open;
+  fs.open = async (...args) => {
+    const handle = await originalOpen(...args);
+    if (args[0] === filename) await fs.appendFile(filename, "changed\n");
+    return handle;
+  };
+  try {
+    const result = await buildPublicationAudit(target, { surface: "repository" });
+    assert.ok(result.surfaces[0].findings.some((entry) =>
+      entry.path === "changing.txt" && entry.rule_id === "tracked-file-drift" && entry.classification === "blocked"
+    ));
+  } finally {
+    fs.open = originalOpen;
+  }
+});

@@ -1,0 +1,16 @@
+{
+  "schema_version": "workkeel.real-maintenance-summary/v1",
+  "purpose": "Real monitor formatting helper implementation and source review, not paired model ranking",
+  "source_path": "src/workkeel-monitor-view.mjs",
+  "source_sha256": "d610ae93b423af60923547586cbed89110daaaa2a268626f314150c52444c8a9",
+  "steps": [
+    {"role":"implementation","requested_model":"gpt-6-luna","runtime_model":"gpt-6-luna","observed_model":null,"input_tokens":63744,"output_tokens":856,"adapter_elapsed_ms":37347.789208,"launcher_elapsed_ms":37888.607084,"checks_passed":32,"checks_total":32,"repair":false,"cost_usd":null},
+    {"role":"source-review","requested_model":"gpt-6-sol","runtime_model":"gpt-6-sol","observed_model":null,"input_tokens":59636,"output_tokens":1680,"adapter_elapsed_ms":59139.308167,"launcher_elapsed_ms":59635.014875,"judgment":"pass","findings":[],"repair":false,"cost_usd":null}
+  ],
+  "dispatches": 2,
+  "additional_dispatches": 0,
+  "repairs": 0,
+  "total_recorded_tokens": 125916,
+  "stopped": "Both prescribed steps completed; no further live experiment",
+  "limitations": ["One real small task with different implementer/reviewer roles", "Coordinator and independent QA usage excluded", "Model sandbox did not run Node checks; coordinator ran them", "Backend identity and subscription price unavailable", "No general model quality or monthly savings inference", "Final external launcher prompt-binding and pre-dispatch guards added after live run and checked offline only"]
+}
