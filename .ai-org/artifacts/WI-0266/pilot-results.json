@@ -1,0 +1,454 @@
+{
+  "schema_version": "workkeel.model-pilot-report/v2",
+  "candidate": "96a241ab8916f63a98952cb241176955c4f735c1",
+  "status": "completed-diagnostic-only",
+  "scope": "One fresh three-case paired synthetic pilot; coordinator/reviewer usage excluded",
+  "plan": {
+    "schema_version": "workkeel.model-pilot/v2",
+    "at": "2026-09-24T00:14:27.293Z",
+    "models": [
+      "gpt-6-luna",
+      "gpt-6-sol"
+    ],
+    "effort": "medium",
+    "order": [
+      "luna",
+      "sol",
+      "sol",
+      "luna",
+      "luna",
+      "sol"
+    ],
+    "limits": {
+      "steps": 12,
+      "elapsed_ms": 1200000,
+      "step_ms": 90000,
+      "quota_rule": "Fresh shared-account remaining minus 3 percentage points, minimum 30; actual snapshots stay local"
+    },
+    "approval_ref": ".ai-org/artifacts/WI-0266/work-order.md",
+    "approval_sha256": "a360dda6ded109f040c90a62a9f51d9bc1153412761babda130c962ab8f4d4a4",
+    "code_sha256": {
+      "scripts/workkeel-model-pilot.mjs": "ee761ec0dc6a0bad502dd63b06872f51cac3d2d011e7c5cacf24b9b5bf08ca02",
+      "src/workkeel-codex-host.mjs": "bde899ed5e82e3861fb7e15cca7d7eaf454465646f96eb79141155e7e63bcd7c",
+      "src/workkeel-codex-runtime.mjs": "b882465bf9a4766774270591a40e603bb0520d37819a37d4fd59f6c1ac50ce41",
+      "src/workkeel-workflows.mjs": "e42bcfaec7a5362fd7b5e0b08c18430e240344ec38cbc61460dc8498940c596c",
+      "src/workkeel-measurements.mjs": "f189f8ab54f47e7812ead941231fd7d24d7f012ebd4f86bbc879d42ece2cb598",
+      "src/workkeel-execution-policy.mjs": "7b152bdf901342dc1d0a4375a8b2c52654af82b6b6705f2c6ef212f408d883b8",
+      "src/workkeel-checkpoints.mjs": "36298b415e68eea9d8b73848c05deeeb27ab7a84b0902257e37c24225cf6259d"
+    },
+    "cases": [
+      {
+        "id": "intervals",
+        "prompt_sha256": "bf1ee43be89ec1fbd892685641d2b869a14b8a4c4af94b812314c215a74727a2",
+        "starter_sha256": "89e2220d51089b3d35e85b749a3b6cf77882eb306df0c6882b0689b5d7b18bf2",
+        "checks_sha256": "de4d63c4683dd1c09fc9e22289feffc8fffec0fe75db58be0764b417f475ce20",
+        "checks": 13
+      },
+      {
+        "id": "ready",
+        "prompt_sha256": "2b967f792c8dc4cf60feb38c862ce22a024e0ea1cc592e6e69f50cfae875d680",
+        "starter_sha256": "352ad65ee65440810a4728cd44cef670428fc5d96729a679b0264a19a6e73db2",
+        "checks_sha256": "89744517ecafbc2bbcba698d4c43a4191bb70f5ae0d4120fa2af326bb709c96b",
+        "checks": 10
+      },
+      {
+        "id": "usage",
+        "prompt_sha256": "c84e29569a8c086e8297a68e05ed03a11bc59108bbb5801ccac4a9efb78b73d7",
+        "starter_sha256": "9987e426ee08d2fc1b2c22def77635e54cd27f548e1040bf1db052c3fb3c4ade",
+        "checks_sha256": "cef263f6137ff28af383dda5f465f5faa9bb0fd0335a15caff458fd008f9f5b5",
+        "checks": 7
+      }
+    ],
+    "codex": "codex-cli 0.155.0-alpha.9.2"
+  },
+  "completed_pairs": 3,
+  "executed_work_steps": 6,
+  "models": [
+    {
+      "model": "gpt-6-luna",
+      "valid_matched_tasks": 3,
+      "first_pass": 3,
+      "final_pass": 3,
+      "repairs": 0,
+      "input_tokens": 133616,
+      "output_tokens": 2432,
+      "adapter_work_ms": 87938.209583,
+      "cost_usd": null
+    },
+    {
+      "model": "gpt-6-sol",
+      "valid_matched_tasks": 3,
+      "first_pass": 3,
+      "final_pass": 3,
+      "repairs": 0,
+      "input_tokens": 155812,
+      "output_tokens": 3544,
+      "adapter_work_ms": 127415.20366700001,
+      "cost_usd": null
+    }
+  ],
+  "results": [
+    {
+      "id": "pair-0-luna-0",
+      "case": "intervals",
+      "model": "gpt-6-luna",
+      "effort": "medium",
+      "attempt": 0,
+      "checks": {
+        "pass": true,
+        "passed": 13,
+        "total": 13,
+        "failed": []
+      },
+      "infrastructure_failure": null,
+      "usage": {
+        "input_tokens": {
+          "total": 35051,
+          "known_subtotal": 35051,
+          "observed_operations": 1,
+          "complete_operations": 1,
+          "total_operations": 1,
+          "complete": true
+        },
+        "output_tokens": {
+          "total": 737,
+          "known_subtotal": 737,
+          "observed_operations": 1,
+          "complete_operations": 1,
+          "total_operations": 1,
+          "complete": true
+        },
+        "cost_usd": {
+          "total": null,
+          "known_subtotal": null,
+          "observed_operations": 0,
+          "complete_operations": 0,
+          "total_operations": 1,
+          "complete": false
+        }
+      },
+      "timing": {
+        "adapter_work_ms": 30686.615833,
+        "known_adapter_work_ms": 30686.615833,
+        "measured_operations": 1,
+        "total_operations": 1,
+        "meaning": "Sum of measured adapter calls, including setup/tools/cleanup; parallel calls overlap. Not model compute time or run wall time."
+      },
+      "requested_models": [
+        "gpt-6-luna"
+      ],
+      "runtime_models": [
+        "gpt-6-luna"
+      ],
+      "backend_models": [
+        null
+      ],
+      "raw_report_sha256": "9afa0d3403f7bde3523d05896becd99595dca81a44017d98dc62ad00781c6a80",
+      "source_sha256": "1bef746341d0d0f15f7378851b8be176fc64a39d6411a54fd6defbc10781841b"
+    },
+    {
+      "id": "pair-0-sol-0",
+      "case": "intervals",
+      "model": "gpt-6-sol",
+      "effort": "medium",
+      "attempt": 0,
+      "checks": {
+        "pass": true,
+        "passed": 13,
+        "total": 13,
+        "failed": []
+      },
+      "infrastructure_failure": null,
+      "usage": {
+        "input_tokens": {
+          "total": 65433,
+          "known_subtotal": 65433,
+          "observed_operations": 1,
+          "complete_operations": 1,
+          "total_operations": 1,
+          "complete": true
+        },
+        "output_tokens": {
+          "total": 1647,
+          "known_subtotal": 1647,
+          "observed_operations": 1,
+          "complete_operations": 1,
+          "total_operations": 1,
+          "complete": true
+        },
+        "cost_usd": {
+          "total": null,
+          "known_subtotal": null,
+          "observed_operations": 0,
+          "complete_operations": 0,
+          "total_operations": 1,
+          "complete": false
+        }
+      },
+      "timing": {
+        "adapter_work_ms": 56289.474083,
+        "known_adapter_work_ms": 56289.474083,
+        "measured_operations": 1,
+        "total_operations": 1,
+        "meaning": "Sum of measured adapter calls, including setup/tools/cleanup; parallel calls overlap. Not model compute time or run wall time."
+      },
+      "requested_models": [
+        "gpt-6-sol"
+      ],
+      "runtime_models": [
+        "gpt-6-sol"
+      ],
+      "backend_models": [
+        null
+      ],
+      "raw_report_sha256": "0b5735d62455be846f4cef538fefb1465a51ca8f91b005e02f5ad73e6cf947be",
+      "source_sha256": "234dcca68d40f2dcbd49a050e431b8714dd67bc8a23ee9bd410cb9f1baf392ac"
+    },
+    {
+      "id": "pair-1-luna-0",
+      "case": "ready",
+      "model": "gpt-6-luna",
+      "effort": "medium",
+      "attempt": 0,
+      "checks": {
+        "pass": true,
+        "passed": 10,
+        "total": 10,
+        "failed": []
+      },
+      "infrastructure_failure": null,
+      "usage": {
+        "input_tokens": {
+          "total": 53871,
+          "known_subtotal": 53871,
+          "observed_operations": 1,
+          "complete_operations": 1,
+          "total_operations": 1,
+          "complete": true
+        },
+        "output_tokens": {
+          "total": 766,
+          "known_subtotal": 766,
+          "observed_operations": 1,
+          "complete_operations": 1,
+          "total_operations": 1,
+          "complete": true
+        },
+        "cost_usd": {
+          "total": null,
+          "known_subtotal": null,
+          "observed_operations": 0,
+          "complete_operations": 0,
+          "total_operations": 1,
+          "complete": false
+        }
+      },
+      "timing": {
+        "adapter_work_ms": 26871.821625,
+        "known_adapter_work_ms": 26871.821625,
+        "measured_operations": 1,
+        "total_operations": 1,
+        "meaning": "Sum of measured adapter calls, including setup/tools/cleanup; parallel calls overlap. Not model compute time or run wall time."
+      },
+      "requested_models": [
+        "gpt-6-luna"
+      ],
+      "runtime_models": [
+        "gpt-6-luna"
+      ],
+      "backend_models": [
+        null
+      ],
+      "raw_report_sha256": "21e25d5aa09f6cd1cf0f5f9b01b3da8e33df98327dbe500f701b5543a9557a11",
+      "source_sha256": "803d0dcf89ae86a0f27e9015b967e68cbd388d38f6499bf041b83a38b215e6c3"
+    },
+    {
+      "id": "pair-1-sol-0",
+      "case": "ready",
+      "model": "gpt-6-sol",
+      "effort": "medium",
+      "attempt": 0,
+      "checks": {
+        "pass": true,
+        "passed": 10,
+        "total": 10,
+        "failed": []
+      },
+      "infrastructure_failure": null,
+      "usage": {
+        "input_tokens": {
+          "total": 44469,
+          "known_subtotal": 44469,
+          "observed_operations": 1,
+          "complete_operations": 1,
+          "total_operations": 1,
+          "complete": true
+        },
+        "output_tokens": {
+          "total": 586,
+          "known_subtotal": 586,
+          "observed_operations": 1,
+          "complete_operations": 1,
+          "total_operations": 1,
+          "complete": true
+        },
+        "cost_usd": {
+          "total": null,
+          "known_subtotal": null,
+          "observed_operations": 0,
+          "complete_operations": 0,
+          "total_operations": 1,
+          "complete": false
+        }
+      },
+      "timing": {
+        "adapter_work_ms": 30703.828959,
+        "known_adapter_work_ms": 30703.828959,
+        "measured_operations": 1,
+        "total_operations": 1,
+        "meaning": "Sum of measured adapter calls, including setup/tools/cleanup; parallel calls overlap. Not model compute time or run wall time."
+      },
+      "requested_models": [
+        "gpt-6-sol"
+      ],
+      "runtime_models": [
+        "gpt-6-sol"
+      ],
+      "backend_models": [
+        null
+      ],
+      "raw_report_sha256": "10d14d31f454a213d3325de62f0802fbb4ebbc648116fbee15eab72eae4061e9",
+      "source_sha256": "fa9ba317287bd7e9a62e692a9aa75798ee28b07b3c6cb1c4a44c1fb0a3a9622c"
+    },
+    {
+      "id": "pair-2-luna-0",
+      "case": "usage",
+      "model": "gpt-6-luna",
+      "effort": "medium",
+      "attempt": 0,
+      "checks": {
+        "pass": true,
+        "passed": 7,
+        "total": 7,
+        "failed": []
+      },
+      "infrastructure_failure": null,
+      "usage": {
+        "input_tokens": {
+          "total": 44694,
+          "known_subtotal": 44694,
+          "observed_operations": 1,
+          "complete_operations": 1,
+          "total_operations": 1,
+          "complete": true
+        },
+        "output_tokens": {
+          "total": 929,
+          "known_subtotal": 929,
+          "observed_operations": 1,
+          "complete_operations": 1,
+          "total_operations": 1,
+          "complete": true
+        },
+        "cost_usd": {
+          "total": null,
+          "known_subtotal": null,
+          "observed_operations": 0,
+          "complete_operations": 0,
+          "total_operations": 1,
+          "complete": false
+        }
+      },
+      "timing": {
+        "adapter_work_ms": 30379.772125,
+        "known_adapter_work_ms": 30379.772125,
+        "measured_operations": 1,
+        "total_operations": 1,
+        "meaning": "Sum of measured adapter calls, including setup/tools/cleanup; parallel calls overlap. Not model compute time or run wall time."
+      },
+      "requested_models": [
+        "gpt-6-luna"
+      ],
+      "runtime_models": [
+        "gpt-6-luna"
+      ],
+      "backend_models": [
+        null
+      ],
+      "raw_report_sha256": "03590a9c2eaf2e719ae171779bd9982874b2c1e9fa4092993a5fc1ed82160fef",
+      "source_sha256": "5c45c9dc7bbdf9413327b799a8641a6615aca9c9cf150b1d509519dffab80e20"
+    },
+    {
+      "id": "pair-2-sol-0",
+      "case": "usage",
+      "model": "gpt-6-sol",
+      "effort": "medium",
+      "attempt": 0,
+      "checks": {
+        "pass": true,
+        "passed": 7,
+        "total": 7,
+        "failed": []
+      },
+      "infrastructure_failure": null,
+      "usage": {
+        "input_tokens": {
+          "total": 45910,
+          "known_subtotal": 45910,
+          "observed_operations": 1,
+          "complete_operations": 1,
+          "total_operations": 1,
+          "complete": true
+        },
+        "output_tokens": {
+          "total": 1311,
+          "known_subtotal": 1311,
+          "observed_operations": 1,
+          "complete_operations": 1,
+          "total_operations": 1,
+          "complete": true
+        },
+        "cost_usd": {
+          "total": null,
+          "known_subtotal": null,
+          "observed_operations": 0,
+          "complete_operations": 0,
+          "total_operations": 1,
+          "complete": false
+        }
+      },
+      "timing": {
+        "adapter_work_ms": 40421.90062500001,
+        "known_adapter_work_ms": 40421.90062500001,
+        "measured_operations": 1,
+        "total_operations": 1,
+        "meaning": "Sum of measured adapter calls, including setup/tools/cleanup; parallel calls overlap. Not model compute time or run wall time."
+      },
+      "requested_models": [
+        "gpt-6-sol"
+      ],
+      "runtime_models": [
+        "gpt-6-sol"
+      ],
+      "backend_models": [
+        null
+      ],
+      "raw_report_sha256": "5cf665fc3bd30a0c2e3e90b6ec72cb23a210970382703cc939d0b3f9eb61ad06",
+      "source_sha256": "8a792890242ac4efa839766d6a1bc9b681b03b3909e97d6e06a7f0c8eb6ebb9e"
+    }
+  ],
+  "all_steps_totals": {
+    "input_tokens": 289428,
+    "output_tokens": 5976,
+    "adapter_work_ms": 215353.41324999998,
+    "cost_usd": null
+  },
+  "suite_wall_ms": 245373,
+  "limitations": [
+    "Three tasks per model do not establish general superiority or statistical savings.",
+    "No inference of subscription credits, dollars, or independent backend model from runtime labels.",
+    "Adapter time includes host setup, tools and cleanup; tokens include repeated context, not cache-adjusted billing.",
+    "No coordinator/helper usage or unrelated account activity is attributed to pilot step totals.",
+    "The earlier stopped pilot is separate and excluded; sample checks are not full-domain correctness proof."
+  ]
+}
