@@ -3212,6 +3212,34 @@
       "attached_at": "2026-09-23T17:43:52.372Z",
       "completed_at": "2026-09-23T17:50:19.041Z",
       "updated_at": "2026-09-23T17:50:19.041Z"
+    },
+    {
+      "id": "worker-20260924002057-ece563c3",
+      "runtime_kind": "internal-subagent",
+      "status": "completed",
+      "work_item_id": "WI-0266",
+      "position_id": "quality_evaluator",
+      "agent_id": "agent-lulu",
+      "principal_id": "human",
+      "claim_id": "claim-20260924002057-6966a381",
+      "base_revision": "e37f416f6696c5fd16eeb1d479638ea9247b05ab",
+      "branch": "codex/workkeel-cleanup-pilot",
+      "worktree": null,
+      "plan_fingerprint": "e97123d95930cb0bc10a971a6aa903b1e1771066272a09a5f5c3151662567c68",
+      "plan_digest": "59211ed52852f4426e53bd8dea7b7497a204b9222f94d6b50a1e945d8cd36bbe",
+      "preparation_fingerprint": "ae2a417284cc69e204510e2b5db4952f28c7ea0a27b846dc5519f15fab675cc1",
+      "wave_id": "wave-001",
+      "runtime_id": "/root/cleanup_pilot_independent_qa",
+      "task_id": null,
+      "resource_reservation_ids": [],
+      "current_revision": "e37f416f6696c5fd16eeb1d479638ea9247b05ab",
+      "evidence": [
+        ".ai-org/artifacts/WI-0266/independent-review.md"
+      ],
+      "reserved_at": "2026-09-24T00:20:57.304Z",
+      "attached_at": "2026-09-24T00:21:34.394Z",
+      "completed_at": "2026-09-24T00:25:28.966Z",
+      "updated_at": "2026-09-24T00:25:28.966Z"
     }
   ]
 }
