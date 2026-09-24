@@ -440,5 +440,7 @@ export async function executeWorkflow(targetInput, request, { adapters = [], sig
 }
 function sumUsage(operations, key) {
   const values = [...operations.values()].map(op => op.result?.usage[key]);
-  return values.some(value => value === null || value === undefined) ? null : values.reduce((sum, value) => sum + value, 0);
+  if (values.some(value => value === null || value === undefined)) return null;
+  const total = values.reduce((sum, value) => sum + value, 0);
+  return Number.isFinite(total) && total >= 0 && (key === "cost_usd" || Number.isSafeInteger(total)) ? total : null;
 }
