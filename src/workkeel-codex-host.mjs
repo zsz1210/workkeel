@@ -6,8 +6,38 @@ import { safeDirectory } from "./workkeel-project.mjs";
 
 const exec = promisify(execFile);
 export const QUALIFIED_CODEX_VERSION = "codex-cli 0.155.0-alpha.9.2";
-// An intentionally narrow local profile. Updating its runtime version requires
-// protocol and sandbox qualification, not just broadening the version comparison.
+// The version is a minimum. Host controls and requested model availability are
+// checked separately; future CLI changes must still fail closed on mismatch.
+function parseCodexVersion(value) {
+  const match = /^codex-cli (0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(?:-([0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*))?(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?$/.exec(value);
+  if (!match) return null;
+  const prerelease = match[4]?.split('.') ?? [];
+  if (prerelease.some(part => /^[0-9]+$/.test(part) && part.length > 1 && part[0] === '0')) return null;
+  return { core: match.slice(1, 4).map(BigInt), prerelease };
+}
+
+function compareIdentifiers(left, right) {
+  const leftNumeric = /^[0-9]+$/.test(left);
+  const rightNumeric = /^[0-9]+$/.test(right);
+  if (leftNumeric && rightNumeric) return BigInt(left) < BigInt(right) ? -1 : BigInt(left) > BigInt(right) ? 1 : 0;
+  if (leftNumeric !== rightNumeric) return leftNumeric ? -1 : 1;
+  return left < right ? -1 : left > right ? 1 : 0;
+}
+
+export function codexVersionAtLeast(actual, minimum = QUALIFIED_CODEX_VERSION) {
+  const left = parseCodexVersion(actual);
+  const right = parseCodexVersion(minimum);
+  if (!left || !right) return false;
+  for (let i = 0; i < 3; i++) {
+    if (left.core[i] !== right.core[i]) return left.core[i] > right.core[i];
+  }
+  if (!left.prerelease.length || !right.prerelease.length) return !left.prerelease.length;
+  for (let i = 0; i < Math.min(left.prerelease.length, right.prerelease.length); i++) {
+    const comparison = compareIdentifiers(left.prerelease[i], right.prerelease[i]);
+    if (comparison) return comparison > 0;
+  }
+  return left.prerelease.length >= right.prerelease.length;
+}
 const disabled = ["apps", "plugins", "remote_plugin", "hooks", "browser_use", "browser_use_external", "browser_use_full_cdp_access",
   "computer_use", "image_generation", "multi_agent", "multi_agent_v2", "memories", "skill_mcp_dependency_install", "skill_search",
   "shell_snapshot", "workspace_dependencies", "tool_suggest", "auth_elicitation", "goals", "in_app_local_automation"];
@@ -37,7 +67,7 @@ export async function createLocalCodexSubscriptionHost(targetInput, { command = 
   const target = await safeDirectory(targetInput, ".");
   const env = cleanEnvironment();
   const version = (await exec(command, ["--version"], { env, timeout: 5000 })).stdout.trim();
-  if (version !== QUALIFIED_CODEX_VERSION || process.platform !== "darwin") throw new Error("Codex version/platform needs host qualification before automatic execution");
+  if (!codexVersionAtLeast(version) || process.platform !== "darwin") throw new Error("Codex version/platform needs host qualification before automatic execution");
   const settings = [...disabled.map(name => `features.${name}=false`), "web_search=\"disabled\"", "analytics.enabled=false",
     "shell_environment_policy.inherit=\"none\"", "shell_environment_policy.set={}", "shell_environment_policy.include_only=[]", "shell_environment_policy.experimental_use_profile=false",
     "project_doc_max_bytes=0", "instructions=\"\"", "developer_instructions=\"\"", "features.skip_host_skill_discovery=true", "allow_login_shell=false",

@@ -20,8 +20,11 @@ remain recorded. These do not qualify general workflow reliability. See the
 | LiteLLM gateway | Describe a fixed, approved gateway connection | Separately operated gateway and enforcing host; live qualification still pending |
 
 The concrete subscription profile was tested on macOS with
-`codex-cli 0.155.0-alpha.9.2`. Other versions/platforms fail preflight until their
-protocol and sandbox are qualified. Workkeel does not update Codex, log in, copy
+`codex-cli 0.155.0-alpha.9.2`. The local host accepts that version or a newer
+semantic version on macOS, while retaining its App Server, model and sandbox
+control checks. A newer version passing the version gate is not itself a live
+qualification; record version-specific offline and live results separately.
+Workkeel does not update Codex, log in, copy
 credentials, alter global settings or bypass subscription limits. Current desktop
 conversations keep their existing model; routing applies to Workkeel-launched
 steps, not every chat in the app.
