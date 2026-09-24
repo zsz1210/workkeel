@@ -59,8 +59,13 @@ export async function codexPermissionsForContract(target, contract) {
 }
 
 /** Codex owns the coding loop. This adapter only connects its documented protocol. */
-export function createCodexRuntime(host) {
+export function createCodexRuntime(host, options = {}) {
   if (!host || typeof host.connect !== "function" || typeof host.assertCompatible !== "function") throw new Error("A trusted Codex host is required");
+  exactKeys(options, [], ["coordinatorChecks"]);
+  const coordinatorChecks = options.coordinatorChecks ?? [];
+  if (!Array.isArray(coordinatorChecks) || new Set(coordinatorChecks).size !== coordinatorChecks.length ||
+      coordinatorChecks.some(check => !["git", "tests"].includes(check))) throw new Error("Unsupported coordinator check ownership");
+  const assignedChecks = Object.freeze([...coordinatorChecks]);
   const active = new Map();
   async function assertCompatible(context) {
     const { contract, policy } = context;
@@ -206,6 +211,8 @@ export function createCodexRuntime(host) {
         input: [{ type: "text", text: JSON.stringify({ task: context.contract, work: context.input,
           execution_context: { started_at_utc: authorizationCheck.checked_at_utc, lifecycle_owner: "workkeel-coordinator",
             authorization_check: authorizationCheck,
+            ...(assignedChecks.length ? { coordinator_checks: assignedChecks,
+              check_rule: "The embedding coordinator runs these checks after dispatch and supplies their evidence separately. Do not run or probe these assigned checks; report changed files and unverified outcomes. This assignment grants no acceptance or permission." } : {}),
             result_rule: "done means requested work performed; attention means incomplete or blocked. Neither grants acceptance or lifecycle authority." } }) }],
         ...(parameters.model ? { model: parameters.model } : {}),
         ...(context.selection.connection.effort ? { effort: context.selection.connection.effort } : {}) });

@@ -92,6 +92,24 @@ test("unqualified hosts and unsupported conditions fail before connecting", asyn
   c.policy.limits.max_cost_usd = null; c.policy.headroom.mode = "lossless";
   await assert.rejects(runtime.start(c), /cannot be intercepted/); assert.equal(connections, 0);
 });
+
+test("trusted embedding can assign checks without changing task authority or sandbox", async t => {
+  const c = await context(t), checks = ["git", "tests"];
+  let payload;
+  const runtime = createCodexRuntime(fixtureHost({ onTurn: params => {payload = JSON.parse(params.input[0].text);} }), {coordinatorChecks: checks});
+  checks.length = 0;
+  await runtime.start(c);
+  assert.deepEqual(payload.task, c.contract);
+  assert.deepEqual(payload.execution_context.coordinator_checks, ["git", "tests"]);
+  const permissions = await codexPermissionsForContract(c.target, c.contract);
+  assert.equal(permissions.filesystem[":root"], "deny");
+  assert.equal(permissions.network.enabled, false);
+  let defaultPayload;
+  await createCodexRuntime(fixtureHost({onTurn: params => {defaultPayload = JSON.parse(params.input[0].text);}})).start(c);
+  assert.equal(Object.hasOwn(defaultPayload.execution_context, "coordinator_checks"), false);
+  for (const options of [{coordinatorChecks:["arbitrary-command"]},{coordinatorChecks:["git","git"]},{coordinatorChecks:"git"},{skipChecks:true}])
+    assert.throws(() => createCodexRuntime(fixtureHost(), options));
+});
 test("rerouting and runtime approval requests never silently expand the workflow", async t => {
   const c = await context(t);
   await assert.rejects(createCodexRuntime(fixtureHost({ reroute: true })).start(c), /pinned model/);

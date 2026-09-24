@@ -289,6 +289,17 @@ automatically replayed. Recheck physical artifacts when resuming a saved result.
 This host-owned validation does not close a task, replace distinct-agent review,
 or imply that all workflow integrations already implement a repair loop.
 
+Trusted embedding code that actually performs Git or test checks may construct
+`createCodexRuntime(host, { coordinatorChecks: ["git", "tests"] })`. The adapter
+includes this bounded ownership assignment in the execution context, instructing
+the executor to leave those checks to the coordinator and report unverified work.
+Omit the option when the host does not own those checks. The default is unchanged.
+The option accepts only `git` and `tests`, is copied at construction, and cannot
+be set through workflow JSON. It does not alter the complete contract, host
+permissions, required instruction reading, acceptance or review requirements.
+The coordinator must run the assigned checks, retain their evidence and include
+failures in its existing bounded repair/attention path.
+
 ## Headroom and Skills
 
 Headroom policy is chosen during planning: `off` or `lossless`. An enforcing
