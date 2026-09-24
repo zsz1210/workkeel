@@ -74,7 +74,8 @@ node bin/workkeel.mjs help
 | LiteLLM gateway | 關閉／選配 | 固定且核准的連線；不內附伺服器；真實服務驗證待完成 |
 | LiteLLM Auto Router | 尚未整合 | 與 Workkeel 規則選模不同；啟用 gateway 不代表啟用 Auto |
 | Headroom | 關閉 | 主機自有整合可用無損檢視；不支援攔截 Codex 原生工具輸出 |
-| 任務監看 | 關閉／選配 | `workkeel monitor /path/to/project`：按需啟動、唯讀查看任務與執行紀錄；不呼叫模型、不安裝背景服務。[指南](docs/operations/workkeel-measurements.md#optional-task-monitor) |
+| 日常任務入口 | 明確預覽／套用 | 一份已批准的 brief 產生原生任務契約；仍須交接與審閱。[指南](docs/operations/workkeel-daily-work.md) |
+| 任務監看 | 關閉／選配 | `workkeel monitor /path/to/project`：待處理優先總覽、任務證據與用量／品質；唯讀、不呼叫模型、不安裝背景服務。[指南](docs/operations/workkeel-daily-work.md#observer-surfaces-and-limits) |
 | 任務量測 | Workflow 執行時記錄 | 唯讀查詢模型、token 與耗時；原生代理工作階段尚未收集。[指南](docs/operations/workkeel-measurements.md) |
 
 沒有通用的 Luna／Sol／Astra 預設：原生 Agent 保留自己的設定，自動流程則必須提供核准的政策。

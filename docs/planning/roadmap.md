@@ -1,97 +1,61 @@
-# Temple roadmap
+# Workkeel roadmap
 
 **English** | [日本語](roadmap.ja.md) | [繁體中文](roadmap.zh-TW.md)
 
-Temple is an operating framework for AI-assisted software development. It gives people and AI Agents explicit responsibilities, turns product intent into bounded work, and keeps decisions, evidence, and recovery state in the repository.
+Workkeel connects approved tasks, coding-agent execution, handoffs and verified
+results. New projects use task-first coordination without company Positions.
+This toolkit repository still retains its legacy self-hosting contract.
 
-## Product goal
+## Available in development source
 
-Make multi-Agent development dependable at any project scale:
+- Native task contracts, scoped claims, exact-candidate handoff, distinct review
+  and explicit acceptance.
+- A daily brief preview/apply entry using the same task guards.
+- An optional foreground observer with work overview, task evidence, handoff
+  summaries and per-task usage/quality. It is read-only and single-project.
+- Opt-in graph execution and policy-based model selection through an explicitly
+  configured Codex subscription host. Execution remains experimental.
+- Recorded workflow measurements, unknown/partial coverage and bounded attributed
+  check/link observations. Native conversations are not automatically measured.
 
-- a solo developer can coordinate several AI Agents without losing context or duplicating work;
-- a multidisciplinary team can divide responsibility and run safe work in parallel; and
-- a larger organization can retain its existing repositories, specifications, trackers, and approval boundaries.
+The renamed Workkeel package is not yet a published release. Historical Temple
+Alpha.33 availability does not publish the current source or qualify new features.
+Merging a PR is separate from package publication or deployment.
 
-Temple scales the process to the work. Small, reversible changes stay lightweight; ordinary delivery retains review; consequential work receives stronger assurance.
+## Current priorities
 
-## Product capabilities
+1. Make ordinary approved work easy to start and resume from a Codex conversation.
+2. Keep task acceptance, runtime progress and external observations clearly separate.
+3. Collect representative real-task quality, rework, time and token evidence.
+4. Compare workflows only with matched scope, model, tools and acceptance checks.
+5. Reduce maintenance friction through current documentation and verified archives.
 
-| Capability | What Temple provides today |
-| --- | --- |
-| Organization | Separate Positions, Agent Identities, assignments, authority, and work claims |
-| Delivery | Bounded Work Items, proportionate workflows, handoffs, evidence gates, Independent QA, and closeout |
-| Continuity | Repository-backed state, context routing, task correlation, backup, recovery, and engineering learning |
-| Team scale | Safe parallel waves, multi-human governance, external-tracker boundaries, and multi-repository federation |
-| Extensibility | Project-owned specifications, UI delivery modes, Skills, capabilities, and optional integrations |
-| Execution guidance | Per-step, explainable model and tool recommendations that remain separate from responsibility and execution authority |
+One successful sample does not establish general reliability, savings or model
+superiority. Preserve negative results and measurement boundaries.
 
-The Management Console and continuous Usage observation are optional. Semantic retrieval and broader Provider execution remain future extensions; the core organization does not depend on them.
+## Retained compatibility and optional work
 
-## Availability
+Legacy Temple projects retain their instructions, Positions, schemas and pinned
+launcher. Explicit migration supports only the documented quiescent Solo scope;
+do not rename or discard their canonical history. The legacy Console, federation,
+external-tracker adapters and retrieval extensions remain optional capabilities.
 
-The source repository and **Alpha.33** are public on GitHub and npm (`next` channel). The published package is an early Alpha, not a stable or enterprise-qualified release. See [release readiness](release-readiness.md) for dated channel observations and qualification evidence.
+Fixed LiteLLM gateway live qualification remains pending operational inputs.
+Gateway-owned automatic routing, multi-machine coordination, broad provider
+qualification and cross-project observation are separate follow-ups.
 
-Work on `main` after a release is unreleased until a separate version is qualified and published. Development fixes, draft comparisons, and planned capabilities must not be presented as behavior or results of the installed npm package. Adaptive execution routing currently recommends a route; it does not automatically select and launch a model.
+## Historical plans and maintenance
 
-## Milestones
+The Phase 1–4 documents describe earlier Temple milestones and design context.
+They are not the task-first onboarding path or today's backlog. Large experiment
+runners are retained reproduction instruments; keep their frozen protocols and
+version-specific results. Reuse them only for an explicitly scoped validation.
 
-### 1. Organization foundation — delivered
+Historical evidence and screenshots need a retention index and verified export /
+readback before relocation. Managed installation copies and project templates
+have different ownership even when their bytes match. No age-based deletion or
+Git-history rewrite is part of ordinary maintenance.
 
-- Position, Agent Identity, and Assignment contracts
-- repository-native Work Items and lifecycle state
-- handoff, evidence, Independent QA, and closeout boundaries
-- installation, upgrade, backup, restore, and cold-task recovery
-
-### 2. Team and project scale — delivered with bounded validation
-
-- product, UX, UI, API, and technical-specification authority
-- Lean, Standard, and High-Assurance workflow profiles
-- safe parallel planning and runtime coordination
-- multi-human collaboration, external-tracker mapping, and multi-repository federation
-- governed Skills and an Engineering Learning Loop
-
-Real multi-company, multi-machine, and regulated operation still requires representative validation.
-
-### 3. Adaptive execution — foundation delivered, bounded evidence collected
-
-- responsibility is separate from model selection
-- one Work Item can resolve different execution profiles for different steps
-- Capability, privacy, risk, Provider, and resource constraints are checked before preference
-- requested settings remain separate from the model and reasoning actually observed
-- route resolution is advisory and does not launch a Provider or change project state
-
-Bounded comparisons have shown equal observed quality with mixed resource and integration costs. They do not establish general Token savings or qualify automatic routing. The [validation index](../validation/README.md) separates measured results from prepared experiments; the next priority is to reduce operating friction and evaluate end-to-end delivery before changing defaults.
-
-### 4. Real-world qualification — current
-
-- extend the demonstrated bounded fresh-Agent Core Path and cold recovery to representative existing-project work
-- simplify first use, same-scope review corrections, and owned runtime cleanup while preserving exact revisions and authority
-- compare Temple with a competent conventional workflow under matched tasks, models, tools, and acceptance tests
-- test whether smaller context and simpler operations reduce measured overhead without losing quality; do not assume that they do
-- compare Temple's adaptive route with a fixed model route while keeping the Temple process unchanged
-- validate real multi-human, multi-machine, and multi-repository delivery
-- measure correctness, recovery, rework, human intervention, Tokens, latency, and operating overhead
-
-This milestone succeeds only with decision-grade evidence. A neutral or negative result must narrow, simplify, or remove the mechanism that failed to justify its cost.
-
-An external first-time-human study can add broader usability evidence later, but it is not required for a narrowly labeled AI-assisted Alpha. Temple must not claim unaided beginner usability until that separate question is actually tested.
-
-Follow the existing [field-validation plan](../validation/post-alpha-field-validation.md): start with bounded delivery and fresh-task recovery, then existing-project adoption and cross-repository coordination. Turn observed workflows into short User Guide examples; keep planned examples separate from tested outcomes.
-
-### 5. Ecosystem expansion — later
-
-- add Provider execution only after its trust, protocol, authority, and rollback contracts are proven
-- add semantic or local retrieval where measured repository scale shows deterministic routing is insufficient
-- consider automatic routing only for task shapes with qualified evidence and a safe fallback
-- mature optional operational views and integrations without making them framework dependencies
-- evolve the public Alpha through separately qualified releases; merging changes alone does not publish to npm
-
-## Where to follow the work
-
-- [Core Path](../getting-started/core-path.md) — the shortest end-to-end operating journey
-- [Work Items](../../.ai-org/work-items/) — detailed implementation state
-- [Validation records](../validation/README.md) — what has been tested and what remains unproven
-- [Release readiness](release-readiness.md) — distribution-specific gates
-- [Changelog](../../CHANGELOG.md) — version history
-
-This Roadmap describes product direction and capability milestones. It is not the task backlog, experiment log, or release checklist.
+[Daily work](../operations/workkeel-daily-work.md) ·
+[Quick start](../getting-started/workkeel.md) ·
+[Validation](../validation/README.md) · [Release readiness](release-readiness.md)

@@ -57,6 +57,10 @@ Below, `workkeel` means the installed command or
 
 ## Approve a task
 
+For daily work, the [single-brief entry](../operations/workkeel-daily-work.md)
+previews and creates this same contract without repeating its lifecycle fields.
+The full form below remains available for explicit integration.
+
 Write the human-approved work order and data policy to `docs/work-order.md`. Save
 this complete example as `task-contract.json`, adjusting its real boundaries:
 

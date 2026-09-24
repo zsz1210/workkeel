@@ -30,16 +30,20 @@ through a tunnel or reverse proxy. The capability URL protects API access from
 unrelated browser pages; it is not a security boundary against another process
 already running as your local user.
 
-The page refreshes every two seconds while visible. Choose a task to see its
+The page offers an attention-first overview, task detail and a usage/quality table;
+see the [daily work guide](workkeel-daily-work.md) for intake, handoff and optional
+revision-bound check/link observations. It refreshes every two seconds while visible.
+Choose a task to see its
 lifecycle state, workflow state, recorded/completed/unresolved attempts, selected
 and runtime-confirmed models, backend model when available, tokens, adapter work
 and run wall time. Cost remains unknown for the subscription adapter. The display
-does not infer a percentage, finish tasks or launch agents. A stale/corrupt journal
-hides previous data with an error; it never repairs or resumes execution.
+does not infer a percentage, finish tasks or launch agents. Attributable corrupt
+journals mark the affected totals incomplete; unknown attribution marks all totals
+incomplete. Fatal snapshot failures hide old content. It never repairs or resumes execution.
 
 The monitor reads existing records only and does not require optional LangGraph
 packages merely to view them. It excludes retained legacy-mode tasks; it does not
-migrate a project or replace the legacy Console. Limits: 200 task records and a
+migrate a project or replace the legacy Console. Limits: 200 visible native tasks and a
 4 MiB response; use the per-task JSON command for larger projects. Starting the
 viewer and reading snapshots writes no project files. Browser reload loses the
 in-memory access token; reopen the printed link to regain access.

@@ -26,6 +26,11 @@ export const REQUIRED_PACKAGE_PATHS = [
   "src/workkeel-measurements.mjs",
   "src/workkeel-monitor.mjs",
   "src/workkeel-monitor-view.mjs",
+  "src/workkeel-monitor-page.mjs",
+  "src/workkeel-task-summary.mjs",
+  "src/workkeel-intake.mjs",
+  "docs/operations/workkeel-daily-work.md",
+  "docs/adr/0075-daily-task-entry-and-observation.md",
   "docs/adr/0074-on-demand-task-monitor.md",
   "docs/validation/workkeel-development-routing.md",
   "docs/adr/0073-opt-in-workflow-execution.md",
@@ -135,7 +140,8 @@ const ALLOWED_TOP_LEVEL_DIRECTORIES = ["bin/", "docs/", "packs/", "project-overl
 // WI-0264 adds the measurement module and its public operations guide.
 // WI-0267 adds exactly two monitor modules, the monitor ADR and routing evaluation.
 // External development tools, raw receipts and browser evidence stay excluded.
-const MAX_FILE_COUNT = 493;
+// WI-0269 adds exactly three product modules, one daily guide and one ADR.
+const MAX_FILE_COUNT = 498;
 const MAX_UNPACKED_SIZE = 8 * 1024 * 1024;
 
 export function validatePackageDryRun(pack) {

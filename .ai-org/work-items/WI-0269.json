@@ -1,0 +1,199 @@
+{
+  "schema_version": "temple.work-item/v1",
+  "id": "WI-0269",
+  "title": "Integrate daily task intake and evidence-first observer",
+  "state": "build",
+  "owner_position": "developer",
+  "assigned_agent_id": "agent-rikku",
+  "created_at": "2026-09-24T22:45:32.903Z",
+  "updated_at": "2026-09-24T22:46:42.104Z",
+  "scope": [
+    "Approved daily task entry, handoff summaries, usage and quality views, readonly observer, aligned roadmap and bounded archival verification; PR integration, no package release"
+  ],
+  "acceptance_criteria": [
+    "Preserve task authority and evidence checks; useful responsive overview/detail/measurements; corrupted data remains visible as incomplete; full offline and browser gates plus distinct reviewer and real-task evidence"
+  ],
+  "affected_paths": [
+    "src",
+    "test",
+    "scripts",
+    "docs",
+    "README.md",
+    "README.ja.md",
+    "README.zh-TW.md",
+    "bin"
+  ],
+  "context_refs": [],
+  "spec_refs": [],
+  "ux_refs": [],
+  "ui_refs": [],
+  "contract_refs": [],
+  "specification_mode": "gate-evidence",
+  "ui_delivery_mode": "code-first",
+  "workflow_profile": "standard",
+  "risk_tier": "standard",
+  "profile_assessment": {
+    "requested_profile": "standard",
+    "effective_profile": "standard",
+    "scope_class": "ordinary",
+    "escalation_triggers": [],
+    "rationale": "",
+    "evidence_refs": [],
+    "evaluated_at": "2026-09-24T22:45:32.894Z",
+    "escalated": false
+  },
+  "parent_work_item_id": null,
+  "tracker_visibility": "team-visible",
+  "tracker_refs": [],
+  "tracker_reconciliations": [],
+  "dependencies": [],
+  "required_disciplines": [],
+  "stage_requirements": {},
+  "base_revision": "29a7773b2f43da2fddd42bac7e1125e9ecbfcd1f",
+  "parallel_mode": "pending",
+  "integration_owner_agent_id": null,
+  "planned_agent_id": null,
+  "shared_contract_refs": [],
+  "contract_status": "not_required",
+  "overlap_resolution": [],
+  "claim": {
+    "id": "claim-20260924224642-cf9aeff9",
+    "status": "active",
+    "principal_id": "human",
+    "agent_id": "agent-rikku",
+    "actor_provenance": {
+      "selection": "explicit-agent",
+      "principal_source": "explicit-principal",
+      "verification_class": "attributed",
+      "evidence_ref": null,
+      "provider_authenticated": false,
+      "externally_supplied_evidence": false
+    },
+    "position_id": "developer",
+    "base_revision": "29a7773b2f43da2fddd42bac7e1125e9ecbfcd1f",
+    "branch": "codex/task-observer-integration",
+    "worktree": null,
+    "claimed_at": "2026-09-24T22:46:42.104Z",
+    "released_at": null
+  },
+  "claims": [
+    {
+      "id": "claim-20260924224638-6b187eb2",
+      "status": "released",
+      "principal_id": "human",
+      "agent_id": "agent-mog",
+      "actor_provenance": {
+        "selection": "explicit-agent",
+        "principal_source": "explicit-principal",
+        "verification_class": "attributed",
+        "evidence_ref": null,
+        "provider_authenticated": false,
+        "externally_supplied_evidence": false
+      },
+      "position_id": "engineering_manager",
+      "base_revision": "29a7773b2f43da2fddd42bac7e1125e9ecbfcd1f",
+      "branch": "codex/task-observer-integration",
+      "worktree": null,
+      "claimed_at": "2026-09-24T22:46:38.612Z",
+      "released_at": "2026-09-24T22:46:39.036Z",
+      "release_reason": [
+        "Approved work order recorded"
+      ]
+    },
+    {
+      "id": "claim-20260924224639-c3aded83",
+      "status": "released",
+      "principal_id": "human",
+      "agent_id": "agent-yuna",
+      "actor_provenance": {
+        "selection": "explicit-agent",
+        "principal_source": "explicit-principal",
+        "verification_class": "attributed",
+        "evidence_ref": null,
+        "provider_authenticated": false,
+        "externally_supplied_evidence": false
+      },
+      "position_id": "product_manager",
+      "base_revision": "29a7773b2f43da2fddd42bac7e1125e9ecbfcd1f",
+      "branch": "codex/task-observer-integration",
+      "worktree": null,
+      "claimed_at": "2026-09-24T22:46:39.821Z",
+      "released_at": "2026-09-24T22:46:40.183Z",
+      "release_reason": [
+        "Scope acceptance and UI brief recorded"
+      ]
+    },
+    {
+      "id": "claim-20260924224640-93d3a6b6",
+      "status": "released",
+      "principal_id": "human",
+      "agent_id": "agent-tidus",
+      "actor_provenance": {
+        "selection": "explicit-agent",
+        "principal_source": "explicit-principal",
+        "verification_class": "attributed",
+        "evidence_ref": null,
+        "provider_authenticated": false,
+        "externally_supplied_evidence": false
+      },
+      "position_id": "tech_lead",
+      "base_revision": "29a7773b2f43da2fddd42bac7e1125e9ecbfcd1f",
+      "branch": "codex/task-observer-integration",
+      "worktree": null,
+      "claimed_at": "2026-09-24T22:46:40.960Z",
+      "released_at": "2026-09-24T22:46:41.322Z",
+      "release_reason": [
+        "Design and risk boundary recorded"
+      ]
+    },
+    {
+      "id": "claim-20260924224642-cf9aeff9",
+      "status": "active",
+      "principal_id": "human",
+      "agent_id": "agent-rikku",
+      "actor_provenance": {
+        "selection": "explicit-agent",
+        "principal_source": "explicit-principal",
+        "verification_class": "attributed",
+        "evidence_ref": null,
+        "provider_authenticated": false,
+        "externally_supplied_evidence": false
+      },
+      "position_id": "developer",
+      "base_revision": "29a7773b2f43da2fddd42bac7e1125e9ecbfcd1f",
+      "branch": "codex/task-observer-integration",
+      "worktree": null,
+      "claimed_at": "2026-09-24T22:46:42.104Z",
+      "released_at": null
+    }
+  ],
+  "gate_evidence": {
+    "work_order": [
+      ".ai-org/artifacts/WI-0269/work-order.md"
+    ],
+    "approved_scope": [
+      ".ai-org/artifacts/WI-0269/work-order.md"
+    ],
+    "acceptance_criteria": [
+      ".ai-org/artifacts/WI-0269/work-order.md"
+    ],
+    "technical_design": [
+      ".ai-org/artifacts/WI-0269/work-order.md"
+    ],
+    "risk_review": [
+      ".ai-org/artifacts/WI-0269/work-order.md"
+    ],
+    "ui_brief": [
+      ".ai-org/artifacts/WI-0269/ui-brief.md"
+    ],
+    "required_state_coverage": [
+      ".ai-org/artifacts/WI-0269/ui-brief.md"
+    ]
+  },
+  "evidence": [
+    ".ai-org/artifacts/WI-0269/work-order.md",
+    ".ai-org/artifacts/WI-0269/ui-brief.md"
+  ],
+  "unresolved": [],
+  "next_position": "quality_evaluator"
+}
