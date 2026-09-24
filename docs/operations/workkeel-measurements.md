@@ -9,9 +9,42 @@ node /path/to/workkeel/bin/workkeel.mjs workflow metrics /path/to/project --id r
 ```
 
 Replace the example task/run IDs with existing IDs. Both commands return JSON and
-are read-only. A future dashboard can consume this data; Console integration is
-not implemented. No background collector, browser, API key or extra dependency
+are read-only. An optional task monitor can display this data. No background collector,
+browser, API key or extra dependency
 is needed to read it. Running the optional Graph still has its own prerequisites.
+
+## Optional task monitor
+
+From a source checkout, start the foreground viewer for an initialized task-first
+project (replace the example path):
+
+```sh
+node bin/workkeel.mjs monitor /path/to/project
+```
+
+With the package installed, use `workkeel monitor /path/to/project`. Open the
+printed access URL in a browser; keep it private. The viewer binds only to
+`127.0.0.1` on a random port. Ctrl-C stops it; nothing is installed at login and
+no process needs to keep running when you are not viewing it. Do not expose it
+through a tunnel or reverse proxy. The capability URL protects API access from
+unrelated browser pages; it is not a security boundary against another process
+already running as your local user.
+
+The page refreshes every two seconds while visible. Choose a task to see its
+lifecycle state, workflow state, recorded/completed/unresolved attempts, selected
+and runtime-confirmed models, backend model when available, tokens, adapter work
+and run wall time. Cost remains unknown for the subscription adapter. The display
+does not infer a percentage, finish tasks or launch agents. A stale/corrupt journal
+hides previous data with an error; it never repairs or resumes execution.
+
+The monitor reads existing records only and does not require optional LangGraph
+packages merely to view them. It excludes retained legacy-mode tasks; it does not
+migrate a project or replace the legacy Console. Limits: 200 task records and a
+4 MiB response; use the per-task JSON command for larger projects. Starting the
+viewer and reading snapshots writes no project files. Browser reload loses the
+in-memory access token; reopen the printed link to regain access.
+
+This is a task monitor, not the [offline workflow explainer](../assets/workkeel-flow.html).
 
 ## Coverage and defaults
 

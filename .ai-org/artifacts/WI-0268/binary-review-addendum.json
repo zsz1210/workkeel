@@ -1,0 +1,370 @@
+{
+  "schema_version": "workkeel.publication-binary-addendum/v1",
+  "work_item_id": "WI-0268",
+  "base_revision": "c9d5ad7741bcf21de6f55825b42d67988372358f",
+  "prior_review": ".ai-org/artifacts/WI-0160/binary-review.json",
+  "inventory_count": 117,
+  "reused_exact_count": 68,
+  "records": [
+    {
+      "path": ".ai-org/artifacts/WI-0230/ui-runtime.png",
+      "sha256": "a75d228f0fb3fccfd9784f446f4ac77c4482c7fa4aa2f626c60b06952766768e",
+      "bytes": 251739,
+      "kind": "png",
+      "review": "visual-and-chunk-reviewed"
+    },
+    {
+      "path": ".ai-org/artifacts/WI-0230/verification-535c306e.log.gz",
+      "sha256": "ed1db43102c9e045c8c6833a92f4e95af8dab134f4a89ca10d1267f5ce00977d",
+      "bytes": 41366,
+      "kind": "gzip",
+      "review": "decompressed-pattern-reviewed"
+    },
+    {
+      "path": ".ai-org/artifacts/WI-0230/verification-56700f3a.log.gz",
+      "sha256": "9dc47b3ea17f886ed26a193affc397091f33762ee2ba581f622e915c0eeebbe2",
+      "bytes": 42764,
+      "kind": "gzip",
+      "review": "decompressed-pattern-reviewed"
+    },
+    {
+      "path": ".ai-org/artifacts/WI-0230/verification-8bfe3889.log.gz",
+      "sha256": "3592f617f266c0bc493e5dfe152ea0ebcb04c6ae08a9c53571866434c6d53673",
+      "bytes": 41833,
+      "kind": "gzip",
+      "review": "decompressed-pattern-reviewed"
+    },
+    {
+      "path": ".ai-org/artifacts/WI-0230/verification-aff1b86e.log.gz",
+      "sha256": "f2605c6a9a6d94db0c30be1c2914fb675006934310ffe398cc5939dd43ba3176",
+      "bytes": 41926,
+      "kind": "gzip",
+      "review": "decompressed-pattern-reviewed"
+    },
+    {
+      "path": ".ai-org/artifacts/WI-0234/closeout-verify-fast.log.gz",
+      "sha256": "0ba6606ea7d34f8acc779801ec50afdb0e6c1ea81dab5df332ce4944e91f0883",
+      "bytes": 2424,
+      "kind": "gzip",
+      "review": "decompressed-pattern-reviewed"
+    },
+    {
+      "path": ".ai-org/artifacts/WI-0234/rework-01-qa-reproduction.tar.gz",
+      "sha256": "b4b3884a7c56ff52d3aa2b25d73b1de34b685e48bee23442330066ead1b29805",
+      "bytes": 4556,
+      "kind": "tar-gzip",
+      "review": "decompressed-pattern-reviewed"
+    },
+    {
+      "path": ".ai-org/artifacts/WI-0234/verification-220eda61.log.gz",
+      "sha256": "7f52e73ca25e53051990395c1de21edaf756e934d5c0ac67bcb9f39571e94134",
+      "bytes": 41550,
+      "kind": "gzip",
+      "review": "decompressed-pattern-reviewed"
+    },
+    {
+      "path": ".ai-org/artifacts/WI-0238/closeout-verify-fast.log.gz",
+      "sha256": "2a635e94a863704a6ea44ec3ba014ffc55ca1a939841cb06ae906407399f900c",
+      "bytes": 2425,
+      "kind": "gzip",
+      "review": "decompressed-pattern-reviewed"
+    },
+    {
+      "path": ".ai-org/artifacts/WI-0238/focused-profiling.tar.gz",
+      "sha256": "518465b7da6c3c11639e509bfdfbfa3d826f1a83145d236a454542817b2d9cf2",
+      "bytes": 5304,
+      "kind": "tar-gzip",
+      "review": "decompressed-pattern-reviewed"
+    },
+    {
+      "path": ".ai-org/artifacts/WI-0238/independent-controls.tar.gz",
+      "sha256": "43c7a9e398537b8ed74c0afa2cee5a1ec3dcad4d1a9bbe19457941af6b26af9c",
+      "bytes": 1858,
+      "kind": "tar-gzip",
+      "review": "decompressed-pattern-reviewed"
+    },
+    {
+      "path": ".ai-org/artifacts/WI-0238/verification-472c1673.log.gz",
+      "sha256": "c03521ad1514e6e1c3bd0161f5de52cdc03b66c5af6c161cb4b6becc09d4d98a",
+      "bytes": 41634,
+      "kind": "gzip",
+      "review": "decompressed-pattern-reviewed"
+    },
+    {
+      "path": ".ai-org/artifacts/WI-0239/baseline-timing.jsonl.gz",
+      "sha256": "09c7483a4f0c459d28a76bb08165b2095e28482346e6e5b2682540b042acba72",
+      "bytes": 50434,
+      "kind": "gzip",
+      "review": "decompressed-pattern-reviewed"
+    },
+    {
+      "path": ".ai-org/artifacts/WI-0239/baseline.log.gz",
+      "sha256": "5577242d930d6721c5c8cc6c7a373d2d5dfa1c4d61f4076057f946692da47d53",
+      "bytes": 41604,
+      "kind": "gzip",
+      "review": "decompressed-pattern-reviewed"
+    },
+    {
+      "path": ".ai-org/artifacts/WI-0239/bench.json.gz",
+      "sha256": "ec47e0776ca749d954d5382734537b36d9c44bc5f6b974b0fb8ddb2b8442ed31",
+      "bytes": 558,
+      "kind": "gzip",
+      "review": "decompressed-pattern-reviewed"
+    },
+    {
+      "path": ".ai-org/artifacts/WI-0239/bench.log.gz",
+      "sha256": "d1563a2b2ab4b837acec970822103fbd80f9f31f2680ffa8b6719246539598a7",
+      "bytes": 164,
+      "kind": "gzip",
+      "review": "decompressed-pattern-reviewed"
+    },
+    {
+      "path": ".ai-org/artifacts/WI-0239/candidate-timing.jsonl.gz",
+      "sha256": "356d14ce76816de7b5dcfd132f28236d1e219f0d894c0fb4922d97d69bcff677",
+      "bytes": 50343,
+      "kind": "gzip",
+      "review": "decompressed-pattern-reviewed"
+    },
+    {
+      "path": ".ai-org/artifacts/WI-0239/candidate.log.gz",
+      "sha256": "6dc12669e7f124ae34f1ad62c7330e70c05714bdd79fb44c9761be88814b844b",
+      "bytes": 41713,
+      "kind": "gzip",
+      "review": "decompressed-pattern-reviewed"
+    },
+    {
+      "path": ".ai-org/artifacts/WI-0239/comparison.json.gz",
+      "sha256": "f9c9cfa9946bd6e75b35990a09eaa6050ecea6b2c3bf821654037c609b1df248",
+      "bytes": 3292,
+      "kind": "gzip",
+      "review": "decompressed-pattern-reviewed"
+    },
+    {
+      "path": ".ai-org/artifacts/WI-0239/controls.log.gz",
+      "sha256": "c74a86455ec483470b11327f4d44b9e8a6d5de061108589e64f2fb5dc9a5aa91",
+      "bytes": 336,
+      "kind": "gzip",
+      "review": "decompressed-pattern-reviewed"
+    },
+    {
+      "path": ".ai-org/artifacts/WI-0239/doctor.json.gz",
+      "sha256": "e9910bb5f2b6f4575f8e96bb6e5b18010c1514f6693e06c2a9dd5b8b9f0edc59",
+      "bytes": 1590,
+      "kind": "gzip",
+      "review": "decompressed-pattern-reviewed"
+    },
+    {
+      "path": ".ai-org/artifacts/WI-0239/final-fast.log.gz",
+      "sha256": "85ac1139fd3a8b3ddbca56244d260428aa626c5dd29d49a976eb74f482e4e1b8",
+      "bytes": 2430,
+      "kind": "gzip",
+      "review": "decompressed-pattern-reviewed"
+    },
+    {
+      "path": ".ai-org/artifacts/WI-0239/final-plan.json.gz",
+      "sha256": "721c78293eeaa8de1780d9ec000ddf4297689207485aa4fcae1b613ddcedbb65",
+      "bytes": 468,
+      "kind": "gzip",
+      "review": "decompressed-pattern-reviewed"
+    },
+    {
+      "path": ".ai-org/artifacts/WI-0239/final-status.json.gz",
+      "sha256": "ac03529b19b10e3f3dd27e6590b05d071d53a350e68395bffccf865a5d3e6534",
+      "bytes": 1477,
+      "kind": "gzip",
+      "review": "decompressed-pattern-reviewed"
+    },
+    {
+      "path": ".ai-org/artifacts/WI-0239/focused.log.gz",
+      "sha256": "d26852f59d5a2e22b97c212a0aebe7928a83594aee1196272cdcd24fc31b4a89",
+      "bytes": 3259,
+      "kind": "gzip",
+      "review": "decompressed-pattern-reviewed"
+    },
+    {
+      "path": ".ai-org/artifacts/WI-0239/qa-claim-failure.log.gz",
+      "sha256": "3f7f95a041ce30b5130cc4c7d75f68cc9be033d33cb66ca5af90c825785cced3",
+      "bytes": 185,
+      "kind": "gzip",
+      "review": "decompressed-pattern-reviewed"
+    },
+    {
+      "path": ".ai-org/artifacts/WI-0239/qa-claim-failure.test.mjs.gz",
+      "sha256": "d28590a830e664c0f198fc08546cfdee1cb6a09aaa30d55bcb33ccce633d8725",
+      "bytes": 1049,
+      "kind": "gzip",
+      "review": "decompressed-pattern-reviewed"
+    },
+    {
+      "path": ".ai-org/artifacts/WI-0240/closeout-evidence.tar.gz",
+      "sha256": "abe234f2523930b17f8c1cefd2f57776fa3bef109e216f6436e3580a47388a3e",
+      "bytes": 6634,
+      "kind": "tar-gzip",
+      "review": "decompressed-pattern-reviewed"
+    },
+    {
+      "path": ".ai-org/artifacts/WI-0240/full-verification.log.gz",
+      "sha256": "6074f65c5d4e695127c07d4f29a66f73e39927f921cf568edb8264a8f2587024",
+      "bytes": 42141,
+      "kind": "gzip",
+      "review": "decompressed-pattern-reviewed"
+    },
+    {
+      "path": ".ai-org/artifacts/WI-0240/independent-probe.tar.gz",
+      "sha256": "2715813a378e958e940da9a6418cd65c05dc09d14f8b91f32a61c92c5a516dae",
+      "bytes": 1968,
+      "kind": "tar-gzip",
+      "review": "decompressed-pattern-reviewed"
+    },
+    {
+      "path": ".ai-org/artifacts/WI-0240/profiling-evidence.tar.gz",
+      "sha256": "3ec32b2ef653f0cf180ecb2b506a746e33e3e73f88bc17a767569fca991a74c8",
+      "bytes": 26138,
+      "kind": "tar-gzip",
+      "review": "decompressed-pattern-reviewed"
+    },
+    {
+      "path": ".ai-org/artifacts/WI-0241/final-diagnostics.tar.gz",
+      "sha256": "9e2637f325d131c4063059cd2c3650f1c057fd0b590a5dd0934bea39f2342569",
+      "bytes": 5666,
+      "kind": "tar-gzip",
+      "review": "reviewed-redaction-placeholder",
+      "placeholder_home_path_count": 1
+    },
+    {
+      "path": ".ai-org/artifacts/WI-0241/full-attempt-1-memory.json.gz",
+      "sha256": "8e2668f971cd9ab9696bd1d164db20685bc58cec179a060f17bc0622e3541bba",
+      "bytes": 36715,
+      "kind": "gzip",
+      "review": "decompressed-pattern-reviewed"
+    },
+    {
+      "path": ".ai-org/artifacts/WI-0241/full-attempt-1.log.gz",
+      "sha256": "4bcf5fd34bd7566d5cd66a0b80f7e0970ceafbf97d4eb1ac2f59fe73e7fc7224",
+      "bytes": 42088,
+      "kind": "gzip",
+      "review": "reviewed-redaction-placeholder",
+      "placeholder_home_path_count": 1
+    },
+    {
+      "path": ".ai-org/artifacts/WI-0241/full-attempt-2-memory.json.gz",
+      "sha256": "ecdf6e60d26a95eccbefc889fe75478a1015b86e7267cda48123758bc262949b",
+      "bytes": 36961,
+      "kind": "gzip",
+      "review": "decompressed-pattern-reviewed"
+    },
+    {
+      "path": ".ai-org/artifacts/WI-0241/full-attempt-2.log.gz",
+      "sha256": "b56b616178940aa18c6b13f390fb1f44aedcea16b4367cfb8407af2333b9a217",
+      "bytes": 41911,
+      "kind": "gzip",
+      "review": "decompressed-pattern-reviewed"
+    },
+    {
+      "path": ".ai-org/artifacts/WI-0241/independent-probe.tar.gz",
+      "sha256": "215ffb1c69be763b986d70dd0e50a17ea2f60d9eebc6736aa10b5b2edb53b5b3",
+      "bytes": 2897,
+      "kind": "tar-gzip",
+      "review": "reviewed-redaction-placeholder",
+      "placeholder_home_path_count": 2
+    },
+    {
+      "path": ".ai-org/artifacts/WI-0241/measurement-evidence.tar.gz",
+      "sha256": "53c82a1771ef0f43970950f474a698b7de916f355ae76335b60e5baba17cbac8",
+      "bytes": 17323,
+      "kind": "tar-gzip",
+      "review": "reviewed-redaction-placeholder",
+      "placeholder_home_path_count": 33
+    },
+    {
+      "path": ".ai-org/artifacts/WI-0241/verification-monitors.tar.gz",
+      "sha256": "85ea204ea6d1d563ccd515152c51558c02407077f8fdda6d59024767c304f464",
+      "bytes": 1240,
+      "kind": "tar-gzip",
+      "review": "reviewed-redaction-placeholder",
+      "placeholder_home_path_count": 2
+    },
+    {
+      "path": ".ai-org/artifacts/WI-0242/closeout-checks.tar.gz",
+      "sha256": "558282d6086297581172beecb452e0c591cdfe1a77f8d9204881e2eb99c541e0",
+      "bytes": 5596,
+      "kind": "tar-gzip",
+      "review": "reviewed-redaction-placeholder",
+      "placeholder_home_path_count": 1
+    },
+    {
+      "path": ".ai-org/artifacts/WI-0242/diagnostic-evidence.tar.gz",
+      "sha256": "f89fb11d141e4e212282ae88a473c5eb952e0c5c451098f288e502fa8ea4a591",
+      "bytes": 52666,
+      "kind": "tar-gzip",
+      "review": "reviewed-redaction-placeholder",
+      "placeholder_home_path_count": 1
+    },
+    {
+      "path": ".ai-org/artifacts/WI-0242/final-verification.tar.gz",
+      "sha256": "b5ca7b660232829553b90d7506122447c19f6eca0927a975bfd1f96dfc3cf68a",
+      "bytes": 44189,
+      "kind": "tar-gzip",
+      "review": "reviewed-redaction-placeholder",
+      "placeholder_home_path_count": 1
+    },
+    {
+      "path": ".ai-org/artifacts/WI-0263/flow-dark.png",
+      "sha256": "6267ca1e1b04ba1c2ad90ffc0a6465bd9c815745b81f66c645d6be96f7c1ac5c",
+      "bytes": 143834,
+      "kind": "png",
+      "review": "visual-and-chunk-reviewed"
+    },
+    {
+      "path": ".ai-org/artifacts/WI-0263/flow-desktop.png",
+      "sha256": "b33481e5128e4d8b80d2bfae18307e5553ad9f0068b72e5c09afc1091be0dbbf",
+      "bytes": 142770,
+      "kind": "png",
+      "review": "visual-and-chunk-reviewed"
+    },
+    {
+      "path": ".ai-org/artifacts/WI-0263/flow-mobile.png",
+      "sha256": "0b93d8bfa9943ced458bd3b853241eddf12aebe7a1cde15d02e375d3d26cffd5",
+      "bytes": 140475,
+      "kind": "png",
+      "review": "visual-and-chunk-reviewed"
+    },
+    {
+      "path": ".ai-org/artifacts/WI-0263/workkeel-architecture-mobile.png",
+      "sha256": "ac8751bf3a12ffea4189f6787f8db5908c79017ccb704b392baa4451ec42fadf",
+      "bytes": 162107,
+      "kind": "png",
+      "review": "visual-and-chunk-reviewed"
+    },
+    {
+      "path": ".ai-org/artifacts/WI-0263/workkeel-architecture.png",
+      "sha256": "6594f66d1936a118076396d298e186f5d1364e5c1c21193678e9c2ec490e1ed7",
+      "bytes": 238710,
+      "kind": "png",
+      "review": "visual-and-chunk-reviewed"
+    },
+    {
+      "path": ".ai-org/artifacts/WI-0263/workkeel-workflow-mobile.png",
+      "sha256": "8771b497f75d7706f23a05af1d26561a013f698d32d4586be06cd5b825bb46bc",
+      "bytes": 76629,
+      "kind": "png",
+      "review": "visual-and-chunk-reviewed"
+    },
+    {
+      "path": ".ai-org/artifacts/WI-0263/workkeel-workflow.png",
+      "sha256": "9dd409415b0f66a03bf191ccd1db67b21230ade1460b02e1419afa0b5e01352c",
+      "bytes": 95183,
+      "kind": "png",
+      "review": "visual-and-chunk-reviewed"
+    }
+  ],
+  "method": {
+    "png": "Original-size visual inspection of eight new PNGs plus chunk inspection for embedded text and EXIF.",
+    "gzip": "Decompress and inspect the payload with publication privacy patterns; record only categories and counts.",
+    "tar_gzip": "Decompress, parse regular TAR entries, inspect each payload with publication privacy patterns; record only categories and counts."
+  },
+  "limitations": [
+    "Eight compressed artifacts contain 42 exact redaction-placeholder home-path pattern matches; generic binary review remains required.",
+    "This review does not alter generic binary-review findings or grant publication authority."
+  ]
+}

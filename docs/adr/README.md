@@ -1,5 +1,7 @@
 # Architecture Decision Records
 
+- [ADR-0074: On-demand task monitor](0074-on-demand-task-monitor.md)
+
 - [ADR-0073: Opt-in workflow execution and model routing](0073-opt-in-workflow-execution.md)
 
 - [ADR-0072: Task-first lifecycle without company Positions](0072-task-first-lifecycle.md)

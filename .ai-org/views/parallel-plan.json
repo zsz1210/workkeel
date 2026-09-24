@@ -1,23 +1,88 @@
 {
   "schema_version": "temple.parallel-plan/v1",
-  "generated_at": "2026-09-24T00:26:09.048Z",
-  "source_fingerprint": "0a2ec5e95a44fd877de8edb3369be2e6b5808e81c243cf2e44f246ca28b0662c",
+  "generated_at": "2026-09-24T01:09:39.946Z",
+  "source_fingerprint": "ab658ef86387d92fb3c95524107db283a4d372dcd6b60f8ad658375881e2e219",
   "scope": {
     "mode": "all-active",
     "parent_work_item_id": null,
-    "selected_work_item_ids": []
+    "selected_work_item_ids": [
+      "WI-0267",
+      "WI-0268"
+    ]
   },
   "max_workers": null,
   "summary": {
-    "selected": 0,
-    "dispatchable": 0,
-    "active": 0,
+    "selected": 2,
+    "dispatchable": 1,
+    "active": 1,
     "sequential": 0,
     "blocked": 0,
-    "waves": 0
+    "waves": 1
   },
-  "waves": [],
-  "active": [],
+  "waves": [
+    {
+      "id": "wave-001",
+      "order": 1,
+      "dispatch": [
+        {
+          "work_item_id": "WI-0268",
+          "title": "Bounded publication scanning and digest-bound binary review",
+          "position_id": "developer",
+          "agent_id": "agent-rikku",
+          "agent_name": "Rikku",
+          "suggested_task_title": "WI-0268 · Bounded publication scannin… · Developer (Rikku)",
+          "base_revision": "c9d5ad7741bcf21de6f55825b42d67988372358f",
+          "affected_paths": [
+            "src/publication-audit.mjs",
+            "test/publication-audit.test.mjs",
+            ".ai-org/artifacts/WI-0268"
+          ],
+          "dependencies": [],
+          "required_disciplines": [],
+          "active_requirements": {
+            "stage": "build",
+            "disciplines": [],
+            "resources": []
+          },
+          "preparation_fingerprint": "208213b9c59199803ad598567f49e942c39efb4318bfbb5853af03e476fbaa1a",
+          "integration_owner_agent_id": "agent-mog",
+          "context_command": "node ./templew.mjs context resolve . --work-item WI-0268 --position developer --no-write --json",
+          "claim_required_before_work": true,
+          "task_registration_required_after_creation": true,
+          "task_creation_performed": false,
+          "claim_performed": false,
+          "external_action_performed": false
+        }
+      ],
+      "join_gate": {
+        "integration_owner_agent_ids": [
+          "agent-mog"
+        ],
+        "required_evidence": [
+          "exact_candidate_revision",
+          "verification_results",
+          "unresolved_items"
+        ],
+        "rule": "Join every dispatched Work Item through its Integration Owner before dispatching dependent work or advancing the lifecycle."
+      }
+    }
+  ],
+  "active": [
+    {
+      "work_item_id": "WI-0267",
+      "title": "Complete bounded development routing and task monitor",
+      "disposition": "active",
+      "position_id": "developer",
+      "agent_id": "agent-rikku",
+      "integration_owner_agent_id": null,
+      "reasons": [],
+      "claim_id": "claim-20260924010938-2ed9bbdf",
+      "principal_id": "human",
+      "branch": "codex/workkeel-monitor-and-dev-routing",
+      "worktree": null,
+      "base_revision": "c9d5ad7741bcf21de6f55825b42d67988372358f"
+    }
+  ],
   "sequential": [],
   "blocked": [],
   "conflicts": [],

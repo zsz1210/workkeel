@@ -1,9 +1,21 @@
 # Workkeel automation validation
 
-Development evidence as of 2026-09-23. This page separates offline tests, local
+Development evidence, updated 2026-09-24. This page separates offline tests, local
 process tests and real model execution; it is not a production-readiness claim.
+
+## Current bounded follow-up
+
+Subsequently authorized WI-0266 ran three corrected synthetic tasks on each of
+Luna and Sol: six first-pass successes, no repairs. WI-0267 then completed a real
+monitor-helper implementation (Luna) and source review (Sol), with 32 prewritten
+checks passing and no findings. See the [role-specific measurements and external
+selector boundary](workkeel-development-routing.md). These limited results do not
+erase the earlier failures below or qualify general automation reliability.
+
+## Historical WI-0260 qualification
+
 Full offline verification passed at `2481c93f5524929558a85ddc82383b5cfb60b021`.
-The final authorized live check failed; no additional model test is authorized.
+That work item's final authorized live check failed and its retry budget ended.
 Independent review accepted the experimental/local implementation at
 `c84f1b5599a210dcf42647f9c54ff9ffa8b14324`, with fresh 35-case focused and 59-case
 fast checks. This does not qualify reliable live automation. The named judgments

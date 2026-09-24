@@ -69,15 +69,19 @@ node bin/workkeel.mjs help
 | Coding Agent | 使用既有 Agent | Codex、Claude Code 或其他能遵循指令的 Agent；原生使用不會替它選模型 |
 | Graph 引擎 | 關閉／選配 | 安裝 LangGraph 依賴並核准流程；支援順序、分支、直接匯合與檢查點 |
 | 自動選模 | 關閉／選配 | Workkeel 政策：步驟明確指定 → 符合的規則 → 核准的預設；不另呼叫模型分類 |
-| Codex 月費 | 選配／實驗性 | 既有 ChatGPT 登入、macOS 與指定 Codex 版本；最後一次真實驗證失敗 |
+| Codex 月費 | 選配／實驗性 | 既有 ChatGPT 登入、macOS 與指定 Codex 版本；有限的 Luna／Sol 樣本已通過，不代表普遍可靠性 |
 | LiteLLM gateway | 關閉／選配 | 固定且核准的連線；不內附伺服器；真實服務驗證待完成 |
 | LiteLLM Auto Router | 尚未整合 | 與 Workkeel 規則選模不同；啟用 gateway 不代表啟用 Auto |
 | Headroom | 關閉 | 主機自有整合可用無損檢視；不支援攔截 Codex 原生工具輸出 |
-| Console／observer | 選配 | 已有本機觀測介面；尚未完成新 Workkeel 任務／Graph 儀表板整合 |
+| 任務監看 | 關閉／選配 | `workkeel monitor /path/to/project`：按需啟動、唯讀查看任務與執行紀錄；不呼叫模型、不安裝背景服務。[指南](docs/operations/workkeel-measurements.md#optional-task-monitor) |
 | 任務量測 | Workflow 執行時記錄 | 唯讀查詢模型、token 與耗時；原生代理工作階段尚未收集。[指南](docs/operations/workkeel-measurements.md) |
 
 沒有通用的 Luna／Sol／Astra 預設：原生 Agent 保留自己的設定，自動流程則必須提供核准的政策。
 不會安裝 macOS app，也不要求常駐背景程式。詳見[執行設定與限制](docs/operations/workkeel-workflows.md)。
+
+個人開發選模與框架分開：外部選配工具可用 LiteLLM 的本機啟發式分類，在啟動原生 Codex
+前建議 Luna／Sol。這不是 LiteLLM Auto gateway，不會切換 App 中既有對話的模型，也不
+隨框架附帶。詳見[有限樣本評估](docs/validation/workkeel-development-routing.md)。
 
 ## 架構
 

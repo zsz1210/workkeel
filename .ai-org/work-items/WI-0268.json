@@ -1,0 +1,187 @@
+{
+  "schema_version": "temple.work-item/v1",
+  "id": "WI-0268",
+  "title": "Bounded publication scanning and digest-bound binary review",
+  "state": "build",
+  "owner_position": "developer",
+  "assigned_agent_id": "agent-rikku",
+  "created_at": "2026-09-24T01:08:08.493Z",
+  "updated_at": "2026-09-24T01:09:40.834Z",
+  "scope": [
+    "Stream oversized current text files with bounded memory and fail-closed limits; inspect existing binary inventory and retain digest-bound clearance; no deletion, history rewrite or weakened privacy rules"
+  ],
+  "acceptance_criteria": [
+    "Cross-boundary scans match text rules, drift and scan caps block; binary review bound to exact bytes, unknowns remain blocked; focused tests and full integration review"
+  ],
+  "affected_paths": [
+    "src/publication-audit.mjs",
+    "test/publication-audit.test.mjs",
+    ".ai-org/artifacts/WI-0268"
+  ],
+  "context_refs": [],
+  "spec_refs": [],
+  "ux_refs": [],
+  "ui_refs": [],
+  "contract_refs": [],
+  "specification_mode": "gate-evidence",
+  "ui_delivery_mode": "not-applicable",
+  "workflow_profile": "standard",
+  "risk_tier": "standard",
+  "profile_assessment": {
+    "requested_profile": "standard",
+    "effective_profile": "standard",
+    "scope_class": "ordinary",
+    "escalation_triggers": [],
+    "rationale": "",
+    "evidence_refs": [],
+    "evaluated_at": "2026-09-24T01:08:08.479Z",
+    "escalated": false
+  },
+  "parent_work_item_id": null,
+  "tracker_visibility": "team-visible",
+  "tracker_refs": [],
+  "tracker_reconciliations": [],
+  "dependencies": [],
+  "required_disciplines": [],
+  "stage_requirements": {},
+  "base_revision": "c9d5ad7741bcf21de6f55825b42d67988372358f",
+  "parallel_mode": "parallel",
+  "integration_owner_agent_id": "agent-mog",
+  "planned_agent_id": null,
+  "shared_contract_refs": [],
+  "contract_status": "not_required",
+  "overlap_resolution": [],
+  "claim": {
+    "id": "claim-20260924010940-e44a3923",
+    "status": "active",
+    "principal_id": "human",
+    "agent_id": "agent-rikku",
+    "actor_provenance": {
+      "selection": "explicit-agent",
+      "principal_source": "explicit-principal",
+      "verification_class": "attributed",
+      "evidence_ref": null,
+      "provider_authenticated": false,
+      "externally_supplied_evidence": false
+    },
+    "position_id": "developer",
+    "base_revision": "c9d5ad7741bcf21de6f55825b42d67988372358f",
+    "branch": "codex/workkeel-monitor-and-dev-routing",
+    "worktree": null,
+    "claimed_at": "2026-09-24T01:09:40.834Z",
+    "released_at": null
+  },
+  "claims": [
+    {
+      "id": "claim-20260924010809-f6f41a9d",
+      "status": "released",
+      "principal_id": "human",
+      "agent_id": "agent-mog",
+      "actor_provenance": {
+        "selection": "explicit-agent",
+        "principal_source": "explicit-principal",
+        "verification_class": "attributed",
+        "evidence_ref": null,
+        "provider_authenticated": false,
+        "externally_supplied_evidence": false
+      },
+      "position_id": "engineering_manager",
+      "base_revision": "c9d5ad7741bcf21de6f55825b42d67988372358f",
+      "branch": "codex/workkeel-monitor-and-dev-routing",
+      "worktree": null,
+      "claimed_at": "2026-09-24T01:08:09.044Z",
+      "released_at": "2026-09-24T01:09:33.461Z",
+      "release_reason": [
+        "Approved work order recorded"
+      ]
+    },
+    {
+      "id": "claim-20260924010934-9ed25a26",
+      "status": "released",
+      "principal_id": "human",
+      "agent_id": "agent-yuna",
+      "actor_provenance": {
+        "selection": "explicit-agent",
+        "principal_source": "explicit-principal",
+        "verification_class": "attributed",
+        "evidence_ref": null,
+        "provider_authenticated": false,
+        "externally_supplied_evidence": false
+      },
+      "position_id": "product_manager",
+      "base_revision": "c9d5ad7741bcf21de6f55825b42d67988372358f",
+      "branch": "codex/workkeel-monitor-and-dev-routing",
+      "worktree": null,
+      "claimed_at": "2026-09-24T01:09:34.741Z",
+      "released_at": "2026-09-24T01:09:35.343Z",
+      "release_reason": [
+        "Scope and acceptance recorded"
+      ]
+    },
+    {
+      "id": "claim-20260924010936-b8bf2c58",
+      "status": "released",
+      "principal_id": "human",
+      "agent_id": "agent-tidus",
+      "actor_provenance": {
+        "selection": "explicit-agent",
+        "principal_source": "explicit-principal",
+        "verification_class": "attributed",
+        "evidence_ref": null,
+        "provider_authenticated": false,
+        "externally_supplied_evidence": false
+      },
+      "position_id": "tech_lead",
+      "base_revision": "c9d5ad7741bcf21de6f55825b42d67988372358f",
+      "branch": "codex/workkeel-monitor-and-dev-routing",
+      "worktree": null,
+      "claimed_at": "2026-09-24T01:09:36.703Z",
+      "released_at": "2026-09-24T01:09:37.315Z",
+      "release_reason": [
+        "Design and risk boundary recorded"
+      ]
+    },
+    {
+      "id": "claim-20260924010940-e44a3923",
+      "status": "active",
+      "principal_id": "human",
+      "agent_id": "agent-rikku",
+      "actor_provenance": {
+        "selection": "explicit-agent",
+        "principal_source": "explicit-principal",
+        "verification_class": "attributed",
+        "evidence_ref": null,
+        "provider_authenticated": false,
+        "externally_supplied_evidence": false
+      },
+      "position_id": "developer",
+      "base_revision": "c9d5ad7741bcf21de6f55825b42d67988372358f",
+      "branch": "codex/workkeel-monitor-and-dev-routing",
+      "worktree": null,
+      "claimed_at": "2026-09-24T01:09:40.834Z",
+      "released_at": null
+    }
+  ],
+  "gate_evidence": {
+    "work_order": [
+      ".ai-org/artifacts/WI-0268/work-order.md"
+    ],
+    "approved_scope": [
+      ".ai-org/artifacts/WI-0268/work-order.md"
+    ],
+    "acceptance_criteria": [
+      ".ai-org/artifacts/WI-0268/work-order.md"
+    ],
+    "technical_design": [
+      ".ai-org/artifacts/WI-0268/work-order.md"
+    ],
+    "risk_review": [
+      ".ai-org/artifacts/WI-0268/work-order.md"
+    ]
+  },
+  "evidence": [
+    ".ai-org/artifacts/WI-0268/work-order.md"
+  ],
+  "unresolved": [],
+  "next_position": "quality_evaluator"
+}

@@ -71,6 +71,11 @@ const TEXT_RULES = [
 
 const CLASS_ORDER = new Map([["blocked", 0], ["review-required", 1], ["allowed", 2]]);
 const MAX_COMMAND_BUFFER = 64 * 1024 * 1024;
+// These are scanner limits, independent of the profile's in-memory threshold.
+const MAX_STREAM_FILE_BYTES = 64 * 1024 * 1024;
+const MAX_STREAM_LINE_BYTES = 4 * 1024 * 1024;
+const MAX_STREAM_FINDINGS = 10_000;
+const STREAM_CHUNK_BYTES = 64 * 1024;
 
 function gitOptions(target, maxBuffer = MAX_COMMAND_BUFFER) {
   return { cwd: target, encoding: "buffer", maxBuffer };
@@ -139,7 +144,7 @@ function valueFingerprint(ruleId, relativePath, matchedValue) {
   return crypto.createHash("sha256").update(ruleId).update("\0").update(relativePath).update("\0").update(matchedValue).digest("hex");
 }
 
-function scanText(content, relativePath, syntheticUsernames) {
+function scanText(content, relativePath, syntheticUsernames, firstLine = 1, singleLine = false, maximumFindings = Infinity) {
   const findings = [];
   for (const rule of TEXT_RULES) {
     const expression = new RegExp(rule.pattern.source, rule.pattern.flags);
@@ -149,11 +154,12 @@ function scanText(content, relativePath, syntheticUsernames) {
         const username = String(match[rule.usernameGroup] ?? "").toLowerCase();
         if (syntheticUsernames.has(username)) continue;
       }
+      if (findings.length >= maximumFindings) return null;
       findings.push({
         rule_id: rule.id,
         evidence_class: rule.evidenceClass,
         path: relativePath,
-        line: lineNumberFor(content, match.index ?? 0),
+        line: singleLine ? firstLine : firstLine + lineNumberFor(content, match.index ?? 0) - 1,
         remediation: rule.remediation,
         fingerprint: valueFingerprint(rule.id, relativePath, match[0])
       });
@@ -162,14 +168,87 @@ function scanText(content, relativePath, syntheticUsernames) {
   return findings;
 }
 
+function sameFileVersion(before, after) {
+  return before.isFile() && after.isFile() &&
+    before.dev === after.dev && before.ino === after.ino &&
+    before.size === after.size && before.mtimeNs === after.mtimeNs &&
+    before.ctimeNs === after.ctimeNs;
+}
+
+async function scanStreamedText(absolutePath, relativePath, initialStat, syntheticUsernames) {
+  if (initialStat.size > BigInt(MAX_STREAM_FILE_BYTES)) return { kind: "stream-limit", limit: "file" };
+  const findings = [];
+  const digest = crypto.createHash("sha256");
+  let pending = Buffer.alloc(0);
+  let total = 0;
+  let line = 1;
+  let binary = false;
+  const handle = await fs.open(absolutePath, "r");
+  try {
+    if (!sameFileVersion(initialStat, await handle.stat({ bigint: true }))) return { kind: "drift" };
+    const chunk = Buffer.allocUnsafe(STREAM_CHUNK_BYTES);
+    while (true) {
+      const { bytesRead } = await handle.read(chunk, 0, chunk.length, null);
+      if (bytesRead === 0) break;
+      total += bytesRead;
+      if (total > MAX_STREAM_FILE_BYTES) return { kind: "stream-limit", limit: "file" };
+      const bytes = chunk.subarray(0, bytesRead);
+      digest.update(bytes);
+      if (bytes.includes(0)) binary = true;
+      if (binary) continue;
+      let start = 0;
+      for (let index = 0; index < bytes.length; index += 1) {
+        if (bytes[index] !== 10) continue;
+        const segment = bytes.subarray(start, index);
+        if (pending.length + segment.length > MAX_STREAM_LINE_BYTES) return { kind: "stream-limit", limit: "line" };
+        const logicalLine = pending.length ? Buffer.concat([pending, segment]) : segment;
+        const lineFindings = scanText(logicalLine.toString("utf8"), relativePath, syntheticUsernames, line, true, MAX_STREAM_FINDINGS - findings.length);
+        if (!lineFindings) return { kind: "stream-limit", limit: "findings" };
+        for (const finding of lineFindings) findings.push(finding);
+        pending = Buffer.alloc(0);
+        line += 1;
+        start = index + 1;
+      }
+      const remainder = bytes.subarray(start);
+      if (pending.length + remainder.length > MAX_STREAM_LINE_BYTES) return { kind: "stream-limit", limit: "line" };
+      pending = pending.length ? Buffer.concat([pending, remainder]) : Buffer.from(remainder);
+    }
+    if (pending.length && !binary) {
+      const lineFindings = scanText(pending.toString("utf8"), relativePath, syntheticUsernames, line, true, MAX_STREAM_FINDINGS - findings.length);
+      if (!lineFindings) return { kind: "stream-limit", limit: "findings" };
+      for (const finding of lineFindings) findings.push(finding);
+    }
+    if (BigInt(total) !== initialStat.size || !sameFileVersion(initialStat, await handle.stat({ bigint: true })) ||
+        !sameFileVersion(initialStat, await fs.lstat(absolutePath, { bigint: true }))) return { kind: "drift" };
+    return binary ? { kind: "binary" } : { kind: "text", findings, digest: digest.digest("hex") };
+  } finally {
+    await handle.close();
+  }
+}
+
 async function readCurrentFile(target, relativePath, maximumBytes) {
   const absolutePath = path.join(target, relativePath);
-  const stat = await fs.lstat(absolutePath);
+  const stat = await fs.lstat(absolutePath, { bigint: true });
   if (stat.isSymbolicLink()) return { kind: "symlink", buffer: Buffer.from(await fs.readlink(absolutePath), "utf8") };
   if (!stat.isFile()) return { kind: "unsupported", buffer: Buffer.alloc(0) };
-  if (stat.size > maximumBytes) return { kind: "oversize", buffer: Buffer.alloc(0), size: stat.size };
-  const buffer = await fs.readFile(absolutePath);
-  return { kind: buffer.includes(0) ? "binary" : "text", buffer, size: stat.size };
+  if (stat.size > BigInt(maximumBytes)) return { kind: "stream", absolutePath, stat };
+  const handle = await fs.open(absolutePath, "r");
+  try {
+    if (!sameFileVersion(stat, await handle.stat({ bigint: true }))) return { kind: "drift" };
+    const buffer = Buffer.allocUnsafe(Number(stat.size) + 1);
+    let total = 0;
+    while (total < buffer.length) {
+      const { bytesRead } = await handle.read(buffer, total, buffer.length - total, null);
+      if (bytesRead === 0) break;
+      total += bytesRead;
+    }
+    if (BigInt(total) !== stat.size || !sameFileVersion(stat, await handle.stat({ bigint: true })) ||
+        !sameFileVersion(stat, await fs.lstat(absolutePath, { bigint: true }))) return { kind: "drift" };
+    const content = buffer.subarray(0, total);
+    return { kind: content.includes(0) ? "binary" : "text", buffer: content };
+  } finally {
+    await handle.close();
+  }
 }
 
 function metadataFinding(ruleId, evidenceClass, relativePath, remediation) {
@@ -181,6 +260,7 @@ async function scanCurrentSurface(target, surface, files, policy) {
   const binaryPaths = [];
   const fileDigests = new Map();
   let textFiles = 0;
+  const synthetic = new Set(policy.synthetic_usernames.map((entry) => entry.toLowerCase()));
   for (const relativePath of files) {
     if (isSensitiveDotenv(relativePath)) {
       findings.push(metadataFinding("sensitive-dotenv", "secret-material", relativePath, "Remove the tracked environment file and rotate any contained credentials."));
@@ -195,8 +275,27 @@ async function scanCurrentSurface(target, surface, files, policy) {
       findings.push(metadataFinding("unreadable-tracked-file", "inspection-failure", relativePath, "Make the tracked file readable and rerun the audit."));
       continue;
     }
-    if (read.kind === "oversize") {
-      findings.push(metadataFinding("oversize-text-or-binary", "inspection-failure", relativePath, `Review or reduce the file below ${policy.max_text_file_bytes} bytes before publication.`));
+    if (read.kind === "stream") {
+      try {
+        read = await scanStreamedText(read.absolutePath, relativePath, read.stat, synthetic);
+      } catch {
+        read = { kind: "unreadable" };
+      }
+    }
+    if (read.kind === "unreadable") {
+      findings.push(metadataFinding("unreadable-tracked-file", "inspection-failure", relativePath, "Make the tracked file readable and rerun the audit."));
+      continue;
+    }
+    if (read.kind === "stream-limit") {
+      const limit = read.limit === "file" ? `${MAX_STREAM_FILE_BYTES}-byte file`
+        : read.limit === "line" ? `${MAX_STREAM_LINE_BYTES}-byte logical line`
+          : `${MAX_STREAM_FINDINGS}-finding file`;
+      findings.push(metadataFinding("stream-limit-exceeded", "inspection-failure", relativePath,
+        `Review or reduce the file below the ${limit} scan bound before publication.`));
+      continue;
+    }
+    if (read.kind === "drift") {
+      findings.push(metadataFinding("tracked-file-drift", "inspection-failure", relativePath, "Stabilize the tracked file and rerun the audit."));
       continue;
     }
     if (read.kind === "unsupported") {
@@ -208,8 +307,8 @@ async function scanCurrentSurface(target, surface, files, policy) {
       continue;
     }
     textFiles += 1;
-    fileDigests.set(relativePath, crypto.createHash("sha256").update(read.buffer).digest("hex"));
-    findings.push(...scanText(read.buffer.toString("utf8"), relativePath, new Set(policy.synthetic_usernames.map((entry) => entry.toLowerCase()))));
+    fileDigests.set(relativePath, read.digest ?? crypto.createHash("sha256").update(read.buffer).digest("hex"));
+    for (const finding of read.findings ?? scanText(read.buffer.toString("utf8"), relativePath, synthetic)) findings.push(finding);
   }
   return { surface, files: files.length, textFiles, binaryPaths, fileDigests, findings };
 }
