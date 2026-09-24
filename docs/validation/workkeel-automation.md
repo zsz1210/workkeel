@@ -5,6 +5,39 @@ process tests and real model execution; it is not a production-readiness claim.
 
 ## Current bounded follow-up
 
+### Mac Mini handoff with newer Codex
+
+On 2026-09-24, the maintainer authorized replacing the exact CLI version check
+with a semantic minimum of `0.155.0-alpha.9.2`. This is a version acceptance
+policy; host controls, sandbox permissions, login type and fixed-model checks
+still apply. No additional dependency is required.
+
+The runtime change at `bab621a2542adb3c01dbaf3163ed24551b225890` was tested on
+macOS arm64 with Codex `0.155.0-alpha.16.3` and Node.js 24.20.0:
+
+- Version and runtime tests: 18 passed; real model-free permission checks:
+  9 passed, zero observed tool network connections.
+- One authorized synthetic typo task completed with one dispatch and one attempt,
+  using `gpt-6-luna` at medium effort, no fallback and a 120-second ceiling.
+  Requested and runtime-confirmed model names matched. The only product change
+  was the approved one-word correction in `src/README.md`.
+- The personal entry measured 20.82 seconds and three underlying model requests
+  within that single coding-agent turn. Reported cumulative usage was 37,217
+  input tokens (23,040 cached) and 455 output tokens; monetary cost was unknown.
+
+The optional personal launcher remained outside this repository. Its separate
+33-case checks passed with Python 3.14.6 and LiteLLM 1.101.0. Machine paths,
+credentials, raw conversations and personal configuration are not published here.
+This sample establishes the bounded handoff on that newer CLI, not all future
+versions, general task reliability or an independent acceptance judgment.
+
+The initial complete suite attempt used a shallow checkout: three historical
+experiment checks could not resolve their pinned Git objects. That attempt was
+not a passing full-verification result. Integration must use the complete history
+and record fresh full-verification results for the submitted candidate.
+
+### Earlier development-routing samples
+
 Subsequently authorized WI-0266 ran three corrected synthetic tasks on each of
 Luna and Sol: six first-pass successes, no repairs. WI-0267 then completed a real
 monitor-helper implementation (Luna) and source review (Sol), with 32 prewritten
