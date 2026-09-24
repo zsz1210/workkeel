@@ -270,6 +270,25 @@ After completion, run the project's verification and follow the ordinary
 claim/handoff/distinct-agent review/acceptance path. Keep runtime completion and
 task acceptance separate.
 
+### Executor responsibility and coordinator validation
+
+The coordinator owns claims, handoff, review and closure. A dispatched Codex
+executor reads the complete approved contract and required project instructions,
+performs only its assigned work, and reports changed files, actual checks and
+unverified outcomes. Lifecycle commands in project instructions belong to the
+coordinator during that dispatch. Direct work without a coordinator still requires
+the ordinary claim and handoff path. Existing project instructions are not
+overwritten by this clarification.
+
+An embedding coordinator may run predeclared local acceptance checks after a
+confirmed dispatch and feed concrete failures into a separately authorized,
+bounded repair. Keep the original candidate and failed checks. Count every attempt
+and its usage, apply the same scope/model restrictions, and stop on scope violations
+or uncertain dispatch. A durable intent without a confirmed result must never be
+automatically replayed. Recheck physical artifacts when resuming a saved result.
+This host-owned validation does not close a task, replace distinct-agent review,
+or imply that all workflow integrations already implement a repair loop.
+
 ## Headroom and Skills
 
 Headroom policy is chosen during planning: `off` or `lossless`. An enforcing
