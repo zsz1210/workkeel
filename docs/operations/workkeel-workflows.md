@@ -29,6 +29,10 @@ credentials, alter global settings or bypass subscription limits. Current deskto
 conversations keep their existing model; routing applies to Workkeel-launched
 steps, not every chat in the app.
 
+For a task-first project, follow its `WORKKEEL.md` and approved task contract.
+`TEMPLE.md` and `temple-work` belong to the retained legacy organization workflow;
+they are not setup requirements for using this task-first subscription path.
+
 Install the optional engine from the reviewed source checkout:
 
 ```sh
