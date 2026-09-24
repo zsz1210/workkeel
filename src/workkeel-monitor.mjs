@@ -21,7 +21,7 @@ export async function readMonitorSnapshot(target) {
       const summary=await readTaskSummary(target,item.id),measurements=projectTaskMeasurements({id:item.id,state:summary.task_state},index);
       const runAttention=measurements.measurement_errors.length>0||measurements.runs.some(r=>['interrupted','rejected','cancelled','blocked','paused','awaiting-approval'].includes(r.runner_state)||r.progress.unresolved_attempts>0);
       tasks.push({...summary,...measurements,id:item.id,title:item.title.slice(0,180),read_status:'available',needs_attention:summary.needs_attention||runAttention,
-        next_action:runAttention&&!summary.needs_attention?'Inspect the interrupted or incomplete workflow record before continuing.':summary.next_action});
+        next_action:runAttention?'Inspect the interrupted or incomplete workflow record before continuing. '+summary.next_action:summary.next_action});
     }catch{tasks.push({id:item.id,title:item.id,task_state:'unknown',display_state:'unavailable',read_status:'unavailable',needs_attention:true,next_action:'Inspect this task record; its state could not be verified.'});}
   }
   tasks.sort((a,b)=>Number(b.needs_attention)-Number(a.needs_attention)||String(b.updated_at??'').localeCompare(String(a.updated_at??''))||a.id.localeCompare(b.id));

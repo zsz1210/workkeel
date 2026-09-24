@@ -1,5 +1,11 @@
 # Daily work: brief, handoff and observation
 
+Optional check/link observations are append-only project-local data under
+`.ai-org/observations/`, with an exact `*` ignore policy like the execution journal.
+They do not create untracked product changes or publish conversation links through
+ordinary Git staging. Export needed records deliberately when preserving evidence;
+changing the ignore policy blocks new observation writes for inspection.
+
 Use this path in an initialized task-first project. Your Codex conversation is
 the place to agree on work and execute it; the optional observer is read-only.
 No desktop plugin, global model change, background service or extra dependency

@@ -46,6 +46,10 @@ export async function recordTaskObservation(target, id, value) {
     if(value.task_version!==task.version)throw Error('Stale task observation; inspect the current task');
     const record={value,evidence:await checkEvidence(target,value)},sha256=executionDigest(record);
     const ref=`.ai-org/observations/${id}`,directory=await safeDirectory(target,ref,{create:true});
+    // Keep project-local observations out of product changes and ordinary Git staging.
+    const ignoreRef='.ai-org/observations/.gitignore';
+    try{await durableAtomicCreate(path.join(target,ignoreRef),'*\n');}
+    catch(error){if(error.code!=='EEXIST')throw error;if((await readTaskFile(target,ignoreRef)).content!=='*\n')throw Error('Observation ignore policy changed; inspect before recording');}
     const file=path.join(directory,sha256+'.json');
     if(await existsEntry(target,`${ref}/${sha256}.json`)) {
       const existing=(await readTaskContractInput(target,`${ref}/${sha256}.json`)).document;

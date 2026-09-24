@@ -50,7 +50,11 @@ test('first review failure survives rework and later acceptance',async t=>{
  const preview=await previewTaskIntake(root,input);await applyTaskIntake(root,input,preview.fingerprint);
  const mutate=async(action,extra={})=>{const item=await readNativeTask(root,input.id);return mutateNativeTask(root,input.id,action,{operation_id:action+'-'+item.version,expected_version:item.version,actor,...extra});};
  let claim=await mutate('claim',{base_revision:git('rev-parse','HEAD')});
+ await recordTaskObservation(root,input.id,{schema_version:'workkeel.task-observation/v1',task_id:input.id,task_version:claim.version,actor,candidate_revision:null,observed_at:new Date().toISOString(),source:'Synthetic integration fixture',sample_kind:'fixture',comparison_group:null,checks:[],links:{conversation:null,pull_request:null},note:'Observation must not block the lifecycle'});
  await mutate('handoff',{claim_id:claim.claim.id,revision:git('rev-parse','HEAD'),summary:'Synthetic initial delivery',evidence:['docs/approval.md'],unresolved:[]});
+ await fs.mkdir(root+'/.ai-org/execution/broken',{recursive:true});await fs.writeFile(root+'/.ai-org/execution/broken/run.json','broken');
+ const partial=(await readMonitorSnapshot(root)).tasks[0];assert.match(partial.next_action,/Inspect.*workflow.*Review the delivered candidate/);
+ await fs.rm(root+'/.ai-org/execution/broken',{recursive:true});
  await mutate('review',{actor:reviewer,revision:git('rev-parse','HEAD'),judgment:'fail',summary:'Synthetic defect',evidence:['docs/approval.md']});
  await mutate('rework',{summary:'Correct same scope'});
  let summary=await readTaskSummary(root,input.id);assert.equal(summary.quality.first_review_pass,false);assert.equal(summary.quality.review_judgment,null);assert.equal(summary.quality.rework_count,1);
@@ -67,6 +71,8 @@ test('observations are bounded idempotent metadata, never acceptance; changed ev
  assert.equal((await recordTaskObservation(root,value.task_id,value)).replayed,true);
  assert.deepEqual(await readNativeTask(root,value.task_id),before);
  const summary=await readTaskSummary(root,value.task_id);assert.equal(summary.observation.status,'unbound');assert.equal(summary.quality.locally_accepted,false);assert.equal(summary.quality.first_review_pass,null);
+ await fs.writeFile(path.join(root,'.ai-org/observations/.gitignore'),'changed');await assert.rejects(recordTaskObservation(root,value.task_id,value),/ignore policy changed/);
+ await fs.writeFile(path.join(root,'.ai-org/observations/.gitignore'),'*\n');
  await fs.appendFile(path.join(root,'docs/approval.md'),' drift');
  const drift=await readTaskSummary(root,value.task_id);
  assert.equal(drift.observation.status,'unavailable');assert.equal(drift.quality.evidence_current,false);
