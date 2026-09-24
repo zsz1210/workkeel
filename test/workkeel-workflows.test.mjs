@@ -111,6 +111,62 @@ test("retries preserve each operation and missing resume usage makes totals inco
   assert.equal(metrics.usage.input_tokens.known_subtotal, 10); assert.equal(metrics.timing.measured_operations, 2);
 });
 
+test("aggregate usage status agrees with persisted measurements at numeric boundaries", async t => {
+  const maximum = Number.MAX_SAFE_INTEGER;
+  const definition = graph(["first", "second"].map(id => ({ id, kind: "runtime", input: id })),
+    [{ from: "start", to: "first" }, { from: "first", to: "second" }, { from: "second", to: "end" }]);
+  for (const { name, first, second, expected } of [
+    { name: "unsafe input", first: { input_tokens: maximum, output_tokens: 2, cost_usd: 0.1 },
+      second: { input_tokens: 1, output_tokens: 3, cost_usd: 0.2 },
+      expected: { input_tokens: null, output_tokens: 5, cost_usd: 0.1 + 0.2 } },
+    { name: "unsafe output and nonfinite cost", first: { input_tokens: 1, output_tokens: maximum, cost_usd: 1e308 },
+      second: { input_tokens: 2, output_tokens: 1, cost_usd: 1e308 },
+      expected: { input_tokens: 3, output_tokens: null, cost_usd: null } },
+    { name: "exact safe boundary and fractional cost", first: { input_tokens: maximum - 1, output_tokens: maximum, cost_usd: 0.25 },
+      second: { input_tokens: 1, output_tokens: 0, cost_usd: 0.125 },
+      expected: { input_tokens: maximum, output_tokens: maximum, cost_usd: 0.375 } },
+    { name: "unknown usage", first: { input_tokens: 1, output_tokens: 0, cost_usd: null },
+      second: { input_tokens: null, output_tokens: 2, cost_usd: 0.25 },
+      expected: { input_tokens: null, output_tokens: 2, cost_usd: null } }
+  ]) {
+    await t.test(name, async t => {
+      const { root, request } = await fixture(t, definition);
+      let calls = 0;
+      const host = adapter(async () => result({ usage: ++calls === 1 ? first : second }));
+      const run = await executeWorkflow(root, request, { adapters: [host] });
+      assert.equal(run.status.state, "completed"); assert.equal(run.status.dispatches, 2);
+      assert.deepEqual(run.status.usage, expected);
+      const metrics = await readWorkflowMeasurements(root, request.run_id);
+      for (const [key, value] of Object.entries(expected)) {
+        assert.equal(metrics.usage[key].total, value);
+        assert.equal(metrics.usage[key].complete, value !== null);
+      }
+      assert.deepEqual((await readWorkflowRun(root, request.run_id)).status.usage, expected);
+      assert.deepEqual((await executeWorkflow(root, request, { adapters: [host] })).status.usage, expected);
+      assert.equal(calls, 2);
+    });
+  }
+});
+
+test("confirmed empty dispatch usage remains zero in status and measurements", async t => {
+  const definition = graph([{ id: "confirm", kind: "approval", input: "Confirm" }],
+    [{ from: "start", to: "confirm" }, { from: "confirm", to: "end" }]);
+  const { root, request } = await fixture(t, definition);
+  const host = adapter(async () => { throw new Error("Approval-only workflow must not dispatch"); });
+  const paused = await executeWorkflow(root, request, { adapters: [host] });
+  const entry = paused.status.interrupts[0];
+  const completed = await executeWorkflow(root, request, { adapters: [host], approvals: { [entry.id]: approval(entry.value.token) } });
+  const zero = { input_tokens: 0, output_tokens: 0, cost_usd: 0 };
+  assert.equal(completed.status.state, "completed"); assert.equal(completed.status.dispatches, 0);
+  assert.deepEqual(completed.status.usage, zero);
+  const metrics = await readWorkflowMeasurements(root, request.run_id);
+  for (const key of Object.keys(zero)) {
+    assert.equal(metrics.usage[key].total, 0);
+    assert.equal(metrics.usage[key].complete, true);
+  }
+  assert.deepEqual((await readWorkflowRun(root, request.run_id)).status.usage, zero);
+});
+
 test("task totals include multiple runs without claiming visibility into native sessions", async t => {
   const { root, request } = await fixture(t);
   const host = adapter(async () => result({ usage: { input_tokens: 10, output_tokens: 3, cost_usd: null } }));
