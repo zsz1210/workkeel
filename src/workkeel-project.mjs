@@ -176,13 +176,17 @@ named Skills. Read applicable instructions completely, including required refere
 Load only task-relevant material, not the whole Skill catalog. A missing required
 Skill or authority source must be reported; do not pretend it was applied.
 
-\`status\` and \`doctor\` are read-only. Claim before implementation. Stay inside the
+\`status\` and \`doctor\` are read-only. The coordinator claims before dispatch and
+owns task lifecycle commands. A dispatched executor performs only its assigned
+work; it must not repeat claim, handoff, review or close commands. When acting
+directly without a coordinator, claim before implementation. Stay inside the
 approved working directory, paths, tools, network, data and spending boundaries.
 The runtime host must actually enforce these conditions; metadata is not a sandbox.
 Workflow progress, approval interrupts and model routing cannot enlarge authority.
 
-Hand off an exact Git candidate with verification evidence and unresolved work
-clearly stated. A different registered Agent reviews the candidate before an
+Report changed files, actual checks and unresolved work to the coordinator. The
+coordinator hands off the exact Git candidate and verification evidence. A
+different registered Agent reviews the candidate before an
 authorized Principal closes the task. Completion does not publish or deploy.
 
 At handoff, identify the relevant Skills, what was applied, the resulting artifacts
