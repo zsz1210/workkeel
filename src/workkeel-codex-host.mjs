@@ -1,5 +1,7 @@
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
+import fs from "node:fs/promises";
+import path from "node:path";
 import { createJsonRpcProcess } from "./codex-app-server-provider.mjs";
 import { createCodexRuntime, codexPermissionProfileArgs } from "./workkeel-codex-runtime.mjs";
 import { safeDirectory } from "./workkeel-project.mjs";
@@ -49,6 +51,52 @@ async function initialize(rpc) {
   rpc.notify("initialized");
 }
 function enabledServers(config) { return Object.entries(config.mcp_servers ?? {}).filter(([, value]) => value.enabled !== false).map(([name]) => name); }
+
+async function skillCatalogue(rpc, target) {
+  const result = await rpc.request("skills/list", { cwds: [target], forceReload: true });
+  const entry = result?.data?.[0];
+  if (!Array.isArray(result?.data) || result.data.length !== 1 || entry?.cwd !== target ||
+      !Array.isArray(entry.errors) || entry.errors.length || !Array.isArray(entry.skills) ||
+      entry.skills.some(skill => !skill || typeof skill.enabled !== "boolean" ||
+        typeof skill.path !== "string" || !path.isAbsolute(skill.path) || path.normalize(skill.path) !== skill.path) ||
+      new Set(entry.skills.map(skill => skill.path)).size !== entry.skills.length) {
+    throw new Error("Codex Skill catalogue is incomplete or invalid; resolve discovery before dispatch");
+  }
+  return entry.skills;
+}
+
+async function readableProjectSkill(target, file) {
+  const under = (entry, parent) => entry.startsWith(`${parent}${path.sep}`);
+  if (!under(file, target) || file === path.join(target, ".ai-org/execution") ||
+      under(file, path.join(target, ".ai-org/execution"))) return false;
+  try {
+    // Metadata only: no unrelated Skill body reads and no symlink escape.
+    await fs.access(file, fs.constants.R_OK);
+    return (await fs.realpath(file)) === file && (await fs.lstat(file)).isFile();
+  } catch (error) {
+    if (["ENOENT", "ENOTDIR", "ELOOP", "EACCES", "EPERM"].includes(error.code)) return false;
+    throw error;
+  }
+}
+
+export async function codexSkillDisables(rpc, target) {
+  const disabledPaths = [];
+  for (const skill of await skillCatalogue(rpc, target)) {
+    // Replacing the config array must retain existing disabled project Skills.
+    if (!skill.enabled || !await readableProjectSkill(target, skill.path)) disabledPaths.push(skill.path);
+  }
+  return disabledPaths;
+}
+
+export async function assertCodexSkills(rpc, target, disabledPaths) {
+  const disabledSet = new Set(disabledPaths);
+  for (const skill of await skillCatalogue(rpc, target)) {
+    if (skill.enabled && (disabledSet.has(skill.path) || !await readableProjectSkill(target, skill.path))) {
+      throw new Error("Codex Skill catalogue contains an enabled out-of-scope or disabled Skill; resolve host routing before dispatch");
+    }
+  }
+}
+
 function assertControls(config, target) {
   const failed = [...disabled.filter(name => config.features?.[name] !== false).map(name => `feature:${name}`),
     ...Object.entries({ web_search: config.web_search === "disabled", analytics: config.analytics?.enabled === false,
@@ -74,6 +122,7 @@ export async function createLocalCodexSubscriptionHost(targetInput, { command = 
     `projects={${JSON.stringify(target)}={trust_level=\"untrusted\"}}`, "approval_policy=\"never\"", "sandbox_mode=\"read-only\""];
   const args = () => ["app-server", "--stdio", ...settings.flatMap(setting => ["-c", setting])];
   const probe = createJsonRpcProcess(command, args(), { cwd: target, env });
+  let disabledSkills;
   try {
     await initialize(probe);
     const { config } = await probe.request("config/read", { cwd: target, includeLayers: false });
@@ -87,9 +136,14 @@ export async function createLocalCodexSubscriptionHost(targetInput, { command = 
       if (!/^[A-Za-z0-9_-]+$/.test(name)) throw new Error("Codex MCP name requires a separately reviewed host profile");
       settings.push(`mcp_servers.${name}.enabled=false`);
     }
+    disabledSkills = await codexSkillDisables(probe, target);
+    // alpha.16.3 requires exact SKILL.md paths, not containing directories.
+    // Check the resulting catalogue on the actual dispatch connection as well.
+    settings.push(`skills.config=[${disabledSkills.map(file => `{path=${JSON.stringify(file)},enabled=false}`).join(",")}]`);
   } finally { await probe.close(); }
   const assertConnected = async (rpc, context) => {
     const { config } = await rpc.request("config/read", { cwd: target, includeLayers: false }); assertControls(config, target);
+    await assertCodexSkills(rpc, target, disabledSkills);
     const account = await rpc.request("account/read", { refreshToken: false });
     if (account.account?.type !== "chatgpt") throw new Error("Existing ChatGPT subscription login is required; Workkeel will not change accounts");
     const catalog = await rpc.request("model/list", { includeHidden: false, limit: 100 });

@@ -1,0 +1,187 @@
+{
+  "schema_version": "temple.work-item/v1",
+  "id": "WI-0273",
+  "title": "Align Codex Skill routing with task sandbox",
+  "state": "build",
+  "owner_position": "developer",
+  "assigned_agent_id": "agent-rikku",
+  "created_at": "2026-09-25T06:43:07.032Z",
+  "updated_at": "2026-09-25T06:44:24.948Z",
+  "scope": [
+    "Process-local suppression of unreadable automatic Skills; retain explicit required reading and sandbox; bounded verification and normal PR merge"
+  ],
+  "acceptance_criteria": [
+    "Unavailable catalogue Skills cannot trigger a dispatched task; named project Skills remain required; fail closed on mismatch; full tests and independent QA"
+  ],
+  "affected_paths": [
+    "src/workkeel-codex-host.mjs",
+    "test",
+    "docs"
+  ],
+  "context_refs": [],
+  "spec_refs": [],
+  "ux_refs": [],
+  "ui_refs": [],
+  "contract_refs": [],
+  "specification_mode": "gate-evidence",
+  "ui_delivery_mode": "not-applicable",
+  "workflow_profile": "standard",
+  "risk_tier": "standard",
+  "profile_assessment": {
+    "requested_profile": "standard",
+    "effective_profile": "standard",
+    "scope_class": "ordinary",
+    "escalation_triggers": [],
+    "rationale": "",
+    "evidence_refs": [],
+    "evaluated_at": "2026-09-25T06:43:07.019Z",
+    "escalated": false
+  },
+  "parent_work_item_id": null,
+  "tracker_visibility": "team-visible",
+  "tracker_refs": [],
+  "tracker_reconciliations": [],
+  "dependencies": [],
+  "required_disciplines": [],
+  "stage_requirements": {},
+  "base_revision": "HEAD",
+  "parallel_mode": "pending",
+  "integration_owner_agent_id": null,
+  "planned_agent_id": null,
+  "shared_contract_refs": [],
+  "contract_status": "not_required",
+  "overlap_resolution": [],
+  "claim": {
+    "id": "claim-20260925064424-8a2a9364",
+    "status": "active",
+    "principal_id": "human",
+    "agent_id": "agent-rikku",
+    "actor_provenance": {
+      "selection": "explicit-agent",
+      "principal_source": "explicit-principal",
+      "verification_class": "attributed",
+      "evidence_ref": null,
+      "provider_authenticated": false,
+      "externally_supplied_evidence": false
+    },
+    "position_id": "developer",
+    "base_revision": "HEAD",
+    "branch": "codex/skill-routing",
+    "worktree": null,
+    "claimed_at": "2026-09-25T06:44:24.948Z",
+    "released_at": null
+  },
+  "claims": [
+    {
+      "id": "claim-20260925064322-92eb85a6",
+      "status": "released",
+      "principal_id": "human",
+      "agent_id": "agent-mog",
+      "actor_provenance": {
+        "selection": "explicit-agent",
+        "principal_source": "explicit-principal",
+        "verification_class": "attributed",
+        "evidence_ref": null,
+        "provider_authenticated": false,
+        "externally_supplied_evidence": false
+      },
+      "position_id": "engineering_manager",
+      "base_revision": "HEAD",
+      "branch": "codex/skill-routing",
+      "worktree": null,
+      "claimed_at": "2026-09-25T06:43:22.414Z",
+      "released_at": "2026-09-25T06:44:20.527Z",
+      "release_reason": [
+        "Approved scope recorded"
+      ]
+    },
+    {
+      "id": "claim-20260925064421-7b5a9d6e",
+      "status": "released",
+      "principal_id": "human",
+      "agent_id": "agent-yuna",
+      "actor_provenance": {
+        "selection": "explicit-agent",
+        "principal_source": "explicit-principal",
+        "verification_class": "attributed",
+        "evidence_ref": null,
+        "provider_authenticated": false,
+        "externally_supplied_evidence": false
+      },
+      "position_id": "product_manager",
+      "base_revision": "HEAD",
+      "branch": "codex/skill-routing",
+      "worktree": null,
+      "claimed_at": "2026-09-25T06:44:21.671Z",
+      "released_at": "2026-09-25T06:44:22.193Z",
+      "release_reason": [
+        "Scope and acceptance approved"
+      ]
+    },
+    {
+      "id": "claim-20260925064423-fe6927ec",
+      "status": "released",
+      "principal_id": "human",
+      "agent_id": "agent-tidus",
+      "actor_provenance": {
+        "selection": "explicit-agent",
+        "principal_source": "explicit-principal",
+        "verification_class": "attributed",
+        "evidence_ref": null,
+        "provider_authenticated": false,
+        "externally_supplied_evidence": false
+      },
+      "position_id": "tech_lead",
+      "base_revision": "HEAD",
+      "branch": "codex/skill-routing",
+      "worktree": null,
+      "claimed_at": "2026-09-25T06:44:23.311Z",
+      "released_at": "2026-09-25T06:44:23.827Z",
+      "release_reason": [
+        "Process-local design and risk recorded"
+      ]
+    },
+    {
+      "id": "claim-20260925064424-8a2a9364",
+      "status": "active",
+      "principal_id": "human",
+      "agent_id": "agent-rikku",
+      "actor_provenance": {
+        "selection": "explicit-agent",
+        "principal_source": "explicit-principal",
+        "verification_class": "attributed",
+        "evidence_ref": null,
+        "provider_authenticated": false,
+        "externally_supplied_evidence": false
+      },
+      "position_id": "developer",
+      "base_revision": "HEAD",
+      "branch": "codex/skill-routing",
+      "worktree": null,
+      "claimed_at": "2026-09-25T06:44:24.948Z",
+      "released_at": null
+    }
+  ],
+  "gate_evidence": {
+    "work_order": [
+      ".ai-org/artifacts/WI-0273/work-order.md"
+    ],
+    "approved_scope": [
+      ".ai-org/artifacts/WI-0273/work-order.md"
+    ],
+    "acceptance_criteria": [
+      ".ai-org/artifacts/WI-0273/work-order.md"
+    ],
+    "technical_design": [
+      ".ai-org/artifacts/WI-0273/work-order.md"
+    ],
+    "risk_review": [
+      ".ai-org/artifacts/WI-0273/work-order.md"
+    ]
+  },
+  "evidence": [
+    ".ai-org/artifacts/WI-0273/work-order.md"
+  ],
+  "unresolved": [],
+  "next_position": "quality_evaluator"
+}
