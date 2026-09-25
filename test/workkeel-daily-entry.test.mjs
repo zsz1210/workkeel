@@ -63,6 +63,10 @@ test('first review failure survives rework and later acceptance',async t=>{
  await mutate('review',{actor:reviewer,revision,judgment:'pass',summary:'Corrected fixture reviewed',evidence:['docs/approval.md']});
  await mutate('close',{actor:reviewer,revision,summary:'Synthetic acceptance',rollback:'Revert fixture',evidence:['docs/approval.md']});
  summary=await readTaskSummary(root,input.id);assert.equal(summary.quality.first_review_pass,false);assert.equal(summary.quality.locally_accepted,true);assert.equal(summary.quality.review_judgment,'pass');assert.equal(summary.quality.evidence_current,true);assert.ok(summary.quality.lifecycle_elapsed_ms>=0);
+ assert.equal(summary.lifecycle.coverage,'complete-history');assert.equal(summary.lifecycle.ongoing,false);
+ assert.equal(Object.values(summary.lifecycle.phases).reduce((a,b)=>a+b,0),summary.quality.lifecycle_elapsed_ms);
+ assert.ok(summary.lifecycle.phases.rework>0);assert.deepEqual(summary.execution_scope.write_paths,['src']);
+ assert.equal(summary.lifecycle.human_effort_ms,null);assert.equal(summary.lifecycle.saved_time_ms,null);
 });
 async function observed(root){const task=await readNativeTask(root,'WK-completed');return {schema_version:'workkeel.task-observation/v1',task_id:task.id,task_version:task.version,actor:task.contract.actor,candidate_revision:null,observed_at:new Date().toISOString(),source:'Coordinator local test',sample_kind:'fixture',comparison_group:null,checks:[{name:'Acceptance',status:'pass',evidence_ref:'docs/approval.md'}],links:{conversation:'codex://threads/01a0d1d2-b5ee-7c90-b7c5-178e65725b86',pull_request:'https://github.com/example/project/pull/1'},note:'Synthetic observation; not task acceptance'};}
 test('observations are bounded idempotent metadata, never acceptance; changed evidence is unavailable',async t=>{

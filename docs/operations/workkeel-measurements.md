@@ -30,7 +30,7 @@ through a tunnel or reverse proxy. The capability URL protects API access from
 unrelated browser pages; it is not a security boundary against another process
 already running as your local user.
 
-The page offers an attention-first overview, task detail and a usage/quality table;
+The Traditional Chinese page offers an attention-first overview, task detail and a usage/quality table;
 see the [daily work guide](workkeel-daily-work.md) for intake, handoff and optional
 revision-bound check/link observations. It refreshes every two seconds while visible.
 Choose a task to see its
@@ -49,6 +49,40 @@ viewer and reading snapshots writes no project files. Browser reload loses the
 in-memory access token; reopen the printed link to regain access.
 
 This is a task monitor, not the [offline workflow explainer](../assets/workkeel-flow.html).
+
+### Full task time and handoff
+
+Task detail and the quality table show total lifecycle elapsed time and five
+disjoint phases: waiting for claim, implementation, review (including waiting),
+rework implementation, and waiting for acceptance. A failed review remains in the
+review phase until rework is authorized. Subsequent build intervals after a rework
+event count as rework. Released claims return to waiting. Terminal tasks freeze at
+the final event; ongoing tasks run to the snapshot read time. Invalid, reversed or
+future event times make the whole timing projection unknown, not a partial total.
+The additive `lifecycle` field is also available in `task summary` JSON; its phase
+durations sum to `elapsed_ms`. The older terminal-only quality field is retained.
+
+These are calendar intervals, including downtime. They do not measure active
+human or reviewer effort. Adapter time can overlap and must not be added to task
+time. A complete history does not imply complete token or cost coverage. Human
+effort, general-workflow baseline and saved time remain null. First-review outcome,
+rework count, current review and local acceptance are separate observations.
+No percentage improvement is inferred without a suitable comparison dataset.
+
+The page distinguishes snapshot read time, latest task event and latest external
+observation. Concrete attention reasons identify expired approval, changed policy,
+unavailable evidence, failed review, pending acceptance and incomplete workflow
+records. Read freshness never proves process liveness.
+
+Use the copy-handoff button to copy the currently selected task's goal, scope,
+acceptance criteria, candidate, evidence hashes/status, next actions and timing
+limits into your own Codex conversation. Copy is a user action, not a dispatch or
+authorization. Browser clipboard denial offers a selectable text fallback. Its
+timestamp identifies the frozen copy; refresh does not overwrite selected text.
+Changing tasks or losing the snapshot clears the fallback. Runtime output and
+monitor capability URLs are excluded. Project-authored text is not translated.
+
+See [ADR-0078](../adr/0078-observer-task-lifecycle-measurements.md).
 
 ## Coverage and defaults
 

@@ -10,6 +10,7 @@ import {renderMonitorPage} from './workkeel-monitor-page.mjs';
 
 /** Read-only projection; no runtime adapter, model connection or lifecycle writer. */
 export async function readMonitorSnapshot(target) {
+  const now=new Date();
   const items=await listTaskItems(target,{isolateErrors:true});
   const visible=items.filter(item=>item.mode!=='legacy-read-only');
   if(visible.length>200) throw Error("Monitor task limit exceeded; use per-task metrics");
@@ -21,9 +22,10 @@ export async function readMonitorSnapshot(target) {
     const batch=await Promise.all(visible.slice(offset,offset+8).map(async item=>{
     try {
       if(item.mode==='unavailable')throw Error('Task unavailable');
-      const summary=await readTaskSummary(target,item.id),measurements=projectTaskMeasurements({id:item.id,state:summary.task_state},index);
+      const summary=await readTaskSummary(target,item.id,{now}),measurements=projectTaskMeasurements({id:item.id,state:summary.task_state},index);
       const runAttention=measurements.measurement_errors.length>0||measurements.runs.some(r=>['interrupted','rejected','cancelled','blocked','paused','awaiting-approval'].includes(r.runner_state)||r.progress.unresolved_attempts>0);
       return {...summary,...measurements,id:item.id,title:item.title.slice(0,180),read_status:'available',needs_attention:summary.needs_attention||runAttention,
+        attention_reasons:[...summary.attention_reasons,...(runAttention?['workflow-incomplete']:[])],
         next_action:runAttention?'Inspect the interrupted or incomplete workflow record before continuing. '+summary.next_action:summary.next_action};
     }catch{return {id:item.id,title:item.id,task_state:'unknown',display_state:'unavailable',read_status:'unavailable',needs_attention:true,next_action:'Inspect this task record; its state could not be verified.'};}
     }));
@@ -31,8 +33,8 @@ export async function readMonitorSnapshot(target) {
   }
   tasks.sort((a,b)=>Number(b.needs_attention)-Number(a.needs_attention)||String(b.updated_at??'').localeCompare(String(a.updated_at??''))||a.id.localeCompare(b.id));
   return {schema_version:"workkeel.monitor/v2",authority:"observation-only",mutation_status:"no-write",
-    read_at:new Date().toISOString(),legacy_tasks_excluded:items.length-visible.length,tasks,
-    complete:index.errors.length===0&&tasks.every(t=>t.read_status==='available'&&t.observation.status!=='unavailable'&&t.quality.evidence_current),
+    read_at:now.toISOString(),legacy_tasks_excluded:items.length-visible.length,tasks,
+    complete:index.errors.length===0&&tasks.every(t=>t.read_status==='available'&&t.observation.status!=='unavailable'&&t.quality.evidence_current&&t.lifecycle.coverage==='complete-history'),
     measurement_errors:index.errors,inventory_reads:index.index_reads};
 }
 
@@ -42,6 +44,7 @@ export async function startTaskMonitor(targetInput,{port=0}={}) {
   const target=await fs.realpath(targetInput);await readTaskProject(target);
   const token=randomBytes(32).toString('hex'),nonce=randomBytes(24).toString('base64');
   const view=await fs.readFile(new URL('./workkeel-monitor-view.mjs',import.meta.url));
+  const client=await fs.readFile(new URL('./workkeel-monitor-client.mjs',import.meta.url));
   const html=renderMonitorPage(nonce);let origin,busy=false;
   const server=http.createServer(async(req,res)=>{
     const headers={'Cache-Control':'no-store','Content-Type':'text/plain; charset=utf-8','X-Content-Type-Options':'nosniff','Referrer-Policy':'no-referrer','Content-Security-Policy':`default-src 'none'; script-src 'self' 'nonce-${nonce}'; style-src 'nonce-${nonce}'; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'`};
@@ -50,6 +53,7 @@ export async function startTaskMonitor(targetInput,{port=0}={}) {
     if(req.method!=='GET')return send(405,'Read-only monitor');
     if(req.url==='/')return send(200,html,'text/html; charset=utf-8');
     if(req.url==='/view.mjs')return send(200,view,'text/javascript; charset=utf-8');
+    if(req.url==='/client.mjs')return send(200,client,'text/javascript; charset=utf-8');
     if(req.url!=='/api/snapshot')return send(404,'Not found');
     const supplied=Buffer.from(req.headers.authorization??''),expected=Buffer.from('Bearer '+token);
     if(supplied.length!==expected.length||!timingSafeEqual(supplied,expected))return send(401,'Access denied');

@@ -82,7 +82,7 @@ node bin/workkeel.mjs help
 | LiteLLM Auto Router | 未統合 | Workkeel のルール選択とは別。gateway を使っても Auto は有効にならない |
 | Headroom | 無効 | ホスト所有の統合で可逆ビューを利用。Codex 標準ツール出力の傍受は非対応 |
 | 日常タスクの入口 | 明示的なプレビュー／適用 | 承認済み brief から既存のタスク契約を生成。引き継ぎとレビューは引き続き必要。[ガイド](docs/operations/workkeel-daily-work.md) |
-| タスクモニター | 無効／任意 | `workkeel monitor /path/to/project`：要対応の一覧、タスクの証拠、使用量／品質。読み取り専用、モデル呼び出し・常駐サービスなし。[ガイド](docs/operations/workkeel-daily-work.md#observer-surfaces-and-limits) |
+| タスクモニター | 無効／任意 | `workkeel monitor /path/to/project`：繁体字中国語の一覧、阻害要因、コピー可能な引き継ぎ要約、タスク段階の時間と使用量／品質。読み取り専用、モデル呼び出し・常駐サービスなし。[ガイド](docs/operations/workkeel-measurements.md#full-task-time-and-handoff) |
 | タスク計測 | Workflow 実行中に記録 | モデル・token・所要時間の読み取り専用クエリ。ネイティブの作業セッションは未収集。[ガイド](docs/operations/workkeel-measurements.md) |
 
 Luna／Sol／Astra の共通既定値はありません。ネイティブエージェントは自身の設定を維持し、

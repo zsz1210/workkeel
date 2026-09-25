@@ -6,6 +6,7 @@ import { readTaskContractInput, readTaskFile } from './task-contract.mjs';
 import { withProjectMutationLock } from './project.mjs';
 import { durableAtomicCreate } from './files.mjs';
 import { executionDigest, exactKeys } from './workkeel-execution-policy.mjs';
+import { projectTaskTiming } from './workkeel-task-timing.mjs';
 
 const SHA = /^[a-f0-9]{40}(?:[a-f0-9]{24})?$/;
 const bounded = (value, max=2000) => typeof value==='string' && value.trim().length>0 && value.length<=max;
@@ -81,10 +82,10 @@ async function observation(target,task) {
   const value=records[0]??null;
   return {status:!value?'unobserved':value.candidate_revision===null?'unbound':value.candidate_revision===task.delivery?.revision?'candidate-matched':'stale',value};
 }
-export async function readTaskSummary(target,id) {
+export async function readTaskSummary(target,id,{now=new Date()}={}) {
   const task=await readNativeTask(target,id);
   const project=await readTaskProject(target),policyCurrent=executionDigest(project.policy)===task.policy_sha256;
-  const authorityExpired=task.contract.authorization.expires_at!==null&&Date.parse(task.contract.authorization.expires_at)<=Date.now();
+  const authorityExpired=task.contract.authorization.expires_at!==null&&Date.parse(task.contract.authorization.expires_at)<=now.getTime();
   const activeAuthorityExpired=authorityExpired&&!['done','cancelled'].includes(task.state);
   const rejected=task.attempts.filter(a=>a.kind==='rejected').length;
   let observed;
@@ -101,10 +102,21 @@ export async function readTaskSummary(target,id) {
   if(evidenceStatus.some(p=>p.status!=='verified'))next='Recover the exact recorded evidence before continuing this task.';
   if(!policyCurrent)next='Inspect the project policy change and re-establish task authority before continuing.';
   if(activeAuthorityExpired)next='Task approval has expired. Obtain renewed approval through a new task before continuing.';
+  const attentionReasons=[];
+  if(activeAuthorityExpired)attentionReasons.push('approval-expired');
+  if(!policyCurrent)attentionReasons.push('policy-changed');
+  if(evidenceStatus.some(p=>p.status!=='verified'))attentionReasons.push('evidence-unavailable');
+  if(observed.status==='unavailable')attentionReasons.push('observation-unavailable');
+  if(task.review?.judgment==='fail')attentionReasons.push('review-failed');
+  else if(task.state==='test')attentionReasons.push('awaiting-review');
+  if(task.state==='release_gate')attentionReasons.push('awaiting-acceptance');
+  const lifecycle=projectTaskTiming(task,{now});
+  if(lifecycle.coverage!=='complete-history')attentionReasons.push('timing-unavailable');
   return {schema_version:'workkeel.task-summary/v1',authority:'observation-only',mutation_status:'no-write',
-    task_id:id,title:task.contract.goal,task_state:task.state,version:task.version,
-    display_state:runStates[task.state],needs_attention:activeAuthorityExpired||!policyCurrent||['test','release_gate'].includes(task.state)||observed.status==='unavailable'||evidenceStatus.some(p=>p.status!=='verified'),
-    next_action:next,updated_at:last.at,created_at:task.history[0].at,
+    task_id:id,title:task.contract.goal,goal:task.contract.goal,scope:task.contract.scope,
+    execution_scope:{read_paths:task.contract.environment.read_paths,write_paths:task.contract.environment.write_paths,tools:task.contract.environment.tools,network:task.contract.environment.network},task_state:task.state,version:task.version,
+    display_state:runStates[task.state],needs_attention:attentionReasons.length>0,
+    next_action:next,attention_reasons:attentionReasons,lifecycle,updated_at:last.at,created_at:task.history[0].at,
     actor:task.claim?.actor??task.contract.actor,acceptance_criteria:task.contract.acceptance.criteria,
     candidate_revision:task.delivery?.revision??null,delivery:task.delivery,review:task.review,closeout:task.closeout,
     evidence:evidenceStatus,observation:observed,
@@ -112,7 +124,7 @@ export async function readTaskSummary(target,id) {
       first_review_pass:rejected>0?false:task.review?task.review.judgment==='pass':null,
       approval_status:authorityExpired?'expired':'current',
       locally_accepted:task.state==='done',evidence_current:policyCurrent&&evidenceStatus.every(p=>p.status==='verified'),policy_current:policyCurrent,
-      lifecycle_elapsed_ms:['done','cancelled'].includes(task.state)?Date.parse(last.at)-Date.parse(task.history[0].at):null},
+      lifecycle_elapsed_ms:['done','cancelled'].includes(task.state)?lifecycle.elapsed_ms:null},
     timeline:task.history.map(e=>({action:e.action,at:e.at,state:e.state,revision:e.revision})),
     limitations:['Recorded task state is not process liveness.','Attribution is not provider authentication.','Check and PR observations never satisfy acceptance gates.']};
 }
