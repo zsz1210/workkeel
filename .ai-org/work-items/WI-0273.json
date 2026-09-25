@@ -6,7 +6,7 @@
   "owner_position": "developer",
   "assigned_agent_id": "agent-rikku",
   "created_at": "2026-09-25T06:43:07.032Z",
-  "updated_at": "2026-09-25T06:44:24.948Z",
+  "updated_at": "2026-09-25T07:00:41.519Z",
   "scope": [
     "Process-local suppression of unreadable automatic Skills; retain explicit required reading and sandbox; bounded verification and normal PR merge"
   ],
@@ -44,7 +44,7 @@
   "dependencies": [],
   "required_disciplines": [],
   "stage_requirements": {},
-  "base_revision": "HEAD",
+  "base_revision": "379b03387ad4eeb4f07d05021eec9e7fd2236088",
   "parallel_mode": "pending",
   "integration_owner_agent_id": null,
   "planned_agent_id": null,
@@ -52,7 +52,7 @@
   "contract_status": "not_required",
   "overlap_resolution": [],
   "claim": {
-    "id": "claim-20260925064424-8a2a9364",
+    "id": "claim-20260925070041-09bed85c",
     "status": "active",
     "principal_id": "human",
     "agent_id": "agent-rikku",
@@ -65,10 +65,10 @@
       "externally_supplied_evidence": false
     },
     "position_id": "developer",
-    "base_revision": "HEAD",
+    "base_revision": "379b03387ad4eeb4f07d05021eec9e7fd2236088",
     "branch": "codex/skill-routing",
     "worktree": null,
-    "claimed_at": "2026-09-25T06:44:24.948Z",
+    "claimed_at": "2026-09-25T07:00:41.519Z",
     "released_at": null
   },
   "claims": [
@@ -143,7 +143,7 @@
     },
     {
       "id": "claim-20260925064424-8a2a9364",
-      "status": "active",
+      "status": "released",
       "principal_id": "human",
       "agent_id": "agent-rikku",
       "actor_provenance": {
@@ -159,6 +159,96 @@
       "branch": "codex/skill-routing",
       "worktree": null,
       "claimed_at": "2026-09-25T06:44:24.948Z",
+      "released_at": "2026-09-25T06:56:51.999Z",
+      "release_reason": [
+        "Exact candidate handed off with verification"
+      ]
+    },
+    {
+      "id": "claim-20260925065652-a27cdfad",
+      "status": "released",
+      "principal_id": "human",
+      "agent_id": "agent-lulu",
+      "actor_provenance": {
+        "selection": "explicit-agent",
+        "principal_source": "explicit-principal",
+        "verification_class": "attributed",
+        "evidence_ref": null,
+        "provider_authenticated": false,
+        "externally_supplied_evidence": false
+      },
+      "position_id": "quality_evaluator",
+      "base_revision": "379b03387ad4eeb4f07d05021eec9e7fd2236088",
+      "branch": "codex/skill-routing",
+      "worktree": null,
+      "claimed_at": "2026-09-25T06:56:52.867Z",
+      "released_at": "2026-09-25T06:56:53.265Z",
+      "release_reason": [
+        "Full and focused verification plus live checks confirmed"
+      ]
+    },
+    {
+      "id": "claim-20260925065654-91cb256a",
+      "status": "released",
+      "principal_id": "human",
+      "agent_id": "agent-lulu",
+      "actor_provenance": {
+        "selection": "explicit-agent",
+        "principal_source": "explicit-principal",
+        "verification_class": "attributed",
+        "evidence_ref": null,
+        "provider_authenticated": false,
+        "externally_supplied_evidence": false
+      },
+      "position_id": "quality_evaluator",
+      "base_revision": "379b03387ad4eeb4f07d05021eec9e7fd2236088",
+      "branch": "codex/skill-routing",
+      "worktree": null,
+      "claimed_at": "2026-09-25T06:56:54.120Z",
+      "released_at": "2026-09-25T06:56:54.519Z",
+      "release_reason": [
+        "Bounded evaluation and limits recorded"
+      ]
+    },
+    {
+      "id": "claim-20260925065655-ed8d12dc",
+      "status": "released",
+      "principal_id": "human",
+      "agent_id": "agent-lulu",
+      "actor_provenance": {
+        "selection": "explicit-agent",
+        "principal_source": "explicit-principal",
+        "verification_class": "attributed",
+        "evidence_ref": null,
+        "provider_authenticated": false,
+        "externally_supplied_evidence": false
+      },
+      "position_id": "independent_qa",
+      "base_revision": "379b03387ad4eeb4f07d05021eec9e7fd2236088",
+      "branch": "codex/skill-routing",
+      "worktree": null,
+      "claimed_at": "2026-09-25T06:56:55.373Z",
+      "released_at": "2026-09-25T07:00:40.853Z",
+      "release_reason": "review_rework"
+    },
+    {
+      "id": "claim-20260925070041-09bed85c",
+      "status": "active",
+      "principal_id": "human",
+      "agent_id": "agent-rikku",
+      "actor_provenance": {
+        "selection": "explicit-agent",
+        "principal_source": "explicit-principal",
+        "verification_class": "attributed",
+        "evidence_ref": null,
+        "provider_authenticated": false,
+        "externally_supplied_evidence": false
+      },
+      "position_id": "developer",
+      "base_revision": "379b03387ad4eeb4f07d05021eec9e7fd2236088",
+      "branch": "codex/skill-routing",
+      "worktree": null,
+      "claimed_at": "2026-09-25T07:00:41.519Z",
       "released_at": null
     }
   ],
@@ -180,8 +270,74 @@
     ]
   },
   "evidence": [
-    ".ai-org/artifacts/WI-0273/work-order.md"
+    ".ai-org/artifacts/WI-0273/work-order.md",
+    ".ai-org/artifacts/WI-0273/handoff-001-developer-to-quality_evaluator.md",
+    ".ai-org/artifacts/WI-0273/developer-verification.md",
+    ".ai-org/artifacts/WI-0273/evaluation-report.md"
   ],
   "unresolved": [],
-  "next_position": "quality_evaluator"
+  "next_position": "quality_evaluator",
+  "handoffs": [
+    {
+      "from_position": "developer",
+      "to_position": "quality_evaluator",
+      "actor": "agent-rikku",
+      "principal_id": "human",
+      "actor_provenance": {
+        "selection": "active-claim",
+        "principal_source": "active-claim",
+        "verification_class": "attributed",
+        "evidence_ref": null,
+        "provider_authenticated": false,
+        "externally_supplied_evidence": false
+      },
+      "input_revision": "379b03387ad4eeb4f07d05021eec9e7fd2236088",
+      "artifact": ".ai-org/artifacts/WI-0273/handoff-001-developer-to-quality_evaluator.md",
+      "created_at": "2026-09-25T06:56:51.556Z"
+    }
+  ],
+  "rework_history": [
+    {
+      "sequence": 1,
+      "returned_at": "2026-09-25T07:00:40.853Z",
+      "from_state": "independent_qa",
+      "reviewer_agent_id": "agent-lulu",
+      "reviewer_claim_id": "claim-20260925065655-ed8d12dc",
+      "rejected_revision": "379b03387ad4eeb4f07d05021eec9e7fd2236088",
+      "reason": [
+        "Independent QA requires preservation check for enabled project Skills"
+      ],
+      "findings": [
+        ".ai-org/artifacts/WI-0273/independent-review-0.md"
+      ],
+      "scope_digest": "dd58cd84d053707b01fa89a846fbe534b6fd82870cd1e441272a89b53468805c",
+      "retained_requirements": [
+        "work_order",
+        "approved_scope",
+        "acceptance_criteria",
+        "technical_design",
+        "risk_review"
+      ],
+      "retired_gate_evidence": {
+        "developer_handoff": [
+          ".ai-org/artifacts/WI-0273/handoff-001-developer-to-quality_evaluator.md"
+        ],
+        "developer_evidence": [
+          ".ai-org/artifacts/WI-0273/developer-verification.md"
+        ],
+        "test_evidence": [
+          ".ai-org/artifacts/WI-0273/developer-verification.md"
+        ],
+        "evaluation_report": [
+          ".ai-org/artifacts/WI-0273/evaluation-report.md"
+        ]
+      },
+      "retired_candidate_fields": {
+        "developer_candidate_revision": "379b03387ad4eeb4f07d05021eec9e7fd2236088"
+      },
+      "handoff_refs": [
+        ".ai-org/artifacts/WI-0273/handoff-001-developer-to-quality_evaluator.md"
+      ]
+    }
+  ]
 }

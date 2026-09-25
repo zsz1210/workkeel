@@ -307,7 +307,8 @@ regular files physically inside the project, excluding private workflow executio
 state and symlink paths. It preserves existing disabled Skills. Exact Skill file
 paths are disabled through process-local configuration; user configuration is never
 rewritten. A fresh catalogue check before thread start rejects discovery errors,
-ignored overrides or newly enabled out-of-scope Skills. This is a point-in-time
+ignored overrides, missing or disabled previously enabled project Skills, or newly
+enabled out-of-scope Skills. This is a point-in-time
 check, not a filesystem transaction.
 
 Named contract Skills and required instruction references remain mandatory. Missing

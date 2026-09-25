@@ -320,7 +320,7 @@
 | WI-0270 | Recover historical evidence with explicit artifact source revisions | done | Engineering Manager | Mog | pending | team-visible | 0 | gate-evidence | not-applicable | 0 | 0 | 0 | — | `2673ebe3` | 0 | 7 | 0 |
 | WI-0271 | Classify and recover remaining historical evidence in bounded batches | done | Engineering Manager | Mog | pending | team-visible | 0 | gate-evidence | not-applicable | 0 | 0 | 0 | — | `bf03d754` | 0 | 7 | 0 |
 | WI-0272 | Reduce dispatch context and observer snapshot latency | done | Engineering Manager | Mog | pending | team-visible | 0 | gate-evidence | not-applicable | 0 | 0 | 0 | — | `e8953fa3` | 0 | 8 | 0 |
-| WI-0273 | Align Codex Skill routing with task sandbox | build | Developer | Rikku | pending | team-visible | 0 | gate-evidence | not-applicable | 0 | 0 | 0 | claim-20260925064424-8a2a9364 | `—` | 0 | 1 | 0 |
+| WI-0273 | Align Codex Skill routing with task sandbox | build | Developer | Rikku | pending | team-visible | 0 | gate-evidence | not-applicable | 0 | 0 | 0 | claim-20260925070041-09bed85c | `—` | 0 | 4 | 0 |
 
 ## Delivery attention
 
@@ -582,14 +582,14 @@
 
 | Time | Event | Work item | Actor |
 |---|---|---|---|
-| 2026-09-25T06:44:24.948Z | work_item_claimed | WI-0273 | human |
-| 2026-09-25T06:44:24.374Z | work_item_transitioned | WI-0273 | agent-tidus |
-| 2026-09-25T06:44:23.827Z | work_item_claim_released | WI-0273 | human |
-| 2026-09-25T06:44:23.311Z | work_item_claimed | WI-0273 | human |
-| 2026-09-25T06:44:22.736Z | work_item_transitioned | WI-0273 | agent-yuna |
-| 2026-09-25T06:44:22.193Z | work_item_claim_released | WI-0273 | human |
-| 2026-09-25T06:44:21.671Z | work_item_claimed | WI-0273 | human |
-| 2026-09-25T06:44:21.090Z | work_item_transitioned | WI-0273 | agent-mog |
+| 2026-09-25T07:00:41.519Z | work_item_claimed | WI-0273 | human |
+| 2026-09-25T07:00:40.853Z | work_item_reworked | WI-0273 | agent-lulu |
+| 2026-09-25T06:56:55.373Z | work_item_claimed | WI-0273 | human |
+| 2026-09-25T06:56:54.931Z | work_item_transitioned | WI-0273 | agent-lulu |
+| 2026-09-25T06:56:54.519Z | work_item_claim_released | WI-0273 | human |
+| 2026-09-25T06:56:54.120Z | work_item_claimed | WI-0273 | human |
+| 2026-09-25T06:56:53.680Z | work_item_transitioned | WI-0273 | agent-lulu |
+| 2026-09-25T06:56:53.265Z | work_item_claim_released | WI-0273 | human |
 
 ## Assignments
 
