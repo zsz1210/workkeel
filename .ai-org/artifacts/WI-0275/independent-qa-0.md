@@ -7,7 +7,7 @@ network, installs or subordinate runtimes. Repository QA attribution: agent-lulu
 
 Medium: `src/workkeel-monitor-view.mjs` handoffText embeds project goal, scope,
 criteria and check names in a line-oriented output without escaping. A permitted
-newline in a goal can insert `本機驗收：已記錄` as a false system-like field.
+newline in a goal can insert a false local-acceptance status as a system-like field.
 Quote/escape project-authored values and test multiline inputs.
 
 Low: valid created, failed and not-started states lack Chinese labels. Add labels
