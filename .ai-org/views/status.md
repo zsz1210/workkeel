@@ -3,9 +3,9 @@
 - Project ID: `temple`
 - Organization system version: `0.1.0-alpha.33`
 - Active Agent Identities: 5
-- Collaboration profile: `solo` (0 Human Principals, 1 active claims)
+- Collaboration profile: `solo` (0 Human Principals, 0 active claims)
 - Parallel plan: 0 wave(s), fresh=false
-- Work items: 274 total, 1 active
+- Work items: 274 total, 0 active
 - Codex tasks: 14 registered, 14 archive-ready
 - Runtime workers: 118 registered, 0 reserved, 0 active
 - Shared resources: 0 defined, 0 active reservation(s)
@@ -27,7 +27,7 @@
 - Human Principals: 0
 - Agent sponsorships: 0
 - Active Position memberships: 10
-- Active Work Item claims: 1
+- Active Work Item claims: 0
 - Active Human Authority Grants: 0
 - Governance recovery: `not_configured`
 - Real Collaborative validation: `not_run` (.ai-org/templates/collaborative-large-scale-test-plan.md)
@@ -321,12 +321,10 @@
 | WI-0271 | Classify and recover remaining historical evidence in bounded batches | done | Engineering Manager | Mog | pending | team-visible | 0 | gate-evidence | not-applicable | 0 | 0 | 0 | — | `bf03d754` | 0 | 7 | 0 |
 | WI-0272 | Reduce dispatch context and observer snapshot latency | done | Engineering Manager | Mog | pending | team-visible | 0 | gate-evidence | not-applicable | 0 | 0 | 0 | — | `e8953fa3` | 0 | 8 | 0 |
 | WI-0273 | Align Codex Skill routing with task sandbox | done | Engineering Manager | Mog | pending | team-visible | 0 | gate-evidence | not-applicable | 0 | 0 | 0 | — | `c6dd4ff4` | 0 | 11 | 0 |
-| WI-0274 | Guide first use and qualify process interruption recovery | build | Developer | Rikku | pending | team-visible | 0 | gate-evidence | not-applicable | 0 | 0 | 0 | claim-20260925104811-a1f3dd6d | `—` | 0 | 1 | 0 |
+| WI-0274 | Guide first use and qualify process interruption recovery | done | Engineering Manager | Mog | pending | team-visible | 0 | gate-evidence | not-applicable | 0 | 0 | 0 | — | `a31ce049` | 0 | 7 | 0 |
 
 ## Delivery attention
 
-- WI-0274: awaiting-owner — The recorded owner can continue the scoped work; no attached active worker is recorded.
-  - owner: No attached active runtime is recorded for this claim.
 
 ## Codex task registry
 
@@ -583,14 +581,14 @@
 
 | Time | Event | Work item | Actor |
 |---|---|---|---|
-| 2026-09-25T10:48:11.036Z | work_item_claimed | WI-0274 | human |
-| 2026-09-25T10:48:10.611Z | work_item_transitioned | WI-0274 | agent-tidus |
-| 2026-09-25T10:48:10.200Z | work_item_claim_released | WI-0274 | human |
-| 2026-09-25T10:48:09.736Z | work_item_claimed | WI-0274 | human |
-| 2026-09-25T10:47:39.650Z | work_item_transitioned | WI-0274 | agent-yuna |
-| 2026-09-25T10:47:39.164Z | work_item_claim_released | WI-0274 | human |
-| 2026-09-25T10:47:38.698Z | work_item_claimed | WI-0274 | human |
-| 2026-09-25T10:47:38.180Z | work_item_transitioned | WI-0274 | agent-mog |
+| 2026-09-25T11:11:19.201Z | work_item_closed | WI-0274 | agent-mog |
+| 2026-09-25T11:11:19.201Z | release_gate_completed | WI-0274 | agent-mog |
+| 2026-09-25T11:11:18.752Z | work_item_claimed | WI-0274 | human |
+| 2026-09-25T11:11:18.231Z | work_item_transitioned | WI-0274 | agent-lulu |
+| 2026-09-25T11:11:17.775Z | work_item_claim_released | WI-0274 | human |
+| 2026-09-25T11:11:17.351Z | work_item_claimed | WI-0274 | human |
+| 2026-09-25T11:11:16.881Z | work_item_transitioned | WI-0274 | agent-lulu |
+| 2026-09-25T11:11:16.436Z | work_item_claim_released | WI-0274 | human |
 
 ## Assignments
 

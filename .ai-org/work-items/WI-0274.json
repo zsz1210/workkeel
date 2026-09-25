@@ -2,11 +2,11 @@
   "schema_version": "temple.work-item/v1",
   "id": "WI-0274",
   "title": "Guide first use and qualify process interruption recovery",
-  "state": "build",
-  "owner_position": "developer",
-  "assigned_agent_id": "agent-rikku",
+  "state": "done",
+  "owner_position": "engineering_manager",
+  "assigned_agent_id": "agent-mog",
   "created_at": "2026-09-25T10:46:48.196Z",
-  "updated_at": "2026-09-25T10:48:11.036Z",
+  "updated_at": "2026-09-25T11:11:19.201Z",
   "scope": [
     "Read-only start guidance and incomplete drafts using existing native guards; actual child-process interruption recovery with bounded local evidence; normal PR integration"
   ],
@@ -48,7 +48,7 @@
   "dependencies": [],
   "required_disciplines": [],
   "stage_requirements": {},
-  "base_revision": "6edead8f7b371cbac343ef92a9e2522d67aafbfa",
+  "base_revision": "a31ce049722281b67708846d3d98ba2b75f67bbc",
   "parallel_mode": "pending",
   "integration_owner_agent_id": null,
   "planned_agent_id": null,
@@ -56,10 +56,10 @@
   "contract_status": "not_required",
   "overlap_resolution": [],
   "claim": {
-    "id": "claim-20260925104811-a1f3dd6d",
-    "status": "active",
+    "id": "claim-20260925111118-36d62d5b",
+    "status": "released",
     "principal_id": "human",
-    "agent_id": "agent-rikku",
+    "agent_id": "agent-mog",
     "actor_provenance": {
       "selection": "explicit-agent",
       "principal_source": "explicit-principal",
@@ -68,12 +68,13 @@
       "provider_authenticated": false,
       "externally_supplied_evidence": false
     },
-    "position_id": "developer",
-    "base_revision": "6edead8f7b371cbac343ef92a9e2522d67aafbfa",
+    "position_id": "release_manager",
+    "base_revision": "a31ce049722281b67708846d3d98ba2b75f67bbc",
     "branch": "codex/onboarding-recovery",
     "worktree": null,
-    "claimed_at": "2026-09-25T10:48:11.036Z",
-    "released_at": null
+    "claimed_at": "2026-09-25T11:11:18.752Z",
+    "released_at": "2026-09-25T11:11:19.201Z",
+    "release_reason": "work_item_closed"
   },
   "claims": [
     {
@@ -147,7 +148,7 @@
     },
     {
       "id": "claim-20260925104811-a1f3dd6d",
-      "status": "active",
+      "status": "released",
       "principal_id": "human",
       "agent_id": "agent-rikku",
       "actor_provenance": {
@@ -163,7 +164,100 @@
       "branch": "codex/onboarding-recovery",
       "worktree": null,
       "claimed_at": "2026-09-25T10:48:11.036Z",
-      "released_at": null
+      "released_at": "2026-09-25T11:11:13.748Z",
+      "release_reason": [
+        "Exact repaired candidate ready for evaluation and independent review"
+      ]
+    },
+    {
+      "id": "claim-20260925111114-b455c184",
+      "status": "released",
+      "principal_id": "human",
+      "agent_id": "agent-lulu",
+      "actor_provenance": {
+        "selection": "explicit-agent",
+        "principal_source": "explicit-principal",
+        "verification_class": "attributed",
+        "evidence_ref": null,
+        "provider_authenticated": false,
+        "externally_supplied_evidence": false
+      },
+      "position_id": "quality_evaluator",
+      "base_revision": "a31ce049722281b67708846d3d98ba2b75f67bbc",
+      "branch": "codex/onboarding-recovery",
+      "worktree": null,
+      "claimed_at": "2026-09-25T11:11:14.667Z",
+      "released_at": "2026-09-25T11:11:15.092Z",
+      "release_reason": [
+        "Actual stage evidence and distinct reviewer judgment recorded"
+      ]
+    },
+    {
+      "id": "claim-20260925111116-39dc5ba2",
+      "status": "released",
+      "principal_id": "human",
+      "agent_id": "agent-lulu",
+      "actor_provenance": {
+        "selection": "explicit-agent",
+        "principal_source": "explicit-principal",
+        "verification_class": "attributed",
+        "evidence_ref": null,
+        "provider_authenticated": false,
+        "externally_supplied_evidence": false
+      },
+      "position_id": "quality_evaluator",
+      "base_revision": "a31ce049722281b67708846d3d98ba2b75f67bbc",
+      "branch": "codex/onboarding-recovery",
+      "worktree": null,
+      "claimed_at": "2026-09-25T11:11:16.007Z",
+      "released_at": "2026-09-25T11:11:16.436Z",
+      "release_reason": [
+        "Actual stage evidence and distinct reviewer judgment recorded"
+      ]
+    },
+    {
+      "id": "claim-20260925111117-b238f0f8",
+      "status": "released",
+      "principal_id": "human",
+      "agent_id": "agent-lulu",
+      "actor_provenance": {
+        "selection": "explicit-agent",
+        "principal_source": "explicit-principal",
+        "verification_class": "attributed",
+        "evidence_ref": null,
+        "provider_authenticated": false,
+        "externally_supplied_evidence": false
+      },
+      "position_id": "independent_qa",
+      "base_revision": "a31ce049722281b67708846d3d98ba2b75f67bbc",
+      "branch": "codex/onboarding-recovery",
+      "worktree": null,
+      "claimed_at": "2026-09-25T11:11:17.351Z",
+      "released_at": "2026-09-25T11:11:17.775Z",
+      "release_reason": [
+        "Actual stage evidence and distinct reviewer judgment recorded"
+      ]
+    },
+    {
+      "id": "claim-20260925111118-36d62d5b",
+      "status": "released",
+      "principal_id": "human",
+      "agent_id": "agent-mog",
+      "actor_provenance": {
+        "selection": "explicit-agent",
+        "principal_source": "explicit-principal",
+        "verification_class": "attributed",
+        "evidence_ref": null,
+        "provider_authenticated": false,
+        "externally_supplied_evidence": false
+      },
+      "position_id": "release_manager",
+      "base_revision": "a31ce049722281b67708846d3d98ba2b75f67bbc",
+      "branch": "codex/onboarding-recovery",
+      "worktree": null,
+      "claimed_at": "2026-09-25T11:11:18.752Z",
+      "released_at": "2026-09-25T11:11:19.201Z",
+      "release_reason": "work_item_closed"
     }
   ],
   "gate_evidence": {
@@ -181,11 +275,70 @@
     ],
     "risk_review": [
       ".ai-org/artifacts/WI-0274/work-order.md"
+    ],
+    "developer_handoff": [
+      ".ai-org/artifacts/WI-0274/handoff-001-developer-to-quality_evaluator.md"
+    ],
+    "developer_evidence": [
+      ".ai-org/artifacts/WI-0274/developer-verification.md"
+    ],
+    "test_evidence": [
+      ".ai-org/artifacts/WI-0274/developer-verification.md"
+    ],
+    "evaluation_report": [
+      ".ai-org/artifacts/WI-0274/evaluation-report.md"
+    ],
+    "independent_qa_pass": [
+      ".ai-org/artifacts/WI-0274/independent-review-1.md"
+    ],
+    "accepted_scope": [
+      ".ai-org/artifacts/WI-0274/accepted-scope.md"
+    ],
+    "independent_qa_report": [
+      ".ai-org/artifacts/WI-0274/independent-review-1.md"
+    ],
+    "rollback_plan": [
+      ".ai-org/artifacts/WI-0274/release-record.md"
+    ],
+    "required_human_approval": [
+      ".ai-org/artifacts/WI-0274/accepted-scope.md"
     ]
   },
   "evidence": [
-    ".ai-org/artifacts/WI-0274/work-order.md"
+    ".ai-org/artifacts/WI-0274/work-order.md",
+    ".ai-org/artifacts/WI-0274/handoff-001-developer-to-quality_evaluator.md",
+    ".ai-org/artifacts/WI-0274/developer-verification.md",
+    ".ai-org/artifacts/WI-0274/evaluation-report.md",
+    ".ai-org/artifacts/WI-0274/independent-review-1.md",
+    ".ai-org/artifacts/WI-0274/release-record.md",
+    ".ai-org/artifacts/WI-0274/accepted-scope.md"
   ],
   "unresolved": [],
-  "next_position": "quality_evaluator"
+  "next_position": null,
+  "handoffs": [
+    {
+      "from_position": "developer",
+      "to_position": "quality_evaluator",
+      "actor": "agent-rikku",
+      "principal_id": "human",
+      "actor_provenance": {
+        "selection": "active-claim",
+        "principal_source": "active-claim",
+        "verification_class": "attributed",
+        "evidence_ref": null,
+        "provider_authenticated": false,
+        "externally_supplied_evidence": false
+      },
+      "input_revision": "a31ce049722281b67708846d3d98ba2b75f67bbc",
+      "artifact": ".ai-org/artifacts/WI-0274/handoff-001-developer-to-quality_evaluator.md",
+      "created_at": "2026-09-25T11:11:13.287Z"
+    }
+  ],
+  "developer_candidate_revision": "a31ce049722281b67708846d3d98ba2b75f67bbc",
+  "tested_revision": "a31ce049722281b67708846d3d98ba2b75f67bbc",
+  "release_gate_result": "go",
+  "lifecycle_outcome": "accepted",
+  "closeout_reasons": [],
+  "external_release_status": "not_performed",
+  "approval_record": ".ai-org/artifacts/WI-0274/accepted-scope.md"
 }
