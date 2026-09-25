@@ -1,0 +1,36 @@
+{
+  "pass": true,
+  "checks": [
+    "1440:dark-layout",
+    "1440:overview-search-quality-navigation",
+    "1440:completed",
+    "1440:interrupted",
+    "1440:unobserved",
+    "1440:changed-running-projection",
+    "1440:stale-hidden",
+    "1440:read-recovery",
+    "1440:empty",
+    "1440:missing-capability",
+    "390:dark-layout",
+    "390:overview-search-quality-navigation",
+    "390:completed",
+    "390:interrupted",
+    "390:unobserved",
+    "390:changed-running-projection",
+    "390:stale-hidden",
+    "390:read-recovery",
+    "390:empty",
+    "390:missing-capability"
+  ],
+  "real_server_states": [
+    "completed",
+    "interrupted",
+    "unobserved",
+    "empty"
+  ],
+  "injected_projection_states": [
+    "running update",
+    "503 stale error"
+  ],
+  "model_calls": 0
+}
