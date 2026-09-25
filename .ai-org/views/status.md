@@ -5,7 +5,7 @@
 - Active Agent Identities: 5
 - Collaboration profile: `solo` (0 Human Principals, 1 active claims)
 - Parallel plan: 0 wave(s), fresh=false
-- Work items: 276 total, 1 active
+- Work items: 277 total, 2 active
 - Codex tasks: 14 registered, 14 archive-ready
 - Runtime workers: 118 registered, 0 reserved, 0 active
 - Shared resources: 0 defined, 0 active reservation(s)
@@ -323,11 +323,14 @@
 | WI-0273 | Align Codex Skill routing with task sandbox | done | Engineering Manager | Mog | pending | team-visible | 0 | gate-evidence | not-applicable | 0 | 0 | 0 | — | `c6dd4ff4` | 0 | 11 | 0 |
 | WI-0274 | Guide first use and qualify process interruption recovery | done | Engineering Manager | Mog | pending | team-visible | 0 | gate-evidence | not-applicable | 0 | 0 | 0 | — | `a31ce049` | 0 | 7 | 0 |
 | WI-0275 | Observer usability and full task benefit measurements | done | Engineering Manager | Mog | pending | team-visible | 0 | gate-evidence | code-first | 0 | 0 | 0 | — | `51b762e7` | 0 | 10 | 0 |
-| WI-0276 | Stage-aware task material and verified continuation | build | Developer | Rikku | pending | team-visible | 0 | gate-evidence | not-applicable | 0 | 0 | 0 | claim-20260925144432-2f274763 | `—` | 0 | 2 | 0 |
+| WI-0276 | Stage-aware task material and verified continuation | test | Quality & Evaluation Engineer | Lulu | pending | team-visible | 0 | gate-evidence | not-applicable | 0 | 0 | 0 | — | `262d6c76` | 0 | 4 | 0 |
+| WI-0277 | Show verified continuation guidance in existing observer | build | Developer | Rikku | pending | team-visible | 0 | gate-evidence | code-first | 0 | 0 | 0 | claim-20260925151627-50c1aedd | `—` | 0 | 1 | 0 |
 
 ## Delivery attention
 
-- WI-0276: awaiting-owner — The recorded owner can continue the scoped work; no attached active worker is recorded.
+- WI-0276: awaiting-owner — Have the eligible owner claim or resume the next scoped responsibility.
+  - owner: No active eligible ownership claim is recorded.
+- WI-0277: awaiting-owner — The recorded owner can continue the scoped work; no attached active worker is recorded.
   - owner: No attached active runtime is recorded for this claim.
 
 ## Codex task registry
@@ -511,7 +514,7 @@
 - Profile: `repository-only`
 - Sync granularity: `team-visible`
 - Active providers: 0
-- Team-visible Work Items: 121
+- Team-visible Work Items: 122
 - Linked Work Items: 0
 - Observed external items: 0
 - Reconciliation actions: 0
@@ -585,14 +588,14 @@
 
 | Time | Event | Work item | Actor |
 |---|---|---|---|
+| 2026-09-25T15:16:27.193Z | work_item_claimed | WI-0277 | human |
+| 2026-09-25T15:16:26.788Z | work_item_transitioned | WI-0277 | agent-mog |
+| 2026-09-25T15:15:31.080Z | work_item_transitioned | WI-0276 | agent-rikku |
+| 2026-09-25T15:15:30.702Z | work_item_claim_released | WI-0276 | human |
+| 2026-09-25T15:15:30.333Z | handoff_created | WI-0276 | agent-rikku |
+| 2026-09-25T15:14:41.377Z | work_item_created | WI-0277 | agent-mog |
 | 2026-09-25T14:44:32.095Z | work_item_claimed | WI-0276 | human |
 | 2026-09-25T14:44:31.692Z | work_item_transitioned | WI-0276 | agent-tidus |
-| 2026-09-25T14:44:31.313Z | work_item_claim_released | WI-0276 | human |
-| 2026-09-25T14:44:30.954Z | work_item_claimed | WI-0276 | human |
-| 2026-09-25T14:44:30.555Z | work_item_transitioned | WI-0276 | agent-yuna |
-| 2026-09-25T14:44:30.178Z | work_item_claim_released | WI-0276 | human |
-| 2026-09-25T14:44:29.817Z | work_item_claimed | WI-0276 | human |
-| 2026-09-25T14:44:29.414Z | work_item_transitioned | WI-0276 | agent-mog |
 
 ## Assignments
 

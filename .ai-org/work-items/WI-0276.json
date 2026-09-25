@@ -2,11 +2,11 @@
   "schema_version": "temple.work-item/v1",
   "id": "WI-0276",
   "title": "Stage-aware task material and verified continuation",
-  "state": "build",
-  "owner_position": "developer",
-  "assigned_agent_id": "agent-rikku",
+  "state": "test",
+  "owner_position": "quality_evaluator",
+  "assigned_agent_id": "agent-lulu",
   "created_at": "2026-09-25T14:42:59.682Z",
-  "updated_at": "2026-09-25T14:44:32.095Z",
+  "updated_at": "2026-09-25T15:15:31.080Z",
   "scope": [
     "Shared task-first material preparation, confirmed-interruption continuation and proportionate instructions"
   ],
@@ -56,7 +56,7 @@
   "overlap_resolution": [],
   "claim": {
     "id": "claim-20260925144432-2f274763",
-    "status": "active",
+    "status": "released",
     "principal_id": "human",
     "agent_id": "agent-rikku",
     "actor_provenance": {
@@ -72,7 +72,10 @@
     "branch": "codex/task-context-resume",
     "worktree": null,
     "claimed_at": "2026-09-25T14:44:32.095Z",
-    "released_at": null
+    "released_at": "2026-09-25T15:15:30.702Z",
+    "release_reason": [
+      "completed"
+    ]
   },
   "claims": [
     {
@@ -146,7 +149,7 @@
     },
     {
       "id": "claim-20260925144432-2f274763",
-      "status": "active",
+      "status": "released",
       "principal_id": "human",
       "agent_id": "agent-rikku",
       "actor_provenance": {
@@ -162,7 +165,10 @@
       "branch": "codex/task-context-resume",
       "worktree": null,
       "claimed_at": "2026-09-25T14:44:32.095Z",
-      "released_at": null
+      "released_at": "2026-09-25T15:15:30.702Z",
+      "release_reason": [
+        "completed"
+      ]
     }
   ],
   "gate_evidence": {
@@ -180,12 +186,40 @@
     ],
     "risk_review": [
       ".ai-org/artifacts/WI-0276/work-order.md"
+    ],
+    "developer_handoff": [
+      ".ai-org/artifacts/WI-0276/handoff-001-developer-to-quality_evaluator.md"
+    ],
+    "developer_evidence": [
+      ".ai-org/artifacts/WI-0276/developer-verification-0.md"
     ]
   },
   "evidence": [
     ".ai-org/artifacts/WI-0276/work-order.md",
-    "docs/adr/0079-stage-material-and-confirmed-continuation.md"
+    "docs/adr/0079-stage-material-and-confirmed-continuation.md",
+    ".ai-org/artifacts/WI-0276/handoff-001-developer-to-quality_evaluator.md",
+    ".ai-org/artifacts/WI-0276/developer-verification-0.md"
   ],
   "unresolved": [],
-  "next_position": "quality_evaluator"
+  "next_position": "quality_evaluator",
+  "handoffs": [
+    {
+      "from_position": "developer",
+      "to_position": "quality_evaluator",
+      "actor": "agent-rikku",
+      "principal_id": "human",
+      "actor_provenance": {
+        "selection": "active-claim",
+        "principal_source": "active-claim",
+        "verification_class": "attributed",
+        "evidence_ref": null,
+        "provider_authenticated": false,
+        "externally_supplied_evidence": false
+      },
+      "input_revision": "262d6c76e520f97dbdf9dcf4e5f61dc635065b91",
+      "artifact": ".ai-org/artifacts/WI-0276/handoff-001-developer-to-quality_evaluator.md",
+      "created_at": "2026-09-25T15:15:30.333Z"
+    }
+  ],
+  "developer_candidate_revision": "262d6c76e520f97dbdf9dcf4e5f61dc635065b91"
 }

@@ -1,0 +1,128 @@
+{
+  "schema_version": "temple.work-item/v1",
+  "id": "WI-0277",
+  "title": "Show verified continuation guidance in existing observer",
+  "state": "build",
+  "owner_position": "developer",
+  "assigned_agent_id": "agent-rikku",
+  "created_at": "2026-09-25T15:14:41.377Z",
+  "updated_at": "2026-09-25T15:16:27.193Z",
+  "scope": [
+    "Render the existing redacted continuation projection in task actions and copied handoff; code-first text-only UI change within approved context design and Issue 140"
+  ],
+  "acceptance_criteria": [
+    "Confirmed, blocked and existing-successor states have accurate Traditional Chinese guidance without granting authority or exposing private fields"
+  ],
+  "affected_paths": [
+    "src/workkeel-monitor-view.mjs",
+    "test/workkeel-task-timing.test.mjs"
+  ],
+  "context_refs": [],
+  "spec_refs": [],
+  "ux_refs": [],
+  "ui_refs": [],
+  "contract_refs": [],
+  "specification_mode": "gate-evidence",
+  "ui_delivery_mode": "code-first",
+  "workflow_profile": "lean",
+  "risk_tier": "low",
+  "profile_assessment": {
+    "requested_profile": "lean",
+    "effective_profile": "lean",
+    "scope_class": "bounded",
+    "escalation_triggers": [],
+    "rationale": "Bounded derived text presentation; no new control, layout or permission change",
+    "evidence_refs": [
+      ".ai-org/artifacts/WI-0276/work-order.md"
+    ],
+    "evaluated_at": "2026-09-25T15:14:41.369Z",
+    "escalated": false
+  },
+  "parent_work_item_id": null,
+  "tracker_visibility": "team-visible",
+  "tracker_refs": [],
+  "tracker_reconciliations": [],
+  "dependencies": [],
+  "required_disciplines": [],
+  "stage_requirements": {},
+  "base_revision": "262d6c76e520f97dbdf9dcf4e5f61dc635065b91",
+  "parallel_mode": "pending",
+  "integration_owner_agent_id": null,
+  "planned_agent_id": null,
+  "shared_contract_refs": [],
+  "contract_status": "not_required",
+  "overlap_resolution": [],
+  "claim": {
+    "id": "claim-20260925151627-50c1aedd",
+    "status": "active",
+    "principal_id": "human",
+    "agent_id": "agent-rikku",
+    "actor_provenance": {
+      "selection": "explicit-agent",
+      "principal_source": "explicit-principal",
+      "verification_class": "attributed",
+      "evidence_ref": null,
+      "provider_authenticated": false,
+      "externally_supplied_evidence": false
+    },
+    "position_id": "developer",
+    "base_revision": "262d6c76e520f97dbdf9dcf4e5f61dc635065b91",
+    "branch": "codex/task-context-resume",
+    "worktree": null,
+    "claimed_at": "2026-09-25T15:16:27.193Z",
+    "released_at": null
+  },
+  "claims": [
+    {
+      "id": "claim-20260925151627-50c1aedd",
+      "status": "active",
+      "principal_id": "human",
+      "agent_id": "agent-rikku",
+      "actor_provenance": {
+        "selection": "explicit-agent",
+        "principal_source": "explicit-principal",
+        "verification_class": "attributed",
+        "evidence_ref": null,
+        "provider_authenticated": false,
+        "externally_supplied_evidence": false
+      },
+      "position_id": "developer",
+      "base_revision": "262d6c76e520f97dbdf9dcf4e5f61dc635065b91",
+      "branch": "codex/task-context-resume",
+      "worktree": null,
+      "claimed_at": "2026-09-25T15:16:27.193Z",
+      "released_at": null
+    }
+  ],
+  "gate_evidence": {
+    "work_order": [
+      ".ai-org/artifacts/WI-0277/ui-brief.md"
+    ],
+    "approved_scope": [
+      ".ai-org/artifacts/WI-0277/ui-brief.md"
+    ],
+    "acceptance_criteria": [
+      ".ai-org/artifacts/WI-0277/ui-brief.md"
+    ],
+    "technical_design": [
+      ".ai-org/artifacts/WI-0277/ui-brief.md"
+    ],
+    "risk_review": [
+      ".ai-org/artifacts/WI-0277/ui-brief.md"
+    ],
+    "profile_eligibility": [
+      ".ai-org/artifacts/WI-0277/ui-brief.md"
+    ],
+    "ui_brief": [
+      ".ai-org/artifacts/WI-0277/ui-brief.md"
+    ],
+    "required_state_coverage": [
+      ".ai-org/artifacts/WI-0277/ui-brief.md"
+    ]
+  },
+  "evidence": [
+    ".ai-org/artifacts/WI-0277/ui-brief.md"
+  ],
+  "unresolved": [],
+  "next_position": "quality_evaluator"
+}
