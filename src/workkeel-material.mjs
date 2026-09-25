@@ -23,6 +23,8 @@ export async function prepareTaskMaterial(target, contract, request) {
   if (!validateTaskContract(contract).contract_complete) throw Error("Material requires a complete current contract");
   if (!WORK_TYPES.includes(request.kind) || !text(request.instruction) || !Array.isArray(request.write_paths) ||
       !Array.isArray(request.materials) || request.materials.length > 64) throw Error("Invalid work type or bounded material request");
+  if (!["review", "rereview", "reconsideration"].includes(request.kind) && Object.hasOwn(request, "candidate_revision")) throw Error("Candidate revision is only valid for review work types");
+  if (request.kind !== "reconsideration" && Object.hasOwn(request, "prior_revision")) throw Error("Prior revision is only valid for reconsideration");
   if (new Set(request.write_paths).size !== request.write_paths.length || request.write_paths.some(ref =>
     typeof ref !== "string" || !contract.environment.write_paths.includes(ref))) throw Error("Material write scope must select exact approved roots");
   if (["review", "rereview", "reconsideration"].includes(request.kind)) {

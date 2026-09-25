@@ -81,6 +81,12 @@ test("prepared material validates all six work types, selection and source fresh
   await assert.rejects(prepareTaskMaterial(root,contract,{...make('reconsideration'),prior_revision:'0'.repeat(40)}),/unchanged/);
   await assert.rejects(prepareTaskMaterial(root,contract,{...make('repair'),materials:[]}),/findings/);
   await assert.rejects(prepareTaskMaterial(root,contract,{...make('initial'),write_paths:['.']}),/scope/);
+  for (const kind of ['initial','repair','takeover']) {
+    await assert.rejects(prepareTaskMaterial(root,contract,{...make(kind),candidate_revision:'0'.repeat(40),materials:[]}),/only valid for review/);
+  }
+  for (const kind of ['initial','repair','takeover','review','rereview']) {
+    await assert.rejects(prepareTaskMaterial(root,contract,{...make(kind),prior_revision:git(root,'rev-parse','HEAD')}),/only valid for reconsideration/);
+  }
   const packet=await prepareTaskMaterial(root,contract,make('initial'));
   await fs.writeFile(path.join(root,'docs/material.json'),JSON.stringify(packet));
   let calls=0;

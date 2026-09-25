@@ -323,15 +323,15 @@
 | WI-0273 | Align Codex Skill routing with task sandbox | done | Engineering Manager | Mog | pending | team-visible | 0 | gate-evidence | not-applicable | 0 | 0 | 0 | — | `c6dd4ff4` | 0 | 11 | 0 |
 | WI-0274 | Guide first use and qualify process interruption recovery | done | Engineering Manager | Mog | pending | team-visible | 0 | gate-evidence | not-applicable | 0 | 0 | 0 | — | `a31ce049` | 0 | 7 | 0 |
 | WI-0275 | Observer usability and full task benefit measurements | done | Engineering Manager | Mog | pending | team-visible | 0 | gate-evidence | code-first | 0 | 0 | 0 | — | `51b762e7` | 0 | 10 | 0 |
-| WI-0276 | Stage-aware task material and verified continuation | test | Quality & Evaluation Engineer | Lulu | pending | team-visible | 0 | gate-evidence | not-applicable | 0 | 0 | 0 | — | `262d6c76` | 0 | 4 | 0 |
-| WI-0277 | Show verified continuation guidance in existing observer | build | Developer | Rikku | pending | team-visible | 0 | gate-evidence | code-first | 0 | 0 | 0 | claim-20260925151627-50c1aedd | `—` | 0 | 1 | 0 |
+| WI-0276 | Stage-aware task material and verified continuation | build | Developer | Rikku | pending | team-visible | 0 | gate-evidence | not-applicable | 0 | 0 | 0 | claim-20260925152140-bad2a6a0 | `—` | 0 | 4 | 0 |
+| WI-0277 | Show verified continuation guidance in existing observer | test | Quality & Evaluation Engineer | Lulu | pending | team-visible | 0 | gate-evidence | code-first | 0 | 0 | 0 | — | `26e42ce7` | 0 | 3 | 0 |
 
 ## Delivery attention
 
-- WI-0276: awaiting-owner — Have the eligible owner claim or resume the next scoped responsibility.
-  - owner: No active eligible ownership claim is recorded.
-- WI-0277: awaiting-owner — The recorded owner can continue the scoped work; no attached active worker is recorded.
+- WI-0276: awaiting-owner — The recorded owner can continue the scoped work; no attached active worker is recorded.
   - owner: No attached active runtime is recorded for this claim.
+- WI-0277: awaiting-owner — Have the eligible owner claim or resume the next scoped responsibility.
+  - owner: No active eligible ownership claim is recorded.
 
 ## Codex task registry
 
@@ -588,14 +588,14 @@
 
 | Time | Event | Work item | Actor |
 |---|---|---|---|
+| 2026-09-25T15:21:40.930Z | work_item_claimed | WI-0276 | human |
+| 2026-09-25T15:21:40.500Z | work_item_reworked | WI-0276 | agent-lulu |
+| 2026-09-25T15:21:40.099Z | work_item_claimed | WI-0276 | human |
+| 2026-09-25T15:21:39.670Z | work_item_transitioned | WI-0277 | agent-rikku |
+| 2026-09-25T15:21:39.265Z | work_item_claim_released | WI-0277 | human |
+| 2026-09-25T15:21:38.837Z | handoff_created | WI-0277 | agent-rikku |
 | 2026-09-25T15:16:27.193Z | work_item_claimed | WI-0277 | human |
 | 2026-09-25T15:16:26.788Z | work_item_transitioned | WI-0277 | agent-mog |
-| 2026-09-25T15:15:31.080Z | work_item_transitioned | WI-0276 | agent-rikku |
-| 2026-09-25T15:15:30.702Z | work_item_claim_released | WI-0276 | human |
-| 2026-09-25T15:15:30.333Z | handoff_created | WI-0276 | agent-rikku |
-| 2026-09-25T15:14:41.377Z | work_item_created | WI-0277 | agent-mog |
-| 2026-09-25T14:44:32.095Z | work_item_claimed | WI-0276 | human |
-| 2026-09-25T14:44:31.692Z | work_item_transitioned | WI-0276 | agent-tidus |
 
 ## Assignments
 

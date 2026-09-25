@@ -2,11 +2,11 @@
   "schema_version": "temple.work-item/v1",
   "id": "WI-0276",
   "title": "Stage-aware task material and verified continuation",
-  "state": "test",
-  "owner_position": "quality_evaluator",
-  "assigned_agent_id": "agent-lulu",
+  "state": "build",
+  "owner_position": "developer",
+  "assigned_agent_id": "agent-rikku",
   "created_at": "2026-09-25T14:42:59.682Z",
-  "updated_at": "2026-09-25T15:15:31.080Z",
+  "updated_at": "2026-09-25T15:21:40.930Z",
   "scope": [
     "Shared task-first material preparation, confirmed-interruption continuation and proportionate instructions"
   ],
@@ -47,7 +47,7 @@
   "dependencies": [],
   "required_disciplines": [],
   "stage_requirements": {},
-  "base_revision": "e82ebb6c6d86d9cccfb4bd5ab20ff06ac8f90f5d",
+  "base_revision": "26e42ce7604ae611c2271f66dde13d6c975ef6d4",
   "parallel_mode": "pending",
   "integration_owner_agent_id": null,
   "planned_agent_id": null,
@@ -55,8 +55,8 @@
   "contract_status": "not_required",
   "overlap_resolution": [],
   "claim": {
-    "id": "claim-20260925144432-2f274763",
-    "status": "released",
+    "id": "claim-20260925152140-bad2a6a0",
+    "status": "active",
     "principal_id": "human",
     "agent_id": "agent-rikku",
     "actor_provenance": {
@@ -68,14 +68,11 @@
       "externally_supplied_evidence": false
     },
     "position_id": "developer",
-    "base_revision": "e82ebb6c6d86d9cccfb4bd5ab20ff06ac8f90f5d",
+    "base_revision": "26e42ce7604ae611c2271f66dde13d6c975ef6d4",
     "branch": "codex/task-context-resume",
     "worktree": null,
-    "claimed_at": "2026-09-25T14:44:32.095Z",
-    "released_at": "2026-09-25T15:15:30.702Z",
-    "release_reason": [
-      "completed"
-    ]
+    "claimed_at": "2026-09-25T15:21:40.930Z",
+    "released_at": null
   },
   "claims": [
     {
@@ -169,6 +166,47 @@
       "release_reason": [
         "completed"
       ]
+    },
+    {
+      "id": "claim-20260925152140-4b26605e",
+      "status": "released",
+      "principal_id": "human",
+      "agent_id": "agent-lulu",
+      "actor_provenance": {
+        "selection": "explicit-agent",
+        "principal_source": "explicit-principal",
+        "verification_class": "attributed",
+        "evidence_ref": null,
+        "provider_authenticated": false,
+        "externally_supplied_evidence": false
+      },
+      "position_id": "quality_evaluator",
+      "base_revision": "26e42ce7604ae611c2271f66dde13d6c975ef6d4",
+      "branch": "codex/task-context-resume",
+      "worktree": null,
+      "claimed_at": "2026-09-25T15:21:40.099Z",
+      "released_at": "2026-09-25T15:21:40.500Z",
+      "release_reason": "review_rework"
+    },
+    {
+      "id": "claim-20260925152140-bad2a6a0",
+      "status": "active",
+      "principal_id": "human",
+      "agent_id": "agent-rikku",
+      "actor_provenance": {
+        "selection": "explicit-agent",
+        "principal_source": "explicit-principal",
+        "verification_class": "attributed",
+        "evidence_ref": null,
+        "provider_authenticated": false,
+        "externally_supplied_evidence": false
+      },
+      "position_id": "developer",
+      "base_revision": "26e42ce7604ae611c2271f66dde13d6c975ef6d4",
+      "branch": "codex/task-context-resume",
+      "worktree": null,
+      "claimed_at": "2026-09-25T15:21:40.930Z",
+      "released_at": null
     }
   ],
   "gate_evidence": {
@@ -186,12 +224,6 @@
     ],
     "risk_review": [
       ".ai-org/artifacts/WI-0276/work-order.md"
-    ],
-    "developer_handoff": [
-      ".ai-org/artifacts/WI-0276/handoff-001-developer-to-quality_evaluator.md"
-    ],
-    "developer_evidence": [
-      ".ai-org/artifacts/WI-0276/developer-verification-0.md"
     ]
   },
   "evidence": [
@@ -221,5 +253,42 @@
       "created_at": "2026-09-25T15:15:30.333Z"
     }
   ],
-  "developer_candidate_revision": "262d6c76e520f97dbdf9dcf4e5f61dc635065b91"
+  "rework_history": [
+    {
+      "sequence": 1,
+      "returned_at": "2026-09-25T15:21:40.500Z",
+      "from_state": "test",
+      "reviewer_agent_id": "agent-lulu",
+      "reviewer_claim_id": "claim-20260925152140-4b26605e",
+      "rejected_revision": "262d6c76e520f97dbdf9dcf4e5f61dc635065b91",
+      "reason": [
+        "Reject inapplicable revision fields; independent QA found one P2"
+      ],
+      "findings": [
+        ".ai-org/artifacts/WI-0276/independent-qa-1.md"
+      ],
+      "scope_digest": "462b87c665300f8c4a19bb1d7c643b1f8a8b1bd8b05a477168c58be31afacad9",
+      "retained_requirements": [
+        "work_order",
+        "approved_scope",
+        "acceptance_criteria",
+        "technical_design",
+        "risk_review"
+      ],
+      "retired_gate_evidence": {
+        "developer_handoff": [
+          ".ai-org/artifacts/WI-0276/handoff-001-developer-to-quality_evaluator.md"
+        ],
+        "developer_evidence": [
+          ".ai-org/artifacts/WI-0276/developer-verification-0.md"
+        ]
+      },
+      "retired_candidate_fields": {
+        "developer_candidate_revision": "262d6c76e520f97dbdf9dcf4e5f61dc635065b91"
+      },
+      "handoff_refs": [
+        ".ai-org/artifacts/WI-0276/handoff-001-developer-to-quality_evaluator.md"
+      ]
+    }
+  ]
 }

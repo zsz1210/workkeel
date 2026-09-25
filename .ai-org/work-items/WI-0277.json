@@ -2,11 +2,11 @@
   "schema_version": "temple.work-item/v1",
   "id": "WI-0277",
   "title": "Show verified continuation guidance in existing observer",
-  "state": "build",
-  "owner_position": "developer",
-  "assigned_agent_id": "agent-rikku",
+  "state": "test",
+  "owner_position": "quality_evaluator",
+  "assigned_agent_id": "agent-lulu",
   "created_at": "2026-09-25T15:14:41.377Z",
-  "updated_at": "2026-09-25T15:16:27.193Z",
+  "updated_at": "2026-09-25T15:21:39.670Z",
   "scope": [
     "Render the existing redacted continuation projection in task actions and copied handoff; code-first text-only UI change within approved context design and Issue 140"
   ],
@@ -54,7 +54,7 @@
   "overlap_resolution": [],
   "claim": {
     "id": "claim-20260925151627-50c1aedd",
-    "status": "active",
+    "status": "released",
     "principal_id": "human",
     "agent_id": "agent-rikku",
     "actor_provenance": {
@@ -70,12 +70,15 @@
     "branch": "codex/task-context-resume",
     "worktree": null,
     "claimed_at": "2026-09-25T15:16:27.193Z",
-    "released_at": null
+    "released_at": "2026-09-25T15:21:39.265Z",
+    "release_reason": [
+      "completed"
+    ]
   },
   "claims": [
     {
       "id": "claim-20260925151627-50c1aedd",
-      "status": "active",
+      "status": "released",
       "principal_id": "human",
       "agent_id": "agent-rikku",
       "actor_provenance": {
@@ -91,7 +94,10 @@
       "branch": "codex/task-context-resume",
       "worktree": null,
       "claimed_at": "2026-09-25T15:16:27.193Z",
-      "released_at": null
+      "released_at": "2026-09-25T15:21:39.265Z",
+      "release_reason": [
+        "completed"
+      ]
     }
   ],
   "gate_evidence": {
@@ -118,11 +124,39 @@
     ],
     "required_state_coverage": [
       ".ai-org/artifacts/WI-0277/ui-brief.md"
+    ],
+    "developer_handoff": [
+      ".ai-org/artifacts/WI-0277/handoff-001-developer-to-quality_evaluator.md"
+    ],
+    "developer_evidence": [
+      ".ai-org/artifacts/WI-0277/developer-verification.md"
     ]
   },
   "evidence": [
-    ".ai-org/artifacts/WI-0277/ui-brief.md"
+    ".ai-org/artifacts/WI-0277/ui-brief.md",
+    ".ai-org/artifacts/WI-0277/handoff-001-developer-to-quality_evaluator.md",
+    ".ai-org/artifacts/WI-0277/developer-verification.md"
   ],
   "unresolved": [],
-  "next_position": "quality_evaluator"
+  "next_position": "engineering_manager",
+  "handoffs": [
+    {
+      "from_position": "developer",
+      "to_position": "quality_evaluator",
+      "actor": "agent-rikku",
+      "principal_id": "human",
+      "actor_provenance": {
+        "selection": "active-claim",
+        "principal_source": "active-claim",
+        "verification_class": "attributed",
+        "evidence_ref": null,
+        "provider_authenticated": false,
+        "externally_supplied_evidence": false
+      },
+      "input_revision": "26e42ce7604ae611c2271f66dde13d6c975ef6d4",
+      "artifact": ".ai-org/artifacts/WI-0277/handoff-001-developer-to-quality_evaluator.md",
+      "created_at": "2026-09-25T15:21:38.837Z"
+    }
+  ],
+  "developer_candidate_revision": "26e42ce7604ae611c2271f66dde13d6c975ef6d4"
 }
