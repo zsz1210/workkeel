@@ -1,0 +1,339 @@
+{
+  "schema_version": "temple.work-item/v1",
+  "id": "WI-0271",
+  "title": "Classify and recover remaining historical evidence in bounded batches",
+  "state": "done",
+  "owner_position": "engineering_manager",
+  "assigned_agent_id": "agent-mog",
+  "created_at": "2026-09-25T02:49:50.512Z",
+  "updated_at": "2026-09-25T03:08:30.587Z",
+  "scope": [
+    "Classify every existing registry record; append exact-byte recoverable artifact sources in batches; portable export and readback; preserve all original metadata and unresolved debt; assess retention without deletion; normal PR integration"
+  ],
+  "acceptance_criteria": [
+    "Complete record and artifact accounting; original registry unchanged; only eligible missing artifacts mapped; all selected bytes verified by existing API and independent readback; unresolved causes explicit; independent review and normal CI"
+  ],
+  "affected_paths": [
+    ".ai-org/artifacts/evidence-sources",
+    ".ai-org/artifacts"
+  ],
+  "context_refs": [],
+  "spec_refs": [],
+  "ux_refs": [],
+  "ui_refs": [],
+  "contract_refs": [],
+  "specification_mode": "gate-evidence",
+  "ui_delivery_mode": "not-applicable",
+  "workflow_profile": "standard",
+  "risk_tier": "standard",
+  "profile_assessment": {
+    "requested_profile": "standard",
+    "effective_profile": "standard",
+    "scope_class": "ordinary",
+    "escalation_triggers": [],
+    "rationale": "",
+    "evidence_refs": [],
+    "evaluated_at": "2026-09-25T02:49:50.502Z",
+    "escalated": false
+  },
+  "parent_work_item_id": null,
+  "tracker_visibility": "team-visible",
+  "tracker_refs": [],
+  "tracker_reconciliations": [],
+  "dependencies": [],
+  "required_disciplines": [],
+  "stage_requirements": {},
+  "base_revision": "bf03d754dddfd658efc1bfa5f63e0d545d76e3db",
+  "parallel_mode": "pending",
+  "integration_owner_agent_id": null,
+  "planned_agent_id": null,
+  "shared_contract_refs": [],
+  "contract_status": "not_required",
+  "overlap_resolution": [],
+  "claim": {
+    "id": "claim-20260925030830-8001a1f2",
+    "status": "released",
+    "principal_id": "human",
+    "agent_id": "agent-mog",
+    "actor_provenance": {
+      "selection": "explicit-agent",
+      "principal_source": "explicit-principal",
+      "verification_class": "attributed",
+      "evidence_ref": null,
+      "provider_authenticated": false,
+      "externally_supplied_evidence": false
+    },
+    "position_id": "release_manager",
+    "base_revision": "bf03d754dddfd658efc1bfa5f63e0d545d76e3db",
+    "branch": "codex/evidence-recovery-batches",
+    "worktree": null,
+    "claimed_at": "2026-09-25T03:08:30.082Z",
+    "released_at": "2026-09-25T03:08:30.587Z",
+    "release_reason": "work_item_closed"
+  },
+  "claims": [
+    {
+      "id": "claim-20260925025028-8a2f026f",
+      "status": "released",
+      "principal_id": "human",
+      "agent_id": "agent-mog",
+      "actor_provenance": {
+        "selection": "explicit-agent",
+        "principal_source": "explicit-principal",
+        "verification_class": "attributed",
+        "evidence_ref": null,
+        "provider_authenticated": false,
+        "externally_supplied_evidence": false
+      },
+      "position_id": "engineering_manager",
+      "base_revision": "ff94b638f49fea215cec0e579b92159e1a852628",
+      "branch": "codex/evidence-recovery-batches",
+      "worktree": null,
+      "claimed_at": "2026-09-25T02:50:28.888Z",
+      "released_at": "2026-09-25T02:50:29.434Z",
+      "release_reason": [
+        "Approved complete inventory and bounded repair scope recorded"
+      ]
+    },
+    {
+      "id": "claim-20260925025030-c0665740",
+      "status": "released",
+      "principal_id": "human",
+      "agent_id": "agent-yuna",
+      "actor_provenance": {
+        "selection": "explicit-agent",
+        "principal_source": "explicit-principal",
+        "verification_class": "attributed",
+        "evidence_ref": null,
+        "provider_authenticated": false,
+        "externally_supplied_evidence": false
+      },
+      "position_id": "product_manager",
+      "base_revision": "ff94b638f49fea215cec0e579b92159e1a852628",
+      "branch": "codex/evidence-recovery-batches",
+      "worktree": null,
+      "claimed_at": "2026-09-25T02:50:30.221Z",
+      "released_at": "2026-09-25T02:50:30.585Z",
+      "release_reason": [
+        "Snapshot acceptance and no-deletion stop defined"
+      ]
+    },
+    {
+      "id": "claim-20260925025031-2071b911",
+      "status": "released",
+      "principal_id": "human",
+      "agent_id": "agent-tidus",
+      "actor_provenance": {
+        "selection": "explicit-agent",
+        "principal_source": "explicit-principal",
+        "verification_class": "attributed",
+        "evidence_ref": null,
+        "provider_authenticated": false,
+        "externally_supplied_evidence": false
+      },
+      "position_id": "tech_lead",
+      "base_revision": "ff94b638f49fea215cec0e579b92159e1a852628",
+      "branch": "codex/evidence-recovery-batches",
+      "worktree": null,
+      "claimed_at": "2026-09-25T02:50:31.371Z",
+      "released_at": "2026-09-25T02:50:31.734Z",
+      "release_reason": [
+        "Existing source recovery API and source-integrity boundaries selected"
+      ]
+    },
+    {
+      "id": "claim-20260925025032-15952302",
+      "status": "released",
+      "principal_id": "human",
+      "agent_id": "agent-rikku",
+      "actor_provenance": {
+        "selection": "explicit-agent",
+        "principal_source": "explicit-principal",
+        "verification_class": "attributed",
+        "evidence_ref": null,
+        "provider_authenticated": false,
+        "externally_supplied_evidence": false
+      },
+      "position_id": "developer",
+      "base_revision": "ff94b638f49fea215cec0e579b92159e1a852628",
+      "branch": "codex/evidence-recovery-batches",
+      "worktree": null,
+      "claimed_at": "2026-09-25T02:50:32.520Z",
+      "released_at": "2026-09-25T03:06:32.574Z",
+      "release_reason": [
+        "Data candidate delivered for actual independent review"
+      ]
+    },
+    {
+      "id": "claim-20260925030633-f7462b54",
+      "status": "released",
+      "principal_id": "human",
+      "agent_id": "agent-lulu",
+      "actor_provenance": {
+        "selection": "explicit-agent",
+        "principal_source": "explicit-principal",
+        "verification_class": "attributed",
+        "evidence_ref": null,
+        "provider_authenticated": false,
+        "externally_supplied_evidence": false
+      },
+      "position_id": "quality_evaluator",
+      "base_revision": "bf03d754dddfd658efc1bfa5f63e0d545d76e3db",
+      "branch": "codex/evidence-recovery-batches",
+      "worktree": null,
+      "claimed_at": "2026-09-25T03:06:33.647Z",
+      "released_at": "2026-09-25T03:08:25.900Z",
+      "release_reason": [
+        "Batch readback, independent byte check and exact candidate hashes verified"
+      ]
+    },
+    {
+      "id": "claim-20260925030827-cc6577af",
+      "status": "released",
+      "principal_id": "human",
+      "agent_id": "agent-lulu",
+      "actor_provenance": {
+        "selection": "explicit-agent",
+        "principal_source": "explicit-principal",
+        "verification_class": "attributed",
+        "evidence_ref": null,
+        "provider_authenticated": false,
+        "externally_supplied_evidence": false
+      },
+      "position_id": "quality_evaluator",
+      "base_revision": "bf03d754dddfd658efc1bfa5f63e0d545d76e3db",
+      "branch": "codex/evidence-recovery-batches",
+      "worktree": null,
+      "claimed_at": "2026-09-25T03:08:27.005Z",
+      "released_at": "2026-09-25T03:08:27.496Z",
+      "release_reason": [
+        "Actual separate data review PASS with explicit verification limits"
+      ]
+    },
+    {
+      "id": "claim-20260925030828-6144a39c",
+      "status": "released",
+      "principal_id": "human",
+      "agent_id": "agent-lulu",
+      "actor_provenance": {
+        "selection": "explicit-agent",
+        "principal_source": "explicit-principal",
+        "verification_class": "attributed",
+        "evidence_ref": null,
+        "provider_authenticated": false,
+        "externally_supplied_evidence": false
+      },
+      "position_id": "independent_qa",
+      "base_revision": "bf03d754dddfd658efc1bfa5f63e0d545d76e3db",
+      "branch": "codex/evidence-recovery-batches",
+      "worktree": null,
+      "claimed_at": "2026-09-25T03:08:28.544Z",
+      "released_at": "2026-09-25T03:08:29.029Z",
+      "release_reason": [
+        "Independent judgment and coordinator follow-up verification complete"
+      ]
+    },
+    {
+      "id": "claim-20260925030830-8001a1f2",
+      "status": "released",
+      "principal_id": "human",
+      "agent_id": "agent-mog",
+      "actor_provenance": {
+        "selection": "explicit-agent",
+        "principal_source": "explicit-principal",
+        "verification_class": "attributed",
+        "evidence_ref": null,
+        "provider_authenticated": false,
+        "externally_supplied_evidence": false
+      },
+      "position_id": "release_manager",
+      "base_revision": "bf03d754dddfd658efc1bfa5f63e0d545d76e3db",
+      "branch": "codex/evidence-recovery-batches",
+      "worktree": null,
+      "claimed_at": "2026-09-25T03:08:30.082Z",
+      "released_at": "2026-09-25T03:08:30.587Z",
+      "release_reason": "work_item_closed"
+    }
+  ],
+  "gate_evidence": {
+    "work_order": [
+      ".ai-org/artifacts/WI-0271/work-order.md"
+    ],
+    "approved_scope": [
+      ".ai-org/artifacts/WI-0271/work-order.md"
+    ],
+    "acceptance_criteria": [
+      ".ai-org/artifacts/WI-0271/work-order.md"
+    ],
+    "technical_design": [
+      ".ai-org/artifacts/WI-0271/work-order.md"
+    ],
+    "risk_review": [
+      ".ai-org/artifacts/WI-0271/work-order.md"
+    ],
+    "developer_handoff": [
+      ".ai-org/artifacts/WI-0271/handoff-001-developer-to-quality_evaluator.md"
+    ],
+    "developer_evidence": [
+      ".ai-org/artifacts/WI-0271/developer-attempt-0.md"
+    ],
+    "test_evidence": [
+      ".ai-org/artifacts/WI-0271/final-verification.md"
+    ],
+    "evaluation_report": [
+      ".ai-org/artifacts/WI-0271/independent-review-0.md"
+    ],
+    "independent_qa_pass": [
+      ".ai-org/artifacts/WI-0271/independent-review-0.md"
+    ],
+    "accepted_scope": [
+      ".ai-org/artifacts/WI-0271/final-scope-and-approval.md"
+    ],
+    "independent_qa_report": [
+      ".ai-org/artifacts/WI-0271/independent-review-0.md"
+    ],
+    "rollback_plan": [
+      ".ai-org/artifacts/WI-0271/release-record.md"
+    ],
+    "required_human_approval": [
+      ".ai-org/artifacts/WI-0271/final-scope-and-approval.md"
+    ]
+  },
+  "evidence": [
+    ".ai-org/artifacts/WI-0271/work-order.md",
+    ".ai-org/artifacts/WI-0271/handoff-001-developer-to-quality_evaluator.md",
+    ".ai-org/artifacts/WI-0271/developer-attempt-0.md",
+    ".ai-org/artifacts/WI-0271/final-verification.md",
+    ".ai-org/artifacts/WI-0271/independent-review-0.md",
+    ".ai-org/artifacts/WI-0271/release-record.md",
+    ".ai-org/artifacts/WI-0271/final-scope-and-approval.md"
+  ],
+  "unresolved": [],
+  "next_position": null,
+  "handoffs": [
+    {
+      "from_position": "developer",
+      "to_position": "quality_evaluator",
+      "actor": "agent-rikku",
+      "principal_id": "human",
+      "actor_provenance": {
+        "selection": "active-claim",
+        "principal_source": "active-claim",
+        "verification_class": "attributed",
+        "evidence_ref": null,
+        "provider_authenticated": false,
+        "externally_supplied_evidence": false
+      },
+      "input_revision": "bf03d754dddfd658efc1bfa5f63e0d545d76e3db",
+      "artifact": ".ai-org/artifacts/WI-0271/handoff-001-developer-to-quality_evaluator.md",
+      "created_at": "2026-09-25T03:06:32.059Z"
+    }
+  ],
+  "developer_candidate_revision": "bf03d754dddfd658efc1bfa5f63e0d545d76e3db",
+  "tested_revision": "bf03d754dddfd658efc1bfa5f63e0d545d76e3db",
+  "release_gate_result": "go",
+  "lifecycle_outcome": "accepted",
+  "closeout_reasons": [],
+  "external_release_status": "not_performed",
+  "approval_record": ".ai-org/artifacts/WI-0271/final-scope-and-approval.md"
+}
