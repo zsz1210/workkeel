@@ -1,0 +1,294 @@
+{
+  "schema_version": "temple.evidence-sources/v1",
+  "sources": [
+    {
+      "evidence_id": "EVID-20260830T063819Z-890D1A9D",
+      "path": ".ai-org/artifacts/observations/self-host-launcher-independent-qa.json",
+      "source_revision": "ff94b638f49fea215cec0e579b92159e1a852628",
+      "evidence_sha256": "6da71a9e8ba415348b966748a84d8641cdcf6a98d2d8e66c648a44304a6da382",
+      "scope_revision": "835dc57d909d140d365e577acfa412789d91864f",
+      "sha256": "d937c4db35243131eb93a3da2d228c892f10b7dcc5af6b2ca64cb2ecca5477ad"
+    },
+    {
+      "evidence_id": "EVID-20260830T063819Z-890D1A9D",
+      "path": ".ai-org/artifacts/WI-0013/independent-qa-report.md",
+      "source_revision": "ff94b638f49fea215cec0e579b92159e1a852628",
+      "evidence_sha256": "6da71a9e8ba415348b966748a84d8641cdcf6a98d2d8e66c648a44304a6da382",
+      "scope_revision": "835dc57d909d140d365e577acfa412789d91864f",
+      "sha256": "e063982d1bb33b1e4da499b3bc1ae5e14e7d071d7c8289323b7fea7161be2c83"
+    },
+    {
+      "evidence_id": "EVID-20260830T063819Z-CFB40530",
+      "path": ".ai-org/artifacts/observations/self-host-launcher-independent-qa-runtime.json",
+      "source_revision": "ff94b638f49fea215cec0e579b92159e1a852628",
+      "evidence_sha256": "5a4300f3827b8c2fb4f4942bf7f9f17dbb1d6c609bc6f9e69013980abe415cde",
+      "scope_revision": "835dc57d909d140d365e577acfa412789d91864f",
+      "sha256": "34940473865504f3e07cd41d3c5ca0d16d316c0fcc9208c0a356043d3dcfe44e"
+    },
+    {
+      "evidence_id": "EVID-20260830T063819Z-CFB40530",
+      "path": ".ai-org/artifacts/WI-0013/independent-qa-report.md",
+      "source_revision": "ff94b638f49fea215cec0e579b92159e1a852628",
+      "evidence_sha256": "5a4300f3827b8c2fb4f4942bf7f9f17dbb1d6c609bc6f9e69013980abe415cde",
+      "scope_revision": "835dc57d909d140d365e577acfa412789d91864f",
+      "sha256": "e063982d1bb33b1e4da499b3bc1ae5e14e7d071d7c8289323b7fea7161be2c83"
+    },
+    {
+      "evidence_id": "EVID-20260830T071617Z-0C9677E5",
+      "path": ".ai-org/artifacts/observations/wi-0014-live-telemetry.json",
+      "source_revision": "ff94b638f49fea215cec0e579b92159e1a852628",
+      "evidence_sha256": "2504a39d01b1a61d1dae7ae8bd1024267ebc3451663c6d512e801768b99763ae",
+      "scope_revision": "23768e74ceb35a15589e194e0929f70914e8f407",
+      "sha256": "8775f0c113e95460cf6a842f9bb4b9b7ce6777ae69924c982ec1b71dea41e833"
+    },
+    {
+      "evidence_id": "EVID-20260830T071617Z-0C9677E5",
+      "path": ".ai-org/artifacts/WI-0014/independent-qa-report.md",
+      "source_revision": "ff94b638f49fea215cec0e579b92159e1a852628",
+      "evidence_sha256": "2504a39d01b1a61d1dae7ae8bd1024267ebc3451663c6d512e801768b99763ae",
+      "scope_revision": "23768e74ceb35a15589e194e0929f70914e8f407",
+      "sha256": "afa70923ef01c045787e5a86c2d5608d8c12518dcdf3fab161a61ca793f3c74f"
+    },
+    {
+      "evidence_id": "EVID-20260830T071617Z-A71FCFF5",
+      "path": ".ai-org/artifacts/observations/wi-0014-independent-qa.json",
+      "source_revision": "ff94b638f49fea215cec0e579b92159e1a852628",
+      "evidence_sha256": "5f3e2a5ffa68b60b77b39ab85e00a4469f4d2d1dce8544653e819dc6afa5405e",
+      "scope_revision": "23768e74ceb35a15589e194e0929f70914e8f407",
+      "sha256": "c843cf49ad47cb47746b3df179b6d1d644a7b5c021aa5669d7f56a11833e48ea"
+    },
+    {
+      "evidence_id": "EVID-20260830T071617Z-A71FCFF5",
+      "path": ".ai-org/artifacts/WI-0014/independent-qa-report.md",
+      "source_revision": "ff94b638f49fea215cec0e579b92159e1a852628",
+      "evidence_sha256": "5f3e2a5ffa68b60b77b39ab85e00a4469f4d2d1dce8544653e819dc6afa5405e",
+      "scope_revision": "23768e74ceb35a15589e194e0929f70914e8f407",
+      "sha256": "afa70923ef01c045787e5a86c2d5608d8c12518dcdf3fab161a61ca793f3c74f"
+    },
+    {
+      "evidence_id": "EVID-20260830T071617Z-F40BAB29",
+      "path": ".ai-org/artifacts/observations/wi-0014-developer.json",
+      "source_revision": "ff94b638f49fea215cec0e579b92159e1a852628",
+      "evidence_sha256": "ab86782cca94856bfc577e033311588d7f9ac0caaa57a8455165404bc102eef1",
+      "scope_revision": "23768e74ceb35a15589e194e0929f70914e8f407",
+      "sha256": "f4a3ef5e4569e57ed3c547490fc838c2913bea9c4dd44b656910c1060f68e997"
+    },
+    {
+      "evidence_id": "EVID-20260830T071617Z-F40BAB29",
+      "path": ".ai-org/artifacts/WI-0014/developer-evidence.md",
+      "source_revision": "ff94b638f49fea215cec0e579b92159e1a852628",
+      "evidence_sha256": "ab86782cca94856bfc577e033311588d7f9ac0caaa57a8455165404bc102eef1",
+      "scope_revision": "23768e74ceb35a15589e194e0929f70914e8f407",
+      "sha256": "1dadc6dc2ad6fdf0a20724d471e372544b579a31a5b04a31ef1db8af7f7fe7a6"
+    },
+    {
+      "evidence_id": "EVID-20260830T074917Z-281A3610",
+      "path": ".ai-org/artifacts/WI-0016/developer-observation.json",
+      "source_revision": "ff94b638f49fea215cec0e579b92159e1a852628",
+      "evidence_sha256": "9dd11e42024fa22ecb9a09494a90932a716a08c0e6139c988dbfa9e1b771be70",
+      "scope_revision": "1c3ca9c830798507c1a32148e2af1c12e82ce178",
+      "sha256": "ca208e7cf04064e441a472a7663a73d4e82733ef69e7c9b6e8f7c56e5b88bad0"
+    },
+    {
+      "evidence_id": "EVID-20260830T074930Z-81C8BCCC",
+      "path": ".ai-org/artifacts/WI-0017/developer-observation.json",
+      "source_revision": "ff94b638f49fea215cec0e579b92159e1a852628",
+      "evidence_sha256": "5341d7487d9e09f7a9b3facee21ed11719a26b9f26ccc7bd9203478cf5972f71",
+      "scope_revision": "1c3ca9c830798507c1a32148e2af1c12e82ce178",
+      "sha256": "38ce62b8fa3dd9a78305fdf2ba62c12fd919ec725fa53e3751a8e62632686747"
+    },
+    {
+      "evidence_id": "EVID-20260830T074930Z-9565BFFB",
+      "path": ".ai-org/artifacts/WI-0018/developer-observation.json",
+      "source_revision": "ff94b638f49fea215cec0e579b92159e1a852628",
+      "evidence_sha256": "aa176d93e3c0c64de107bfc7d817b02af810fe3097217dba88e27c62fe827059",
+      "scope_revision": "1c3ca9c830798507c1a32148e2af1c12e82ce178",
+      "sha256": "77836f6de7af1535c025d661cac53778f89c13dd9fd48cbc5242543708c916c5"
+    },
+    {
+      "evidence_id": "EVID-20260830T081319Z-3D3FE880",
+      "path": ".ai-org/artifacts/WI-0021/developer-observation.json",
+      "source_revision": "ff94b638f49fea215cec0e579b92159e1a852628",
+      "evidence_sha256": "d4205cf37d73207e387db7c6a2af7688c7ca35c967116582dbf590fc1bc026de",
+      "scope_revision": "5fb81a86bd9828f561ad9611daef3b0e2eab9b9c",
+      "sha256": "abe19e11d9456b1314e00ec501252768d39beaeaef3864ffbe99043bcccffb2b"
+    },
+    {
+      "evidence_id": "EVID-20260830T081319Z-91FB6C16",
+      "path": ".ai-org/artifacts/WI-0020/developer-observation.json",
+      "source_revision": "ff94b638f49fea215cec0e579b92159e1a852628",
+      "evidence_sha256": "d80a29baaa78def2ef7f0c86ba099bda7055abaadd8e48a0ae7aeac6be804209",
+      "scope_revision": "5fb81a86bd9828f561ad9611daef3b0e2eab9b9c",
+      "sha256": "6ebe243a99d97e27e29bb37f7df70db1a2aa25d4ee9236ef64f903c97a11be8a"
+    },
+    {
+      "evidence_id": "EVID-20260830T081320Z-43B20AA3",
+      "path": ".ai-org/artifacts/WI-0022/developer-observation.json",
+      "source_revision": "ff94b638f49fea215cec0e579b92159e1a852628",
+      "evidence_sha256": "7dce7662848f2efe60001bc48a8a2b1dae53305c08aded9ebc1bc608e25d875d",
+      "scope_revision": "5fb81a86bd9828f561ad9611daef3b0e2eab9b9c",
+      "sha256": "35dee5dae52891c762b228c83301d210517f78699e51c83318afa5c22605bca1"
+    },
+    {
+      "evidence_id": "EVID-20260830T082019Z-34CFB1EA",
+      "path": ".ai-org/artifacts/WI-0020/independent-qa-observation.json",
+      "source_revision": "ff94b638f49fea215cec0e579b92159e1a852628",
+      "evidence_sha256": "18984c8a405aee79fa160b208790844ec1ab039f6b655b84f6ef1c22ffadf662",
+      "scope_revision": "5733bb25202d8acc2de31ec8e0501787557962cb",
+      "sha256": "8b07a5f534a3d02d78506b8d87614142fdff1fbdca9b7babc44389e30f947d99"
+    },
+    {
+      "evidence_id": "EVID-20260830T082019Z-DA7A2A1B",
+      "path": ".ai-org/artifacts/WI-0021/independent-qa-observation.json",
+      "source_revision": "ff94b638f49fea215cec0e579b92159e1a852628",
+      "evidence_sha256": "e6d540aa2cdac7c26fe7f0315a3bae66b554ffe04c7e56533463a84d06cadf98",
+      "scope_revision": "5733bb25202d8acc2de31ec8e0501787557962cb",
+      "sha256": "a6ba12889d6c03414600be13ac7870018d49a3d9f84567e39ad51d5da729cf2b"
+    },
+    {
+      "evidence_id": "EVID-20260830T082218Z-0ADFE6F0",
+      "path": ".ai-org/artifacts/WI-0021/independent-qa-observation.json",
+      "source_revision": "ff94b638f49fea215cec0e579b92159e1a852628",
+      "evidence_sha256": "6b4ddff48d8f679452893c53110a80883c2fc5576ea4a28c4eb67990097041b7",
+      "scope_revision": "5733bb25202d8acc2de31ec8e0501787557962cb",
+      "sha256": "a6ba12889d6c03414600be13ac7870018d49a3d9f84567e39ad51d5da729cf2b"
+    },
+    {
+      "evidence_id": "EVID-20260830T082800Z-20146D34",
+      "path": ".ai-org/artifacts/WI-0023/developer-observation.json",
+      "source_revision": "ff94b638f49fea215cec0e579b92159e1a852628",
+      "evidence_sha256": "ebda59e3c63ff6d6a72999e690938e833645046245c23ca54ba319f5daa2c9ab",
+      "scope_revision": "db40145cee3f1ca7bfa3925cdfcfeb38b8844b9b",
+      "sha256": "7d1734c127c476f61e684a7b9aa472c14dd78f35fcc9233e19f5e1e858813569"
+    },
+    {
+      "evidence_id": "EVID-20260830T083141Z-FDC3BBCB",
+      "path": ".ai-org/artifacts/WI-0023/independent-qa-observation.json",
+      "source_revision": "ff94b638f49fea215cec0e579b92159e1a852628",
+      "evidence_sha256": "5bee6ab1c24b1142d1e09221ef551c109ca775dbbb3155e585d7519c61cb9f31",
+      "scope_revision": "db40145cee3f1ca7bfa3925cdfcfeb38b8844b9b",
+      "sha256": "04074aa582291b40d71b2d2d75a932beceac4d1e39b1d753e352c8781dcc4162"
+    },
+    {
+      "evidence_id": "EVID-20260830T083720Z-1509A493",
+      "path": ".ai-org/artifacts/WI-0024/developer-observation.json",
+      "source_revision": "ff94b638f49fea215cec0e579b92159e1a852628",
+      "evidence_sha256": "95553867945478c885b6dcd34264099f6558da48564f2cb7a8f5004a3e24f210",
+      "scope_revision": "2bf07c0dcc94769b6c964c2a935b1d74bb3b5734",
+      "sha256": "79ed650086fd0319afbb9f531d307614762d193a7f68baa18914b98356887f68"
+    },
+    {
+      "evidence_id": "EVID-20260830T084102Z-779644B2",
+      "path": ".ai-org/artifacts/WI-0024/independent-qa-observation.json",
+      "source_revision": "ff94b638f49fea215cec0e579b92159e1a852628",
+      "evidence_sha256": "fa0772da2affec061235a61887b866cff4bf9573db1ca86f034494326d5d59d8",
+      "scope_revision": "2bf07c0dcc94769b6c964c2a935b1d74bb3b5734",
+      "sha256": "e3fb7ac5395eee731f5cee6c62cfe0f2bafe49be5e260ade937fd88f7458bf26"
+    },
+    {
+      "evidence_id": "EVID-20260830T084227Z-73C0FD20",
+      "path": ".ai-org/artifacts/WI-0016/aipet-digest-rehearsal.json",
+      "source_revision": "ff94b638f49fea215cec0e579b92159e1a852628",
+      "evidence_sha256": "7c057c64157e1f2e574c1770343792495905f67886347c8800f9a8c521d5bcfd",
+      "scope_revision": "2bf07c0dcc94769b6c964c2a935b1d74bb3b5734",
+      "sha256": "1091cc547e90f0eaf14a64569e1ec39de353e0a9a44684e9a39434e7d1af8082"
+    },
+    {
+      "evidence_id": "EVID-20260830T084227Z-73C0FD20",
+      "path": ".ai-org/artifacts/WI-0016/aipet-runtime-observation.json",
+      "source_revision": "ff94b638f49fea215cec0e579b92159e1a852628",
+      "evidence_sha256": "7c057c64157e1f2e574c1770343792495905f67886347c8800f9a8c521d5bcfd",
+      "scope_revision": "2bf07c0dcc94769b6c964c2a935b1d74bb3b5734",
+      "sha256": "91a7cd11f74ad7550053abe69142b9030a20761a71447c5aecad12d60f3b3761"
+    },
+    {
+      "evidence_id": "EVID-20260830T084227Z-73C0FD20",
+      "path": "docs/validation/phase-4a-aipet-digest-rehearsal.md",
+      "source_revision": "ff94b638f49fea215cec0e579b92159e1a852628",
+      "evidence_sha256": "7c057c64157e1f2e574c1770343792495905f67886347c8800f9a8c521d5bcfd",
+      "scope_revision": "2bf07c0dcc94769b6c964c2a935b1d74bb3b5734",
+      "sha256": "a3f0f2ed6f76c1b15506183c914e196f5d3fca956603ddd941335755f6d2b888"
+    },
+    {
+      "evidence_id": "EVID-20260830T090045Z-86F6076C",
+      "path": ".ai-org/artifacts/WI-0025/developer-observation.json",
+      "source_revision": "ff94b638f49fea215cec0e579b92159e1a852628",
+      "evidence_sha256": "3da32ae8155a24e6d48bc65e97ecad238fb5eca6f5e4482ba864c56a1e2b0be9",
+      "scope_revision": "7dda4c6b3e1fc9fd16b1fcc55b794e1f1c5d5de5",
+      "sha256": "76aa8033c649ab5009bcb22e03367c07fe4c34fbf92b2c008cb84c422765c707"
+    },
+    {
+      "evidence_id": "EVID-20260830T090047Z-AC8576DF",
+      "path": ".ai-org/artifacts/WI-0026/developer-observation.json",
+      "source_revision": "ff94b638f49fea215cec0e579b92159e1a852628",
+      "evidence_sha256": "72bb9084e82689f3ceb880a6e0c0f3f921dadffb1220868212247638c676a744",
+      "scope_revision": "7dda4c6b3e1fc9fd16b1fcc55b794e1f1c5d5de5",
+      "sha256": "c69747592716b4b18e372a75710136e901fdce295abcbb48a2018dc49a1df79c"
+    },
+    {
+      "evidence_id": "EVID-20260830T091043Z-FA4695AF",
+      "path": ".ai-org/artifacts/WI-0025/independent-qa-observation-001.json",
+      "source_revision": "ff94b638f49fea215cec0e579b92159e1a852628",
+      "evidence_sha256": "752488faed54e4cbb177de852649c08959311d1e6f21fe51fe7dfc50807ac471",
+      "scope_revision": "7dda4c6b3e1fc9fd16b1fcc55b794e1f1c5d5de5",
+      "sha256": "e8690cf01b6fea6774fc51fe6ee78e527e3feb9897d957587c4e1cad336b0f3a"
+    },
+    {
+      "evidence_id": "EVID-20260830T091043Z-FA4695AF",
+      "path": ".ai-org/artifacts/WI-0025/independent-qa-report-001.md",
+      "source_revision": "ff94b638f49fea215cec0e579b92159e1a852628",
+      "evidence_sha256": "752488faed54e4cbb177de852649c08959311d1e6f21fe51fe7dfc50807ac471",
+      "scope_revision": "7dda4c6b3e1fc9fd16b1fcc55b794e1f1c5d5de5",
+      "sha256": "4cb181d6d71352b3ef9ffa1946132bba44b6040e0dae4eb23dcfebc1b80a5a81"
+    },
+    {
+      "evidence_id": "EVID-20260830T091044Z-404EAF84",
+      "path": ".ai-org/artifacts/WI-0026/independent-qa-observation-001.json",
+      "source_revision": "ff94b638f49fea215cec0e579b92159e1a852628",
+      "evidence_sha256": "a735df2f71fe55c0374d0719815fc0146e5504c72a6690063a150fe7ffeca940",
+      "scope_revision": "7dda4c6b3e1fc9fd16b1fcc55b794e1f1c5d5de5",
+      "sha256": "d6f372aad7b50b4cb3deeea98f279e1f9bd3c850533597635d25fbb7ae653905"
+    },
+    {
+      "evidence_id": "EVID-20260830T091044Z-404EAF84",
+      "path": ".ai-org/artifacts/WI-0026/independent-qa-report-001.md",
+      "source_revision": "ff94b638f49fea215cec0e579b92159e1a852628",
+      "evidence_sha256": "a735df2f71fe55c0374d0719815fc0146e5504c72a6690063a150fe7ffeca940",
+      "scope_revision": "7dda4c6b3e1fc9fd16b1fcc55b794e1f1c5d5de5",
+      "sha256": "327fb9d40da9a546d1f3f39ced97ec54d55c2744e4882cccdfb07709e48b1886"
+    },
+    {
+      "evidence_id": "EVID-20260830T091637Z-3C56BCD2",
+      "path": ".ai-org/artifacts/WI-0025/independent-qa-observation-002.json",
+      "source_revision": "ff94b638f49fea215cec0e579b92159e1a852628",
+      "evidence_sha256": "88a3af81751f45ff102737b10c35ab72556679862658bc3d9bc461bec6b1d5ee",
+      "scope_revision": "d6833dc2eb25949d067e83a53e47344c9e8c131f",
+      "sha256": "f3af5cf990eeeb2ede3b57071b2a8785a91167b6d631b59287e0d4c2c71fff51"
+    },
+    {
+      "evidence_id": "EVID-20260830T091637Z-3C56BCD2",
+      "path": ".ai-org/artifacts/WI-0025/independent-qa-report-002.md",
+      "source_revision": "ff94b638f49fea215cec0e579b92159e1a852628",
+      "evidence_sha256": "88a3af81751f45ff102737b10c35ab72556679862658bc3d9bc461bec6b1d5ee",
+      "scope_revision": "d6833dc2eb25949d067e83a53e47344c9e8c131f",
+      "sha256": "b1af614154d258015b99e53f30b5d1d4b847c8b4f597b9e84a2d734eb437d71c"
+    },
+    {
+      "evidence_id": "EVID-20260830T091637Z-A43A6C7D",
+      "path": ".ai-org/artifacts/WI-0026/independent-qa-observation-002.json",
+      "source_revision": "ff94b638f49fea215cec0e579b92159e1a852628",
+      "evidence_sha256": "a388f08e0a982ca240ccf5c2b8f114d1634b7947db0b91ac472d66f4aba64407",
+      "scope_revision": "d6833dc2eb25949d067e83a53e47344c9e8c131f",
+      "sha256": "76056eb722496fbfdaa80a886118de1c950be97735881192d91a3e5f2821c6fe"
+    },
+    {
+      "evidence_id": "EVID-20260830T091637Z-A43A6C7D",
+      "path": ".ai-org/artifacts/WI-0026/independent-qa-report-002.md",
+      "source_revision": "ff94b638f49fea215cec0e579b92159e1a852628",
+      "evidence_sha256": "a388f08e0a982ca240ccf5c2b8f114d1634b7947db0b91ac472d66f4aba64407",
+      "scope_revision": "d6833dc2eb25949d067e83a53e47344c9e8c131f",
+      "sha256": "9b28af3363af78f8ce5dfc3aa0c86a3b4aee3fb6c076a6958e273338802d0760"
+    }
+  ],
+  "sources_sha256": "dc8998491aa61ff780424c59c42432d3b4d419188333b49b9329e5ec77b0e745"
+}

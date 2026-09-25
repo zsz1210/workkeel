@@ -1,0 +1,30 @@
+{
+  "schema_version": "temple.evidence-sources/v1",
+  "sources": [
+    {
+      "evidence_id": "EVID-20260903T075942Z-C6F47254",
+      "path": ".ai-org/artifacts/WI-0131/quality-report.md",
+      "source_revision": "ff94b638f49fea215cec0e579b92159e1a852628",
+      "evidence_sha256": "23856c370114670474ac41e952cb95c5cb35cc4cf9c532ace821afde518d2333",
+      "scope_revision": "c040c0be1cc955e7c9aa260f534ea482278af0e5",
+      "sha256": "fd3daeee9644e75a9b5f2f35532371e676bc9662857defe740bb14760723fbc6"
+    },
+    {
+      "evidence_id": "EVID-20260903T075942Z-C6F47254",
+      "path": ".ai-org/artifacts/WI-0131/quality-test-observation.json",
+      "source_revision": "ff94b638f49fea215cec0e579b92159e1a852628",
+      "evidence_sha256": "23856c370114670474ac41e952cb95c5cb35cc4cf9c532ace821afde518d2333",
+      "scope_revision": "c040c0be1cc955e7c9aa260f534ea482278af0e5",
+      "sha256": "c8a708be5c14123e6157b812ea43c94919dd0ffc892f385b61e1bd1ce82934ec"
+    },
+    {
+      "evidence_id": "EVID-20260903T112719Z-CD3B8304",
+      "path": ".ai-org/artifacts/WI-0136/developer-test-observation.json",
+      "source_revision": "6f692ef75f72c0f79d74fb2a4872ffd37144e39b",
+      "evidence_sha256": "a01d3dcd88aaee4689790450864598f019c74f2c2335c3b42d272cb0f5a164be",
+      "scope_revision": "15239a247de4c069c27cb82a0783fee176482230",
+      "sha256": "f7fda66037d39a5fa8673aa3b8692778efeed4e7fa71b7cd0b2ae5e7375a57fe"
+    }
+  ],
+  "sources_sha256": "9cc891f0b38dce179ba98eb8bdf033a34a951206f80769005971299149e69033"
+}
