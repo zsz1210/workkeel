@@ -54,6 +54,8 @@ npm ci --omit=optional --ignore-scripts
 node bin/workkeel.mjs help
 ```
 
+`node /path/to/workkeel/bin/workkeel.mjs start /path/to/project` で、読み取り専用の
+セットアップ案内と、記入が必要なポリシー／タスクの下書きを取得できます。ファイル変更やモデル起動は行いません。
 [クイックスタート](docs/getting-started/workkeel.md)に沿ってプロジェクトを初期化し、
 タスクを承認・取得してレビューを記録します。
 プレビュー可能な [AGENTS／CLAUDE ブリッジ](docs/extensions/workkeel-context.md)は既存の指示を保持します。

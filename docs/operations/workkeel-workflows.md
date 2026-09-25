@@ -270,6 +270,34 @@ After completion, run the project's verification and follow the ordinary
 claim/handoff/distinct-agent review/acceptance path. Keep runtime completion and
 task acceptance separate.
 
+### Local process interruption exercise
+
+For an actual local process interruption exercise, run:
+
+```sh
+node scripts/verify-workkeel-process-recovery.mjs /path/to/new-isolated-directory
+```
+
+Run from source with existing workflow dependencies. The destination must not
+exist; its parent must exist. This creates a synthetic project and terminates only
+its own child runner with SIGKILL after a file is written but before the result is
+recorded. No model calls, networking or descendant jobs are used. Keep the directory
+to inspect `result.json`, `blocked-attempts.json`, `killed-child.json` and its journal.
+
+The exercise checks live-lock refusal, stopped-lock recovery, uncertain-dispatch
+refusal, evidence-backed reconciliation, fresh-process continuation and completed
+replay. Earlier effects stay unchanged; the native task stays in Build until normal
+review and acceptance. Timings describe one offline adapter exercise, not Codex
+service interruption, multi-machine recovery, human savings or universal exactly-once
+external effects.
+
+For real interrupted work, inspect the host and task files, establish that the
+runner and descendants stopped, then recover its lock. Preserve the same run ID,
+request, claim and pinned definitions. An unresolved dispatch needs the host's
+actual result and recorded evidence in `reconciliations`; a changed file alone
+cannot establish completion. Resume with `workflow run` using that same request.
+If the outcome cannot be established, retain uncertainty and investigate.
+
 ### Executor responsibility and coordinator validation
 
 The coordinator owns claims, handoff, review and closure. A dispatched Codex

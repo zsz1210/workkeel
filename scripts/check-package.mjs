@@ -32,6 +32,7 @@ export const REQUIRED_PACKAGE_PATHS = [
   "docs/operations/workkeel-daily-work.md",
   "docs/adr/0075-daily-task-entry-and-observation.md",
   "docs/adr/0076-explicit-evidence-artifact-sources.md",
+  "docs/adr/0077-first-use-guidance.md",
   "docs/operations/evidence-source-recovery.md",
   "docs/adr/0074-on-demand-task-monitor.md",
   "docs/validation/workkeel-development-routing.md",
@@ -143,7 +144,7 @@ const ALLOWED_TOP_LEVEL_DIRECTORIES = ["bin/", "docs/", "packs/", "project-overl
 // WI-0267 adds exactly two monitor modules, the monitor ADR and routing evaluation.
 // External development tools, raw receipts and browser evidence stay excluded.
 // WI-0269 adds exactly three product modules, one daily guide and one ADR.
-const MAX_FILE_COUNT = 500;
+const MAX_FILE_COUNT = 501; // Adds reviewed ADR-0077; recovery scripts/tests stay source-only.
 const MAX_UNPACKED_SIZE = 8 * 1024 * 1024;
 
 export function validatePackageDryRun(pack) {

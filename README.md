@@ -57,6 +57,8 @@ npm ci --omit=optional --ignore-scripts
 node bin/workkeel.mjs help
 ```
 
+Run `node /path/to/workkeel/bin/workkeel.mjs start /path/to/project` for read-only
+setup guidance and incomplete policy/brief drafts. It never writes or starts a model.
 Follow the [quick start](docs/getting-started/workkeel.md) to initialize your
 project, approve a task, claim it and record review. The previewable
 [AGENTS/CLAUDE bridge](docs/extensions/workkeel-context.md) preserves existing

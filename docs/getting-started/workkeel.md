@@ -18,6 +18,39 @@ The optional Console and legacy provider are not required for task coordination.
 
 ## Initialize an existing repository
 
+Start with read-only guidance from your reviewed source checkout:
+
+```sh
+node /path/to/workkeel/bin/workkeel.mjs start /path/to/your/project
+```
+
+The JSON response identifies the next setup stage: Git root, project policy,
+instruction bridge, or task brief. `drafts.policy` and `drafts.brief` provide the
+structure to fill in; nulls and empty required fields are unresolved decisions,
+not defaults or approval. Ask your coding agent to fill them from your agreed
+goal and boundaries and save the reviewed document. Existing identities are
+listed as choices, never selected automatically. `next_command` is an argv array
+for the reviewed Workkeel CLI, run from the selected project; it is not shell text.
+
+Follow the returned step, then run `start` again. Initialization and instruction
+application remain explicit. For an existing legacy project it points back to
+the pinned legacy workflow. Broken project pins or conflicting instruction blocks
+return an error without overwriting anything. This checks setup and intake inputs;
+use `doctor` separately for existing task health.
+
+Once the bridge is applied and the approved brief is saved:
+
+```sh
+node /path/to/workkeel/bin/workkeel.mjs start /path/to/your/project --request brief.json
+```
+
+Inspect `intake_preview` and use its exact fingerprint with the returned
+`intake apply` arguments. `ready: true` means a preview was produced. It does not
+claim work, launch a model or accept a task. Continue through the lifecycle below;
+open `workkeel monitor .` when you want to inspect recorded progress and results.
+An invalid brief returns exit code 1 with `mutation_status: no-write`; a valid
+guidance step returns exit code 0 even when there is more setup to do.
+
 Read native repository instructions and confirm identities, approval authority and
 review separation with the human. Save the reviewed policy as `task-policy.json`:
 
