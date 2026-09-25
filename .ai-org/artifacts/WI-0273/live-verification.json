@@ -1,0 +1,44 @@
+{
+  "candidate": "379b03387ad4eeb4f07d05021eec9e7fd2236088",
+  "rows": [
+    {
+      "task": "audit",
+      "model": "gpt-6-sol",
+      "effort": "medium",
+      "runtime_outcome": "done",
+      "workflow_state": "completed",
+      "elapsed_ms": 59005.184666999994,
+      "input_tokens": 103573,
+      "output_tokens": 2170,
+      "cost_usd": null,
+      "checks_passed": 16,
+      "checks_total": 16,
+      "enabled_project_skills": 1,
+      "disabled_skills": 49,
+      "named_skill_reference_read": true
+    },
+    {
+      "task": "backlog",
+      "model": "gpt-6-sol",
+      "effort": "medium",
+      "runtime_outcome": "done",
+      "workflow_state": "completed",
+      "elapsed_ms": 70558.97054200001,
+      "input_tokens": 108024,
+      "output_tokens": 2486,
+      "cost_usd": null,
+      "checks_passed": 11,
+      "checks_total": 11,
+      "enabled_project_skills": 1,
+      "disabled_skills": 49,
+      "named_skill_reference_read": true
+    }
+  ],
+  "total_tokens": 216253,
+  "model_turns": 2,
+  "repair_turns": 0,
+  "attention_results": 0,
+  "previous_pilot_attention_results": 2,
+  "comparison_limit": "Two diagnostic report reruns of frozen historical sources plus a new named local Skill; not a randomized speed, cost or model-quality benchmark. Full verification ran concurrently. Historical outcomes remain unchanged.",
+  "cost": "unknown"
+}

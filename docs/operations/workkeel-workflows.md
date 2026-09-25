@@ -302,6 +302,22 @@ failures in its existing bounded repair/attention path.
 
 ## Headroom and Skills
 
+The local Codex subscription host limits its automatic Skill catalogue to readable,
+regular files physically inside the project, excluding private workflow execution
+state and symlink paths. It preserves existing disabled Skills. Exact Skill file
+paths are disabled through process-local configuration; user configuration is never
+rewritten. A fresh catalogue check before thread start rejects discovery errors,
+ignored overrides, missing or disabled previously enabled project Skills, or newly
+enabled out-of-scope Skills. This is a point-in-time
+check, not a filesystem transaction.
+
+Named contract Skills and required instruction references remain mandatory. Missing
+required files still block work; filtering automatic suggestions does not waive
+reading obligations or grant access to external Skill bodies. Prepare approved
+project-local material before dispatch when a task needs an external Skill. The
+host neither copies it automatically nor expands sandbox permissions. Codex versions
+must support these effective catalogue controls as well as the minimum version.
+
 Headroom policy is chosen during planning: `off` or `lossless`. An enforcing
 embedded adapter can pass derived tool outputs through `context.toolView`.
 Instructions, approvals and policy references retain their originals. The local
