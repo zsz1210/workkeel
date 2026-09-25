@@ -1,0 +1,26 @@
+{
+  "captured_at": "2026-09-25T05:32:33.168350+00:00",
+  "host": "Mac-mini.local",
+  "arch": "arm64",
+  "macos": "27.0",
+  "candidate": "e8953fa339e4b3012d1dfa7b73620cc0d5f11a44",
+  "base": "f206dbff61be25b35f3a9d7b520ecff464c001a5",
+  "files": {
+    "src/workkeel-codex-runtime.mjs": {
+      "sha256": "7f3dd95d0eb8986d3b2652ac0c834bddd6301b52297e382bc03e471525908d82",
+      "mode": "0o644"
+    },
+    "src/workkeel-monitor.mjs": {
+      "sha256": "33aa3c1be79d347b7d9249424fdf320db9d9769dc354365ba78d3bec4da6e2f4",
+      "mode": "0o644"
+    },
+    "test/workkeel-daily-entry.test.mjs": {
+      "sha256": "01fe7e8d5a7b0fb75ebbf000def14a49c36b7f2fcbc8d896deecd6cc5b08219b",
+      "mode": "0o644"
+    },
+    "docs/operations/workkeel-daily-work.md": {
+      "sha256": "eb992abbee2e8236e585fcbd7a057b3236957d4823c9ba48c2e90bb1a696cdc6",
+      "mode": "0o644"
+    }
+  }
+}

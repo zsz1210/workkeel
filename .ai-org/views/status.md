@@ -5,7 +5,7 @@
 - Active Agent Identities: 5
 - Collaboration profile: `solo` (0 Human Principals, 0 active claims)
 - Parallel plan: 0 wave(s), fresh=false
-- Work items: 271 total, 0 active
+- Work items: 272 total, 0 active
 - Codex tasks: 14 registered, 14 archive-ready
 - Runtime workers: 118 registered, 0 reserved, 0 active
 - Shared resources: 0 defined, 0 active reservation(s)
@@ -319,6 +319,7 @@
 | WI-0269 | Integrate daily task intake and evidence-first observer | done | Engineering Manager | Mog | pending | team-visible | 0 | gate-evidence | code-first | 0 | 0 | 0 | — | `2dcd9552` | 0 | 10 | 0 |
 | WI-0270 | Recover historical evidence with explicit artifact source revisions | done | Engineering Manager | Mog | pending | team-visible | 0 | gate-evidence | not-applicable | 0 | 0 | 0 | — | `2673ebe3` | 0 | 7 | 0 |
 | WI-0271 | Classify and recover remaining historical evidence in bounded batches | done | Engineering Manager | Mog | pending | team-visible | 0 | gate-evidence | not-applicable | 0 | 0 | 0 | — | `bf03d754` | 0 | 7 | 0 |
+| WI-0272 | Reduce dispatch context and observer snapshot latency | done | Engineering Manager | Mog | pending | team-visible | 0 | gate-evidence | not-applicable | 0 | 0 | 0 | — | `e8953fa3` | 0 | 8 | 0 |
 
 ## Delivery attention
 
@@ -504,7 +505,7 @@
 - Profile: `repository-only`
 - Sync granularity: `team-visible`
 - Active providers: 0
-- Team-visible Work Items: 116
+- Team-visible Work Items: 117
 - Linked Work Items: 0
 - Observed external items: 0
 - Reconciliation actions: 0
@@ -578,14 +579,14 @@
 
 | Time | Event | Work item | Actor |
 |---|---|---|---|
-| 2026-09-25T03:08:30.587Z | work_item_closed | WI-0271 | agent-mog |
-| 2026-09-25T03:08:30.587Z | release_gate_completed | WI-0271 | agent-mog |
-| 2026-09-25T03:08:30.082Z | work_item_claimed | WI-0271 | human |
-| 2026-09-25T03:08:29.544Z | work_item_transitioned | WI-0271 | agent-lulu |
-| 2026-09-25T03:08:29.029Z | work_item_claim_released | WI-0271 | human |
-| 2026-09-25T03:08:28.544Z | work_item_claimed | WI-0271 | human |
-| 2026-09-25T03:08:28.002Z | work_item_transitioned | WI-0271 | agent-lulu |
-| 2026-09-25T03:08:27.496Z | work_item_claim_released | WI-0271 | human |
+| 2026-09-25T05:48:24.227Z | work_item_closed | WI-0272 | agent-mog |
+| 2026-09-25T05:48:24.227Z | release_gate_completed | WI-0272 | agent-mog |
+| 2026-09-25T05:48:23.812Z | work_item_claimed | WI-0272 | human |
+| 2026-09-25T05:48:23.003Z | work_item_transitioned | WI-0272 | agent-lulu |
+| 2026-09-25T05:48:22.583Z | work_item_claim_released | WI-0272 | human |
+| 2026-09-25T05:44:50.524Z | work_item_claimed | WI-0272 | human |
+| 2026-09-25T05:44:49.704Z | work_item_transitioned | WI-0272 | agent-lulu |
+| 2026-09-25T05:44:49.280Z | work_item_claim_released | WI-0272 | human |
 
 ## Assignments
 

@@ -185,7 +185,7 @@ export function createCodexRuntime(host, options = {}) {
       const started = await request(resume ? "thread/resume" : "thread/start", {
         ...parameters, ...(resume ? { threadId: context.conversation_id } : { allowProviderModelFallback: false }), cwd,
         approvalPolicy: "never", permissions,
-        developerInstructions: "Execute work within task, the complete approved Workkeel contract. You are the dispatched executor; the coordinator owns claims, handoff, review and closure. Project lifecycle instructions apply to that owner; do not repeat those commands. task.authorization and environment remain binding. execution_context.authorization_check is only a point-in-time UTC expiry check, not new authority; use the actual UTC clock for expiry questions, not a date-only session header. Read WORKKEEL.md and AGENTS.md when present, applicable nested instructions, named Skills and required references completely. Discovery may be disabled; match other project Skills without reading the whole catalog. Batch independent required reads when possible. Missing required material, expired authority, scope conflicts or incomplete work require attention. Apply procedures and report changed files, actual checks, Skill use and unverified outcomes. Return requested result text in output. The coordinator evaluates acceptance separately; done reports implementation, never acceptance. Do not expand permissions, change models or launch background/detached jobs.",
+        developerInstructions: "Execute work under the full task contract, including authorization and environment. The coordinator owns claims, handoff, review, closure and assigned coordinator_checks; do not perform those operations. Read applicable WORKKEEL.md, AGENTS.md, nested instructions, named/matching Skills and required references fully, even if discovery is disabled; match Skills without reading the whole catalog and batch independent reads. Use the actual UTC clock for expiry; authorization_check is a point-in-time observation, not authority. Missing material, expiry, scope conflicts or incomplete work require attention. Return the requested result, changed files, actual checks, Skill use and unverified outcomes in output. Follow result_rule. Never expand permissions, change models or start background/detached jobs.",
         config: { ...parameters.config, web_search: "disabled", allow_login_shell: false,
           permissions: { [permissions]: profile }, default_permissions: permissions }
       });
@@ -212,8 +212,8 @@ export function createCodexRuntime(host, options = {}) {
           execution_context: { started_at_utc: authorizationCheck.checked_at_utc, lifecycle_owner: "workkeel-coordinator",
             authorization_check: authorizationCheck,
             ...(assignedChecks.length ? { coordinator_checks: assignedChecks,
-              check_rule: "The embedding coordinator runs these checks after dispatch and supplies their evidence separately. Do not run or probe these assigned checks; report changed files and unverified outcomes. This assignment grants no acceptance or permission." } : {}),
-            result_rule: "done means requested work performed; attention means incomplete or blocked. Neither grants acceptance or lifecycle authority." } }) }],
+              check_rule: "Coordinator checks run after dispatch; evidence is separate. Do not run or probe them. Assignment grants no permission or acceptance." } : {}),
+            result_rule: "done: work performed; attention: incomplete/blocked. Neither grants acceptance or lifecycle authority." } }) }],
         ...(parameters.model ? { model: parameters.model } : {}),
         ...(context.selection.connection.effort ? { effort: context.selection.connection.effort } : {}) });
       if (typeof turn.turn?.id !== "string" || current.turnId && current.turnId !== turn.turn.id) throw new Error("Codex did not return the matching turn ID");
