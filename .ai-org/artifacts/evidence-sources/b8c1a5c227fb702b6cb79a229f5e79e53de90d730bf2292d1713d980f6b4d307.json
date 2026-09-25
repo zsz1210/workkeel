@@ -1,0 +1,46 @@
+{
+  "schema_version": "temple.evidence-sources/v1",
+  "sources": [
+    {
+      "evidence_id": "EVID-20260905T001504Z-9FB745D0",
+      "path": ".ai-org/artifacts/WI-0168/developer-verification.md",
+      "source_revision": "bf608931cf62f82a15a6fac07e9a5f617801860c",
+      "evidence_sha256": "9d7ab2108270cff45363901337725683727997cbf8e9e374560b2d3196920bc7",
+      "scope_revision": "a9265f7e10ecb08cec6474adfc8d35050abfca38",
+      "sha256": "61f2ab8a70717b2558ef6ef15b6278a20b06f6ffb3636d5ab87b64f55d706148"
+    },
+    {
+      "evidence_id": "EVID-20260905T001504Z-9FB745D0",
+      "path": ".ai-org/artifacts/WI-0168/test-observation.json",
+      "source_revision": "bf608931cf62f82a15a6fac07e9a5f617801860c",
+      "evidence_sha256": "9d7ab2108270cff45363901337725683727997cbf8e9e374560b2d3196920bc7",
+      "scope_revision": "a9265f7e10ecb08cec6474adfc8d35050abfca38",
+      "sha256": "9e72c11202d638b60c463a10f5f00855ab08a838becc59a08fd52f1c4f306498"
+    },
+    {
+      "evidence_id": "EVID-20260905T001816Z-6A71EB55",
+      "path": ".ai-org/artifacts/WI-0168/independent-qa-observation.json",
+      "source_revision": "bf608931cf62f82a15a6fac07e9a5f617801860c",
+      "evidence_sha256": "f42e11dddd47c82efb79202a39909996e0472cfb9ba76c2b8b0245917be083b2",
+      "scope_revision": "a9265f7e10ecb08cec6474adfc8d35050abfca38",
+      "sha256": "c3aa35b5ee4377ec8a214267e35e0ce03a567841e72c8db7fdb8069e60436566"
+    },
+    {
+      "evidence_id": "EVID-20260905T001816Z-6A71EB55",
+      "path": ".ai-org/artifacts/WI-0168/independent-qa-report.md",
+      "source_revision": "bf608931cf62f82a15a6fac07e9a5f617801860c",
+      "evidence_sha256": "f42e11dddd47c82efb79202a39909996e0472cfb9ba76c2b8b0245917be083b2",
+      "scope_revision": "a9265f7e10ecb08cec6474adfc8d35050abfca38",
+      "sha256": "ccff10b25b42cb0530cf21038725eafe1c661a0581158f3ce2421c7c897819fc"
+    },
+    {
+      "evidence_id": "EVID-20260905T002557Z-0BC00026",
+      "path": ".ai-org/artifacts/WI-0168/rollback-plan.md",
+      "source_revision": "775110db1cd250198e8586dae5127525978a1cdc",
+      "evidence_sha256": "cfe173bea7709302f88785705ed84ce58773ddb0952c879a16393165e5831da3",
+      "scope_revision": "a9265f7e10ecb08cec6474adfc8d35050abfca38",
+      "sha256": "19fa97657c132cc156f88be004440e50de28ae3c4592457755504e2084edb2a9"
+    }
+  ],
+  "sources_sha256": "b8c1a5c227fb702b6cb79a229f5e79e53de90d730bf2292d1713d980f6b4d307"
+}

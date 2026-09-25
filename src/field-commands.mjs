@@ -92,7 +92,8 @@ export async function runFieldCommand(parsed) {
     "collaboration preview-profile": ["--profile", "--actor-policy"],
     "collaboration apply-profile": ["--profile", "--actor-policy", "--fingerprint"],
     "collaboration setup-contributor": ["--config"],
-    "evidence durability": ["--work-item", "--revision"], "evidence export-bundle": ["--evidence", "--output"],
+    "evidence durability": ["--work-item", "--revision", "--source-map"],
+    "evidence record-sources": ["--source"], "evidence export-bundle": ["--evidence", "--output", "--source-map"],
     "evidence verify-bundle": ["--bundle"], "evidence import-bundle": ["--bundle"],
     "reconcile preview": ["--config"], "reconcile apply": ["--config", "--fingerprint"], "reconcile recover": ["--transaction-id"],
     "reconcile refresh-views": []
@@ -128,14 +129,18 @@ export async function runFieldCommand(parsed) {
       result = await withProjectMutationLock(target, () => setupContributor(target, config));
     }
   } else if (parsed.command === "evidence") {
-    const { inspectEvidenceDurability, exportEvidenceBundle, verifyEvidenceBundle, importEvidenceBundle } = await import("./evidence-bundle.mjs");
+    const { inspectEvidenceDurability, recordEvidenceSources, exportEvidenceBundle, verifyEvidenceBundle, importEvidenceBundle } = await import("./evidence-bundle.mjs");
     if (action === "durability") result = await inspectEvidenceDurability(target, {
       workItemIds: parsed.options["--work-item"] ? [parsed.options["--work-item"]] : undefined,
-      candidateRevision: parsed.options["--revision"] });
+      candidateRevision: parsed.options["--revision"], sourceMapPath: parsed.options["--source-map"] });
+    else if (action === "record-sources") {
+      const request = await input(parsed, "--source");
+      result = await withProjectMutationLock(target, () => recordEvidenceSources(target, request));
+    }
     else if (action === "export-bundle") {
       const value = parsed.options["--evidence"];
       const evidenceIds = value ? (Array.isArray(value) ? value : [value]) : [];
-      result = await exportEvidenceBundle(target, { evidenceIds, outputPath: parsed.options["--output"] });
+      result = await exportEvidenceBundle(target, { evidenceIds, outputPath: parsed.options["--output"], sourceMapPath: parsed.options["--source-map"] });
     } else if (action === "verify-bundle") result = await verifyEvidenceBundle(await input(parsed, "--bundle"), { target });
     else if (action === "import-bundle") {
       const bundle = await input(parsed, "--bundle");

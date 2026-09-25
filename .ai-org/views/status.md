@@ -5,7 +5,7 @@
 - Active Agent Identities: 5
 - Collaboration profile: `solo` (0 Human Principals, 0 active claims)
 - Parallel plan: 0 wave(s), fresh=false
-- Work items: 269 total, 0 active
+- Work items: 270 total, 0 active
 - Codex tasks: 14 registered, 14 archive-ready
 - Runtime workers: 118 registered, 0 reserved, 0 active
 - Shared resources: 0 defined, 0 active reservation(s)
@@ -317,6 +317,7 @@
 | WI-0267 | Complete bounded development routing and task monitor | done | Engineering Manager | Mog | parallel | team-visible | 0 | gate-evidence | code-first | 0 | 0 | 0 | — | `0c35fd44` | 0 | 8 | 0 |
 | WI-0268 | Bounded publication scanning and digest-bound binary review | done | Engineering Manager | Mog | parallel | team-visible | 0 | gate-evidence | not-applicable | 0 | 0 | 0 | — | `0c35fd44` | 0 | 7 | 0 |
 | WI-0269 | Integrate daily task intake and evidence-first observer | done | Engineering Manager | Mog | pending | team-visible | 0 | gate-evidence | code-first | 0 | 0 | 0 | — | `2dcd9552` | 0 | 10 | 0 |
+| WI-0270 | Recover historical evidence with explicit artifact source revisions | done | Engineering Manager | Mog | pending | team-visible | 0 | gate-evidence | not-applicable | 0 | 0 | 0 | — | `2673ebe3` | 0 | 7 | 0 |
 
 ## Delivery attention
 
@@ -502,7 +503,7 @@
 - Profile: `repository-only`
 - Sync granularity: `team-visible`
 - Active providers: 0
-- Team-visible Work Items: 114
+- Team-visible Work Items: 115
 - Linked Work Items: 0
 - Observed external items: 0
 - Reconciliation actions: 0
@@ -576,14 +577,14 @@
 
 | Time | Event | Work item | Actor |
 |---|---|---|---|
-| 2026-09-24T23:32:37.985Z | work_item_closed | WI-0269 | agent-mog |
-| 2026-09-24T23:32:37.985Z | release_gate_completed | WI-0269 | agent-mog |
-| 2026-09-24T23:31:58.304Z | work_item_claimed | WI-0269 | human |
-| 2026-09-24T23:31:57.882Z | work_item_transitioned | WI-0269 | agent-lulu |
-| 2026-09-24T23:31:57.488Z | work_item_claim_released | WI-0269 | human |
-| 2026-09-24T23:31:57.110Z | work_item_claimed | WI-0269 | human |
-| 2026-09-24T23:31:56.688Z | work_item_transitioned | WI-0269 | agent-lulu |
-| 2026-09-24T23:31:56.289Z | work_item_claim_released | WI-0269 | human |
+| 2026-09-25T00:56:00.135Z | work_item_closed | WI-0270 | agent-mog |
+| 2026-09-25T00:56:00.135Z | release_gate_completed | WI-0270 | agent-mog |
+| 2026-09-25T00:55:59.757Z | work_item_claimed | WI-0270 | human |
+| 2026-09-25T00:55:59.342Z | work_item_transitioned | WI-0270 | agent-lulu |
+| 2026-09-25T00:55:58.952Z | work_item_claim_released | WI-0270 | human |
+| 2026-09-25T00:55:58.579Z | work_item_claimed | WI-0270 | human |
+| 2026-09-25T00:55:58.167Z | work_item_transitioned | WI-0270 | agent-lulu |
+| 2026-09-25T00:55:57.773Z | work_item_claim_released | WI-0270 | human |
 
 ## Assignments
 

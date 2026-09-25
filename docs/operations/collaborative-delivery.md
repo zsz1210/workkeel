@@ -139,6 +139,11 @@ Record an actual missing condition with `work-item unresolved . --work-item WI-0
 
 Inspect historical evidence with `evidence durability . --work-item WI-0001 --revision <candidate> --json`. Full Doctor continues reporting baseline debt. Export selected records using `evidence export-bundle . --evidence EVID-ID --output archive.json --json`; verify/import with `evidence verify-bundle` or `evidence import-bundle` and `--bundle archive.json`. The archive requires exact historical Git bytes and verifies hashes. Import stores an immutable archive, not a rewritten pass in the evidence registry. Archive integrity and original Git commit availability are separate results; missing historical bytes cannot be repaired by hashing today's files.
 
+For reports committed after their tested candidate, use the explicit append-only
+[artifact source recovery procedure](evidence-source-recovery.md). A source map
+preserves the tested revision and original record, and enables portable v2 export
+without granting new acceptance. Existing v1 archives remain supported.
+
 For competing collaboration branches, `reconcile preview . --config request.json --json` accepts `{ "baseRevision": "<base>", "incomingRevision": "<incoming>", "paths": [".ai-org/project/evidence.json"] }`. Review the result, save that exact JSON and apply with `reconcile apply . --config preview.json --fingerprint '<fingerprint>' --json`. Stable-ID independent changes combine; divergent IDs, competing claims, deletion versus modification and lifecycle conflicts block application. Stale previews cannot write. An interrupted apply retains a journal; `reconcile recover . --transaction-id <id> --json` restores recorded originals only if intervening edits remain safe. Generated views are rebuilt, never used as conflict authority.
 
 Human-written, ordinary AI-written and governed Agent-written candidates use the same applicable checks and acceptance rules. Record real authorship and evidence; do not backdate a claim to make a prior edit look governed. Organizational acceptance does not publish, deploy, or satisfy hosting rules by itself.

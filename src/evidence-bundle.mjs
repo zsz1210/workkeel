@@ -4,6 +4,9 @@ import { spawnSync } from "node:child_process";
 import { durableAtomicCreate, formatJson, sha256 } from "./files.mjs";
 
 export const EVIDENCE_BUNDLE_SCHEMA = "temple.evidence-bundle/v1";
+export const EVIDENCE_BUNDLE_SOURCE_SCHEMA = "temple.evidence-bundle/v2";
+export const EVIDENCE_SOURCES_SCHEMA = "temple.evidence-sources/v1";
+export const EVIDENCE_SOURCES_DIRECTORY = ".ai-org/artifacts/evidence-sources";
 export const EVIDENCE_ARCHIVE_DIRECTORY = ".ai-org/artifacts/evidence-archives";
 const REGISTRY_PATH = ".ai-org/project/evidence.json";
 const REVISION = /^[a-f0-9]{40}$/;
@@ -87,16 +90,113 @@ async function selectEntries(target, options, explicit = false) {
 function failure(error, extras = {}) { return { valid: false, errors: [error.message ?? String(error)], mutation_performed: false, acceptance_granted: false,
   next_action: "Inspect the selected evidence and its original source; recover exact recorded bytes or correct the archive input before retrying.", ...extras }; }
 
+const sourceKey = (id, file) => JSON.stringify([id, file]);
+function exactKeys(value, keys) {
+  if (!value || typeof value !== "object" || Array.isArray(value)
+    || Object.keys(value).sort().join(",") !== [...keys].sort().join(",")) throw new Error("Invalid source map fields");
+}
+function exactCommit(target, revision) {
+  const result = git(target, ["cat-file", "-t", revision]);
+  return result.status === 0 && result.stdout.toString().trim() === "commit";
+}
+function validateSources(map, entries, bound, target, requireGit = false) {
+  if (map === undefined) return new Map();
+  exactKeys(map, ["schema_version", "sources", "sources_sha256"]);
+  if (map.schema_version !== EVIDENCE_SOURCES_SCHEMA || !Array.isArray(map.sources) || !map.sources.length
+    || map.sources.length > bound.maxEntries * 100 || JSON.stringify(map).length > 4 * 1024 * 1024) throw new Error("Invalid or oversized source map");
+  const { sources_sha256: checksum, ...content } = map;
+  if (!DIGEST.test(checksum ?? "") || digest(content) !== checksum) throw new Error("Source map digest mismatch");
+  const records = new Map(entries.map(entry => [entry.id, entry]));
+  const selected = new Map();
+  let total = 0;
+  for (const source of map.sources) {
+    exactKeys(source, ["evidence_id", "evidence_sha256", "scope_revision", "path", "sha256", "source_revision"]);
+    const entry = records.get(source.evidence_id);
+    const artifacts = entry?.artifacts?.filter(artifact => artifact.path === source.path);
+    if (!entry || artifacts?.length !== 1 || !safePath(source.path) || !DIGEST.test(source.sha256 ?? "")
+      || source.sha256 !== artifacts[0].sha256 || source.scope_revision !== entry.scope_revision
+      || !REVISION.test(source.scope_revision ?? "") || !REVISION.test(source.source_revision ?? "")
+      || source.source_revision === source.scope_revision || source.evidence_sha256 !== digest(entry)) throw new Error("Source map has unknown, stale or invalid evidence binding");
+    const key = sourceKey(source.evidence_id, source.path);
+    if (selected.has(key)) throw new Error("Duplicate source mapping");
+    selected.set(key, source.source_revision);
+    if (!target) continue;
+    const scopeAvailable = exactCommit(target, source.scope_revision);
+    const sourceAvailable = exactCommit(target, source.source_revision);
+    for (const [revision, available] of [[source.scope_revision, scopeAvailable], [source.source_revision, sourceAvailable]]) {
+      if (!available && git(target, ["cat-file", "-e", revision]).status === 0) throw new Error("Source map revisions must name commit objects directly");
+    }
+    if (requireGit && (!scopeAvailable || !sourceAvailable)) throw new Error("Source recording requires both exact Git commit objects");
+    // A map only supplies a report absent at the tested revision. It cannot
+    // override existing bytes, a wrong digest, a symlink or a non-file object.
+    if (scopeAvailable && git(target, ["cat-file", "-e", `${source.scope_revision}:${source.path}`]).status === 0) throw new Error("Source map cannot override an artifact present at the tested revision");
+    if (sourceAvailable) {
+      const found = historicalArtifact(target, source.source_revision, artifacts[0], bound.maxArtifactBytes);
+      if (found.status !== "verified") throw new Error(`Mapped Git source contradicts recorded artifact: ${source.path}: ${found.reason}`);
+      total += found.size_bytes;
+      if (total > bound.maxTotalBytes) throw new Error("Mapped sources exceed total size limit");
+    }
+  }
+  return selected;
+}
+
+async function readSources(target, options, entries, bound) {
+  if (options.sourceMap !== undefined && options.sourceMapPath !== undefined) throw new Error("Provide one source map input");
+  let map = options.sourceMap;
+  if (options.sourceMapPath !== undefined) {
+    const file = await safeFile(target, options.sourceMapPath);
+    if ((await fs.stat(file)).size > 4 * 1024 * 1024) throw new Error("Source map exceeds metadata limit");
+    map = JSON.parse(await fs.readFile(file, "utf8"));
+  }
+  return { map, selected: validateSources(map, entries, bound, target, true) };
+}
+
+/** Append provenance only. Callers serialize project mutations; registry/gates stay untouched. */
+export async function recordEvidenceSources(target, request, options = {}) {
+  try {
+    const bound = limits(options);
+    exactKeys(request, ["sources"]);
+    if (!Array.isArray(request.sources) || !request.sources.length || request.sources.length > bound.maxEntries * 100
+      || JSON.stringify(request).length > 4 * 1024 * 1024) throw new Error("Invalid or oversized source request");
+    const ids = [...new Set(request.sources.map(source => source?.evidence_id))];
+    const entries = await selectEntries(target, { ...options, evidenceIds: ids }, true);
+    if (entries.length > bound.maxEntries) throw new Error("Source selection exceeds entry limit");
+    const sources = request.sources.map(source => {
+      exactKeys(source, ["evidence_id", "path", "source_revision"]);
+      const entry = entries.find(entry => entry.id === source.evidence_id);
+      const artifact = entry.artifacts?.find(artifact => artifact.path === source.path);
+      if (!artifact) throw new Error("Source request names an unknown artifact");
+      return { ...source, evidence_sha256: digest(entry), scope_revision: entry.scope_revision, sha256: artifact.sha256 };
+    }).sort((a, b) => sourceKey(a.evidence_id, a.path).localeCompare(sourceKey(b.evidence_id, b.path), "en"));
+    const content = { schema_version: EVIDENCE_SOURCES_SCHEMA, sources };
+    const map = { ...content, sources_sha256: digest(content) };
+    validateSources(map, entries, bound, target, true);
+    const relativePath = `${EVIDENCE_SOURCES_DIRECTORY}/${map.sources_sha256}.json`;
+    const destination = await safeFile(target, relativePath);
+    let created = true;
+    try { await durableAtomicCreate(destination, formatJson(map)); }
+    catch (error) {
+      if (error.code !== "EEXIST") throw error;
+      if (digest(JSON.parse(await fs.readFile(destination, "utf8"))) !== digest(map)) throw new Error("Conflicting source map destination; preserve it for investigation");
+      created = false;
+    }
+    return { valid: true, errors: [], source_map: map, source_map_path: relativePath, mutation_performed: created,
+      already_present: !created, registry_mutated: false, acceptance_granted: false, source_authentication: "not-established-by-source-map" };
+  } catch (error) { return failure(error, { registry_mutated: false }); }
+}
+
 /** Read only. A historical source is never replaced with current working-tree bytes. */
 export async function inspectEvidenceDurability(target, options = {}) {
   try {
     const bound = limits(options);
     const entries = await selectEntries(target, options);
+    const { selected } = await readSources(target, options, entries, bound);
     const items = entries.map(entry => {
       const available = revisionAvailable(target, entry.scope_revision);
       const artifacts = (entry.artifacts ?? []).map(artifact => {
-        const { bytes: _bytes, ...result } = historicalArtifact(target, entry.scope_revision, artifact, bound.maxArtifactBytes);
-        return { path: artifact.path, sha256: artifact.sha256, ...result };
+        const sourceRevision = selected.get(sourceKey(entry.id, artifact.path)) ?? entry.scope_revision;
+        const { bytes: _bytes, ...result } = historicalArtifact(target, sourceRevision, artifact, bound.maxArtifactBytes);
+        return { path: artifact.path, sha256: artifact.sha256, source_revision: sourceRevision, ...result };
       });
       const missing = !available || artifacts.some(artifact => artifact.status !== "verified");
       return { evidence_id: entry.id, work_item_id: entry.work_item_id, scope_revision: entry.scope_revision,
@@ -118,21 +218,25 @@ export async function exportEvidenceBundle(target, options = {}) {
     const bound = limits(options);
     const entries = await selectEntries(target, options, true);
     if (entries.length > bound.maxEntries) throw new Error("Evidence selection exceeds entry limit");
+    const { map, selected } = await readSources(target, options, entries, bound);
     const artifacts = [];
     let total = 0;
     for (const entry of entries) {
       if (!revisionAvailable(target, entry.scope_revision)) throw new Error(`${entry.id}: original Git revision is unavailable or unrecorded; retrieve it before export`);
       if (!Array.isArray(entry.artifacts)) throw new Error(`${entry.id}: artifacts must be an array`);
       for (const artifact of entry.artifacts) {
-        const source = historicalArtifact(target, entry.scope_revision, artifact, bound.maxArtifactBytes);
+        const sourceRevision = selected.get(sourceKey(entry.id, artifact.path)) ?? entry.scope_revision;
+        const source = historicalArtifact(target, sourceRevision, artifact, bound.maxArtifactBytes);
         if (source.status !== "verified") throw new Error(`${entry.id}:${artifact.path}: ${source.reason}`);
         total += source.size_bytes;
         if (total > bound.maxTotalBytes) throw new Error("Evidence selection exceeds total size limit");
         artifacts.push({ evidence_id: entry.id, scope_revision: entry.scope_revision, path: artifact.path,
+          ...(map ? { source_revision: sourceRevision } : {}),
           sha256: artifact.sha256, size_bytes: source.size_bytes, content_base64: source.bytes.toString("base64") });
       }
     }
-    const content = { schema_version: EVIDENCE_BUNDLE_SCHEMA, entries: structuredClone(entries), artifacts };
+    const content = { schema_version: map ? EVIDENCE_BUNDLE_SOURCE_SCHEMA : EVIDENCE_BUNDLE_SCHEMA,
+      ...(map ? { source_map: structuredClone(map) } : {}), entries: structuredClone(entries), artifacts };
     const bundle = { ...content, bundle_sha256: digest(content) };
     const verified = await verifyEvidenceBundle(bundle, { ...options, target });
     if (!verified.valid) return verified;
@@ -145,7 +249,8 @@ export async function exportEvidenceBundle(target, options = {}) {
 export async function verifyEvidenceBundle(bundle, options = {}) {
   try {
     const bound = limits(options);
-    if (bundle?.schema_version !== EVIDENCE_BUNDLE_SCHEMA) throw new Error(`schema_version must be ${EVIDENCE_BUNDLE_SCHEMA}`);
+    const withSources = bundle?.schema_version === EVIDENCE_BUNDLE_SOURCE_SCHEMA;
+    if (!withSources && bundle?.schema_version !== EVIDENCE_BUNDLE_SCHEMA) throw new Error("Unsupported evidence bundle schema_version");
     if (!Array.isArray(bundle.entries) || !Array.isArray(bundle.artifacts) || !bundle.entries.length || bundle.entries.length > bound.maxEntries) throw new Error("Invalid evidence archive entries or artifacts");
     if (bundle.artifacts.length > bound.maxEntries * 100) throw new Error("Archive artifact count exceeds limit");
     // Bound metadata as well as decoded blobs. Limit checks precede decoding and hashing.
@@ -163,6 +268,8 @@ export async function verifyEvidenceBundle(bundle, options = {}) {
         expected.set(key, { ...artifact, scope_revision: entry.scope_revision });
       }
     }
+    if (withSources && bundle.source_map === undefined) throw new Error("v2 archive requires an explicit source map");
+    const mapped = withSources ? validateSources(bundle.source_map, bundle.entries, bound, options.target) : new Map();
     const sources = new Map();
     let total = 0;
     for (const artifact of bundle.artifacts) {
@@ -171,6 +278,8 @@ export async function verifyEvidenceBundle(bundle, options = {}) {
       const recorded = expected.get(key);
       if (!recorded) throw new Error("Unselected, duplicate or unexpected archive artifact");
       if (artifact.scope_revision !== recorded.scope_revision || artifact.sha256 !== recorded.sha256) throw new Error("Archive artifact conflicts with its evidence record");
+      const sourceRevision = mapped.get(key) ?? recorded.scope_revision;
+      if (withSources && artifact.source_revision !== sourceRevision) throw new Error("Archive artifact conflicts with its explicit source map");
       if (!Number.isSafeInteger(artifact.size_bytes) || artifact.size_bytes < 0 || artifact.size_bytes > bound.maxArtifactBytes) throw new Error("Archive artifact exceeds size limit or has invalid size");
       total += artifact.size_bytes;
       if (total > bound.maxTotalBytes) throw new Error("Archive exceeds total size limit");
@@ -179,9 +288,9 @@ export async function verifyEvidenceBundle(bundle, options = {}) {
       const bytes = Buffer.from(artifact.content_base64, "base64");
       if (bytes.length !== artifact.size_bytes || bytes.toString("base64") !== artifact.content_base64 || sha256(bytes) !== artifact.sha256) throw new Error("Archive artifact size or digest mismatch");
       if (recorded.size_bytes !== undefined && recorded.size_bytes !== bytes.length) throw new Error("Evidence record artifact size mismatch");
-      const sourceKey = JSON.stringify([artifact.scope_revision, artifact.path]);
-      if (sources.has(sourceKey) && sources.get(sourceKey) !== artifact.sha256) throw new Error("Divergent archive records for the same revision and path");
-      sources.set(sourceKey, artifact.sha256);
+      const locationKey = JSON.stringify([sourceRevision, artifact.path]);
+      if (sources.has(locationKey) && sources.get(locationKey) !== artifact.sha256) throw new Error("Divergent archive records for the same revision and path");
+      sources.set(locationKey, artifact.sha256);
       expected.delete(key);
     }
     if (expected.size) throw new Error("Archive is missing selected evidence artifacts");
@@ -192,13 +301,22 @@ export async function verifyEvidenceBundle(bundle, options = {}) {
     // When source Git objects exist locally, a self-consistent forged archive
     // cannot contradict those exact source bytes. An absent source stays absent.
     const available = new Set(revisions.filter(entry => entry.available).map(entry => entry.revision));
+    const artifactRevisions = [...new Set(bundle.artifacts.map(artifact => withSources ? artifact.source_revision : artifact.scope_revision))]
+      .map(revision => ({ revision, available: options.target ? exactCommit(options.target, revision) : null }));
+    const sourceAvailable = new Set(artifactRevisions.filter(entry => entry.available).map(entry => entry.revision));
     for (const artifact of bundle.artifacts) {
-      if (!available.has(artifact.scope_revision)) continue;
-      const source = historicalArtifact(options.target, artifact.scope_revision, artifact, bound.maxArtifactBytes);
+      const revision = withSources ? artifact.source_revision : artifact.scope_revision;
+      if (!(withSources ? sourceAvailable : available).has(revision)) continue;
+      const source = historicalArtifact(options.target, revision, artifact, bound.maxArtifactBytes);
       if (source.status !== "verified") throw new Error(`Archive contradicts available original Git source: ${artifact.path}: ${source.reason}`);
     }
     return { valid: true, errors: [], mutation_performed: false, acceptance_granted: false, archive_integrity: "verified",
       source_authentication: "not-established-by-archive", original_revision_availability: revisions,
+      artifact_source_revision_availability: artifactRevisions,
+      source_relationships: withSources ? bundle.source_map.sources.map(source => ({ evidence_id: source.evidence_id, path: source.path,
+        scope_revision: source.scope_revision, source_revision: source.source_revision,
+        tested_revision_is_ancestor: options.target && available.has(source.scope_revision) && sourceAvailable.has(source.source_revision)
+          ? git(options.target, ["merge-base", "--is-ancestor", source.scope_revision, source.source_revision]).status === 0 : null })) : [],
       bundle_sha256: checksum, evidence_count: bundle.entries.length, artifact_count: bundle.artifacts.length, size_bytes: total,
       invalidated_evidence_ids: bundle.entries.filter(entry => entry.invalidated_at).map(entry => entry.id),
       next_action: revisions.some(entry => entry.available === false) ? "Archive bytes are retrievable; fetch the original Git commits separately before claiming revision availability." : "Apply the current candidate's independent acceptance requirements separately." };
