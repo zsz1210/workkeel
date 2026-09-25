@@ -84,6 +84,7 @@ node bin/workkeel.mjs help
 | 日常タスクの入口 | 明示的なプレビュー／適用 | 承認済み brief から既存のタスク契約を生成。引き継ぎとレビューは引き続き必要。[ガイド](docs/operations/workkeel-daily-work.md) |
 | タスクモニター | 無効／任意 | `workkeel monitor /path/to/project`：繁体字中国語の一覧、阻害要因、コピー可能な引き継ぎ要約、タスク段階の時間と使用量／品質。読み取り専用、モデル呼び出し・常駐サービスなし。[ガイド](docs/operations/workkeel-measurements.md#full-task-time-and-handoff) |
 | タスク計測 | Workflow 実行中に記録 | モデル・token・所要時間の読み取り専用クエリ。ネイティブの作業セッションは未収集。[ガイド](docs/operations/workkeel-measurements.md) |
+| 工程別の資料と引き継ぎ | オプション | 今回の資料を組み立て、再検証後に確認済みの中断作業を継続。[ガイド](docs/operations/workkeel-material-and-continuation.md) |
 
 Luna／Sol／Astra の共通既定値はありません。ネイティブエージェントは自身の設定を維持し、
 自動フローには承認済み方針が必要です。macOS app や必須の常駐サービスはインストールしません。

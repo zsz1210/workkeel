@@ -88,6 +88,7 @@ steps, not existing desktop conversations or your global model default.
 | Daily task entry | Explicit preview / apply | One approved brief produces the native contract; handoff and review remain required. [Guide](docs/operations/workkeel-daily-work.md) |
 | Task monitor | Off / optional | `workkeel monitor /path/to/project`: Traditional Chinese overview, blockers, copyable handoff, lifecycle phases and usage/quality; read-only, no model calls or background service. [Guide](docs/operations/workkeel-measurements.md#full-task-time-and-handoff) |
 | Task measurements | Recorded during workflow execution | Read-only model/token/time queries; native host sessions remain unobserved. [Guide](docs/operations/workkeel-measurements.md) |
+| Stage material and continuation | Opt-in | Prepare scoped materials and continue confirmed interruptions with fresh guards. [Guide](docs/operations/workkeel-material-and-continuation.md) |
 
 There is no universal Luna/Sol/Astra default: a native agent keeps its own setting;
 an automatic workflow must supply its approved policy. No macOS app or mandatory

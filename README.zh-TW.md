@@ -79,6 +79,7 @@ node bin/workkeel.mjs help
 | 日常任務入口 | 明確預覽／套用 | 一份已批准的 brief 產生原生任務契約；仍須交接與審閱。[指南](docs/operations/workkeel-daily-work.md) |
 | 任務監看 | 關閉／選配 | `workkeel monitor /path/to/project`：繁體中文總覽、阻擋原因、可複製的接手摘要、任務階段時間與用量／品質；唯讀、不呼叫模型、不安裝背景服務。[指南](docs/operations/workkeel-measurements.md#full-task-time-and-handoff) |
 | 任務量測 | Workflow 執行時記錄 | 唯讀查詢模型、token 與耗時；原生代理工作階段尚未收集。[指南](docs/operations/workkeel-measurements.md) |
+| 分階段材料與接手 | 選配 | 組裝本輪材料，重新核對後接續已確認中斷的工作。[指南](docs/operations/workkeel-material-and-continuation.md) |
 
 沒有通用的 Luna／Sol／Astra 預設：原生 Agent 保留自己的設定，自動流程則必須提供核准的政策。
 不會安裝 macOS app，也不要求常駐背景程式。詳見[執行設定與限制](docs/operations/workkeel-workflows.md)。
