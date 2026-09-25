@@ -25,10 +25,11 @@ export async function readStartGuide(target, { requestRef = null } = {}) {
     catch { return step("git", "Choose a Git repository root, or explicitly initialize this directory with git init.", null, ["Git repository root"]); }
     if (await fs.realpath(gitRoot) !== root) return step("git-root", "Run start at the Git repository root.", ["start", gitRoot]);
     if (!await existsEntry(root, "workkeel.lock")) {
-      if (await existsEntry(root, "temple.lock")) return step("legacy", "Continue with this project's pinned Temple launcher. Migration requires a separate reviewed preview.", null);
-      for (const ref of ["WORKKEEL.md", "workkeelw.mjs", ".ai-org"]) {
+      for (const ref of ["WORKKEEL.md", "workkeelw.mjs"]) {
         if (await existsEntry(root, ref)) throw Error(`Existing ${ref} requires inspection before initialization; no files were overwritten`);
       }
+      if (await existsEntry(root, "temple.lock")) return step("legacy", "Continue with this project's pinned Temple launcher. Migration requires a separate reviewed preview.", null);
+      if (await existsEntry(root, ".ai-org")) throw Error("Existing .ai-org requires inspection before initialization; no files were overwritten");
       guide.drafts.policy = { schema_version: "workkeel.task-policy/v1", principals: [], agents: [], approvers: [], review_separation: null };
       return step("policy", "Agree on identities and review separation, complete drafts.policy and save it as task-policy.json. Then initialize explicitly.", ["init", ".", "--policy", "task-policy.json"], ["Principal IDs", "Agent-to-Principal mappings", "Approvers", "Review separation"]);
     }

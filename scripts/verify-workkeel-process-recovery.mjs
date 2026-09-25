@@ -44,10 +44,14 @@ export async function verifyProcessRecovery(target) {
   const started=performance.now(),phases=[];
   const phase=async(name,fn)=>{const at=performance.now();const value=await fn();phases.push({name,elapsed_ms:performance.now()-at});return value;};
   const write=(ref,value)=>fs.writeFile(path.join(root,ref),typeof value==='string'?value:JSON.stringify(value,null,2)+'\n',{flag:'wx'});
-  const git=(...args)=>execFileSync('git',['-C',root,...args],{encoding:'utf8',stdio:['ignore','pipe','pipe']}).trim();
+  // Fixture commits must not inherit hooks, templates, signing or GIT_* redirects.
+  const gitEnv={...Object.fromEntries(Object.entries(process.env).filter(([key])=>!key.startsWith('GIT_'))),
+    GIT_CONFIG_NOSYSTEM:'1',GIT_CONFIG_GLOBAL:'/dev/null',GIT_TERMINAL_PROMPT:'0'};
+  const git=(...args)=>execFileSync('git',['-c','core.hooksPath=/dev/null','-c','commit.gpgsign=false','-C',root,...args],
+    {env:gitEnv,timeout:10000,maxBuffer:1024*1024,encoding:'utf8',stdio:['ignore','pipe','pipe']}).trim();
   let child,closed;
   try {
-    git('init','-q');git('config','user.name','Offline recovery fixture');git('config','user.email','fixture@example.invalid');
+    git('init','-q','--template=');git('config','user.name','Offline recovery fixture');git('config','user.email','fixture@example.invalid');
     await initializeTaskProject(root,{schema_version:'workkeel.task-policy/v1',principals:['owner'],agents:[actor],approvers:['owner'],review_separation:'distinct-agent'});
     await fs.mkdir(root+'/docs');await fs.mkdir(root+'/src');
     await write('docs/approval.md','Approved synthetic local process recovery; no network, models, external effects or descendant processes. Preserve uncertain intent until actual filesystem effects are checked.');

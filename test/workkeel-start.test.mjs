@@ -49,6 +49,13 @@ test('legacy projects keep their launcher and malformed native pins never fall b
   const before=await files(root),legacy=await readStartGuide(root);
   assert.equal(legacy.stage,'legacy'); assert.equal(legacy.next_command,null);
   assert.deepEqual(await files(root),before);
+  for(const ref of ['WORKKEEL.md','workkeelw.mjs']){
+    await fs.writeFile(root+'/'+ref,'Interrupted native initialization');
+    const conflict=await readStartGuide(root);
+    assert.equal(conflict.valid,false);assert.equal(conflict.next_command,null);
+    assert.equal(await fs.readFile(root+'/'+ref,'utf8'),'Interrupted native initialization');
+    await fs.unlink(root+'/'+ref);
+  }
   await fs.writeFile(root+'/workkeel.lock','broken');
   assert.equal((await readStartGuide(root)).valid,false);
 });
