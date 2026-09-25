@@ -104,3 +104,32 @@ test('retained legacy history does not consume native monitor limit',async t=>{
  await fs.writeFile(path.join(root,'workkeel.lock'),JSON.stringify(lock));
  const snapshot=await readMonitorSnapshot(root);assert.equal(snapshot.legacy_tasks_excluded,201);assert.equal(snapshot.tasks.length,3);
 });
+
+test('observer keeps summaries ordered and revalidates changed evidence across concurrent reads',async t=>{
+ const root=await fixture(t),input=await brief(root);
+ for(let i=0;i<10;i++){
+  const value={...input,id:'WK-batch-'+i},preview=await previewTaskIntake(root,value);
+  await applyTaskIntake(root,value,preview.fingerprint);
+ }
+ const baseline=await readMonitorSnapshot(root);
+ const expected=baseline.tasks.map(task=>task.id);
+ const read=fs.readFile.bind(fs);
+ // Deliberately invert task read completion order without changing any bytes.
+ t.mock.method(fs,'readFile',async(file,...args)=>{
+  if(String(file).endsWith('/WK-batch-0.json'))await new Promise(resolve=>setTimeout(resolve,30));
+  return read(file,...args);
+ });
+ assert.deepEqual((await readMonitorSnapshot(root)).tasks.map(task=>task.id),expected);
+ const file=path.join(root,'.ai-org/work-items/WK-batch-0.json'),original=await read(file);
+ await fs.writeFile(file,'broken');
+ const broken=await readMonitorSnapshot(root);
+ assert.equal(broken.complete,false);
+ assert.equal(broken.tasks.find(task=>task.id==='WK-batch-0').read_status,'unavailable');
+ assert.equal(broken.tasks.filter(task=>task.read_status==='available').length,12);
+ await fs.writeFile(file,original);
+ assert.equal((await readMonitorSnapshot(root)).tasks.find(task=>task.id==='WK-batch-0').read_status,'available');
+ await fs.appendFile(path.join(root,'docs/approval.md'),' Changed authority.');
+ const changed=await readMonitorSnapshot(root);
+ assert.equal(changed.complete,false);
+ assert.ok(changed.tasks.every(task=>task.quality.evidence_current===false&&task.needs_attention));
+});

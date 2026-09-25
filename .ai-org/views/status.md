@@ -3,9 +3,9 @@
 - Project ID: `temple`
 - Organization system version: `0.1.0-alpha.33`
 - Active Agent Identities: 5
-- Collaboration profile: `solo` (0 Human Principals, 0 active claims)
+- Collaboration profile: `solo` (0 Human Principals, 1 active claims)
 - Parallel plan: 0 wave(s), fresh=false
-- Work items: 271 total, 0 active
+- Work items: 272 total, 1 active
 - Codex tasks: 14 registered, 14 archive-ready
 - Runtime workers: 118 registered, 0 reserved, 0 active
 - Shared resources: 0 defined, 0 active reservation(s)
@@ -27,7 +27,7 @@
 - Human Principals: 0
 - Agent sponsorships: 0
 - Active Position memberships: 10
-- Active Work Item claims: 0
+- Active Work Item claims: 1
 - Active Human Authority Grants: 0
 - Governance recovery: `not_configured`
 - Real Collaborative validation: `not_run` (.ai-org/templates/collaborative-large-scale-test-plan.md)
@@ -319,9 +319,12 @@
 | WI-0269 | Integrate daily task intake and evidence-first observer | done | Engineering Manager | Mog | pending | team-visible | 0 | gate-evidence | code-first | 0 | 0 | 0 | — | `2dcd9552` | 0 | 10 | 0 |
 | WI-0270 | Recover historical evidence with explicit artifact source revisions | done | Engineering Manager | Mog | pending | team-visible | 0 | gate-evidence | not-applicable | 0 | 0 | 0 | — | `2673ebe3` | 0 | 7 | 0 |
 | WI-0271 | Classify and recover remaining historical evidence in bounded batches | done | Engineering Manager | Mog | pending | team-visible | 0 | gate-evidence | not-applicable | 0 | 0 | 0 | — | `bf03d754` | 0 | 7 | 0 |
+| WI-0272 | Reduce dispatch context and observer snapshot latency | build | Developer | Rikku | pending | team-visible | 0 | gate-evidence | not-applicable | 0 | 0 | 0 | claim-20260925052411-c2f4c150 | `—` | 0 | 1 | 0 |
 
 ## Delivery attention
 
+- WI-0272: awaiting-owner — The recorded owner can continue the scoped work; no attached active worker is recorded.
+  - owner: No attached active runtime is recorded for this claim.
 
 ## Codex task registry
 
@@ -504,7 +507,7 @@
 - Profile: `repository-only`
 - Sync granularity: `team-visible`
 - Active providers: 0
-- Team-visible Work Items: 116
+- Team-visible Work Items: 117
 - Linked Work Items: 0
 - Observed external items: 0
 - Reconciliation actions: 0
@@ -578,14 +581,14 @@
 
 | Time | Event | Work item | Actor |
 |---|---|---|---|
-| 2026-09-25T03:08:30.587Z | work_item_closed | WI-0271 | agent-mog |
-| 2026-09-25T03:08:30.587Z | release_gate_completed | WI-0271 | agent-mog |
-| 2026-09-25T03:08:30.082Z | work_item_claimed | WI-0271 | human |
-| 2026-09-25T03:08:29.544Z | work_item_transitioned | WI-0271 | agent-lulu |
-| 2026-09-25T03:08:29.029Z | work_item_claim_released | WI-0271 | human |
-| 2026-09-25T03:08:28.544Z | work_item_claimed | WI-0271 | human |
-| 2026-09-25T03:08:28.002Z | work_item_transitioned | WI-0271 | agent-lulu |
-| 2026-09-25T03:08:27.496Z | work_item_claim_released | WI-0271 | human |
+| 2026-09-25T05:24:11.703Z | work_item_claimed | WI-0272 | human |
+| 2026-09-25T05:24:10.959Z | work_item_transitioned | WI-0272 | agent-tidus |
+| 2026-09-25T05:24:10.576Z | work_item_claim_released | WI-0272 | human |
+| 2026-09-25T05:24:10.206Z | work_item_claimed | WI-0272 | human |
+| 2026-09-25T05:24:09.459Z | work_item_transitioned | WI-0272 | agent-yuna |
+| 2026-09-25T05:24:09.077Z | work_item_claim_released | WI-0272 | human |
+| 2026-09-25T05:24:08.709Z | work_item_claimed | WI-0272 | human |
+| 2026-09-25T05:24:07.963Z | work_item_transitioned | WI-0272 | agent-mog |
 
 ## Assignments
 

@@ -111,8 +111,10 @@ separate; a grouping label alone does not prove a matched comparison.
 - **Usage & quality:** per-task sample kind, token coverage, adapter/lifecycle time,
   rework and review. It does not rank models or infer subscription costs.
 
-The viewer validates the execution inventory once per snapshot. Attributable
-errors mark the affected task incomplete; unknown run attribution marks every
+The viewer validates the execution inventory once per snapshot. Task
+summaries are read with bounded concurrency and fresh validation; results
+are not cached across snapshots. This changes no authority or acceptance rules.
+Attributable errors mark the affected task incomplete; unknown run attribution marks every
 task's measurement total incomplete. Healthy task state can remain visible.
 Fatal snapshot errors hide old content until recovery. Up to 200 visible native
 tasks, 4,096 inventory entries and 4 MiB response are supported. Retained legacy

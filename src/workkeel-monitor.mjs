@@ -15,14 +15,19 @@ export async function readMonitorSnapshot(target) {
   if(visible.length>200) throw Error("Monitor task limit exceeded; use per-task metrics");
   const index=await readProjectMeasurements(target);
   const tasks=[];
-  for(const item of visible) {
+  // Bound filesystem fan-out; each summary still performs fresh validation.
+  // Preserve input order before the final attention sort, including errors.
+  for(let offset=0;offset<visible.length;offset+=8) {
+    const batch=await Promise.all(visible.slice(offset,offset+8).map(async item=>{
     try {
       if(item.mode==='unavailable')throw Error('Task unavailable');
       const summary=await readTaskSummary(target,item.id),measurements=projectTaskMeasurements({id:item.id,state:summary.task_state},index);
       const runAttention=measurements.measurement_errors.length>0||measurements.runs.some(r=>['interrupted','rejected','cancelled','blocked','paused','awaiting-approval'].includes(r.runner_state)||r.progress.unresolved_attempts>0);
-      tasks.push({...summary,...measurements,id:item.id,title:item.title.slice(0,180),read_status:'available',needs_attention:summary.needs_attention||runAttention,
-        next_action:runAttention?'Inspect the interrupted or incomplete workflow record before continuing. '+summary.next_action:summary.next_action});
-    }catch{tasks.push({id:item.id,title:item.id,task_state:'unknown',display_state:'unavailable',read_status:'unavailable',needs_attention:true,next_action:'Inspect this task record; its state could not be verified.'});}
+      return {...summary,...measurements,id:item.id,title:item.title.slice(0,180),read_status:'available',needs_attention:summary.needs_attention||runAttention,
+        next_action:runAttention?'Inspect the interrupted or incomplete workflow record before continuing. '+summary.next_action:summary.next_action};
+    }catch{return {id:item.id,title:item.id,task_state:'unknown',display_state:'unavailable',read_status:'unavailable',needs_attention:true,next_action:'Inspect this task record; its state could not be verified.'};}
+    }));
+    tasks.push(...batch);
   }
   tasks.sort((a,b)=>Number(b.needs_attention)-Number(a.needs_attention)||String(b.updated_at??'').localeCompare(String(a.updated_at??''))||a.id.localeCompare(b.id));
   return {schema_version:"workkeel.monitor/v2",authority:"observation-only",mutation_status:"no-write",
