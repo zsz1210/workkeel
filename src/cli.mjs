@@ -190,9 +190,10 @@ Usage:
   temple measurement capabilities [target] [--json]
   temple measurement inspect|run [target] --config measurement-plan.json [--json]
   temple measurement report [target] --config measurement-plan.json --work-item WI-ID --revision full-sha [--output filename.md] [--json]
-  temple evidence durability [target] [--work-item WI-ID] [--revision ref] [--json]
+  temple evidence durability [target] [--work-item WI-ID] [--revision ref] [--source-map repository-path] [--json]
+  temple evidence record-sources [target] --source request.json [--json]
   temple evidence view [target] --source repository-path [--format text|json|node-test] [--compact] [--expected-sha256 digest] [--json]
-  temple evidence export-bundle [target] --evidence EVID-ID [--output path] [--json]
+  temple evidence export-bundle [target] --evidence EVID-ID [--source-map repository-path] [--output path] [--json]
   temple evidence verify-bundle|import-bundle [target] --bundle path [--json]
   temple reconcile preview|apply [target] --config request-or-preview.json [--fingerprint digest] [--json]
   temple reconcile recover [target] --transaction-id id [--json]
@@ -379,7 +380,7 @@ const BOOLEAN_FLAGS = new Set([
 ]);
 const VALUE_FLAGS = new Set([
   "--kind", "--python", "--snapshot",
-  "--actor-policy", "--fingerprint", "--bundle", "--incoming-revision", "--transaction-id", "--condition-kind",
+  "--actor-policy", "--fingerprint", "--bundle", "--source-map", "--incoming-revision", "--transaction-id", "--condition-kind",
   "--supersedes",
   "--available-whole-sources",
   "--judgment", "--test-evidence", "--lean-closeout",
@@ -3311,7 +3312,7 @@ async function dispatch(argv) {
   }
   if (["measurement", "reconcile"].includes(parsed.command) ||
       parsed.command === "collaboration" && ["readiness", "preview-profile", "apply-profile", "setup-contributor"].includes(parsed.action) ||
-      parsed.command === "evidence" && ["durability", "export-bundle", "verify-bundle", "import-bundle"].includes(parsed.action)) {
+      parsed.command === "evidence" && ["durability", "record-sources", "export-bundle", "verify-bundle", "import-bundle"].includes(parsed.action)) {
     const { runFieldCommand } = await import("./field-commands.mjs");
     return runFieldCommand(parsed);
   }

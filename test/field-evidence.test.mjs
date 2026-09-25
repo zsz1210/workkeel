@@ -5,7 +5,7 @@ import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 import { sha256 } from "../src/files.mjs";
-import { exportEvidenceBundle, importEvidenceBundle, inspectEvidenceDurability, retrieveEvidenceBundleArtifact, verifyEvidenceBundle } from "../src/evidence-bundle.mjs";
+import { exportEvidenceBundle, importEvidenceBundle, inspectEvidenceDurability, recordEvidenceSources, retrieveEvidenceBundleArtifact, verifyEvidenceBundle } from "../src/evidence-bundle.mjs";
 
 async function fixture(t) {
   const root = await fs.mkdtemp(path.join(os.tmpdir(), "temple-field-evidence-"));
@@ -138,4 +138,157 @@ test("V11: self-consistent archive integrity does not authenticate its claimed s
   const againstGit = await verifyEvidenceBundle(forged, { target: root });
   assert.equal(againstGit.valid, false);
   assert.match(againstGit.errors[0], /contradicts available original Git source/);
+});
+
+async function delayedFixture(t) {
+  const value = await fixture(t);
+  const bytes = Buffer.from("A report written after the tested candidate\n");
+  const entry = { ...value.entry, invalidated_at: "2026-09-25T00:00:00Z", outcome: "failed",
+    invalidation_reason: "Keep the failed attempt", artifacts: [{ path: "report.md", sha256: sha256(bytes), size_bytes: bytes.length }] };
+  // Squash delivery can leave tested and artifact commits on different branches.
+  value.git("checkout", "--orphan", "squashed-delivery");
+  value.git("rm", "--cached", "-rf", ".");
+  await fs.writeFile(path.join(value.root, "report.md"), bytes);
+  value.git("add", "report.md"); value.git("commit", "-qm", "report delivery");
+  const request = { sources: [{ evidence_id: entry.id, path: "report.md", source_revision: value.git("rev-parse", "HEAD") }] };
+  await fs.mkdir(path.join(value.root, ".ai-org/project"), { recursive: true });
+  const registryText = JSON.stringify({ entries: [entry] }, null, 2);
+  await fs.writeFile(path.join(value.root, ".ai-org/project/evidence.json"), registryText);
+  return { ...value, entry, bytes, request, registryText, registry: { entries: [entry] } };
+}
+
+const canonicalValue = value => Array.isArray(value) ? value.map(canonicalValue) : value && typeof value === "object"
+  ? Object.fromEntries(Object.keys(value).sort().map(key => [key, canonicalValue(value[key])])) : value;
+function resign(value, key) {
+  const { [key]: _old, ...body } = value;
+  value[key] = sha256(JSON.stringify(canonicalValue(body)));
+  return value;
+}
+
+test("explicit sources recover delayed squash reports without rewriting registry, tested scope or failed state", async t => {
+  const { root, entry, bytes, request, registryText } = await delayedFixture(t);
+  assert.equal((await exportEvidenceBundle(root, { evidenceIds: [entry.id] })).valid, false);
+  const recorded = await recordEvidenceSources(root, request);
+  assert.equal(recorded.valid, true, recorded.errors.join(";"));
+  assert.equal(recorded.registry_mutated, false);
+  assert.equal(recorded.acceptance_granted, false);
+  assert.equal((await recordEvidenceSources(root, request)).already_present, true);
+  const options = { evidenceIds: [entry.id], sourceMapPath: recorded.source_map_path };
+  assert.equal((await inspectEvidenceDurability(root, options)).valid, true);
+  const exported = await exportEvidenceBundle(root, options);
+  assert.equal(exported.valid, true, exported.errors.join(";"));
+  assert.equal(exported.bundle.schema_version, "temple.evidence-bundle/v2");
+  assert.deepEqual(exported.bundle.entries, [entry]);
+  assert.equal(exported.source_relationships[0].tested_revision_is_ancestor, false);
+  assert.equal(exported.bundle.artifacts[0].scope_revision, entry.scope_revision);
+  assert.equal(exported.bundle.artifacts[0].source_revision, request.sources[0].source_revision);
+  assert.deepEqual(exported.invalidated_evidence_ids, [entry.id]);
+  assert.equal(await fs.readFile(path.join(root, ".ai-org/project/evidence.json"), "utf8"), registryText);
+  const fresh = await fs.mkdtemp(path.join(os.tmpdir(), "temple-mapped-portable-"));
+  t.after(() => fs.rm(fresh, { recursive: true, force: true }));
+  const imported = await importEvidenceBundle(fresh, exported.bundle);
+  assert.equal(imported.valid, true);
+  assert.equal(imported.original_revision_availability[0].available, false);
+  assert.equal(imported.artifact_source_revision_availability[0].available, false);
+  assert.equal(imported.source_relationships[0].tested_revision_is_ancestor, null);
+  assert.equal(imported.source_authentication, "not-established-by-archive");
+  assert.equal(imported.acceptance_granted, false);
+  assert.deepEqual((await retrieveEvidenceBundleArtifact(exported.bundle, { target: fresh, evidenceId: entry.id, path: "report.md" })).bytes, bytes);
+});
+
+test("source recording rejects absent/wrong/symlink sources, unknown paths, overrides and limits before writing", async t => {
+  const { root, entry, request, git, registry } = await delayedFixture(t);
+  const wrong = structuredClone(request); wrong.sources[0].source_revision = "f".repeat(40);
+  const invalid = [wrong, { sources: [...request.sources, ...request.sources] }, { sources: [] },
+    { sources: [{ ...request.sources[0], path: "../report.md" }] },
+    { sources: [{ ...request.sources[0], source_revision: "HEAD" }] },
+    { sources: [{ ...request.sources[0], accepted: true }] }];
+  for (const input of invalid) assert.equal((await recordEvidenceSources(root, input)).valid, false);
+  assert.equal((await recordEvidenceSources(root, request, { maxArtifactBytes: 2 })).valid, false);
+  assert.equal((await recordEvidenceSources(root, request, { maxTotalBytes: 2 })).valid, false);
+  await fs.writeFile(path.join(root, "report.md"), "incorrect bytes");
+  git("add", "report.md"); git("commit", "-qm", "wrong report");
+  assert.equal((await recordEvidenceSources(root, { sources: [{ ...request.sources[0], source_revision: git("rev-parse", "HEAD") }] })).valid, false);
+  await fs.rm(path.join(root, "report.md")); await fs.symlink("binary.dat", path.join(root, "report.md"));
+  git("add", "report.md"); git("commit", "-qm", "symlink report");
+  assert.equal((await recordEvidenceSources(root, { sources: [{ ...request.sources[0], source_revision: git("rev-parse", "HEAD") }] })).valid, false);
+  const override = { ...entry, scope_revision: request.sources[0].source_revision };
+  assert.match((await recordEvidenceSources(root, { sources: [{ ...request.sources[0], source_revision: git("rev-parse", "HEAD") }] },
+    { registry: { entries: [override] } })).errors[0], /cannot override/);
+  await assert.rejects(fs.access(path.join(root, ".ai-org/artifacts/evidence-sources")), { code: "ENOENT" });
+  await fs.mkdir(path.join(root, ".ai-org/artifacts"), { recursive: true });
+  await fs.symlink(os.tmpdir(), path.join(root, ".ai-org/artifacts/evidence-sources"));
+  assert.equal((await recordEvidenceSources(root, request, { registry })).valid, false);
+});
+
+test("source map bindings fail closed on stale metadata, divergent artifacts and rehashed structural tampering", async t => {
+  const { root, request, entry } = await delayedFixture(t);
+  const { source_map: map } = await recordEvidenceSources(root, request);
+  const { bundle } = await exportEvidenceBundle(root, { evidenceIds: [entry.id], sourceMap: map });
+  const mutations = [
+    b => { b.entries[0].invalidated_at = null; },
+    b => { b.artifacts[0].source_revision = b.artifacts[0].scope_revision; },
+    b => { delete b.source_map; },
+    b => { b.source_map.sources.push(structuredClone(b.source_map.sources[0])); },
+    b => { b.source_map.sources[0].path = "../escaped"; },
+    b => { b.source_map.sources[0].evidence_id = "unknown"; },
+    b => { b.source_map.sources[0].scope_revision = "a".repeat(40); },
+    b => { b.source_map.acceptance_granted = true; }
+  ];
+  for (const mutate of mutations) {
+    const bad = structuredClone(bundle); mutate(bad);
+    if (bad.source_map) resign(bad.source_map, "sources_sha256");
+    resign(bad, "bundle_sha256");
+    assert.equal((await verifyEvidenceBundle(bad, { target: root })).valid, false);
+    assert.equal((await importEvidenceBundle(root, bad)).mutation_performed, false);
+  }
+  const stale = { ...entry, outcome: "passed" };
+  assert.equal((await exportEvidenceBundle(root, { registry: { entries: [stale] }, evidenceIds: [entry.id], sourceMap: map })).valid, false);
+});
+
+test("v1 cannot opt into mapped retrieval through ignored extra fields", async t => {
+  const { root, registry, entry } = await fixture(t);
+  const { bundle } = await exportEvidenceBundle(root, { registry, evidenceIds: [entry.id] });
+  for (const artifact of bundle.artifacts) artifact.source_revision = "f".repeat(40);
+  resign(bundle, "bundle_sha256");
+  const result = await verifyEvidenceBundle(bundle, { target: root });
+  assert.equal(result.valid, true);
+  assert.deepEqual(result.artifact_source_revision_availability, [{ revision: entry.scope_revision, available: true }]);
+});
+
+test("source map files and manifest destinations reject symlinks, collisions and annotated tag objects", async t => {
+  const { root, request, entry, git } = await delayedFixture(t);
+  const result = await recordEvidenceSources(root, request);
+  const exported = await exportEvidenceBundle(root, { evidenceIds: [entry.id], sourceMap: result.source_map });
+  git("tag", "-a", "source-tag", "-m", "tag");
+  const tag = git("rev-parse", "source-tag");
+  const bad = structuredClone(exported.bundle);
+  bad.source_map.sources[0].source_revision = tag; bad.artifacts[0].source_revision = tag;
+  resign(bad.source_map, "sources_sha256"); resign(bad, "bundle_sha256");
+  assert.equal((await verifyEvidenceBundle(bad, { target: root })).valid, false);
+  await fs.symlink(result.source_map_path, path.join(root, "map-link.json"));
+  assert.equal((await exportEvidenceBundle(root, { evidenceIds: [entry.id], sourceMapPath: "map-link.json" })).valid, false);
+  await fs.writeFile(path.join(root, result.source_map_path), "{}");
+  const replay = await recordEvidenceSources(root, request);
+  assert.equal(replay.valid, false);
+  assert.match(replay.errors[0], /Conflicting/);
+});
+
+test("CLI records, replays, inspects and exports explicit source maps", async t => {
+  const { root, request, entry, registryText } = await delayedFixture(t);
+  await fs.writeFile(path.join(root, "request.json"), JSON.stringify(request));
+  const run = (...args) => {
+    const result = spawnSync(process.execPath, [new URL("../bin/temple.mjs", import.meta.url).pathname, "evidence", args[0], root, ...args.slice(1), "--json"], { encoding: "utf8", cwd: root });
+    assert.equal(result.status, 0, result.stderr + result.stdout);
+    return JSON.parse(result.stdout);
+  };
+  const recorded = run("record-sources", "--source", "request.json");
+  assert.equal(recorded.valid, true);
+  assert.equal(run("record-sources", "--source", "request.json").already_present, true);
+  assert.equal(run("durability", "--work-item", "WI-0001", "--source-map", recorded.source_map_path).valid, true);
+  const exported = run("export-bundle", "--evidence", entry.id, "--source-map", recorded.source_map_path, "--output", "export.json");
+  assert.equal(exported.bundle.schema_version, "temple.evidence-bundle/v2");
+  assert.equal(run("verify-bundle", "--bundle", "export.json").valid, true);
+  assert.equal(run("import-bundle", "--bundle", "export.json").registry_mutated, false);
+  assert.equal(await fs.readFile(path.join(root, ".ai-org/project/evidence.json"), "utf8"), registryText);
 });
