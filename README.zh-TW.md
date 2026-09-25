@@ -52,6 +52,8 @@ npm ci --omit=optional --ignore-scripts
 node bin/workkeel.mjs help
 ```
 
+執行 `node /path/to/workkeel/bin/workkeel.mjs start /path/to/project`，取得唯讀設定引導
+與待填的政策／任務草稿。這個指令不寫入檔案，也不啟動模型。
 依照[快速開始](docs/getting-started/workkeel.md)初始化專案、核准任務、認領工作及記錄審查。
 可預覽的 [AGENTS／CLAUDE 指令橋接](docs/extensions/workkeel-context.md)會保留既有指令；
 基本任務協調可搭配目前使用的 Coding Agent。新任務專案使用 `WORKKEEL.md` 與

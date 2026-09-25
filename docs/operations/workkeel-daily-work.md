@@ -14,6 +14,10 @@ is required. Commands below use `workkeel` as shorthand for
 
 ## One brief instead of repeating the full contract
 
+Run `workkeel start .` to identify the next setup step and obtain an incomplete
+brief draft. After saving the approved brief, `workkeel start . --request brief.json`
+connects to the same intake preview below. Neither command writes or dispatches.
+
 Ask the coding agent to turn your approved goal, acceptance and boundaries into
 `brief.json`. The identities must already exist in the project's policy. Save
 the actual approval and data policy in `docs/work-order.md`; the example is not

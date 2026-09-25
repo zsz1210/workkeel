@@ -4,10 +4,11 @@ import { readTaskContractInput } from "./task-contract.mjs";
 import { initializeTaskProject, previewLegacyMigration, existsEntry } from "./workkeel-project.mjs";
 import { createNativeTask, mutateNativeTask, readNativeTask, listTaskItems, diagnoseTaskProject } from "./workkeel-tasks.mjs";
 import { planTaskRuntime } from "./workkeel-runtime.mjs";
-import { previewInstructions, applyInstructions } from "./workkeel-onboarding.mjs";
+import { previewInstructions, applyInstructions, readStartGuide } from "./workkeel-onboarding.mjs";
 
 const HELP = `Workkeel — repository-native task coordination for coding agents
 
+workkeel start [target] [--request brief.json]
 workkeel init [target] --policy repository-policy.json
 workkeel migration preview [target] --policy repository-policy.json
 workkeel migration apply [target] --policy repository-policy.json --fingerprint sha256
@@ -61,7 +62,10 @@ export async function workkeelMain(args) {
   }
   const { command, action, target, options } = parse(args);
   let output;
-  if (command === "init" || command === "migration") {
+  if (command === "start") {
+    allow(options, ["--request"]);
+    output = await readStartGuide(target, { requestRef: options["--request"] ?? null });
+  } else if (command === "init" || command === "migration") {
     allow(options, command === "init" || action === "preview" ? ["--policy"] : ["--policy", "--fingerprint"]);
     const policy = (await readTaskContractInput(target, required(options, "--policy"))).document;
     if (command === "init") output = await initializeTaskProject(target, policy);
