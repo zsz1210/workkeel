@@ -1,5 +1,7 @@
 # Architecture Decision Records
 
+- [ADR-0079: Stage material and confirmed continuation](0079-stage-material-and-confirmed-continuation.md)
+
 - [ADR-0074: On-demand task monitor](0074-on-demand-task-monitor.md)
 
 - [ADR-0073: Opt-in workflow execution and model routing](0073-opt-in-workflow-execution.md)

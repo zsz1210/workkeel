@@ -9,6 +9,11 @@ const execFileAsync = promisify(execFile);
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
 export const REQUIRED_PACKAGE_PATHS = [
+  "src/workkeel-material.mjs",
+  "src/workkeel-continuation.mjs",
+  "src/workkeel-continuation-state.mjs",
+  "docs/operations/workkeel-material-and-continuation.md",
+  "docs/adr/0079-stage-material-and-confirmed-continuation.md",
   "bin/workkeel.mjs",
   "src/workkeel-cli.mjs",
   "src/workkeel-project.mjs",
@@ -147,7 +152,7 @@ const ALLOWED_TOP_LEVEL_DIRECTORIES = ["bin/", "docs/", "packs/", "project-overl
 // WI-0267 adds exactly two monitor modules, the monitor ADR and routing evaluation.
 // External development tools, raw receipts and browser evidence stay excluded.
 // WI-0269 adds exactly three product modules, one daily guide and one ADR.
-const MAX_FILE_COUNT = 504; // Adds reviewed observer client, lifecycle projection and ADR-0078.
+const MAX_FILE_COUNT = 509; // WI-0276 adds exactly the five required paths above; roots and byte limit unchanged.
 const MAX_UNPACKED_SIZE = 8 * 1024 * 1024;
 
 export function validatePackageDryRun(pack) {

@@ -7,9 +7,12 @@ import test from "node:test";
 import { initializeTaskProject } from "../src/workkeel-project.mjs";
 import { createNativeTask, mutateNativeTask, readNativeTask } from "../src/workkeel-tasks.mjs";
 import { executeWorkflow, readWorkflowRun, cancelWorkflow, planWorkflow } from "../src/workkeel-workflows.mjs";
-import { selectNodeModel, validateExecutionPolicy } from "../src/workkeel-execution-policy.mjs";
+import { selectNodeModel, validateExecutionPolicy, executionDigest } from "../src/workkeel-execution-policy.mjs";
 import { validateWorkflow } from "../src/workkeel-workflow-schema.mjs";
 import { readTaskMeasurements, readWorkflowMeasurements } from "../src/workkeel-measurements.mjs";
+import { prepareTaskMaterial, summarizeChecks } from "../src/workkeel-material.mjs";
+import { planContinuation, continueWorkflow } from "../src/workkeel-continuation.mjs";
+import { captureContinuationState } from "../src/workkeel-continuation-state.mjs";
 
 const actor = { agent_id: "builder", principal_id: "owner" };
 const approval = token => ({ token, approved: true, actor, evidence_ref: "docs/approval.md" });
@@ -25,7 +28,7 @@ const adapter = fn => ({ id: "fixture", assertCompatible: async ({ policy }) => 
   if (policy.limits.max_cost_usd !== null) throw new Error("Fixture has no hard budget enforcement");
 }, start: fn ?? (async () => result()), resume: fn ?? (async () => result()), cancel: async () => {} });
 const git = (root, ...args) => execFileSync("git", ["-C", root, ...args], { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }).trim();
-async function fixture(t, definition = graph(), executionPolicy = policy()) {
+async function fixture(t, definition = graph(), executionPolicy = policy(), expiresAt = null) {
   const root = await fs.mkdtemp(path.join(os.tmpdir(), "workkeel-workflow-"));
   t.after(() => fs.rm(root, { force: true, recursive: true }));
   git(root, "init", "-q"); git(root, "config", "user.name", "Fixture"); git(root, "config", "user.email", "fixture@example.invalid");
@@ -40,7 +43,7 @@ async function fixture(t, definition = graph(), executionPolicy = policy()) {
     verification: { risk_tier: "standard", separation: "distinct-agent", implementer: null, reviewer: null, candidate_revision: null },
     environment: { cwd: ".", read_paths: ["src"], write_paths: ["src"], tools: ["node"], resources: [], network: { mode: "none", hosts: [] }, external_actions: [],
       data: { classification: "internal", model_access: "none", policy_refs: ["docs/approval.md", "docs/workflow.json", "docs/execution.json"] } },
-    authorization: { approved_by: "owner", approval_ref: "docs/approval.md", operations: ["read", "write", "execute"], expires_at: null }, skills: [],
+    authorization: { approved_by: "owner", approval_ref: "docs/approval.md", operations: ["read", "write", "execute"], expires_at: expiresAt }, skills: [],
     execution: { runtime: { kind: "adapter", adapter_id: "fixture", required_features: [] }, model_connection: { kind: "policy", policy_ref: "docs/execution.json" } }, legacy: null };
   git(root, "add", "."); git(root, "commit", "-qm", "fixture");
   await createNativeTask(root, contract, { operation_id: "create", expected_version: 0, actor });
@@ -57,6 +60,138 @@ test("real registered execution persists and completed replay does not dispatch 
   assert.equal(await fs.readFile(path.join(root, "src/result.txt"), "utf8"), "executed");
   assert.equal((await executeWorkflow(root, request, { adapters: [host] })).status.state, "completed");
   assert.equal(calls, 1); assert.equal((await readNativeTask(root, request.task_id)).state, "build");
+});
+
+test("prepared material validates all six work types, selection and source freshness before dispatch", async t => {
+  const { root, request } = await fixture(t);
+  for (const file of ['code','findings','diff','checkpoint','counterevidence']) await fs.writeFile(path.join(root, `src/${file}.txt`), file);
+  git(root, 'add', 'src'); git(root, 'commit', '-qm', 'Pin material source');
+  const contract = (await readNativeTask(root, request.task_id)).contract;
+  const make = kind => ({kind, instruction:'Perform the named bounded work.', write_paths:['review','rereview','reconsideration'].includes(kind)?[]:['src'],
+    materials:[{path:'src/code.txt',use:'required',purpose:'source'}, ...['findings','diff','checkpoint','counterevidence'].map(p=>({path:`src/${p}.txt`,use:'required',purpose:p})),
+      {path:'src/absent.txt',use:'reference',purpose:'unused template',kinds:['repair']}],
+    ...(['review','rereview','reconsideration'].includes(kind)?{candidate_revision:git(root,'rev-parse','HEAD')}:{}),
+    ...(kind==='reconsideration'?{prior_revision:git(root,'rev-parse','HEAD')}:{})});
+  for (const kind of ['initial','repair','takeover','review','rereview','reconsideration']) {
+    const req=make(kind); if(kind==='repair')req.materials.pop();
+    const packet=await prepareTaskMaterial(root,contract,req);
+    assert.equal(packet.authority,'navigation-only'); assert.ok(packet.sources.some(x=>x.path==='docs/approval.md'));
+    assert.ok(!packet.sources.some(x=>x.path==='src/absent.txt'));
+  }
+  await assert.rejects(prepareTaskMaterial(root,contract,{...make('reconsideration'),prior_revision:'0'.repeat(40)}),/unchanged/);
+  await assert.rejects(prepareTaskMaterial(root,contract,{...make('repair'),materials:[]}),/findings/);
+  await assert.rejects(prepareTaskMaterial(root,contract,{...make('initial'),write_paths:['.']}),/scope/);
+  for (const kind of ['initial','repair','takeover']) {
+    await assert.rejects(prepareTaskMaterial(root,contract,{...make(kind),candidate_revision:'0'.repeat(40),materials:[]}),/only valid for review/);
+  }
+  for (const kind of ['initial','repair','takeover','review','rereview']) {
+    await assert.rejects(prepareTaskMaterial(root,contract,{...make(kind),prior_revision:git(root,'rev-parse','HEAD')}),/only valid for reconsideration/);
+  }
+  const packet=await prepareTaskMaterial(root,contract,make('initial'));
+  await fs.writeFile(path.join(root,'docs/material.json'),JSON.stringify(packet));
+  let calls=0;
+  await executeWorkflow(root,{...request,material_refs:{work:'docs/material.json'}},{adapters:[adapter(async ({input})=>{
+    calls++; assert.equal(input.instruction,packet.prompt); return result();
+  })]});
+  assert.equal(calls,1);
+  await fs.writeFile(path.join(root,'src/code.txt'),'changed');
+  await assert.rejects(executeWorkflow(root,{...request,material_refs:{work:'docs/material.json'}},{adapters:[adapter(()=>{calls++;return result();})]}),/material changed/i);
+  await assert.rejects(prepareTaskMaterial(root,contract,make('review')),/pinned candidate/);
+  assert.equal(calls,1);
+});
+
+test("exact failure summaries retain all test IDs without upgrading acceptance", () => {
+  const summary=summarizeChecks([{id:'a',status:'fail',message:'not implemented'},{id:'b',status:'fail',message:'not implemented'},
+    {id:'c',status:'fail',message:'different'},{id:'d',status:'pass',message:'not implemented'}]);
+  assert.equal(summary.groups.length,3);assert.deepEqual(summary.groups[0].test_ids,['a','b']);assert.equal(summary.total,4);
+  assert.equal(summary.acceptance,'not-established');
+});
+
+const continuationRequest = request => ({source_run_id:request.run_id,run_id:'successor',actor,workflow_ref:request.workflow_ref,policy_ref:request.policy_ref});
+test("confirmed interrupted continuation creates one fresh claim and never replays the old operation", async t => {
+  const {root,request}=await fixture(t);let calls=0;
+  const host=adapter(async()=>{calls++;await fs.writeFile(path.join(root,'src/result.txt'),calls===1?'partial':'complete');
+    return result(calls===1?{status:'interrupted',outcome:'attention'}:{});});
+  await assert.rejects(executeWorkflow(root,request,{adapters:[host]}),/did not complete/);
+  const old=await fs.readFile(path.join(root,'.ai-org/execution/run-one/operations/work-0-0.json'),'utf8');
+  const req=continuationRequest(request),plan=await planContinuation(root,req);
+  const next={...req,expected_plan:plan.sha256};
+  const run=await continueWorkflow(root,next,{adapters:[host]});
+  assert.equal(run.status.state,'completed');assert.notEqual(run.request.claim_id,request.claim_id);
+  assert.equal((await continueWorkflow(root,next,{adapters:[host]})).continuation_replayed,true);
+  assert.equal((await planContinuation(root,req)).next_action,'inspect-existing-successor');
+  assert.equal(calls,2);assert.equal(await fs.readFile(path.join(root,'.ai-org/execution/run-one/operations/work-0-0.json'),'utf8'),old);
+});
+
+test("continuation rejects drift, old receipt replacement, unknown results, cancellation and active locks", async t => {
+  for(const mode of ['drift','unknown','cancel','lock','receipt','expired']) await t.test(mode,async t=>{
+    const {root,request}=await fixture(t);let calls=0;
+    const host=adapter(async()=>{calls++;if(mode==='unknown')throw Error('lost');return result({status:'interrupted',outcome:'attention'});});
+    await assert.rejects(executeWorkflow(root,request,{adapters:[host]}),mode==='unknown'?/lost/:/did not complete/);
+    const ref=path.join(root,'.ai-org/execution/run-one');
+    if(mode==='drift'){
+      const old=await fs.readFile(ref+'/settlement.json','utf8');
+      await fs.writeFile(path.join(root,'src/drift.txt'),'changed');
+      await assert.rejects(executeWorkflow(root,request,{adapters:[host]}));
+      assert.equal(await fs.readFile(ref+'/settlement.json','utf8'),old);
+    }
+    if(mode==='cancel')await cancelWorkflow(root,request.run_id,actor);
+    if(mode==='lock')await fs.writeFile(ref+'/runner.lock','active');
+    if(mode==='receipt')await fs.unlink(ref+'/settlement.json');
+    if(mode==='expired')await fs.writeFile(path.join(root,'docs/approval.md'),'changed authority');
+    await assert.rejects(planContinuation(root,continuationRequest(request)));
+    assert.equal(calls,1);
+  });
+});
+
+test("continuation snapshot bounds flat trees and rejects symlinks", async t=>{
+  const {root}=await fixture(t);
+  await fs.symlink('missing',path.join(root,'src/link'));
+  await assert.rejects(captureContinuationState(root,['src']),/Unsafe/);
+  await fs.unlink(path.join(root,'src/link'));
+  await Promise.all(Array.from({length:512},(_,i)=>fs.writeFile(path.join(root,`src/${i}`),'x')));
+  await assert.rejects(captureContinuationState(root,['src']),/512/);
+});
+
+test("continuation finishes exact initialization interrupted between release and claim", async t=>{
+  const {root,request}=await fixture(t),host=adapter(async()=>result({status:'interrupted',outcome:'attention'}));
+  await assert.rejects(executeWorkflow(root,request,{adapters:[host]}));
+  const req=continuationRequest(request),plan=await planContinuation(root,req),next={...req,expected_plan:plan.sha256};
+  const item=await readNativeTask(root,request.task_id),suffix=executionDigest({source:request.run_id,successor:req.run_id}).slice(0,24);
+  const intent={request:next,plan_sha256:plan.sha256,task_id:item.id,
+    release:{operation_id:`continue-release-${suffix}`,expected_version:item.version,actor,claim_id:item.claim.id,summary:`Confirmed interruption ${request.run_id}; successor ${req.run_id}`},
+    claim:{operation_id:`continue-claim-${suffix}`,expected_version:item.version+1,actor,base_revision:plan.partial.revision}};
+  await fs.writeFile(path.join(root,'.ai-org/execution/run-one/successor.json'),JSON.stringify({value:intent,sha256:executionDigest(intent)}));
+  await mutateNativeTask(root,item.id,'release',intent.release);
+  assert.equal((await readNativeTask(root,item.id)).claim,null);
+  let calls=0;const finished=await continueWorkflow(root,next,{adapters:[adapter(async()=>{calls++;return result();})]});
+  assert.equal(finished.status.state,'completed');assert.equal(calls,1);
+});
+
+test("expired approval and stale planned source block continuation without provider calls",async t=>{
+  const now=Date.now(),{root,request}=await fixture(t,graph(),policy(),new Date(now+60000).toISOString());
+  await assert.rejects(executeWorkflow(root,request,{adapters:[adapter(async()=>result({status:'interrupted',outcome:'attention'}))]}));
+  const req=continuationRequest(request),plan=await planContinuation(root,req);let calls=0;
+  await fs.writeFile(path.join(root,'src/new.txt'),'drift after preview');
+  await assert.rejects(continueWorkflow(root,{...req,expected_plan:plan.sha256},{adapters:[adapter(async()=>{calls++;return result();})]}),/changed/);
+  await fs.unlink(path.join(root,'src/new.txt'));
+  t.mock.timers.enable({apis:['Date'],now:now+120000});
+  await assert.rejects(planContinuation(root,req),/expired/i);assert.equal(calls,0);
+});
+
+test("prepared CLI is read-only and its packet runs through the ordinary workflow entry",async t=>{
+  const {root,request}=await fixture(t);
+  const material={kind:'initial',instruction:'Write the fixture output',write_paths:['src'],materials:[]};
+  await fs.writeFile(path.join(root,'docs/request.json'),JSON.stringify(material));
+  const before=git(root,'status','--porcelain');
+  const cli=new URL('../bin/workkeel.mjs',import.meta.url).pathname;
+  const packet=JSON.parse(execFileSync(process.execPath,[cli,'context','prepare',root,'--id',request.task_id,'--request','docs/request.json'],{encoding:'utf8'}));
+  assert.equal(git(root,'status','--porcelain'),before);assert.equal(packet.request.kind,'initial');
+  await fs.writeFile(path.join(root,'docs/material.json'),JSON.stringify(packet));
+  const planRequest={...request,material_refs:{work:'docs/material.json'}};delete planRequest.run_id;
+  await fs.writeFile(path.join(root,'docs/plan.json'),JSON.stringify(planRequest));
+  const plan=JSON.parse(execFileSync(process.execPath,[cli,'workflow','plan',root,'--request','docs/plan.json'],{encoding:'utf8'}));
+  assert.equal(plan.provider_contact,false);assert.ok(plan.pins.materials.work);
 });
 
 test("task measurements persist live snapshots and failure timing without granting replay", async t => {

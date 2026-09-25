@@ -9,6 +9,8 @@ import { assertTaskExecutionContext } from "./workkeel-tasks.mjs";
 import { executionDigest, exactKeys, EXECUTION_ID, validateExecutionPolicy, selectNodeModel, validateRuntimeAdapter, validateRuntimeResult } from "./workkeel-execution-policy.mjs";
 import { validateWorkflow } from "./workkeel-workflow-schema.mjs";
 import { validateExecutionObservation } from "./workkeel-measurements.mjs";
+import { validateTaskMaterial } from "./workkeel-material.mjs";
+import { captureContinuationState } from "./workkeel-continuation-state.mjs";
 
 const runRef = id => {
   if (!EXECUTION_ID.test(id ?? "") || ["constructor", "prototype"].includes(id)) throw new Error("Invalid workflow run ID");
@@ -27,16 +29,17 @@ async function boundedCompatibility(adapter, context, signal) {
     })]);
   } finally { clearTimeout(timer); signal?.removeEventListener("abort", abort); }
 }
-async function readRecord(target, relative) {
+export async function readExecutionRecord(target, relative) {
   const { document } = await readTaskContractInput(target, relative);
   exactKeys(document, ["value", "sha256"]);
   if (executionDigest(document.value) !== document.sha256) throw new Error("Execution record integrity failure");
   return document.value;
 }
+const readRecord = readExecutionRecord;
 async function optionalRecord(target, relative) {
   try { return await readRecord(target, relative); } catch (error) { if (error.code === "ENOENT") return null; throw error; }
 }
-async function lockRun(directory) {
+export async function lockWorkflowDirectory(directory) {
   const file = path.join(directory, "runner.lock");
   const token = crypto.randomUUID();
   // A crashed runner leaves a diagnostic lock. Explicit recovery checks its
@@ -51,6 +54,7 @@ async function lockRun(directory) {
     await fs.unlink(file);
   };
 }
+const lockRun = lockWorkflowDirectory;
 async function loadInputs(target, request) {
   const task = await assertTaskExecutionContext(target, request.task_id, request);
   const { contract } = task;
@@ -103,12 +107,23 @@ async function loadInputs(target, request) {
       fallbacks[node.id] = fallback.models.slice(1).map(id => ({ ...select(id), reason: "approved-fallback-before-dispatch" }));
     }
   }
-  return { task, nodeContracts, definition: workflow.document, policy: policy.document, selections, fallbacks,
-    pins: { contract: task.contract_sha256, workflow: workflow.digest, policy: policy.digest } };
+  const materials = {}, materialPins = {};
+  if (request.material_refs !== undefined) {
+    if (!request.material_refs || typeof request.material_refs !== "object" || Array.isArray(request.material_refs)) throw Error("Invalid prepared material references");
+    for (const [id, ref] of Object.entries(request.material_refs)) {
+      if (!workflow.document.nodes.some(n => n.id === id && n.kind === "runtime")) throw Error("Material names an absent runtime node");
+      const packet = await readTaskContractInput(target, ref);
+      await validateTaskMaterial(target, contract, packet.document, nodeContracts[id].environment.write_paths);
+      materials[id] = packet.document; materialPins[id] = packet.digest;
+    }
+  }
+  return { task, nodeContracts, materials, definition: workflow.document, policy: policy.document, selections, fallbacks,
+    pins: { contract: task.contract_sha256, workflow: workflow.digest, policy: policy.digest,
+      ...(request.material_refs !== undefined ? { materials: materialPins } : {}) } };
 }
 
 export async function planWorkflow(target, request, adapters = []) {
-  exactKeys(request, ["task_id", "actor", "claim_id", "workflow_ref", "policy_ref"]);
+  exactKeys(request, ["task_id", "actor", "claim_id", "workflow_ref", "policy_ref"], ["material_refs"]);
   const input = await loadInputs(target, request);
   const adapter = adapters.find(a => a.id === input.task.contract.execution.runtime.adapter_id);
   if (adapter) {
@@ -153,7 +168,7 @@ export async function recoverWorkflowLock(target, id, actor) {
 
 /** Run a real LangGraph with trusted runtime adapters. No dynamic executable imports from JSON. */
 export async function executeWorkflow(targetInput, request, { adapters = [], signal: externalSignal, approvals = {}, reconciliations = [] } = {}) {
-  exactKeys(request, ["run_id", "task_id", "actor", "claim_id", "workflow_ref", "policy_ref"]);
+  exactKeys(request, ["run_id", "task_id", "actor", "claim_id", "workflow_ref", "policy_ref"], ["material_refs"]);
   const target = await fs.realpath(targetInput);
   const ref = runRef(request.run_id);
   const input = await loadInputs(target, request);
@@ -188,7 +203,7 @@ export async function executeWorkflow(targetInput, request, { adapters = [], sig
   if (externalSignal?.aborted) cancel();
   const active = new Map();
   const pendingNodes = new Set();
-  let run, writeStatus, validationOnly = false, runtimeUnsettled = false;
+  let run, writeStatus, validationOnly = false, runtimeUnsettled = false, operations = new Map();
   try {
     run = await optionalRecord(target, `${ref}/run.json`);
     if (!run && existingBinding) throw new Error("Bound workflow run record is missing; inspect interrupted initialization before recovery");
@@ -204,7 +219,7 @@ export async function executeWorkflow(targetInput, request, { adapters = [], sig
     if (["completed", "cancelled", "rejected"].includes(previousStatus?.state)) return readWorkflowRun(target, request.run_id);
     writeStatus = value => durableAtomicWrite(path.join(directory, "status.json"), envelope({ ...value, at: new Date().toISOString() }));
     const operationsDir = await safeDirectory(target, `${ref}/operations`, { create: true });
-    const operations = new Map();
+    operations = new Map();
     const inventoryPath = path.join(directory, "operations-index.json");
     if (fresh) await durableAtomicCreate(inventoryPath, envelope([]));
     const inventory = await readRecord(target, `${ref}/operations-index.json`);
@@ -276,7 +291,9 @@ export async function executeWorkflow(targetInput, request, { adapters = [], sig
       for (let attempt = 0; attempt < input.policy.limits.attempts_per_node; attempt++) {
         await stopIfNeeded();
         const id = `${node.id}-${visit}-${attempt}`;
-        const nodeInput = { instruction: node.input, previous_results: state.results };
+        const instruction = input.materials[node.id] ? await validateTaskMaterial(target, input.task.contract,
+          input.materials[node.id], input.nodeContracts[node.id].environment.write_paths) : node.input;
+        const nodeInput = { instruction, previous_results: state.results };
         if (Buffer.byteLength(formatJson(nodeInput)) > 262144) throw new Error("Node input exceeds 256 KiB; reduce retained outputs");
         const inputHash = executionDigest(nodeInput);
         const previous = operations.get(id);
@@ -435,7 +452,19 @@ export async function executeWorkflow(targetInput, request, { adapters = [], sig
       if (settled) saver?.close();
       throw new Error("Runtime cancellation did not quiesce; runner lock retained");
     }
-    saver?.close(); await unlock();
+    saver?.close();
+    try {
+      if (run && [...operations.values()].some(op => op.result?.status === "interrupted") &&
+          [...operations.values()].every(op => op.result)) {
+        // A trusted adapter returns only after its child cleanup; unsettled errors
+        // retain the runner lock above. Old runs without this receipt stay unknown.
+        let partial = null;
+        try { partial = await captureContinuationState(target, input.task.contract.environment.write_paths); } catch { /* unsupported snapshot: no continuation */ }
+        await durableAtomicCreate(path.join(directory, "settlement.json"), envelope({ run_id: request.run_id,
+          pins: input.pins, operations: [...operations.values()].map(op => ({ id: op.id, sha256: executionDigest(op) })),
+          cleanup: "confirmed", partial, at: new Date().toISOString() })).catch(error => { if (error.code !== "EEXIST") throw error; });
+      }
+    } finally { await unlock(); }
   }
 }
 function sumUsage(operations, key) {

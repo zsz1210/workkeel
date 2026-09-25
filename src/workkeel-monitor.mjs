@@ -7,6 +7,7 @@ import {listTaskItems} from "./workkeel-tasks.mjs";
 import {readProjectMeasurements,projectTaskMeasurements} from "./workkeel-measurements.mjs";
 import {readTaskSummary} from './workkeel-task-summary.mjs';
 import {renderMonitorPage} from './workkeel-monitor-page.mjs';
+import {readContinuationView} from './workkeel-continuation.mjs';
 
 /** Read-only projection; no runtime adapter, model connection or lifecycle writer. */
 export async function readMonitorSnapshot(target) {
@@ -24,9 +25,12 @@ export async function readMonitorSnapshot(target) {
       if(item.mode==='unavailable')throw Error('Task unavailable');
       const summary=await readTaskSummary(target,item.id,{now}),measurements=projectTaskMeasurements({id:item.id,state:summary.task_state},index);
       const runAttention=measurements.measurement_errors.length>0||measurements.runs.some(r=>['interrupted','rejected','cancelled','blocked','paused','awaiting-approval'].includes(r.runner_state)||r.progress.unresolved_attempts>0);
+      const latest=[...measurements.runs].sort((a,b)=>String(b.created_at).localeCompare(String(a.created_at)))[0];
+      const continuation=latest&&['interrupted','cancelled','blocked'].includes(latest.runner_state)?await readContinuationView(target,latest.run_id):null;
       return {...summary,...measurements,id:item.id,title:item.title.slice(0,180),read_status:'available',needs_attention:summary.needs_attention||runAttention,
+        continuation,
         attention_reasons:[...summary.attention_reasons,...(runAttention?['workflow-incomplete']:[])],
-        next_action:runAttention?'Inspect the interrupted or incomplete workflow record before continuing. '+summary.next_action:summary.next_action};
+        next_action:continuation?continuation.next_action:runAttention?'Inspect the interrupted or incomplete workflow record before continuing. '+summary.next_action:summary.next_action};
     }catch{return {id:item.id,title:item.id,task_state:'unknown',display_state:'unavailable',read_status:'unavailable',needs_attention:true,next_action:'Inspect this task record; its state could not be verified.'};}
     }));
     tasks.push(...batch);

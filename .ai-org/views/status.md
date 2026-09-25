@@ -5,7 +5,7 @@
 - Active Agent Identities: 5
 - Collaboration profile: `solo` (0 Human Principals, 0 active claims)
 - Parallel plan: 0 wave(s), fresh=false
-- Work items: 275 total, 0 active
+- Work items: 277 total, 0 active
 - Codex tasks: 14 registered, 14 archive-ready
 - Runtime workers: 118 registered, 0 reserved, 0 active
 - Shared resources: 0 defined, 0 active reservation(s)
@@ -323,6 +323,8 @@
 | WI-0273 | Align Codex Skill routing with task sandbox | done | Engineering Manager | Mog | pending | team-visible | 0 | gate-evidence | not-applicable | 0 | 0 | 0 | — | `c6dd4ff4` | 0 | 11 | 0 |
 | WI-0274 | Guide first use and qualify process interruption recovery | done | Engineering Manager | Mog | pending | team-visible | 0 | gate-evidence | not-applicable | 0 | 0 | 0 | — | `a31ce049` | 0 | 7 | 0 |
 | WI-0275 | Observer usability and full task benefit measurements | done | Engineering Manager | Mog | pending | team-visible | 0 | gate-evidence | code-first | 0 | 0 | 0 | — | `51b762e7` | 0 | 10 | 0 |
+| WI-0276 | Stage-aware task material and verified continuation | done | Engineering Manager | Mog | pending | team-visible | 0 | gate-evidence | not-applicable | 0 | 0 | 0 | — | `f7489253` | 0 | 10 | 0 |
+| WI-0277 | Show verified continuation guidance in existing observer | done | Engineering Manager | Mog | pending | team-visible | 0 | gate-evidence | code-first | 0 | 0 | 0 | — | `26e42ce7` | 0 | 5 | 0 |
 
 ## Delivery attention
 
@@ -508,7 +510,7 @@
 - Profile: `repository-only`
 - Sync granularity: `team-visible`
 - Active providers: 0
-- Team-visible Work Items: 120
+- Team-visible Work Items: 122
 - Linked Work Items: 0
 - Observed external items: 0
 - Reconciliation actions: 0
@@ -582,14 +584,14 @@
 
 | Time | Event | Work item | Actor |
 |---|---|---|---|
-| 2026-09-25T11:56:32.399Z | work_item_closed | WI-0275 | agent-mog |
-| 2026-09-25T11:56:32.399Z | release_gate_completed | WI-0275 | agent-mog |
-| 2026-09-25T11:56:12.504Z | work_item_claimed | WI-0275 | human |
-| 2026-09-25T11:56:12.019Z | work_item_transitioned | WI-0275 | agent-lulu |
-| 2026-09-25T11:56:11.564Z | work_item_claim_released | WI-0275 | human |
-| 2026-09-25T11:56:11.125Z | work_item_claimed | WI-0275 | human |
-| 2026-09-25T11:56:10.643Z | work_item_transitioned | WI-0275 | agent-lulu |
-| 2026-09-25T11:56:10.184Z | work_item_claim_released | WI-0275 | human |
+| 2026-09-25T15:31:44.116Z | work_item_closed | WI-0277 | agent-lulu |
+| 2026-09-25T15:31:44.116Z | work_item_transitioned | WI-0277 | agent-lulu |
+| 2026-09-25T15:31:43.732Z | work_item_claim_released | WI-0277 | human |
+| 2026-09-25T15:31:43.368Z | work_item_claimed | WI-0277 | human |
+| 2026-09-25T15:31:24.713Z | work_item_closed | WI-0276 | agent-mog |
+| 2026-09-25T15:31:24.713Z | release_gate_completed | WI-0276 | agent-mog |
+| 2026-09-25T15:31:24.329Z | work_item_claimed | WI-0276 | human |
+| 2026-09-25T15:31:23.918Z | work_item_transitioned | WI-0276 | agent-lulu |
 
 ## Assignments
 

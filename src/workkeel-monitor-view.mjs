@@ -58,7 +58,18 @@ const actions = {
 };
 export function taskActions(task) {
   if(task.read_status==='unavailable')return ['任務紀錄無法驗證：檢查此任務檔案；目前狀態未知。'];
-  const reasons=(task.attention_reasons??[]).map(code=>actions[code]??'有未識別的待處理紀錄，請檢查任務。');
+  const continuation=task.continuation;
+  const detail=continuation?.status==='confirmed-interruption'?'已核對中斷、清理與部分成果：準備本輪接手材料，派送前重新核對接續計畫。此快照不授予執行權限。':
+    continuation?.status==='successor-recorded'?'已有接續紀錄：查看既有接續工作，勿重複建立。':
+    continuation?.status==='unavailable'?({
+      'authority-or-claim-changed':'接手授權或認領不再吻合：先核對當前任務權限。',
+      'cleanup-unconfirmed':'尚未確認原程序已清理：先查明執行歸屬，勿啟動競爭工作。',
+      'source-changed':'部分成果或版本已變更：核對差異，重新建立適用入口。',
+      cancelled:'工作已明確取消，保留既有紀錄，不自動接續。',
+      'operation-unconfirmed':'原操作結果尚未確認：先對帳，不重播。',
+      'evidence-unavailable':'接手證據不足或無法驗證：查看原紀錄，不自動接續。'
+    }[continuation.reason]??'接手狀態無法驗證：查看原紀錄，不自動接續。'):null;
+  const reasons=(task.attention_reasons??[]).map(code=>code==='workflow-incomplete'&&detail?detail:actions[code]??'有未識別的待處理紀錄，請檢查任務。');
   if(reasons.length)return reasons;
   return [{intake:'認領已批准的任務，開始工作。',build:'檢查最新執行紀錄，於有效認領範圍內繼續工作。',test:actions['awaiting-review'],release_gate:actions['awaiting-acceptance'],done:'已完成本機驗收；合併與發布仍需各自的證據。',cancelled:'任務已取消，保留既有證據。'}[task.task_state]??'檢查任務紀錄。'];
 }

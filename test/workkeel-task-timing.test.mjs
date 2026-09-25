@@ -2,6 +2,15 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {projectTaskTiming} from '../src/workkeel-task-timing.mjs';
 import {handoffText,taskActions,durationZh,countZh,label} from '../src/workkeel-monitor-view.mjs';
+
+test('continuation action projection is scoped, redacted and keeps authority warnings',()=>{
+ const task={task_state:'build',attention_reasons:['approval-expired','workflow-incomplete'],continuation:{status:'confirmed-interruption',next_action:'PRIVATE_PROMPT'}};
+ const actions=taskActions(task);assert.match(actions[0],/授權已過期/);assert.match(actions[1],/不授予執行權限/);
+ assert.ok(!actions.join('').includes('PRIVATE_PROMPT'));
+ for(const [status,reason,pattern]of [['successor-recorded',null,/勿重複建立/],['unavailable','source-changed',/版本已變更/],['unavailable','operation-unconfirmed',/先對帳/],['unavailable','cleanup-unconfirmed',/原程序已清理/],['unavailable','cancelled',/已明確取消/],['unavailable','evidence-unavailable',/證據不足/]]){
+  task.continuation={status,reason};assert.match(taskActions(task)[1],pattern);
+ }
+});
 const at=n=>new Date(Date.UTC(2026,0,1)+n*1000).toISOString();
 const make=rows=>({state:rows.at(-1)[1],history:rows.map(([action,state,time])=>({action,state,at:at(time)}))});
 const rows=[['create','intake',0],['claim','build',10],['handoff','test',30],['review','test',40],['rework','intake',50],['claim','build',60],['handoff','test',90],['review','release_gate',100],['close','done',120]];

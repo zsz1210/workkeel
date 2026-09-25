@@ -22,9 +22,11 @@ workkeel intake preview [target] --request brief.json
 workkeel intake apply [target] --request brief.json --fingerprint sha256
 workkeel task claim|release|handoff|review|rework|close|cancel [target] --id task-id --request request.json
 workkeel runtime plan [target] --id task-id
+workkeel context prepare [target] --id task-id --request material-request.json
 workkeel instructions preview|apply [target] [--fingerprint sha256]
 workkeel workflow plan [target] --request workflow-request.json
 workkeel workflow run [target] --request workflow-run.json
+workkeel workflow continuation-plan|continue [target] --request continuation.json
 workkeel workflow show [target] --id run-id
 workkeel workflow metrics [target] --id run-id
 workkeel workflow cancel|recover-lock [target] --id run-id --request actor.json
@@ -40,7 +42,7 @@ permissions. Workflow run explicitly launches the qualified Codex subscription h
 `;
 function parse(args) {
   const rest = [...args]; const command = rest.shift() ?? "help";
-  const action = ["task", "intake", "migration", "runtime", "instructions", "workflow", "headroom", "skills"].includes(command) ? rest.shift() : null;
+  const action = ["task", "intake", "migration", "runtime", "instructions", "workflow", "headroom", "skills", "context"].includes(command) ? rest.shift() : null;
   const target = rest[0] && !rest[0].startsWith("--") ? rest.shift() : ".";
   const options = {};
   while (rest.length) {
@@ -105,6 +107,11 @@ export async function workkeelMain(args) {
       output = action === "create" ? await createNativeTask(target, (await readTaskContractInput(target, required(options, "--source"))).document, request) :
         await mutateNativeTask(target, required(options, "--id"), action, request);
     }
+  } else if (command === "context" && action === "prepare") {
+    allow(options, ["--id", "--request"]);
+    const { prepareTaskMaterial } = await import("./workkeel-material.mjs");
+    const item = await readNativeTask(target, required(options, "--id"));
+    output = await prepareTaskMaterial(target, item.contract, (await readTaskContractInput(target, required(options, "--request"))).document);
   } else if (command === "runtime" && action === "plan") {
     allow(options, ["--id"]);
     const item = await readNativeTask(target, required(options, "--id"));
@@ -126,18 +133,22 @@ export async function workkeelMain(args) {
       output = await readWorkflowMeasurements(target, required(options, "--id"));
     } else if (action === "show") { allow(options, ["--id"]); output = await readWorkflowRun(target, required(options, "--id")); }
     else {
-      allow(options, ["plan", "run"].includes(action) ? ["--request"] : ["--id", "--request"]);
+      allow(options, ["plan", "run", "continuation-plan", "continue"].includes(action) ? ["--request"] : ["--id", "--request"]);
       const request = (await readTaskContractInput(target, required(options, "--request"))).document;
       if (action === "plan") output = await planWorkflow(target, request);
-      else if (action === "run") {
+      else if (action === "continuation-plan") {
+        const { planContinuation } = await import("./workkeel-continuation.mjs");
+        output = await planContinuation(target, request);
+      } else if (["run", "continue"].includes(action)) {
         const { executeWorkflow } = await import("./workkeel-workflows.mjs");
+        const { continueWorkflow } = await import("./workkeel-continuation.mjs");
         const { createLocalCodexSubscriptionRuntime } = await import("./workkeel-codex-host.mjs");
         const { exactKeys } = await import("./workkeel-execution-policy.mjs");
         exactKeys(request, ["run"], ["approvals", "reconciliations"]);
         const runtime = await createLocalCodexSubscriptionRuntime(target);
         const controller = new AbortController(); const stop = () => controller.abort();
         process.once("SIGINT", stop); process.once("SIGTERM", stop);
-        try { output = await executeWorkflow(target, request.run, { adapters: [runtime], approvals: request.approvals,
+        try { output = await (action === "continue" ? continueWorkflow : executeWorkflow)(target, request.run, { adapters: [runtime], approvals: request.approvals,
           reconciliations: request.reconciliations, signal: controller.signal }); }
         finally { process.removeListener("SIGINT", stop); process.removeListener("SIGTERM", stop); }
       }
