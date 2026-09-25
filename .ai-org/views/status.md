@@ -322,12 +322,12 @@
 | WI-0272 | Reduce dispatch context and observer snapshot latency | done | Engineering Manager | Mog | pending | team-visible | 0 | gate-evidence | not-applicable | 0 | 0 | 0 | — | `e8953fa3` | 0 | 8 | 0 |
 | WI-0273 | Align Codex Skill routing with task sandbox | done | Engineering Manager | Mog | pending | team-visible | 0 | gate-evidence | not-applicable | 0 | 0 | 0 | — | `c6dd4ff4` | 0 | 11 | 0 |
 | WI-0274 | Guide first use and qualify process interruption recovery | done | Engineering Manager | Mog | pending | team-visible | 0 | gate-evidence | not-applicable | 0 | 0 | 0 | — | `a31ce049` | 0 | 7 | 0 |
-| WI-0275 | Observer usability and full task benefit measurements | build | Developer | Rikku | pending | team-visible | 0 | gate-evidence | code-first | 0 | 0 | 0 | claim-20260925112609-9316ac30 | `—` | 0 | 3 | 0 |
+| WI-0275 | Observer usability and full task benefit measurements | build | Developer | Rikku | pending | team-visible | 0 | gate-evidence | code-first | 0 | 0 | 0 | claim-20260925114455-cdb0535a | `—` | 0 | 5 | 1 |
 
 ## Delivery attention
 
-- WI-0275: awaiting-owner — The recorded owner can continue the scoped work; no attached active worker is recorded.
-  - owner: No attached active runtime is recorded for this claim.
+- WI-0275: awaiting-decision — Resolve this recorded condition with the responsible owner.
+  - decision: Independent QA requires escaped handoff fields and missing Chinese labels
 
 ## Codex task registry
 
@@ -584,14 +584,14 @@
 
 | Time | Event | Work item | Actor |
 |---|---|---|---|
-| 2026-09-25T11:26:09.571Z | work_item_claimed | WI-0275 | human |
-| 2026-09-25T11:26:09.131Z | work_item_transitioned | WI-0275 | agent-tidus |
-| 2026-09-25T11:26:08.718Z | work_item_claim_released | WI-0275 | human |
-| 2026-09-25T11:26:08.326Z | work_item_claimed | WI-0275 | human |
-| 2026-09-25T11:26:07.887Z | work_item_transitioned | WI-0275 | agent-yuna |
-| 2026-09-25T11:26:07.472Z | work_item_claim_released | WI-0275 | human |
-| 2026-09-25T11:26:07.074Z | work_item_claimed | WI-0275 | human |
-| 2026-09-25T11:26:06.634Z | work_item_transitioned | WI-0275 | agent-mog |
+| 2026-09-25T11:44:55.602Z | work_item_claimed | WI-0275 | human |
+| 2026-09-25T11:44:55.117Z | work_item_reworked | WI-0275 | agent-lulu |
+| 2026-09-25T11:44:54.672Z | work_item_claimed | WI-0275 | human |
+| 2026-09-25T11:44:54.195Z | work_item_transitioned | WI-0275 | agent-lulu |
+| 2026-09-25T11:44:53.741Z | work_item_claim_released | WI-0275 | human |
+| 2026-09-25T11:44:53.308Z | work_item_claimed | WI-0275 | human |
+| 2026-09-25T11:44:52.828Z | work_item_transitioned | WI-0275 | agent-lulu |
+| 2026-09-25T11:44:52.375Z | work_item_claim_released | WI-0275 | human |
 
 ## Assignments
 

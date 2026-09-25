@@ -40,7 +40,8 @@ export function formatDuration(ms) {
 
 export const phaseLabels = {waiting:'等待認領',implementation:'實作階段',review:'審查階段（含等待）',rework:'返工階段',acceptance:'等待驗收'};
 const labels = {ready:'待認領',working:'實作中',review:'待審查',acceptance:'待驗收',done:'已驗收',cancelled:'已取消',unavailable:'無法讀取',intake:'待認領',build:'實作中',test:'待審查',release_gate:'待驗收',pass:'通過',fail:'未通過',unknown:'未知',verified:'雜湊吻合',changed:'已變更',authority:'授權',delivery:'交付',closeout:'結案',unobserved:'尚無觀測',unbound:'未綁定候選版本',stale:'舊版本觀測','candidate-matched':'候選版本吻合','real-task':'真實任務','paired-experiment':'配對實驗',fixture:'測試資料',unspecified:'未分類',completed:'執行完成',interrupted:'執行中斷',running:'紀錄為執行中',rejected:'遭拒絕',paused:'已暫停',blocked:'受阻','awaiting-approval':'等待批准',unresolved:'待釐清',unconfirmed:'未確認',create:'建立',claim:'認領',release:'釋放認領',handoff:'交付',rework:'返工',close:'驗收',cancel:'取消'};
-export const label = value => value==='review'?'審查':labels[value] ?? value ?? '未知';
+const additionalLabels = {review:'審查',created:'已建立',failed:'執行失敗','not-started':'尚未啟動'};
+export const label = value => Object.hasOwn(additionalLabels,value)?additionalLabels[value]:Object.hasOwn(labels,value)?labels[value]:value??'未知';
 export const durationZh = ms => formatDuration(ms).replace('Unknown','未知').replace(' min ',' 分 ').replace(/ s$/, ' 秒');
 export const countZh = metric => formatCount(metric).replace('Unknown','未知').replace('(partial)','（部分紀錄）');
 export const costZh = metric => formatCost(metric).replace('Unknown','未知').replace('(partial)','（部分紀錄）');
@@ -64,10 +65,13 @@ export function taskActions(task) {
 /** Explicitly selected public projection fields only. Never copy raw run output or access links. */
 export function handoffText(task, readAt) {
   if(!task || task.read_status!=='available')return null;
-  const list=values=>Array.isArray(values)?values.length?values.join('；'):'無':'未記錄';
+  // Keep project-authored text inside a single quoted field. Escape Unicode line
+  // separators and directional controls as well as JSON's CR/LF/control escaping.
+  const quote=value=>JSON.stringify(String(value??'')).replace(/[\u007f-\u009f\u2028-\u202e\u2066-\u2069]/g,char=>'\\u'+char.charCodeAt(0).toString(16).padStart(4,'0'));
+  const list=values=>Array.isArray(values)?values.length?values.map(quote).join('；'):'無':'未記錄';
   return [
     'WORKKEEL 接手摘要（唯讀觀測，不授予執行權限）',
-    '任務：'+task.id, '目標：'+(task.goal??task.title),
+    '任務：'+task.id, '目標：'+quote(task.goal??task.title),
     '範圍：'+list(task.scope?.include), '排除：'+list(task.scope?.exclude),
     '可讀路徑：'+list(task.execution_scope?.read_paths), '可寫路徑：'+list(task.execution_scope?.write_paths),
     '工具：'+list(task.execution_scope?.tools), '網路：'+(task.execution_scope?.network?.mode??'未知')+' / '+list(task.execution_scope?.network?.hosts),
@@ -78,9 +82,9 @@ export function handoffText(task, readAt) {
     '執行紀錄：'+(task.runs?.length?task.runs.map(r=>r.run_id+' / '+label(r.runner_state)).join('；'):'尚無可讀紀錄'),
     '候選審查：'+(task.review?label(task.review.judgment):'尚未審查'),
     '本機驗收：'+(task.quality?.locally_accepted?'已記錄':'尚未完成'),
-    '證據：'+(task.evidence?.length?task.evidence.map(e=>label(e.stage)+' / '+label(e.status)+' / '+e.path+' / '+e.sha256).join('\n'):'尚無紀錄'),
+    '證據：'+(task.evidence?.length?task.evidence.map(e=>label(e.stage)+' / '+label(e.status)+' / '+quote(e.path)+' / '+e.sha256).join('\n'):'尚無紀錄'),
     '觀測狀態：'+label(task.observation?.status)+'；觀測不代替驗收。',
-    '檢查觀測：'+(task.observation?.value?.checks?.length?task.observation.value.checks.map(check=>check.name+' / '+label(check.status)+' / '+check.evidence_ref).join('\n'):'尚無紀錄'),
+    '檢查觀測：'+(task.observation?.value?.checks?.length?task.observation.value.checks.map(check=>quote(check.name)+' / '+label(check.status)+' / '+quote(check.evidence_ref)).join('\n'):'尚無紀錄'),
     '待處理：'+taskActions(task).join('\n'),
     '任務總經過時間：'+durationZh(task.lifecycle?.elapsed_ms)+(task.lifecycle?.ongoing?'（持續中）':''),
     ...Object.entries(phaseLabels).map(([key,name])=>name+'：'+durationZh(task.lifecycle?.phases?.[key])),

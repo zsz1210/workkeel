@@ -31,6 +31,10 @@ try {
   await page.getByLabel('搜尋',{exact:true}).fill('');
   await page.getByRole('button',{name:'用量與效益',exact:true}).click();
   assert.match(await page.locator('#quality-table').innerText(),/尚未審查/);
+  assert.ok(await page.locator('#quality-table').evaluate(el=>el.scrollWidth>el.clientWidth));
+  await page.locator('#quality-table').focus();await page.keyboard.press('ArrowRight');
+  await page.waitForFunction(()=>document.querySelector('#quality-table').scrollLeft>0);
+  await page.locator('#quality-table').evaluate(el=>{el.scrollLeft=0;});
   await page.screenshot({path:path.join(output,`${viewport.width}-quality.png`),fullPage:true});
   await page.getByRole('button',{name:'任務詳情',exact:true}).click();
   checks.push(`${viewport.width}:overview-search-quality-navigation`);
@@ -56,6 +60,13 @@ try {
    checks.push(viewport.width+':'+state+'-lifecycle');
   }
   await page.context().grantPermissions(['clipboard-read','clipboard-write']);
+  await page.locator('#tasks').selectOption('WK-unobserved');
+  await page.locator('#copy-handoff').click();
+  await page.waitForFunction(()=>document.querySelector('#copy-status').textContent.includes('已複製'));
+  const multiline=await page.evaluate(()=>navigator.clipboard.readText());
+  assert.deepEqual(multiline.split('\n').filter(line=>line.startsWith('本機驗收：')),['本機驗收：尚未完成']);
+  assert.match(multiline,/\\n本機驗收：已記錄/);
+  await page.locator('#tasks').selectOption('WK-accepted');
   await page.locator('#copy-handoff').click();
   await page.waitForFunction(()=>document.querySelector('#copy-status').textContent.includes('已複製'));
   const copied=await page.evaluate(()=>navigator.clipboard.readText());
@@ -89,6 +100,7 @@ try {
    const response=await route.fetch(),snapshot=await response.json();
    if(mode==='running') {
     const task=snapshot.tasks.find(t=>t.id==='WK-interrupted');task.runs[0].runner_state='running';
+    task.runs[0].operations[0].state='failed';
     task.usage.input_tokens.known_subtotal=2400;
    }
    return route.fulfill({response,json:snapshot});
@@ -96,6 +108,7 @@ try {
   await page.getByLabel('任務',{exact:true}).selectOption('WK-interrupted');
   await page.getByRole('button',{name:'立即更新'}).click();await page.waitForFunction(()=>document.querySelector('#cards').textContent.includes('2,400'));
   assert.match(await page.locator('#runs').innerText(),/紀錄為執行中/);checks.push(`${viewport.width}:changed-running-projection`);
+  assert.match(await page.locator('#runs').innerText(),/執行失敗/);checks.push(`${viewport.width}:escaped-handoff-and-translated-operation`);
   mode='error';await page.getByRole('button',{name:'立即更新'}).click();await page.waitForFunction(()=>document.querySelector('#status').classList.contains('error'));
   assert.equal(await page.locator('#detail').isVisible(),false);await page.screenshot({path:path.join(output,`${viewport.width}-stale.png`),fullPage:true});checks.push(`${viewport.width}:stale-hidden`);
   mode='real';await page.getByRole('button',{name:'立即更新'}).click();await page.waitForFunction(()=>!document.querySelector('#status').classList.contains('error'));checks.push(`${viewport.width}:read-recovery`);

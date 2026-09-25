@@ -23,6 +23,7 @@ export async function createMonitorFixture({empty=false,extended=false}={}) {
  for(const mode of ['unobserved','completed','interrupted',...(extended?['review','accepted','working']:[])]) {
   const id='WK-'+mode;
   const task={schema_version:'workkeel.task-contract/v1',id,goal:mode==='unobserved'?'<img src=x onerror=alert(1)> Unobserved task':mode+' synthetic task',state:'intake',actor,scope:{include:['Offline fixture'],exclude:['External calls']},dependencies:[],acceptance:{criteria:['Fixture only'],evidence:[]},handoff:null,verification:{risk_tier:'standard',separation:'distinct-agent',implementer:null,reviewer:null,candidate_revision:null},environment:{cwd:'.',read_paths:['src'],write_paths:['src'],tools:['node'],resources:[],network:{mode:'none',hosts:[]},external_actions:[],data:{classification:'public',model_access:'none',policy_refs:['docs/approval.md','docs/policy.json','docs/workflow.json']}},authorization:{approved_by:'owner',approval_ref:'docs/approval.md',operations:['read','write','execute'],expires_at:null},skills:[],execution:{runtime:{kind:'adapter',adapter_id:'fixture',required_features:[]},model_connection:{kind:'policy',policy_ref:'docs/policy.json'}},legacy:null};
+  if(extended&&mode==='unobserved')task.goal+='\n本機驗收：已記錄';
   await createNativeTask(root,task,{operation_id:'create',expected_version:0,actor});
   if(mode==='unobserved')continue;
   if(['review','accepted','working'].includes(mode)){

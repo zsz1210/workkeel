@@ -6,7 +6,7 @@
   "owner_position": "developer",
   "assigned_agent_id": "agent-rikku",
   "created_at": "2026-09-25T11:24:37.277Z",
-  "updated_at": "2026-09-25T11:26:09.571Z",
+  "updated_at": "2026-09-25T11:44:55.602Z",
   "scope": [
     "Localized read-only observer, actionable blockers, handoff copy and evidence-based lifecycle statistics"
   ],
@@ -48,7 +48,7 @@
   "dependencies": [],
   "required_disciplines": [],
   "stage_requirements": {},
-  "base_revision": "0ed21c5dc3410dae3e063fee97e6fe741e49f22a",
+  "base_revision": "09ae6adb6f4ac5e82f1ab590a975fcbb4a0cfc4b",
   "parallel_mode": "pending",
   "integration_owner_agent_id": null,
   "planned_agent_id": null,
@@ -56,7 +56,7 @@
   "contract_status": "not_required",
   "overlap_resolution": [],
   "claim": {
-    "id": "claim-20260925112609-9316ac30",
+    "id": "claim-20260925114455-cdb0535a",
     "status": "active",
     "principal_id": "human",
     "agent_id": "agent-rikku",
@@ -69,10 +69,10 @@
       "externally_supplied_evidence": false
     },
     "position_id": "developer",
-    "base_revision": "0ed21c5dc3410dae3e063fee97e6fe741e49f22a",
+    "base_revision": "09ae6adb6f4ac5e82f1ab590a975fcbb4a0cfc4b",
     "branch": "codex/observer-benefits",
     "worktree": null,
-    "claimed_at": "2026-09-25T11:26:09.571Z",
+    "claimed_at": "2026-09-25T11:44:55.602Z",
     "released_at": null
   },
   "claims": [
@@ -141,7 +141,7 @@
     },
     {
       "id": "claim-20260925112609-9316ac30",
-      "status": "active",
+      "status": "released",
       "principal_id": "human",
       "agent_id": "agent-rikku",
       "actor_provenance": {
@@ -157,6 +157,90 @@
       "branch": "codex/observer-benefits",
       "worktree": null,
       "claimed_at": "2026-09-25T11:26:09.571Z",
+      "released_at": "2026-09-25T11:44:50.939Z",
+      "release_reason": "completed"
+    },
+    {
+      "id": "claim-20260925114451-6c075a5f",
+      "status": "released",
+      "principal_id": "human",
+      "agent_id": "agent-lulu",
+      "actor_provenance": {
+        "selection": "explicit-agent",
+        "principal_source": "explicit-principal",
+        "verification_class": "attributed",
+        "evidence_ref": null,
+        "provider_authenticated": false,
+        "externally_supplied_evidence": false
+      },
+      "position_id": "quality_evaluator",
+      "base_revision": "09ae6adb6f4ac5e82f1ab590a975fcbb4a0cfc4b",
+      "branch": "codex/observer-benefits",
+      "worktree": null,
+      "claimed_at": "2026-09-25T11:44:51.882Z",
+      "released_at": "2026-09-25T11:44:52.375Z",
+      "release_reason": "completed"
+    },
+    {
+      "id": "claim-20260925114453-b558e019",
+      "status": "released",
+      "principal_id": "human",
+      "agent_id": "agent-lulu",
+      "actor_provenance": {
+        "selection": "explicit-agent",
+        "principal_source": "explicit-principal",
+        "verification_class": "attributed",
+        "evidence_ref": null,
+        "provider_authenticated": false,
+        "externally_supplied_evidence": false
+      },
+      "position_id": "quality_evaluator",
+      "base_revision": "09ae6adb6f4ac5e82f1ab590a975fcbb4a0cfc4b",
+      "branch": "codex/observer-benefits",
+      "worktree": null,
+      "claimed_at": "2026-09-25T11:44:53.308Z",
+      "released_at": "2026-09-25T11:44:53.741Z",
+      "release_reason": "completed"
+    },
+    {
+      "id": "claim-20260925114454-3439a25a",
+      "status": "released",
+      "principal_id": "human",
+      "agent_id": "agent-lulu",
+      "actor_provenance": {
+        "selection": "explicit-agent",
+        "principal_source": "explicit-principal",
+        "verification_class": "attributed",
+        "evidence_ref": null,
+        "provider_authenticated": false,
+        "externally_supplied_evidence": false
+      },
+      "position_id": "independent_qa",
+      "base_revision": "09ae6adb6f4ac5e82f1ab590a975fcbb4a0cfc4b",
+      "branch": "codex/observer-benefits",
+      "worktree": null,
+      "claimed_at": "2026-09-25T11:44:54.672Z",
+      "released_at": "2026-09-25T11:44:55.117Z",
+      "release_reason": "review_rework"
+    },
+    {
+      "id": "claim-20260925114455-cdb0535a",
+      "status": "active",
+      "principal_id": "human",
+      "agent_id": "agent-rikku",
+      "actor_provenance": {
+        "selection": "explicit-agent",
+        "principal_source": "explicit-principal",
+        "verification_class": "attributed",
+        "evidence_ref": null,
+        "provider_authenticated": false,
+        "externally_supplied_evidence": false
+      },
+      "position_id": "developer",
+      "base_revision": "09ae6adb6f4ac5e82f1ab590a975fcbb4a0cfc4b",
+      "branch": "codex/observer-benefits",
+      "worktree": null,
+      "claimed_at": "2026-09-25T11:44:55.602Z",
       "released_at": null
     }
   ],
@@ -186,8 +270,77 @@
   "evidence": [
     ".ai-org/artifacts/WI-0275/work-order.md",
     "docs/adr/0078-observer-task-lifecycle-measurements.md",
-    ".ai-org/artifacts/WI-0275/ui-brief.md"
+    ".ai-org/artifacts/WI-0275/ui-brief.md",
+    ".ai-org/artifacts/WI-0275/handoff-001-developer-to-quality_evaluator.md",
+    ".ai-org/artifacts/WI-0275/developer-verification-0.md"
   ],
-  "unresolved": [],
-  "next_position": "quality_evaluator"
+  "unresolved": [
+    "Independent QA requires escaped handoff fields and missing Chinese labels"
+  ],
+  "next_position": "quality_evaluator",
+  "handoffs": [
+    {
+      "from_position": "developer",
+      "to_position": "quality_evaluator",
+      "actor": "agent-rikku",
+      "principal_id": "human",
+      "actor_provenance": {
+        "selection": "active-claim",
+        "principal_source": "active-claim",
+        "verification_class": "attributed",
+        "evidence_ref": null,
+        "provider_authenticated": false,
+        "externally_supplied_evidence": false
+      },
+      "input_revision": "09ae6adb6f4ac5e82f1ab590a975fcbb4a0cfc4b",
+      "artifact": ".ai-org/artifacts/WI-0275/handoff-001-developer-to-quality_evaluator.md",
+      "created_at": "2026-09-25T11:44:28.427Z"
+    }
+  ],
+  "rework_history": [
+    {
+      "sequence": 1,
+      "returned_at": "2026-09-25T11:44:55.117Z",
+      "from_state": "independent_qa",
+      "reviewer_agent_id": "agent-lulu",
+      "reviewer_claim_id": "claim-20260925114454-3439a25a",
+      "rejected_revision": "09ae6adb6f4ac5e82f1ab590a975fcbb4a0cfc4b",
+      "reason": [
+        "Escape copied project text, translate all runtime states and widen quality columns"
+      ],
+      "findings": [
+        ".ai-org/artifacts/WI-0275/independent-qa-0.md"
+      ],
+      "scope_digest": "080dc05ff597457d736b0dfa31b097ea725379201ec163edb78555ca3d7a9875",
+      "retained_requirements": [
+        "ui_brief",
+        "required_state_coverage",
+        "work_order",
+        "approved_scope",
+        "acceptance_criteria",
+        "technical_design",
+        "risk_review"
+      ],
+      "retired_gate_evidence": {
+        "developer_handoff": [
+          ".ai-org/artifacts/WI-0275/handoff-001-developer-to-quality_evaluator.md"
+        ],
+        "developer_evidence": [
+          ".ai-org/artifacts/WI-0275/developer-verification-0.md"
+        ],
+        "test_evidence": [
+          ".ai-org/artifacts/WI-0275/developer-verification-0.md"
+        ],
+        "evaluation_report": [
+          ".ai-org/artifacts/WI-0275/developer-verification-0.md"
+        ]
+      },
+      "retired_candidate_fields": {
+        "developer_candidate_revision": "09ae6adb6f4ac5e82f1ab590a975fcbb4a0cfc4b"
+      },
+      "handoff_refs": [
+        ".ai-org/artifacts/WI-0275/handoff-001-developer-to-quality_evaluator.md"
+      ]
+    }
+  ]
 }

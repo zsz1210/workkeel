@@ -81,6 +81,8 @@ authorization. Browser clipboard denial offers a selectable text fallback. Its
 timestamp identifies the frozen copy; refresh does not overwrite selected text.
 Changing tasks or losing the snapshot clears the fallback. Runtime output and
 monitor capability URLs are excluded. Project-authored text is not translated.
+Copied project fields are quoted with escaped newlines and directional controls,
+so embedded task text cannot introduce an unquoted acceptance or status field.
 
 See [ADR-0078](../adr/0078-observer-task-lifecycle-measurements.md).
 
