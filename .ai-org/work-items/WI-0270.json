@@ -2,11 +2,11 @@
   "schema_version": "temple.work-item/v1",
   "id": "WI-0270",
   "title": "Recover historical evidence with explicit artifact source revisions",
-  "state": "build",
-  "owner_position": "developer",
-  "assigned_agent_id": "agent-rikku",
+  "state": "done",
+  "owner_position": "engineering_manager",
+  "assigned_agent_id": "agent-mog",
   "created_at": "2026-09-25T00:36:30.495Z",
-  "updated_at": "2026-09-25T00:41:00.656Z",
+  "updated_at": "2026-09-25T00:56:00.135Z",
   "scope": [
     "Append verified source maps for three historical evidence records; preserve tested revisions and canonical registry; compatible archive export and readback, documentation, tests, review and PR merge"
   ],
@@ -47,7 +47,7 @@
   "dependencies": [],
   "required_disciplines": [],
   "stage_requirements": {},
-  "base_revision": "aa9fb7287e5e6cc24d0d69153d1547b4d07e7ade",
+  "base_revision": "2673ebe34a5c55a3a70c25e079f5fde8659723a8",
   "parallel_mode": "pending",
   "integration_owner_agent_id": null,
   "planned_agent_id": null,
@@ -55,10 +55,10 @@
   "contract_status": "not_required",
   "overlap_resolution": [],
   "claim": {
-    "id": "claim-20260925004100-dccf4b96",
-    "status": "active",
+    "id": "claim-20260925005559-7831e95f",
+    "status": "released",
     "principal_id": "human",
-    "agent_id": "agent-rikku",
+    "agent_id": "agent-mog",
     "actor_provenance": {
       "selection": "explicit-agent",
       "principal_source": "explicit-principal",
@@ -67,12 +67,13 @@
       "provider_authenticated": false,
       "externally_supplied_evidence": false
     },
-    "position_id": "developer",
-    "base_revision": "aa9fb7287e5e6cc24d0d69153d1547b4d07e7ade",
+    "position_id": "release_manager",
+    "base_revision": "2673ebe34a5c55a3a70c25e079f5fde8659723a8",
     "branch": "codex/evidence-source-repair",
     "worktree": null,
-    "claimed_at": "2026-09-25T00:41:00.656Z",
-    "released_at": null
+    "claimed_at": "2026-09-25T00:55:59.757Z",
+    "released_at": "2026-09-25T00:56:00.135Z",
+    "release_reason": "work_item_closed"
   },
   "claims": [
     {
@@ -146,7 +147,7 @@
     },
     {
       "id": "claim-20260925004100-dccf4b96",
-      "status": "active",
+      "status": "released",
       "principal_id": "human",
       "agent_id": "agent-rikku",
       "actor_provenance": {
@@ -162,7 +163,100 @@
       "branch": "codex/evidence-source-repair",
       "worktree": null,
       "claimed_at": "2026-09-25T00:41:00.656Z",
-      "released_at": null
+      "released_at": "2026-09-25T00:54:11.698Z",
+      "release_reason": [
+        "Exact candidate handed off for frozen tests and actual review"
+      ]
+    },
+    {
+      "id": "claim-20260925005412-12b944a4",
+      "status": "released",
+      "principal_id": "human",
+      "agent_id": "agent-lulu",
+      "actor_provenance": {
+        "selection": "explicit-agent",
+        "principal_source": "explicit-principal",
+        "verification_class": "attributed",
+        "evidence_ref": null,
+        "provider_authenticated": false,
+        "externally_supplied_evidence": false
+      },
+      "position_id": "quality_evaluator",
+      "base_revision": "2673ebe34a5c55a3a70c25e079f5fde8659723a8",
+      "branch": "codex/evidence-source-repair",
+      "worktree": null,
+      "claimed_at": "2026-09-25T00:54:12.514Z",
+      "released_at": "2026-09-25T00:55:56.590Z",
+      "release_reason": [
+        "Frozen full verification passed and actual reviewer reconsideration preserved"
+      ]
+    },
+    {
+      "id": "claim-20260925005557-91c4a897",
+      "status": "released",
+      "principal_id": "human",
+      "agent_id": "agent-lulu",
+      "actor_provenance": {
+        "selection": "explicit-agent",
+        "principal_source": "explicit-principal",
+        "verification_class": "attributed",
+        "evidence_ref": null,
+        "provider_authenticated": false,
+        "externally_supplied_evidence": false
+      },
+      "position_id": "quality_evaluator",
+      "base_revision": "2673ebe34a5c55a3a70c25e079f5fde8659723a8",
+      "branch": "codex/evidence-source-repair",
+      "worktree": null,
+      "claimed_at": "2026-09-25T00:55:57.402Z",
+      "released_at": "2026-09-25T00:55:57.773Z",
+      "release_reason": [
+        "Actual distinct runtime evaluation PASS after retracted false finding"
+      ]
+    },
+    {
+      "id": "claim-20260925005558-9a34a9a5",
+      "status": "released",
+      "principal_id": "human",
+      "agent_id": "agent-lulu",
+      "actor_provenance": {
+        "selection": "explicit-agent",
+        "principal_source": "explicit-principal",
+        "verification_class": "attributed",
+        "evidence_ref": null,
+        "provider_authenticated": false,
+        "externally_supplied_evidence": false
+      },
+      "position_id": "independent_qa",
+      "base_revision": "2673ebe34a5c55a3a70c25e079f5fde8659723a8",
+      "branch": "codex/evidence-source-repair",
+      "worktree": null,
+      "claimed_at": "2026-09-25T00:55:58.579Z",
+      "released_at": "2026-09-25T00:55:58.952Z",
+      "release_reason": [
+        "Actual independent candidate PASS and original review both retained"
+      ]
+    },
+    {
+      "id": "claim-20260925005559-7831e95f",
+      "status": "released",
+      "principal_id": "human",
+      "agent_id": "agent-mog",
+      "actor_provenance": {
+        "selection": "explicit-agent",
+        "principal_source": "explicit-principal",
+        "verification_class": "attributed",
+        "evidence_ref": null,
+        "provider_authenticated": false,
+        "externally_supplied_evidence": false
+      },
+      "position_id": "release_manager",
+      "base_revision": "2673ebe34a5c55a3a70c25e079f5fde8659723a8",
+      "branch": "codex/evidence-source-repair",
+      "worktree": null,
+      "claimed_at": "2026-09-25T00:55:59.757Z",
+      "released_at": "2026-09-25T00:56:00.135Z",
+      "release_reason": "work_item_closed"
     }
   ],
   "gate_evidence": {
@@ -180,11 +274,70 @@
     ],
     "risk_review": [
       ".ai-org/artifacts/WI-0270/work-order.md"
+    ],
+    "developer_handoff": [
+      ".ai-org/artifacts/WI-0270/handoff-001-developer-to-quality_evaluator.md"
+    ],
+    "developer_evidence": [
+      ".ai-org/artifacts/WI-0270/developer-attempt-0.md"
+    ],
+    "test_evidence": [
+      ".ai-org/artifacts/WI-0270/final-verification.md"
+    ],
+    "evaluation_report": [
+      ".ai-org/artifacts/WI-0270/independent-review-1.md"
+    ],
+    "independent_qa_pass": [
+      ".ai-org/artifacts/WI-0270/independent-review-1.md"
+    ],
+    "accepted_scope": [
+      ".ai-org/artifacts/WI-0270/final-scope-and-approval.md"
+    ],
+    "independent_qa_report": [
+      ".ai-org/artifacts/WI-0270/independent-review-1.md"
+    ],
+    "rollback_plan": [
+      ".ai-org/artifacts/WI-0270/release-record.md"
+    ],
+    "required_human_approval": [
+      ".ai-org/artifacts/WI-0270/final-scope-and-approval.md"
     ]
   },
   "evidence": [
-    ".ai-org/artifacts/WI-0270/work-order.md"
+    ".ai-org/artifacts/WI-0270/work-order.md",
+    ".ai-org/artifacts/WI-0270/handoff-001-developer-to-quality_evaluator.md",
+    ".ai-org/artifacts/WI-0270/developer-attempt-0.md",
+    ".ai-org/artifacts/WI-0270/final-verification.md",
+    ".ai-org/artifacts/WI-0270/independent-review-1.md",
+    ".ai-org/artifacts/WI-0270/release-record.md",
+    ".ai-org/artifacts/WI-0270/final-scope-and-approval.md"
   ],
   "unresolved": [],
-  "next_position": "quality_evaluator"
+  "next_position": null,
+  "handoffs": [
+    {
+      "from_position": "developer",
+      "to_position": "quality_evaluator",
+      "actor": "agent-rikku",
+      "principal_id": "human",
+      "actor_provenance": {
+        "selection": "active-claim",
+        "principal_source": "active-claim",
+        "verification_class": "attributed",
+        "evidence_ref": null,
+        "provider_authenticated": false,
+        "externally_supplied_evidence": false
+      },
+      "input_revision": "2673ebe34a5c55a3a70c25e079f5fde8659723a8",
+      "artifact": ".ai-org/artifacts/WI-0270/handoff-001-developer-to-quality_evaluator.md",
+      "created_at": "2026-09-25T00:54:11.284Z"
+    }
+  ],
+  "developer_candidate_revision": "2673ebe34a5c55a3a70c25e079f5fde8659723a8",
+  "tested_revision": "2673ebe34a5c55a3a70c25e079f5fde8659723a8",
+  "release_gate_result": "go",
+  "lifecycle_outcome": "accepted",
+  "closeout_reasons": [],
+  "external_release_status": "not_performed",
+  "approval_record": ".ai-org/artifacts/WI-0270/final-scope-and-approval.md"
 }
