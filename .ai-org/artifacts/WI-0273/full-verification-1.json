@@ -1,0 +1,12 @@
+{
+  "command": "npm run verify",
+  "exit_code": 0,
+  "test_files": 141,
+  "candidate": "c6dd4ff4f268393fe087ee92232e989fb4f6bd55",
+  "node": "24.20.0",
+  "focused_passed": 24,
+  "full_log": "full-verify-1.log",
+  "observer_browser_gate": "not-applicable-no-UI-change",
+  "live_report_turns": "Two turns on prior candidate 379b0338; not rerun on this repair",
+  "current_host_preflight": "rework-catalogue.json; zero model calls; 1 enabled project Skill and 49 disabled external Skills"
+}
