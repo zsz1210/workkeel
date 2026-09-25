@@ -2,11 +2,11 @@
   "schema_version": "temple.work-item/v1",
   "id": "WI-0276",
   "title": "Stage-aware task material and verified continuation",
-  "state": "build",
-  "owner_position": "developer",
-  "assigned_agent_id": "agent-rikku",
+  "state": "done",
+  "owner_position": "engineering_manager",
+  "assigned_agent_id": "agent-mog",
   "created_at": "2026-09-25T14:42:59.682Z",
-  "updated_at": "2026-09-25T15:21:40.930Z",
+  "updated_at": "2026-09-25T15:31:24.713Z",
   "scope": [
     "Shared task-first material preparation, confirmed-interruption continuation and proportionate instructions"
   ],
@@ -47,7 +47,7 @@
   "dependencies": [],
   "required_disciplines": [],
   "stage_requirements": {},
-  "base_revision": "26e42ce7604ae611c2271f66dde13d6c975ef6d4",
+  "base_revision": "f7489253987bfdb3ba8ea15daf36f6f807135670",
   "parallel_mode": "pending",
   "integration_owner_agent_id": null,
   "planned_agent_id": null,
@@ -55,10 +55,10 @@
   "contract_status": "not_required",
   "overlap_resolution": [],
   "claim": {
-    "id": "claim-20260925152140-bad2a6a0",
-    "status": "active",
+    "id": "claim-20260925153124-d72c0870",
+    "status": "released",
     "principal_id": "human",
-    "agent_id": "agent-rikku",
+    "agent_id": "agent-mog",
     "actor_provenance": {
       "selection": "explicit-agent",
       "principal_source": "explicit-principal",
@@ -67,12 +67,13 @@
       "provider_authenticated": false,
       "externally_supplied_evidence": false
     },
-    "position_id": "developer",
-    "base_revision": "26e42ce7604ae611c2271f66dde13d6c975ef6d4",
+    "position_id": "release_manager",
+    "base_revision": "f7489253987bfdb3ba8ea15daf36f6f807135670",
     "branch": "codex/task-context-resume",
     "worktree": null,
-    "claimed_at": "2026-09-25T15:21:40.930Z",
-    "released_at": null
+    "claimed_at": "2026-09-25T15:31:24.329Z",
+    "released_at": "2026-09-25T15:31:24.713Z",
+    "release_reason": "work_item_closed"
   },
   "claims": [
     {
@@ -190,7 +191,7 @@
     },
     {
       "id": "claim-20260925152140-bad2a6a0",
-      "status": "active",
+      "status": "released",
       "principal_id": "human",
       "agent_id": "agent-rikku",
       "actor_provenance": {
@@ -206,7 +207,100 @@
       "branch": "codex/task-context-resume",
       "worktree": null,
       "claimed_at": "2026-09-25T15:21:40.930Z",
-      "released_at": null
+      "released_at": "2026-09-25T15:31:20.081Z",
+      "release_reason": [
+        "completed"
+      ]
+    },
+    {
+      "id": "claim-20260925153120-479de5f3",
+      "status": "released",
+      "principal_id": "human",
+      "agent_id": "agent-lulu",
+      "actor_provenance": {
+        "selection": "explicit-agent",
+        "principal_source": "explicit-principal",
+        "verification_class": "attributed",
+        "evidence_ref": null,
+        "provider_authenticated": false,
+        "externally_supplied_evidence": false
+      },
+      "position_id": "quality_evaluator",
+      "base_revision": "f7489253987bfdb3ba8ea15daf36f6f807135670",
+      "branch": "codex/task-context-resume",
+      "worktree": null,
+      "claimed_at": "2026-09-25T15:31:20.868Z",
+      "released_at": "2026-09-25T15:31:21.232Z",
+      "release_reason": [
+        "completed"
+      ]
+    },
+    {
+      "id": "claim-20260925153122-3c060a27",
+      "status": "released",
+      "principal_id": "human",
+      "agent_id": "agent-lulu",
+      "actor_provenance": {
+        "selection": "explicit-agent",
+        "principal_source": "explicit-principal",
+        "verification_class": "attributed",
+        "evidence_ref": null,
+        "provider_authenticated": false,
+        "externally_supplied_evidence": false
+      },
+      "position_id": "quality_evaluator",
+      "base_revision": "f7489253987bfdb3ba8ea15daf36f6f807135670",
+      "branch": "codex/task-context-resume",
+      "worktree": null,
+      "claimed_at": "2026-09-25T15:31:22.020Z",
+      "released_at": "2026-09-25T15:31:22.384Z",
+      "release_reason": [
+        "completed"
+      ]
+    },
+    {
+      "id": "claim-20260925153123-946b3ae6",
+      "status": "released",
+      "principal_id": "human",
+      "agent_id": "agent-lulu",
+      "actor_provenance": {
+        "selection": "explicit-agent",
+        "principal_source": "explicit-principal",
+        "verification_class": "attributed",
+        "evidence_ref": null,
+        "provider_authenticated": false,
+        "externally_supplied_evidence": false
+      },
+      "position_id": "independent_qa",
+      "base_revision": "f7489253987bfdb3ba8ea15daf36f6f807135670",
+      "branch": "codex/task-context-resume",
+      "worktree": null,
+      "claimed_at": "2026-09-25T15:31:23.170Z",
+      "released_at": "2026-09-25T15:31:23.534Z",
+      "release_reason": [
+        "completed"
+      ]
+    },
+    {
+      "id": "claim-20260925153124-d72c0870",
+      "status": "released",
+      "principal_id": "human",
+      "agent_id": "agent-mog",
+      "actor_provenance": {
+        "selection": "explicit-agent",
+        "principal_source": "explicit-principal",
+        "verification_class": "attributed",
+        "evidence_ref": null,
+        "provider_authenticated": false,
+        "externally_supplied_evidence": false
+      },
+      "position_id": "release_manager",
+      "base_revision": "f7489253987bfdb3ba8ea15daf36f6f807135670",
+      "branch": "codex/task-context-resume",
+      "worktree": null,
+      "claimed_at": "2026-09-25T15:31:24.329Z",
+      "released_at": "2026-09-25T15:31:24.713Z",
+      "release_reason": "work_item_closed"
     }
   ],
   "gate_evidence": {
@@ -224,16 +318,49 @@
     ],
     "risk_review": [
       ".ai-org/artifacts/WI-0276/work-order.md"
+    ],
+    "developer_handoff": [
+      ".ai-org/artifacts/WI-0276/handoff-002-developer-to-quality_evaluator.md"
+    ],
+    "developer_evidence": [
+      ".ai-org/artifacts/WI-0276/developer-verification-final.md"
+    ],
+    "test_evidence": [
+      ".ai-org/artifacts/WI-0276/developer-verification-final.md"
+    ],
+    "evaluation_report": [
+      ".ai-org/artifacts/WI-0276/evaluation.md"
+    ],
+    "independent_qa_pass": [
+      ".ai-org/artifacts/WI-0276/independent-qa-final.md"
+    ],
+    "accepted_scope": [
+      ".ai-org/artifacts/WI-0276/accepted-scope.md"
+    ],
+    "independent_qa_report": [
+      ".ai-org/artifacts/WI-0276/independent-qa-final.md"
+    ],
+    "rollback_plan": [
+      ".ai-org/artifacts/WI-0276/release-record.md"
+    ],
+    "required_human_approval": [
+      ".ai-org/artifacts/WI-0276/accepted-scope.md"
     ]
   },
   "evidence": [
     ".ai-org/artifacts/WI-0276/work-order.md",
     "docs/adr/0079-stage-material-and-confirmed-continuation.md",
     ".ai-org/artifacts/WI-0276/handoff-001-developer-to-quality_evaluator.md",
-    ".ai-org/artifacts/WI-0276/developer-verification-0.md"
+    ".ai-org/artifacts/WI-0276/developer-verification-0.md",
+    ".ai-org/artifacts/WI-0276/handoff-002-developer-to-quality_evaluator.md",
+    ".ai-org/artifacts/WI-0276/developer-verification-final.md",
+    ".ai-org/artifacts/WI-0276/evaluation.md",
+    ".ai-org/artifacts/WI-0276/independent-qa-final.md",
+    ".ai-org/artifacts/WI-0276/release-record.md",
+    ".ai-org/artifacts/WI-0276/accepted-scope.md"
   ],
   "unresolved": [],
-  "next_position": "quality_evaluator",
+  "next_position": null,
   "handoffs": [
     {
       "from_position": "developer",
@@ -251,6 +378,23 @@
       "input_revision": "262d6c76e520f97dbdf9dcf4e5f61dc635065b91",
       "artifact": ".ai-org/artifacts/WI-0276/handoff-001-developer-to-quality_evaluator.md",
       "created_at": "2026-09-25T15:15:30.333Z"
+    },
+    {
+      "from_position": "developer",
+      "to_position": "quality_evaluator",
+      "actor": "agent-rikku",
+      "principal_id": "human",
+      "actor_provenance": {
+        "selection": "active-claim",
+        "principal_source": "active-claim",
+        "verification_class": "attributed",
+        "evidence_ref": null,
+        "provider_authenticated": false,
+        "externally_supplied_evidence": false
+      },
+      "input_revision": "f7489253987bfdb3ba8ea15daf36f6f807135670",
+      "artifact": ".ai-org/artifacts/WI-0276/handoff-002-developer-to-quality_evaluator.md",
+      "created_at": "2026-09-25T15:31:19.705Z"
     }
   ],
   "rework_history": [
@@ -290,5 +434,12 @@
         ".ai-org/artifacts/WI-0276/handoff-001-developer-to-quality_evaluator.md"
       ]
     }
-  ]
+  ],
+  "developer_candidate_revision": "f7489253987bfdb3ba8ea15daf36f6f807135670",
+  "tested_revision": "f7489253987bfdb3ba8ea15daf36f6f807135670",
+  "release_gate_result": "go",
+  "lifecycle_outcome": "accepted",
+  "closeout_reasons": [],
+  "external_release_status": "not_performed",
+  "approval_record": ".ai-org/artifacts/WI-0276/accepted-scope.md"
 }

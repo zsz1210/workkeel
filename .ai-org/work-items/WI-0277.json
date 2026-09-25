@@ -2,11 +2,11 @@
   "schema_version": "temple.work-item/v1",
   "id": "WI-0277",
   "title": "Show verified continuation guidance in existing observer",
-  "state": "test",
-  "owner_position": "quality_evaluator",
-  "assigned_agent_id": "agent-lulu",
+  "state": "done",
+  "owner_position": "engineering_manager",
+  "assigned_agent_id": "agent-mog",
   "created_at": "2026-09-25T15:14:41.377Z",
-  "updated_at": "2026-09-25T15:21:39.670Z",
+  "updated_at": "2026-09-25T15:31:44.116Z",
   "scope": [
     "Render the existing redacted continuation projection in task actions and copied handoff; code-first text-only UI change within approved context design and Issue 140"
   ],
@@ -45,7 +45,7 @@
   "dependencies": [],
   "required_disciplines": [],
   "stage_requirements": {},
-  "base_revision": "262d6c76e520f97dbdf9dcf4e5f61dc635065b91",
+  "base_revision": "f7489253987bfdb3ba8ea15daf36f6f807135670",
   "parallel_mode": "pending",
   "integration_owner_agent_id": null,
   "planned_agent_id": null,
@@ -53,10 +53,10 @@
   "contract_status": "not_required",
   "overlap_resolution": [],
   "claim": {
-    "id": "claim-20260925151627-50c1aedd",
+    "id": "claim-20260925153143-7b0c15f8",
     "status": "released",
     "principal_id": "human",
-    "agent_id": "agent-rikku",
+    "agent_id": "agent-lulu",
     "actor_provenance": {
       "selection": "explicit-agent",
       "principal_source": "explicit-principal",
@@ -65,12 +65,12 @@
       "provider_authenticated": false,
       "externally_supplied_evidence": false
     },
-    "position_id": "developer",
-    "base_revision": "262d6c76e520f97dbdf9dcf4e5f61dc635065b91",
+    "position_id": "quality_evaluator",
+    "base_revision": "f7489253987bfdb3ba8ea15daf36f6f807135670",
     "branch": "codex/task-context-resume",
     "worktree": null,
-    "claimed_at": "2026-09-25T15:16:27.193Z",
-    "released_at": "2026-09-25T15:21:39.265Z",
+    "claimed_at": "2026-09-25T15:31:43.368Z",
+    "released_at": "2026-09-25T15:31:43.732Z",
     "release_reason": [
       "completed"
     ]
@@ -95,6 +95,29 @@
       "worktree": null,
       "claimed_at": "2026-09-25T15:16:27.193Z",
       "released_at": "2026-09-25T15:21:39.265Z",
+      "release_reason": [
+        "completed"
+      ]
+    },
+    {
+      "id": "claim-20260925153143-7b0c15f8",
+      "status": "released",
+      "principal_id": "human",
+      "agent_id": "agent-lulu",
+      "actor_provenance": {
+        "selection": "explicit-agent",
+        "principal_source": "explicit-principal",
+        "verification_class": "attributed",
+        "evidence_ref": null,
+        "provider_authenticated": false,
+        "externally_supplied_evidence": false
+      },
+      "position_id": "quality_evaluator",
+      "base_revision": "f7489253987bfdb3ba8ea15daf36f6f807135670",
+      "branch": "codex/task-context-resume",
+      "worktree": null,
+      "claimed_at": "2026-09-25T15:31:43.368Z",
+      "released_at": "2026-09-25T15:31:43.732Z",
       "release_reason": [
         "completed"
       ]
@@ -130,15 +153,26 @@
     ],
     "developer_evidence": [
       ".ai-org/artifacts/WI-0277/developer-verification.md"
+    ],
+    "test_evidence": [
+      ".ai-org/artifacts/WI-0276/developer-verification-final.md"
+    ],
+    "lean_closeout": [
+      ".ai-org/artifacts/WI-0277/closeout.md"
+    ],
+    "runtime_visual_review": [
+      ".ai-org/artifacts/WI-0276/developer-verification-final.md"
     ]
   },
   "evidence": [
     ".ai-org/artifacts/WI-0277/ui-brief.md",
     ".ai-org/artifacts/WI-0277/handoff-001-developer-to-quality_evaluator.md",
-    ".ai-org/artifacts/WI-0277/developer-verification.md"
+    ".ai-org/artifacts/WI-0277/developer-verification.md",
+    ".ai-org/artifacts/WI-0276/developer-verification-final.md",
+    ".ai-org/artifacts/WI-0277/closeout.md"
   ],
   "unresolved": [],
-  "next_position": "engineering_manager",
+  "next_position": null,
   "handoffs": [
     {
       "from_position": "developer",
@@ -158,5 +192,8 @@
       "created_at": "2026-09-25T15:21:38.837Z"
     }
   ],
-  "developer_candidate_revision": "26e42ce7604ae611c2271f66dde13d6c975ef6d4"
+  "developer_candidate_revision": "26e42ce7604ae611c2271f66dde13d6c975ef6d4",
+  "lifecycle_outcome": "accepted",
+  "closeout_reasons": [],
+  "external_release_status": "not_performed"
 }
