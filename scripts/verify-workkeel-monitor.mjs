@@ -175,8 +175,8 @@ async function verifyObserverClarity(page,monitor,index){
  assert.ok(circle.radius==='50%'||parseFloat(circle.radius)>=circle.width/2,'help control is circular');assert.equal(await help.innerText(),'?');
  await help.click();const popover=page.locator('.help-popover:popover-open');
  assert.equal(await popover.getByRole('heading',{name:'Recorded time by stage',exact:true}).isVisible(),true);
- assert.match(await popover.locator('p').first().innerText(),/reported tool execution.*implementation, review and rework/i);
- assert.match(await popover.innerText(),/start\/end intervals/);assert.match(await popover.innerText(),/waiting.*does not accumulate/s);
+ assert.match(await popover.locator('p').first().innerText(),/reported time.*planning, implementation, review, repair and verification/i);
+ assert.match(await popover.innerText(),/reported execution intervals/);assert.match(await popover.innerText(),/excluding human waits/);
  assert.equal((await page.locator('#lifecycle').boundingBox()).height,before.height,'help does not shift the panel');
  await page.keyboard.press('Escape');assert.equal(await page.locator('.help-popover:popover-open').count(),0);assert.equal(await page.locator('#drawer').evaluate(el=>el.open),true);
  await page.locator('#close-drawer').click();
@@ -185,7 +185,9 @@ async function verifyObserverClarity(page,monitor,index){
  const nativeHistory=page.locator('#detail-content .panel').filter({has:page.getByRole('heading',{name:'Task history',exact:true})});
  assert.match(await nativeHistory.innerText(),/Synthetic delivery/);assert.match(await nativeHistory.innerText(),/Synthetic review only/);
  assert.match(await nativeHistory.innerText(),/Review passed/);assert.doesNotMatch(await nativeHistory.innerText(),/accepted synthetic task/);
- assert.match(await page.locator('#detail-content .panel').last().locator('h2').innerText(),/Evidence & observations/);
+ const evidence=page.locator('#task-evidence');
+ assert.match(await evidence.locator(':scope > summary').innerText(),/Evidence & observations/);
+ assert.equal(await evidence.evaluate(el=>!el.open&&el===el.parentElement.lastElementChild),true,'evidence is collapsed at the end of the detail');
  await page.locator('#close-drawer').click();
 
  // UI-only projection with explicit expected durations: 2 min implementation,
@@ -214,7 +216,7 @@ async function verifyObserverClarity(page,monitor,index){
   await route.fulfill({response,json:task});
  });
  await openTask('WK-completed');
- for(const [label,milliseconds] of [['Implementation',120000],['Review',60000],['Rework',30000]]){
+ for(const [label,milliseconds] of [['Implementation',120000],['Review',60000],['Repair',30000]]){
   assert.equal(Number(await page.locator('#lifecycle').getByRole('progressbar',{name:label,exact:true}).getAttribute('value')),milliseconds,'stage shows recorded work, excluding lifecycle waits');
  }
  assert.equal(await page.locator('#lifecycle').getByText(/^Partial records:/).count(),0,'complete measurements are not labeled partial');
@@ -229,9 +231,9 @@ async function verifyObserverClarity(page,monitor,index){
  assert.equal(await partialNote.isVisible(),true,'known stage subtotals remain explicitly partial when an operation is unfinished');
  assert.match(await partialNote.innerText(),/reported tool execution only/);
  await page.getByRole('button',{name:'Recorded time by stage',exact:true}).click();
- assert.match(await page.locator('.help-popover:popover-open').innerText(),/Unfinished.*not treated as zero/);
+ assert.match(await page.locator('.help-popover:popover-open').innerText(),/Unreported is not zero/);
  await page.keyboard.press('Escape');
- for(const [label,milliseconds] of [['Implementation',120000],['Review',60000],['Rework',30000]]){
+ for(const [label,milliseconds] of [['Implementation',120000],['Review',60000],['Repair',30000]]){
   assert.equal(Number(await page.locator('#lifecycle').getByRole('progressbar',{name:label,exact:true}).getAttribute('value')),milliseconds,'an unfinished operation does not invent elapsed stage time');
  }
  await page.locator('#close-drawer').click();
@@ -288,13 +290,16 @@ async function verifyObserverFollowup(page,monitor){
  await page.context().grantPermissions(['clipboard-read','clipboard-write']);await page.locator('#copy-handoff').click();await page.waitForFunction(()=>document.querySelector('#copy-status').textContent==='Copied');
  assert.match(await page.evaluate(()=>navigator.clipboard.readText()),/WK-accepted/);await page.locator('#close-drawer').click();
  // Three token-only bound reports: completeness 0/3 is not zero execution time.
- await page.route('**/api/task?id=WK-unobserved',async route=>{const response=await route.fetch(),task=await response.json();task.execution={execution_ms:null,time_complete:false,tokens:120,tokens_complete:false,recorded_operations:3,measured_intervals:0};await route.fulfill({response,json:task});});
+ await page.route('**/api/task?id=WK-unobserved',async route=>{const response=await route.fetch(),task=await response.json();task.execution={execution_ms:null,time_complete:false,tokens:120,tokens_complete:false,recorded_operations:3,measured_intervals:0};task.runs=[{run_id:'token-only',operations:Array.from({length:3},(_,i)=>({operation_id:'token-only-'+i,result_recorded:true,state:'completed',runtime_model:'fixture-token-only',usage:{input_tokens:30,output_tokens:10}}))}];await route.fulfill({response,json:task});});
  await page.locator('#recent-tasks [data-task-id="WK-unobserved"]').click();await page.locator('#lifecycle').waitFor();
  const timing=page.locator('#detail-content .panel').filter({has:page.getByRole('heading',{name:/^Tool execution time/})});
- assert.equal(await timing.locator('.setting').first().locator('dd').innerText(),'Unreported');assert.match(await timing.locator('.setting').nth(1).locator('dd').innerText(),/120\s*Partial/);
- assert.equal(await page.locator('#task-coverage').evaluate(el=>el.open),false);assert.doesNotMatch(await timing.innerText(),/0 \/ 3/);
+ assert.equal(await timing.locator('.setting').first().locator('dd').innerText(),'Unreported');
+ assert.equal(await timing.locator('.setting').nth(1).locator('dd').innerText(),'Unknown · 0 / 3');
+ assert.equal(await timing.locator('[data-token-metric="total"]').innerText(),'120');
+ assert.equal(await timing.locator('[data-coverage-metric="total"]').innerText(),'3 / 3');
+ assert.equal(await page.locator('#task-coverage').evaluate(el=>el.open),false);assert.doesNotMatch(await timing.innerText(),/0 \/ 3 bound operations/);
  await page.locator('#task-coverage summary').click();assert.match(await page.locator('#task-coverage').innerText(),/0 \/ 3 bound operations/);assert.match(await page.locator('#task-coverage').innerText(),/does not measure.*total effort/);
- await page.getByRole('button',{name:'Recorded time by stage',exact:true}).click();assert.match(await page.locator('.help-popover:popover-open').innerText(),/Verification tools run during implementation/);assert.match(await page.locator('.help-popover:popover-open').innerText(),/no timing stays unreported/);await page.keyboard.press('Escape');
+ await page.getByRole('button',{name:'Recorded time by stage',exact:true}).click();assert.match(await page.locator('.help-popover:popover-open').innerText(),/reported activity kind/);assert.match(await page.locator('.help-popover:popover-open').innerText(),/Unreported is not zero/);await page.keyboard.press('Escape');
  await page.locator('#close-drawer').click();await page.locator('#nav-usage').click();await page.locator('#usage-coverage').waitFor();assert.equal(await page.locator('#usage-coverage').evaluate(el=>el.open),false);
  assert.equal(await page.locator('svg.chart').count(),4,'Tool-only fixture leaves the full-turn scatter empty');assert.match(await page.locator('.summary-metrics').innerText(),/2,860/);
  await page.locator('#usage-coverage summary').click();assert.match(await page.locator('#usage-coverage').innerText(),/zero does not mean measured zero usage/);

@@ -9,7 +9,7 @@
     {"path":"AGENTS.md","reason":"Point current-project guidance to the public projection, not private migration evidence"},
     {"path":"docs/validation/native-dispatch-retained-history.md","reason":"Identify excluded private task history instead of directing public readers to absent records"},
     {"path":"docs/validation/native-learning-wire-contract.md","reason":"Separate private reuse records from reproducible public mechanism tests"},
-    {"path":"scripts/verify-workkeel-monitor.mjs","reason":"Correct stale browser expectations: tool-only measurements must not create paired full-turn scatter points"}
+    {"path":"scripts/verify-workkeel-monitor.mjs","reason":"Align stale browser assertions with current timing, activity labels/help and collapsed evidence; no UI or measurement behavior changes"}
   ],
   "local_state_excluded": ["New .ai-org task, artifact, event, learning and view changes", "Local workkeel.lock"],
   "public_state": {
