@@ -296,7 +296,7 @@ async function verifyObserverFollowup(page,monitor){
  await page.locator('#task-coverage summary').click();assert.match(await page.locator('#task-coverage').innerText(),/0 \/ 3 bound operations/);assert.match(await page.locator('#task-coverage').innerText(),/does not measure.*total effort/);
  await page.getByRole('button',{name:'Recorded time by stage',exact:true}).click();assert.match(await page.locator('.help-popover:popover-open').innerText(),/Verification tools run during implementation/);assert.match(await page.locator('.help-popover:popover-open').innerText(),/no timing stays unreported/);await page.keyboard.press('Escape');
  await page.locator('#close-drawer').click();await page.locator('#nav-usage').click();await page.locator('#usage-coverage').waitFor();assert.equal(await page.locator('#usage-coverage').evaluate(el=>el.open),false);
- assert.equal(await page.locator('svg.chart').count(),5,'Usage renders all five charts');assert.match(await page.locator('.summary-metrics').innerText(),/2,860/);
+ assert.equal(await page.locator('svg.chart').count(),4,'Tool-only fixture leaves the full-turn scatter empty');assert.match(await page.locator('.summary-metrics').innerText(),/2,860/);
  await page.locator('#usage-coverage summary').click();assert.match(await page.locator('#usage-coverage').innerText(),/zero does not mean measured zero usage/);
  healthMode='source-error';await page.waitForFunction(()=>document.querySelector('#connection').dataset.health==='source-error');assert.equal(await page.locator('#recent-tasks,svg.chart').count(),0);
  healthMode='offline';await page.waitForFunction(()=>document.querySelector('#connection').dataset.health==='offline');
@@ -343,20 +343,23 @@ try{
    if(name==='board')assert.equal(await page.locator('.task-card').count(),6);
    if(name==='usage'){
     await page.locator('svg.chart').first().waitFor();
-    assert.equal(await page.locator('svg.chart').count(),5);
+    // This fixture has tool time but no complete host turn duration. The paired
+    // scatter must stay empty; the release check covers valid paired points.
+    assert.equal(await page.locator('svg.chart').count(),4);
+    assert.match(await page.locator('#paired-coverage').innerText(),/0 \/ /);
+    assert.equal(await page.locator('[data-paired-operations]').count(),0);
     const checkChartSize=async()=>{
      const plots=await page.locator('svg.chart').evaluateAll(nodes=>nodes.map(e=>({height:e.getBoundingClientRect().height,scale:e.getScreenCTM().a,font:parseFloat(getComputedStyle(e.querySelector('text')).fontSize)})));
      assert.ok(plots.every(p=>Math.abs(p.scale-1)<.01&&p.font===11),'chart labels must retain their screen size');
-     assert.ok(plots[2].height<=281,'scatter height must not grow with the viewport');
-     assert.ok(plots[3].height<=217&&plots[4].height<=217,'trend heights remain bounded');
+     assert.ok(plots[2].height<=217&&plots[3].height<=217,'trend heights remain bounded');
     };
     await checkChartSize();
     if(viewport.width>700){await page.setViewportSize({width:2560,height:1080});await page.waitForFunction(()=>[...document.querySelectorAll('svg.chart')].every(e=>Math.abs(e.getScreenCTM().a-1)<.01));await checkChartSize();await page.setViewportSize(viewport);await page.waitForFunction(()=>[...document.querySelectorAll('svg.chart')].every(e=>Math.abs(e.getScreenCTM().a-1)<.01));}
-    assert.equal(await page.locator('svg.chart path[tabindex]').count(),1);
+    assert.equal(await page.locator('svg.chart path[tabindex]').count(),0);
     assert.match(await page.locator('.summary-metrics').innerText(),/2,860/);
     await page.locator('#usage-filters > summary').click();await page.locator('#usage-model').selectOption('fixture-local-model');await page.waitForFunction(()=>document.querySelector('.summary-metrics').textContent.includes('300'));
     assert.match(await page.locator('.summary-metrics').innerText(),/300/);
-    assert.equal(await page.locator('svg.chart path[tabindex]').count(),1);
+    assert.equal(await page.locator('svg.chart path[tabindex]').count(),0);
     await page.locator('#usage-model').selectOption('all');await page.waitForFunction(()=>document.querySelector('.summary-metrics').textContent.includes('2,860'));
     await page.getByRole('button',{name:'模型',exact:true}).click();
     await page.getByRole('button',{name:'每週',exact:true}).click();await page.waitForTimeout(200);

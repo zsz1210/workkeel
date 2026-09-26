@@ -4,9 +4,12 @@
   "local_source_revision": "f3b38b6ebb072fe8b813333a2576e42fef292fc6",
   "local_source_ancestry_published": false,
   "compared_product_files": 890,
-  "byte_identical_product_files": 889,
+  "byte_identical_product_files": 886,
   "reviewed_product_exceptions": [
-    {"path":"AGENTS.md","reason":"Point current-project guidance to the public projection, not private migration evidence"}
+    {"path":"AGENTS.md","reason":"Point current-project guidance to the public projection, not private migration evidence"},
+    {"path":"docs/validation/native-dispatch-retained-history.md","reason":"Identify excluded private task history instead of directing public readers to absent records"},
+    {"path":"docs/validation/native-learning-wire-contract.md","reason":"Separate private reuse records from reproducible public mechanism tests"},
+    {"path":"scripts/verify-workkeel-monitor.mjs","reason":"Correct stale browser expectations: tool-only measurements must not create paired full-turn scatter points"}
   ],
   "local_state_excluded": ["New .ai-org task, artifact, event, learning and view changes", "Local workkeel.lock"],
   "public_state": {

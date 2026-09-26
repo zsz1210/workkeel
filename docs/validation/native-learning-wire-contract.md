@@ -25,7 +25,10 @@ The applicable lesson is to inspect the relevant contract independently before
 claiming compatibility. Here it changes the observer integration checks: expected
 API fields, exact totals, missing-value behavior and source changes are asserted
 at the HTTP boundary, in addition to the UI component and pure-function checks.
-Found, read, application and outcome are explicitly recorded for the native task.
+Found, read, application and outcome were recorded for the maintainer's private
+native task. Those new task and use records are excluded from this public source
+projection. Public tests cover the mechanism; the private reuse report is not
+an accessible public task record or a fresh live-provider acceptance claim.
 
 ## Exclusions
 

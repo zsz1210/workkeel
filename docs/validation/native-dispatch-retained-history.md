@@ -7,7 +7,13 @@ identities do not restore Position or organization policy. Historical schema nam
 immutable evidence digests, Temple CLI aliases and isolated compatibility fixtures
 remain readable; renaming their bytes would destroy provenance or compatibility.
 
-The four retained `test` records are not four active native tasks:
+The following records describe the maintainer's private validation checkout.
+They are excluded from the public source projection because their evidence
+contains machine-local context. They are not records available in this public
+checkout's Backlog. Public legacy history ends at the unchanged published base;
+the new public native project starts without imported private tasks.
+
+In that private checkout, four retained `test` records are not active native tasks:
 
 | Retained record | Original scope | Current disposition |
 | --- | --- | --- |
@@ -21,7 +27,9 @@ WK-native-usage and WK-observer-followup record the current delivery sequence.
 Their own review and acceptance are the relevant evidence for current behavior;
 they do not convert any old candidate to PASS. The retained records remain
 immutable, pending historical acceptance, and are excluded from the live board.
-Use Backlog's retained-history view to inspect them.
+The retained-history view can inspect only records present in the project being
+observed. The private delivery history above is context, not independently
+reproducible public acceptance evidence.
 
 ## Compatibility retirement criteria
 
