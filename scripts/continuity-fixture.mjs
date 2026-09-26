@@ -23,7 +23,9 @@ function command(cwd, binary, args, options) {
   return r.stdout.trim();
 }
 const git = (root, ...args) => command(root, 'git', ['-c', 'core.hooksPath=' + os.devNull, '-c', 'commit.gpgsign=false', ...args]);
-const cli = (root, ...args) => JSON.parse(command(source, process.execPath, [path.join(source, 'templew.mjs'), ...args, root, '--json']));
+// Exercise this candidate's compatibility CLI against isolated fixture state;
+// the repository's retained Temple launcher is pinned historical evidence.
+const cli = (root, ...args) => JSON.parse(command(source, process.execPath, [path.join(source, 'bin/temple.mjs'), ...args, root, '--json']));
 async function write(root, file, value) {
   await fs.mkdir(path.dirname(path.join(root, file)), { recursive: true });
   await fs.writeFile(path.join(root, file), typeof value === 'string' ? value : JSON.stringify(value, null, 2) + '\n');

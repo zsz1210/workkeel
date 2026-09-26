@@ -9,6 +9,27 @@ const execFileAsync = promisify(execFile);
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
 export const REQUIRED_PACKAGE_PATHS = [
+  "src/workkeel-learning.mjs",
+  "docs/extensions/workkeel-learning.md",
+  "docs/validation/native-learning-wire-contract.md",
+  "src/workkeel-dispatch.mjs",
+  "src/workkeel-dispatch-classifier.mjs",
+  "src/workkeel-monitor-dom.mjs",
+  "docs/operations/workkeel-native-dispatch.md",
+  "docs/adr/0081-native-dispatch-and-reading-state.md",
+  "docs/validation/native-dispatch-retained-history.md",
+  "docs/policies/development-dispatch.json",
+  "src/workkeel-observer-index.mjs",
+  "project-overlay/workkeel-skills/workkeel-init/SKILL.md",
+  "project-overlay/workkeel-skills/workkeel-work/SKILL.md",
+  "src/workkeel-monitor-time.mjs",
+  "src/workkeel-monitor-work-items.mjs",
+  "src/workkeel-monitor-data.mjs",
+  "src/workkeel-monitor-analytics.mjs",
+  "src/workkeel-monitor-style.css",
+  "src/workkeel-read-metrics.mjs",
+  "docs/operations/workkeel-observer.md",
+  "docs/adr/0080-read-only-observer-workspace.md",
   "src/workkeel-material.mjs",
   "src/workkeel-continuation.mjs",
   "src/workkeel-continuation-state.mjs",
@@ -29,6 +50,9 @@ export const REQUIRED_PACKAGE_PATHS = [
   "src/workkeel-workflow-schema.mjs",
   "src/workkeel-workflows.mjs",
   "src/workkeel-measurements.mjs",
+  "src/workkeel-host-usage.mjs",
+  "src/workkeel-tailnet.mjs",
+  "docs/operations/workkeel-native-usage.md",
   "src/workkeel-monitor.mjs",
   "src/workkeel-monitor-view.mjs",
   "src/workkeel-monitor-page.mjs",
@@ -152,7 +176,7 @@ const ALLOWED_TOP_LEVEL_DIRECTORIES = ["bin/", "docs/", "packs/", "project-overl
 // WI-0267 adds exactly two monitor modules, the monitor ADR and routing evaluation.
 // External development tools, raw receipts and browser evidence stay excluded.
 // WI-0269 adds exactly three product modules, one daily guide and one ADR.
-const MAX_FILE_COUNT = 509; // WI-0276 adds exactly the five required paths above; roots and byte limit unchanged.
+const MAX_FILE_COUNT = 533; // Adds native learning module, its guide and scoped wire review; roots and byte limit unchanged.
 const MAX_UNPACKED_SIZE = 8 * 1024 * 1024;
 
 export function validatePackageDryRun(pack) {

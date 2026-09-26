@@ -5,7 +5,8 @@ import path from "node:path";
 import { execFileSync, spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import test from "node:test";
-import { initializeTaskProject, previewLegacyMigration } from "../src/workkeel-project.mjs";
+import { createHash } from "node:crypto";
+import { initializeTaskProject, previewLegacyMigration, readLegacyDigest } from "../src/workkeel-project.mjs";
 import { createNativeTask, mutateNativeTask, readNativeTask, diagnoseTaskProject, listTaskItems } from "../src/workkeel-tasks.mjs";
 
 const cli = fileURLToPath(new URL("../bin/workkeel.mjs", import.meta.url));
@@ -188,6 +189,107 @@ test("explicit legacy migration retains bytes, binds preview and rejects active/
   assert.deepEqual(await fs.readFile(path.join(root, ref)), before);
   assert.equal((await listTaskItems(root))[0].mode, "legacy-read-only");
   assert.equal((await diagnoseTaskProject(root)).valid, true);
+});
+
+test("explicit retention preserves unfinished Solo records without accepting them or allowing live work", async t => {
+  const root = await fixture(t, { init: false });
+  await write(root, "temple.lock", { schema_version: "temple.lock/v1" });
+  await write(root, ".ai-org/project/collaboration.json", { schema_version: "temple.collaboration/v2", profile: "solo", actor_policy: { ordinary_development: "attributed" } });
+  for (const name of ["policies.json", "workflow.json", "collaboration-profiles.json", "high-assurance.json"])
+    await write(root, `.ai-org/core/${name}`, await fs.readFile(new URL(`../project-overlay/.ai-org/core/${name}`, import.meta.url), "utf8"));
+  await write(root, ".ai-org/events/events.jsonl", '{"event":"retained"}\n'.repeat(70000));
+  const ref = ".ai-org/work-items/WI-0001.json", retentionRef = "retention.json";
+  const old = { schema_version: "temple.work-item/v1", id: "WI-0001", title: "Review pending", state: "test", workflow_profile: "standard", claim: null };
+  await write(root, ref, old);
+  const before = await fs.readFile(path.join(root, ref));
+  const journal = await fs.readFile(path.join(root, ".ai-org/events/events.jsonl"));
+  const retention = { schema_version: "workkeel.legacy-retention/v1", approved_by: "owner", approval_ref: "docs/approval.md",
+    open_work_items: [{ id: old.id, sha256: await readLegacyDigest(root, ref) }] };
+  await write(root, retentionRef, retention);
+  await assert.rejects(previewLegacyMigration(root, policy()), /terminal/);
+  const preview = await previewLegacyMigration(root, policy(), { retentionRef });
+  assert.deepEqual(preview.retained_open_items, [{ id: old.id, state: "test", disposition: "unfinished-read-only-history" }]);
+  await write(root, ref, { ...old, claim: { status: "active" } });
+  await assert.rejects(previewLegacyMigration(root, policy(), { retentionRef }), /active claims/);
+  await write(root, ref, { ...old, workflow_profile: "high-assurance" });
+  await assert.rejects(previewLegacyMigration(root, policy(), { retentionRef }), /High-Assurance/);
+  await write(root, ref, { ...old, title: "Changed" });
+  await assert.rejects(previewLegacyMigration(root, policy(), { retentionRef }), /exact approved/);
+  await write(root, ref, before.toString());
+  await write(root, ".ai-org/project/runtime-workers.json", { workers: [{ status: "active" }] });
+  await assert.rejects(previewLegacyMigration(root, policy(), { retentionRef }), /stopped/);
+  await fs.unlink(path.join(root, ".ai-org/project/runtime-workers.json"));
+  await write(root, retentionRef, { ...retention, open_work_items: [...retention.open_work_items, { id: "WI-absent", sha256: "0".repeat(64) }] });
+  await assert.rejects(previewLegacyMigration(root, policy(), { retentionRef }), /exactly/);
+  await write(root, retentionRef, retention);
+  await write(root, "docs/approval.md", "Changed approval");
+  await assert.rejects(initializeTaskProject(root, policy(), { migrationFingerprint: preview.fingerprint, retentionRef }), /Stale/);
+  await write(root, "docs/approval.md", "Approved total repair and internal local test data.\n");
+  const run = args => spawnSync(process.execPath, [cli, ...args], { encoding: "utf8" });
+  const proposed = run(["migration", "preview", root, "--policy", "policy.json", "--retain-open", retentionRef]);
+  assert.equal(proposed.status, 0, proposed.stderr);
+  const applied = run(["migration", "apply", root, "--policy", "policy.json", "--retain-open", retentionRef, "--fingerprint", JSON.parse(proposed.stdout).fingerprint]);
+  assert.equal(applied.status, 0, applied.stderr);
+  assert.deepEqual(await fs.readFile(path.join(root, ref)), before);
+  assert.deepEqual(await fs.readFile(path.join(root, ".ai-org/events/events.jsonl")), journal);
+  assert.equal((await listTaskItems(root))[0].state, "test");
+  assert.equal((await listTaskItems(root))[0].mode, "legacy-read-only");
+  assert.equal((await diagnoseTaskProject(root)).valid, true);
+  await assert.rejects(mutateNativeTask(root, old.id, "claim", request(0)), /canonical/);
+  await fs.appendFile(path.join(root, ".ai-org/events/events.jsonl"), '{"event":"tampered"}\n');
+  assert.equal((await diagnoseTaskProject(root)).valid, false);
+});
+
+test("legacy retention pins BOM-bearing input bytes and detects BOM-only changes", async t => {
+  const root = await fixture(t, { init: false });
+  const bom = Buffer.from([0xef, 0xbb, 0xbf]);
+  const rawHash = bytes => createHash("sha256").update(bytes).digest("hex");
+  const bomWrite = async (ref, value) => {
+    const bytes = Buffer.concat([bom, Buffer.from(typeof value === "string" ? value : JSON.stringify(value))]);
+    await write(root, ref, bytes.toString("utf8"));
+    return bytes;
+  };
+  await bomWrite("temple.lock", { schema_version: "temple.lock/v1" });
+  await write(root, ".ai-org/project/collaboration.json", { schema_version: "temple.collaboration/v2", profile: "solo", actor_policy: { ordinary_development: "attributed" } });
+  for (const name of ["policies.json", "workflow.json", "collaboration-profiles.json", "high-assurance.json"])
+    await bomWrite(`.ai-org/core/${name}`, await fs.readFile(new URL(`../project-overlay/.ai-org/core/${name}`, import.meta.url), "utf8"));
+  const journalRef = ".ai-org/events/events.jsonl", itemRef = ".ai-org/work-items/WI-0001.json";
+  const journal = await bomWrite(journalRef, '{"event":"海"}\n'.repeat(90000));
+  assert.ok(journal.length > 1024 * 1024);
+  const item = await bomWrite(itemRef, { schema_version: "temple.work-item/v1", id: "WI-0001", title: "Retained", state: "test", workflow_profile: "standard", claim: null });
+  await bomWrite(".ai-org/work-items/README.md", "Retained history\n");
+  await bomWrite("docs/approval.md", "Owner approves retaining the original bytes.\n");
+  const retentionRef = "retention.json";
+  await bomWrite(retentionRef, { schema_version: "workkeel.legacy-retention/v1", approved_by: "owner", approval_ref: "docs/approval.md", open_work_items: [{ id: "WI-0001", sha256: rawHash(item) }] });
+  const preview = await previewLegacyMigration(root, policy(), { retentionRef });
+  for (const pin of preview.legacy_manifest)
+    assert.equal(pin.sha256, rawHash(await fs.readFile(path.join(root, pin.path))), pin.path);
+  await initializeTaskProject(root, policy(), { migrationFingerprint: preview.fingerprint, retentionRef });
+  const initial = await diagnoseTaskProject(root);
+  assert.equal(initial.valid, true, JSON.stringify(initial.errors));
+  for (const [ref, bytes] of [[journalRef, journal], [itemRef, item]]) {
+    await fs.writeFile(path.join(root, ref), bytes.subarray(bom.length));
+    assert.equal((await diagnoseTaskProject(root)).valid, false, ref);
+    await fs.writeFile(path.join(root, ref), bytes);
+    assert.equal((await diagnoseTaskProject(root)).valid, true);
+  }
+});
+
+test("legacy journal hashing retains its file, encoding and size boundaries", async t => {
+  const root = await fixture(t, { init: false }), ref = ".ai-org/events/events.jsonl";
+  await write(root, ref, "a".repeat(8 * 1024 * 1024 + 1));
+  await assert.rejects(readLegacyDigest(root, ref), /8 MiB/);
+  await fs.writeFile(path.join(root, ref), Buffer.from([0xff]));
+  await assert.rejects(readLegacyDigest(root, ref), /encoded|encoding/i);
+  await fs.writeFile(path.join(root, ref), Buffer.from([0xe6, 0xb5]));
+  await assert.rejects(readLegacyDigest(root, ref), /encoded|encoding/i);
+  await fs.unlink(path.join(root, ref));
+  await fs.symlink(path.join(root, "docs/approval.md"), path.join(root, ref));
+  await assert.rejects(readLegacyDigest(root, ref));
+  await fs.unlink(path.join(root, ref));
+  await fs.rmdir(path.join(root, ".ai-org/events"));
+  await fs.symlink(path.join(root, "docs"), path.join(root, ".ai-org/events"));
+  await assert.rejects(readLegacyDigest(root, ref), /symlink/);
 });
 
 test("CLI init/create/claim and concurrent retries share the canonical task path", async t => {

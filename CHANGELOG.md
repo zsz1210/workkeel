@@ -1,9 +1,22 @@
 # Changelog
 
-## Unreleased changes
+## 0.1.0-alpha.34
 
-Changes on `main` after Alpha.33; these are not included in the published
-`0.1.0-alpha.33` npm package. Merging does not publish a new version.
+Release candidate for the renamed `@zsz1210/workkeel` package. Publication and
+registry availability remain pending until the release workflow and registry checks pass.
+Historical Alpha.33 is the Temple package; its availability does not publish this rename.
+
+- Added native Learning capture, scoped validation, explicit task use and transitive
+  source-impact queries. Deterministic multilingual aliases require no model call;
+  stale or contradicted sources block recommendations. Proposal eligibility never
+  creates or enables a Skill automatically.
+- Added the read-only Liquid Glass observer, bounded usage charts and history,
+  task execution attribution, native host usage reporting, explicit dispatch
+  selection and persistent disclosure/focus state during background updates.
+- Corrected completed-task attention caused by historical stopped attempts,
+  tool-only operations counted as extra models, and requested reasoning presented
+  as reported reasoning. Unknown measurements remain unknown.
+- Collapsed evidence and analytics filters by default; model grouping is the default.
 
 - Renamed development-source branding and package metadata to Workkeel
   (`@zsz1210/workkeel`), retaining exact legacy package pins, commands and schemas.

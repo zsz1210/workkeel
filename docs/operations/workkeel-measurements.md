@@ -50,17 +50,14 @@ in-memory access token; reopen the printed link to regain access.
 
 This is a task monitor, not the [offline workflow explainer](../assets/workkeel-flow.html).
 
-### Full task time and handoff
+### Execution time and handoff
 
-Task detail and the quality table show total lifecycle elapsed time and five
-disjoint phases: waiting for claim, implementation, review (including waiting),
-rework implementation, and waiting for acceptance. A failed review remains in the
-review phase until rework is authorized. Subsequent build intervals after a rework
-event count as rework. Released claims return to waiting. Terminal tasks freeze at
-the final event; ongoing tasks run to the snapshot read time. Invalid, reversed or
-future event times make the whole timing projection unknown, not a partial total.
-The additive `lifecycle` field is also available in `task summary` JSON; its phase
-durations sum to `elapsed_ms`. The older terminal-only quality field is retained.
+Task details show recorded execution intervals and their intersection with the
+implementation, review and rework stages. Overlapping execution counts once in
+task details; usage analysis sums operations, which can overlap. Missing execution
+intervals stay unknown. Task creation or state residence never establishes active
+work. The separate `lifecycle` field in `task summary` JSON retains calendar
+residence for diagnosis, including waiting and downtime.
 
 These are calendar intervals, including downtime. They do not measure active
 human or reviewer effort. Adapter time can overlap and must not be added to task
@@ -94,11 +91,15 @@ existing execution process. Data remains in its private, Git-ignored
 visit and attempt; repeat reads and completed-run replay do not add usage. A task
 query includes all recorded runs for that task, not just the latest one.
 
-Native coding-agent sessions and unrelated Codex desktop tasks are **not
-automatically collected**. A task without a recorded run has `coverage: unobserved`
+Native coding-agent operations can use the optional
+[explicitly bound native collector](workkeel-native-usage.md). Unbound sessions
+and other desktop tasks are **not collected**. A task without a recorded run has `coverage: unobserved`
 and null totals. With runs, `recorded-workflow-runs-only` explicitly limits the
 scope: this is not proof of the task's entire development cost. Historical runs
 can expose their saved result usage, but missing timing is not reconstructed.
+Native-only coverage is `bound-host-operations-only`; mixed records use
+`recorded-workflow-and-bound-host-operations`. Native reports remain partial task
+coverage even when a bound operation has completed.
 
 ## Reading the fields
 

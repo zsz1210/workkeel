@@ -56,7 +56,7 @@ async function write(root,name,value,exclusive=false){const file=path.join(root,
 async function read(root,name){return JSON.parse(await fs.readFile(path.join(root,name),'utf8'));}
 async function run(root,binary,args){const r=await exec(binary,args,{cwd:root,env:subprocessEnvironment(),timeout:30000,maxBuffer:2*1024*1024});return r.stdout.trim();}
 const git=(root,...args)=>run(root,'git',['-c','core.hooksPath=/dev/null','-c','commit.gpgsign=false',...args]);
-async function cli(root,...args){const n=args[0]==='work-item'?2:1;return JSON.parse(await run(source,process.execPath,[path.join(source,'templew.mjs'),...args.slice(0,n),root,...args.slice(n),'--json']));}
+async function cli(root,...args){const n=args[0]==='work-item'?2:1;return JSON.parse(await run(source,process.execPath,[path.join(source,'bin/temple.mjs'),...args.slice(0,n),root,...args.slice(n),'--json']));}
 async function tree(root,prefix=''){
   const result={};for(const e of await fs.readdir(path.join(root,prefix),{withFileTypes:true})){
     if(e.name==='.git')continue;const p=path.posix.join(prefix,e.name);check(!e.isSymbolicLink(),'unsafe-symlink');
@@ -74,7 +74,7 @@ async function installTemple(root,lab,f){
   const config=await read(source,'docs/getting-started/temple-init.example.json');config.project={id:'autonomy-fixture',name:'Synthetic delivery fixture'};
   config.repository_integration={schema_version:'temple.repository-integration/v1',status:'confirmed',authority:'project',source:'human-confirmed',policy_refs:[],summary:'Synthetic local fixture; coordinator owns fixed administration',integration_target:'main',change_isolation:'not-required',review_gate:'not-required',recorded_at:'2026-09-07T00:00:00Z',recorded_by:'human'};
   const configFile=path.join(lab,'init.json');await write(lab,'init.json',config);
-  await run(source,process.execPath,[path.join(source,'templew.mjs'),'init',root,'--config',configFile,'--json']);
+  await run(source,process.execPath,[path.join(source,'bin/temple.mjs'),'init',root,'--config',configFile,'--json']);
   await fs.appendFile(path.join(root,'AGENTS.md'),'\n# Explicit synthetic experiment assignment\nThe user authorizes the coordinator to perform fixed claim, handoff, transition, evidence and Git recording. Stage actors supply only substantive assigned work. Do not duplicate those administrative mutations. This exception is local to this synthetic fixture.\n');
   await cli(root,'work-item','create','--title',f.title,'--scope','Implement current SPEC.md','--acceptance','All current SPEC.md behavior with preserved public regressions','--affected-path','src','--affected-path','test/additional.test.mjs','--ui-mode','not-applicable','--workflow-profile','standard');
   await transition(root,'spec',['work_order'],'SPEC.md');

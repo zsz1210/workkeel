@@ -7,7 +7,7 @@ import {initializeTaskProject} from '../src/workkeel-project.mjs';
 import {createNativeTask,mutateNativeTask} from '../src/workkeel-tasks.mjs';
 import {executeWorkflow} from '../src/workkeel-workflows.mjs';
 const actor={agent_id:'builder',principal_id:'owner'};
-export async function createMonitorFixture({empty=false,extended=false}={}) {
+export async function createMonitorFixture({empty=false,extended=false,rich=false}={}) {
  const root=await fs.mkdtemp(path.join(os.tmpdir(),'workkeel-monitor-'));
  const env={...Object.fromEntries(Object.entries(process.env).filter(([key])=>!key.startsWith('GIT_'))),GIT_CONFIG_NOSYSTEM:'1',GIT_CONFIG_GLOBAL:'/dev/null',GIT_TERMINAL_PROMPT:'0'};
  const git=(...args)=>execFileSync('git',['-c','core.hooksPath=/dev/null','-c','commit.gpgsign=false','-C',root,...args],{env,timeout:10000,encoding:'utf8',stdio:['ignore','pipe','pipe']}).trim();
@@ -15,8 +15,9 @@ export async function createMonitorFixture({empty=false,extended=false}={}) {
  const reviewer={agent_id:'reviewer',principal_id:'owner'};
  await initializeTaskProject(root,{schema_version:'workkeel.task-policy/v1',principals:['owner'],agents:[actor,reviewer],approvers:['owner'],review_separation:'distinct-agent'});
  await fs.mkdir(path.join(root,'docs'));await fs.mkdir(path.join(root,'src'));
- const policy={schema_version:'workkeel.execution-policy/v1',models:[{id:'native',connection:{kind:'native'},data_classes:['public']}],default_model:'native',rules:[],headroom:{mode:'off'},limits:{steps:1,attempts_per_node:1,parallelism:1,timeout_ms:10000,max_cost_usd:null}};
+ const policy={schema_version:'workkeel.execution-policy/v1',models:[{id:'native',connection:{kind:'native'},data_classes:['public']}],default_model:'native',rules:[],headroom:{mode:'off'},limits:{steps:rich?3:1,attempts_per_node:1,parallelism:1,timeout_ms:10000,max_cost_usd:null}};
  const graph={schema_version:'workkeel.workflow/v1',nodes:[{id:'work',kind:'runtime',input:'Offline fixture'}],edges:[{from:'start',to:'work'},{from:'work',to:'end'}]};
+ if(rich){graph.nodes.push({id:'check',kind:'runtime',input:'Offline second model fixture'});graph.edges=[{from:'start',to:'work'},{from:'work',to:'check'},{from:'check',to:'end'}];}
  for(const [name,value] of [['policy.json',JSON.stringify(policy)],['workflow.json',JSON.stringify(graph)],['approval.md','Approved synthetic offline monitor fixture; no providers.']])await fs.writeFile(path.join(root,'docs',name),value);
  git('add','.');git('commit','-qm','Synthetic monitor fixture');
  if(empty)return root;
@@ -40,7 +41,7 @@ export async function createMonitorFixture({empty=false,extended=false}={}) {
   }
   const claim=await mutateNativeTask(root,id,'claim',{operation_id:'claim',expected_version:1,actor,base_revision:git('rev-parse','HEAD')});
   const run={run_id:mode,task_id:id,actor,claim_id:claim.claim.id,policy_ref:'docs/policy.json',workflow_ref:'docs/workflow.json'};
-  const perform=async({observe})=>{const usage={input_tokens:1200,output_tokens:80,cost_usd:null};if(mode==='interrupted'){await observe({runtime_model:'fixture-runtime',observed_model:null,usage});throw Error('Synthetic interrupted operation');}return {status:'completed',conversation_id:null,output:'PRIVATE_OUTPUT_NOT_FOR_MONITOR',outcome:'done',runtime_model:'fixture-runtime',observed_model:null,usage};};
+  const perform=async({observe,operation_id})=>{const second=rich&&operation_id.includes(':check-'),usage={input_tokens:second?240:1200,output_tokens:second?60:80,cost_usd:null};if(mode==='interrupted'){await observe({runtime_model:'fixture-runtime',observed_model:null,usage});throw Error('Synthetic interrupted operation');}return {status:'completed',conversation_id:null,output:'PRIVATE_OUTPUT_NOT_FOR_MONITOR',outcome:'done',runtime_model:second?'fixture-local-model':'fixture-runtime',observed_model:null,usage};};
   try{await executeWorkflow(root,run,{adapters:[{id:'fixture',assertCompatible:async()=>{},start:perform,resume:perform,cancel:async()=>{}}]});}catch(e){if(mode!=='interrupted')throw e;}
   await mutateNativeTask(root,id,'release',{operation_id:'release',expected_version:2,actor,claim_id:claim.claim.id,summary:'Offline fixture finished'});
  }

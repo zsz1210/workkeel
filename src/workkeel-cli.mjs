@@ -10,14 +10,18 @@ const HELP = `Workkeel — repository-native task coordination for coding agents
 
 workkeel start [target] [--request brief.json]
 workkeel init [target] --policy repository-policy.json
-workkeel migration preview [target] --policy repository-policy.json
-workkeel migration apply [target] --policy repository-policy.json --fingerprint sha256
+workkeel migration preview [target] --policy repository-policy.json [--retain-open retention.json]
+workkeel migration apply [target] --policy repository-policy.json --fingerprint sha256 [--retain-open retention.json]
 workkeel status|doctor [target]
 workkeel task create [target] --source contract.json --request request.json
 workkeel task show [target] --id task-id
 workkeel task metrics [target] --id task-id
 workkeel task summary [target] --id task-id
 workkeel task observe [target] --id task-id --request observation.json
+workkeel usage bind|report|activity|close [target] --request usage-request.json
+workkeel usage collect [target] --id binding-id
+workkeel dispatch prepare|plan|bind [target] --request dispatch-request.json
+workkeel dispatch show [target] --id execution-id
 workkeel intake preview [target] --request brief.json
 workkeel intake apply [target] --request brief.json --fingerprint sha256
 workkeel task claim|release|handoff|review|rework|close|cancel [target] --id task-id --request request.json
@@ -32,6 +36,8 @@ workkeel workflow metrics [target] --id run-id
 workkeel workflow cancel|recover-lock [target] --id run-id --request actor.json
 workkeel headroom view|read [target] --request tool-view-request.json
 workkeel skills audit [target] --request skill-use.json
+workkeel learning list [target]
+workkeel learning capture|review|use|search|impact [target] --request learning-request.json
 workkeel legacy <original Temple arguments>
 
 All task commands return JSON. Lifecycle mutation requests contain operation_id,
@@ -42,13 +48,13 @@ permissions. Workflow run explicitly launches the qualified Codex subscription h
 `;
 function parse(args) {
   const rest = [...args]; const command = rest.shift() ?? "help";
-  const action = ["task", "intake", "migration", "runtime", "instructions", "workflow", "headroom", "skills", "context"].includes(command) ? rest.shift() : null;
+  const action = ["task", "usage", "dispatch", "intake", "migration", "runtime", "instructions", "workflow", "headroom", "skills", "context", "learning"].includes(command) ? rest.shift() : null;
   const target = rest[0] && !rest[0].startsWith("--") ? rest.shift() : ".";
   const options = {};
   while (rest.length) {
     const key = rest.shift();
     if (key === "--json") continue;
-    if (!["--policy", "--source", "--request", "--id", "--fingerprint"].includes(key) || Object.hasOwn(options, key) || !rest.length || rest[0].startsWith("--")) throw new Error("Unknown, repeated or incomplete Workkeel option");
+    if (!["--policy", "--source", "--request", "--id", "--fingerprint", "--retain-open"].includes(key) || Object.hasOwn(options, key) || !rest.length || rest[0].startsWith("--")) throw new Error("Unknown, repeated or incomplete Workkeel option");
     options[key] = rest.shift();
   }
   return { command, action, target: path.resolve(target), options };
@@ -68,11 +74,11 @@ export async function workkeelMain(args) {
     allow(options, ["--request"]);
     output = await readStartGuide(target, { requestRef: options["--request"] ?? null });
   } else if (command === "init" || command === "migration") {
-    allow(options, command === "init" || action === "preview" ? ["--policy"] : ["--policy", "--fingerprint"]);
+    allow(options, command === "init" ? ["--policy"] : action === "preview" ? ["--policy", "--retain-open"] : ["--policy", "--fingerprint", "--retain-open"]);
     const policy = (await readTaskContractInput(target, required(options, "--policy"))).document;
     if (command === "init") output = await initializeTaskProject(target, policy);
-    else if (action === "preview") output = await previewLegacyMigration(target, policy);
-    else if (action === "apply") output = await initializeTaskProject(target, policy, { migrationFingerprint: required(options, "--fingerprint") });
+    else if (action === "preview") output = await previewLegacyMigration(target, policy, { retentionRef: options["--retain-open"] ?? null });
+    else if (action === "apply") output = await initializeTaskProject(target, policy, { migrationFingerprint: required(options, "--fingerprint"), retentionRef: options["--retain-open"] ?? null });
     else throw new Error("Migration requires preview or apply");
   } else if (!await existsEntry(target, "workkeel.lock")) {
     // No migration by inference. Keep the complete original CLI for old projects.
@@ -83,6 +89,14 @@ export async function workkeelMain(args) {
     output = command === "doctor" ? await diagnoseTaskProject(target) : {
       schema_version: "workkeel.status/v1", tasks: await listTaskItems(target), authority: "observation-only", mutation_status: "no-write"
     };
+  } else if (command === 'learning') {
+    const learning=await import('./workkeel-learning.mjs');
+    if(action==='list'){allow(options,[]);output=await learning.listNativeLearning(target);}
+    else {
+      const handler={capture:learning.captureNativeLearning,review:learning.reviewNativeLearning,use:learning.recordNativeLearningUse,search:learning.searchNativeLearning,impact:learning.nativeLearningImpact}[action];
+      if(!handler)throw Error('Learning requires capture, review, use, list, search or impact');
+      allow(options,['--request']);output=await handler(target,(await readTaskContractInput(target,required(options,'--request'))).document);
+    }
   } else if (command === 'intake') {
     allow(options, action==='preview' ? ['--request'] : ['--request','--fingerprint']);
     const {previewTaskIntake,applyTaskIntake}=await import('./workkeel-intake.mjs');
@@ -90,6 +104,26 @@ export async function workkeelMain(args) {
     if(action==='preview')output=await previewTaskIntake(target,brief);
     else if(action==='apply')output=await applyTaskIntake(target,brief,required(options,'--fingerprint'));
     else throw Error('Intake requires preview or apply');
+  } else if (command === 'dispatch') {
+    const {prepareDispatchTicket,readDispatchTicket,planDispatch,bindDispatchTicket}=await import('./workkeel-dispatch.mjs');
+    if(action==='show'){
+      allow(options,['--id']);output=await readDispatchTicket(target,required(options,'--id'));
+    }else{
+      allow(options,['--request']);const request=(await readTaskContractInput(target,required(options,'--request'))).document;
+      if(action==='prepare')output=await prepareDispatchTicket(target,request);
+      else if(action==='plan')output=planDispatch(request.policy,request.plan);
+      else if(action==='bind')output=await bindDispatchTicket(target,request);
+      else throw Error('Dispatch requires prepare, plan, bind or show');
+    }
+  } else if (command === 'usage') {
+    const {bindHostUsage,reportHostUsage,reportHostActivity,collectHostUsage,closeHostUsage}=await import('./workkeel-host-usage.mjs');
+    if(action==='collect'){
+      allow(options,['--id']);output=await collectHostUsage(target,required(options,'--id'));
+    }else{
+      const handler={bind:bindHostUsage,report:reportHostUsage,activity:reportHostActivity,close:closeHostUsage}[action];
+      if(typeof handler!=='function')throw Error('Usage requires bind, report, activity, collect or close');
+      allow(options,['--request']);output=await handler(target,(await readTaskContractInput(target,required(options,'--request'))).document);
+    }
   } else if (command === "task") {
     if(action==='summary'||action==='observe'){
       allow(options,action==='summary'?['--id']:['--id','--request']);

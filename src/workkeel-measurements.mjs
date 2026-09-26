@@ -3,6 +3,7 @@ import { readTaskContractInput } from "./task-contract.mjs";
 import { safeDirectory, existsEntry } from "./workkeel-project.mjs";
 import { readNativeTask } from "./workkeel-tasks.mjs";
 import { executionDigest, exactKeys, EXECUTION_ID, validateRuntimeResult } from "./workkeel-execution-policy.mjs";
+import { readHostMeasurements } from "./workkeel-host-usage.mjs";
 
 const keys = ["input_tokens", "output_tokens", "cost_usd"];
 const unknownUsage = () => Object.fromEntries(keys.map(key => [key, null]));
@@ -24,14 +25,14 @@ export function summarizeMeasurements(operations, { observed = true } = {}) {
   const usage = {};
   for (const key of keys) {
     const seen = operations.map(op => op.usage[key]).filter(finite);
-    const complete = observed && operations.every(op => op.result_recorded && finite(op.usage[key]));
+    const complete = observed && operations.every(op => op.result_recorded && op.coverage_complete !== false && finite(op.usage[key]));
     const subtotal = observed && (seen.length || !operations.length) ? sum(seen, key !== "cost_usd") : null;
     usage[key] = { total: complete ? subtotal : null, known_subtotal: subtotal,
       observed_operations: seen.length, complete_operations: operations.filter(op => op.result_recorded && finite(op.usage[key])).length,
       total_operations: operations.length, complete: complete && subtotal !== null };
   }
   const measured = operations.map(op => op.adapter_elapsed_ms).filter(finite);
-  return { usage, timing: { adapter_work_ms: observed && measured.length === operations.length ? sum(measured) : null,
+  return { usage, timing: { adapter_work_ms: observed && measured.length === operations.length && operations.every(op=>op.coverage_complete!==false) ? sum(measured) : null,
     known_adapter_work_ms: measured.length || observed && !operations.length ? sum(measured) : null,
     measured_operations: measured.length, total_operations: operations.length,
     meaning: "Sum of measured adapter calls, including setup/tools/cleanup; parallel calls overlap. Not model compute time or run wall time." } };
@@ -43,8 +44,8 @@ export function projectOperationMeasurement(record) {
   // Final operation-scoped result supersedes progress, including explicit unknown.
   const usage = record.result?.usage ?? observation?.usage ?? unknownUsage();
   return { operation_id: record.id, node: record.node, visit: record.visit, attempt: record.attempt,
-    requested_model: record.requested_model ?? null, runtime_model: record.result?.runtime_model ?? observation?.runtime_model ?? null,
-    observed_model: record.result?.observed_model ?? observation?.observed_model ?? null,
+    requested_model: record.requested_model ?? null, runtime_model: record.result ? record.result.runtime_model??null : observation?.runtime_model??null,
+    observed_model: record.result ? record.result.observed_model??null : observation?.observed_model??null,
     model_id: record.model_id, selection_reason: record.selection_reason,
     state: record.result?.status ?? (record.measurement?.ended_at ? "unresolved" : "unconfirmed"),
     result_recorded: Boolean(record.result), usage: { ...usage },
@@ -79,7 +80,13 @@ export async function readWorkflowMeasurements(target, id, { now = new Date() } 
   for (const operationId of inventory) {
     const op = await record(target, `${ref}/operations/${operationId}.json`);
     if (op.id !== operationId || op.run_id !== id || executionDigest(op.pins) !== executionDigest(run.identity.pins)) throw new Error("Measurement operation binding mismatch");
-    operations.push(projectOperationMeasurement(op));
+    const candidates=[run.identity.selections?.[op.node],...(run.identity.fallbacks?.[op.node]??[])].filter(Boolean);
+    const selection=candidates.find(s=>s.id===op.model_id&&s.fingerprint===op.model_fingerprint&&executionDigest(s.connection)===s.fingerprint);
+    const connection=selection?.connection;
+    operations.push({...projectOperationMeasurement(op),connection_kind:connection?.kind??null,
+      provider:connection?.provider??(connection?.kind==='codex-subscription'?'openai':null),
+      requested_reasoning:connection?.effort?{name:'effort',value:connection.effort}:null,
+      reported_reasoning:null});
   }
   const refreshed = await record(target, `${ref}/operations-index.json`);
   const latestStatus = await record(target, `${ref}/status.json`).catch(error => { if (error.code === "ENOENT") return { state: "created" }; throw error; });
@@ -88,7 +95,7 @@ export async function readWorkflowMeasurements(target, id, { now = new Date() } 
   const span = timestamp(run.created_at) && end ? Date.parse(end) - Date.parse(run.created_at) : null;
   return { schema_version: "workkeel.workflow-measurements/v1", authority: "observation-only", mutation_status: "no-write",
     run_id: id, task_id: run.request.task_id, runner_state: status.state, read_at: now.toISOString(),
-    created_at: timestamp(run.created_at), wall_elapsed_ms: finite(span) ? span : null,
+    created_at: timestamp(run.created_at), last_observed_at:timestamp(status.at), wall_elapsed_ms: finite(span) ? span : null,
     wall_time_basis: "Since run creation, including waits and downtime; terminal runs stop at status timestamp. Not active execution time.",
     progress: { recorded_attempts: operations.length, completed_attempts: operations.filter(op => op.state === "completed").length,
       unresolved_attempts: operations.filter(op => !op.result_recorded).length, percent: null },
@@ -110,12 +117,15 @@ export async function readTaskMeasurements(target, id) {
       if (run.request.task_id === id) runs.push(await readWorkflowMeasurements(target, entry));
     }
   }
+  const host = await readHostMeasurements(target);
+  if(host.errors.some(error=>error.task_id===null||error.task_id===id))throw new Error('Native host measurement journal unavailable');
+  runs.push(...host.byTask.get(id)??[]);
   const operations = runs.flatMap(run => run.operations);
   return { schema_version: "workkeel.task-measurements/v1", authority: "observation-only", mutation_status: "no-write",
     task_id: id, task_state: task.state, read_at: new Date().toISOString(),
-    coverage: runs.length ? "recorded-workflow-runs-only" : "unobserved",
-    ...summarizeMeasurements(operations, { observed: runs.length > 0 }), runs,
-    limitations: ["No observation of arbitrary native-host sessions or other Codex app tasks.",
+    coverage: measurementCoverage(runs),
+    ...summarizeMeasurements(operations, { observed: hasObservedRun(runs) }), runs,
+    limitations: ["Native host reports cover only explicitly bound operations; unbound sessions and agents are excluded.",
       "Unknown is null, never an inferred zero. Live snapshots are point-in-time observations, not transactional across runs.",
       "Partial snapshots are not final totals. No token-to-subscription-quota or dollar conversion.",
       "Measurements do not accept tasks or establish model quality."] };
@@ -123,13 +133,13 @@ export async function readTaskMeasurements(target, id) {
 
 /** One validated inventory per observer refresh. Strict per-task metrics stay unchanged. */
 export async function readProjectMeasurements(target) {
-  const byTask=new Map(), errors=[];
+  const {byTask,errors,index_reads:hostReads}=await readHostMeasurements(target);
   const ref='.ai-org/execution';
-  if(!await existsEntry(target,ref))return {byTask,errors,index_reads:0};
+  if(!await existsEntry(target,ref))return {byTask,errors,index_reads:hostReads};
   const directory=await safeDirectory(target,ref);
   const names=(await fs.readdir(directory)).sort();
   if(names.length>4096)throw Error('Execution inventory limit exceeded; use per-task metrics');
-  let indexReads=0;
+  let indexReads=hostReads;
   for(const entry of names){
     if(['.gitignore','claims'].includes(entry))continue;
     let taskId=null;
@@ -149,13 +159,21 @@ export async function readProjectMeasurements(target) {
   return {byTask,errors,index_reads:indexReads};
 }
 
+function measurementCoverage(runs){
+  if(!runs.length)return 'unobserved';
+  const host=runs.some(run=>run.measurement_source==='native-host-report');
+  const workflow=runs.some(run=>run.measurement_source!=='native-host-report');
+  return host?(workflow?'recorded-workflow-and-bound-host-operations':'bound-host-operations-only'):'recorded-workflow-runs-only';
+}
+function hasObservedRun(runs){return runs.some(run=>run.measurement_source!=='native-host-report'||run.operations.length>0);}
+
 export function projectTaskMeasurements(task, index) {
   const runs=index.byTask.get(task.id)??[],errors=index.errors.filter(e=>e.task_id===null||e.task_id===task.id);
-  const totals=summarizeMeasurements(runs.flatMap(r=>r.operations),{observed:runs.length>0});
+  const totals=summarizeMeasurements(runs.flatMap(r=>r.operations),{observed:hasObservedRun(runs)});
   if(errors.length){
     for(const metric of Object.values(totals.usage)){metric.total=null;metric.complete=false;}
     totals.timing.adapter_work_ms=null;
   }
-  return {task_id:task.id,task_state:task.state,coverage:errors.length?'incomplete-journal':runs.length?'recorded-workflow-runs-only':'unobserved',
+  return {task_id:task.id,task_state:task.state,coverage:errors.length?'incomplete-journal':measurementCoverage(runs),
     ...totals,runs,measurement_errors:errors};
 }

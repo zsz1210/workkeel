@@ -4,13 +4,17 @@
 
 Workkeel connects approved tasks, coding-agent execution, handoffs and verified
 results. New projects use task-first coordination without company Positions.
-This toolkit repository still retains its legacy self-hosting contract.
+This repository uses the native workflow and retains legacy records read-only.
 
 ## Available in development source
+
+Alpha.34 is the current release candidate; registry publication is pending verification.
 
 - Native task contracts, scoped claims, exact-candidate handoff, distinct review
   and explicit acceptance.
 - A daily brief preview/apply entry using the same task guards.
+- Native Learning validation, multilingual aliases, explicit task use and source-impact
+  queries; Skill proposal readiness remains separate from activation.
 - An optional foreground observer with work overview, task evidence, handoff
   summaries and per-task usage/quality. It is read-only and single-project.
 - Opt-in graph execution and policy-based model selection through an explicitly
@@ -24,7 +28,7 @@ Merging a PR is separate from package publication or deployment.
 
 ## Current priorities
 
-1. Make ordinary approved work easy to start and resume from a Codex conversation.
+1. Make ordinary approved work easy to start and resume from the user's coding tool.
 2. Keep task acceptance, runtime progress and external observations clearly separate.
 3. Collect representative real-task quality, rework, time and token evidence.
 4. Compare workflows only with matched scope, model, tools and acceptance checks.

@@ -85,4 +85,7 @@
 - [Workkeel task-contract migration](0071-workkeel-task-contract.md)
 - [ADR-0077: Read-only first-use guidance](0077-first-use-guidance.md)
 
+- [ADR-0080: Read-only observer workspace](0080-read-only-observer-workspace.md)
+- [ADR-0081: Native dispatch and retained reading state](0081-native-dispatch-and-reading-state.md)
+
 An ADR is an Architecture Decision Record. It preserves the context, decision, rationale, and consequences of an important technical or organizational choice so that later Agents do not have to infer why it was made from chat memory.

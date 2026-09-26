@@ -1,8 +1,15 @@
 # Alpha release readiness
 
-Last refreshed: 2026-09-19
+Last refreshed: 2026-09-26
 
-**Alpha.33 is published on GitHub and npm's `next` channel.** Publication completed
+**Alpha.34 is the Workkeel release candidate; publication is pending.** The renamed
+`@zsz1210/workkeel` registry endpoint returned 404 on the refresh date. Its first
+publication and trusted-publisher configuration must be completed explicitly.
+An npm trust relationship requires an existing package; see the official
+[npm trust prerequisites](https://docs.npmjs.com/cli/v11/commands/npm-trust/).
+Do not assume that the historical package's permission follows a rename.
+
+**Historical Alpha.33 was published as `@zsz1210/temple-ai-dev-org`.** Publication completed
 on 2026-09-16. WI-0243 retains candidate qualification; WI-0244 retains publication
 and registry verification. The source version, a reviewed merge, a Git tag,
 a GitHub Release and an npm version remain separate states.
@@ -12,9 +19,9 @@ a GitHub Release and an npm version remain separate states.
 | Surface | Observed state | Next action |
 | --- | --- | --- |
 | Published GitHub prerelease | [v0.1.0-alpha.33](https://github.com/zsz1210/temple-ai-dev-org/releases/tag/v0.1.0-alpha.33), target `2e269d67bd764d3c47df665bc9043263cf8082e8` | Preserve the immutable published release |
-| npm channels | `next=0.1.0-alpha.33`; `latest=0.1.0-alpha.30` as observed on the refresh date | Use an exact version or `next` for Alpha adoption; the historical `latest` alias does not imply stable qualification |
-| Development source | `main` contains post-release changes; its package version still reads `0.1.0-alpha.33` | Use Git revision and the [Unreleased changelog](../../CHANGELOG.md#unreleased-changes) to distinguish source behavior; qualify a new version before publication |
-| Integration | [Single-maintainer PR policy](../../GOVERNANCE.md#single-maintainer-pull-request-policy) | Ordinary PR, required CI and applicable independent Temple review; no impossible self-approval requirement |
+| npm channels | The renamed Workkeel package is not yet available; prior dist-tags belong to the historical Temple package | Verify the exact name and version; do not treat historical availability as a Workkeel publication |
+| Development source | Alpha.34 release candidate, including native Learning and observer work | Use the exact revision and [changelog](../../CHANGELOG.md) until archive and registry qualification are complete |
+| Integration | [Single-maintainer PR policy](../../GOVERNANCE.md#single-maintainer-pull-request-policy) | Ordinary PR, required CI and independent native Workkeel review; no impossible self-approval requirement |
 | npm publication | [Release-only workflow](../operations/npm-release.md) | Publishing a GitHub Release triggers verification and exact-asset comparison before OIDC upload |
 | Real downstream projects | Not modified by release qualification | Plan an explicit project-specific upgrade; publication does not upgrade installed projects |
 

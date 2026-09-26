@@ -167,7 +167,8 @@ test("fresh initialization installs a compact authority-equivalent instruction r
   assert.equal(contextMap.schema_version, "temple.context-map/v2");
   const marker = /<!-- temple:instructions:start -->[\s\S]*?<!-- temple:instructions:end -->/;
   assert.equal(installed, distribution);
-  assert.equal(toolkit.match(marker)?.[0], distribution.trim());
+  assert.equal(toolkit.match(marker), null, "Native self-hosting must not route current work through the legacy router");
+  assert.match(toolkit, /<!-- workkeel:begin -->[\s\S]*WORKKEEL\.md[\s\S]*<!-- workkeel:end -->/);
   assert.ok(Buffer.byteLength(installed, "utf8") < 9310);
   // Structural reachability, not semantic equivalence proven by text matching.
   assert.match(installed, /Read the whole `TEMPLE.md` operating contract/);

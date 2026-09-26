@@ -56,14 +56,14 @@ async function configureRoot(root,baseline,base,lab,arm){
     config.project={id:'learning-review-delivery',name:'Local learning review delivery'};
     config.repository_integration={schema_version:'temple.repository-integration/v1',status:'confirmed',authority:'project',source:'human-confirmed',policy_refs:[],summary:'Authorized isolated experiment; coordinator owns local administration; no release',integration_target:'main',change_isolation:'not-required',review_gate:'not-required',recorded_at:new Date().toISOString(),recorded_by:'human'};
     const cfg=path.join(lab,'init-'+randomUUID()+'.json');await put(cfg,config);
-    const command=['./templew.mjs','init',root,'--config',cfg,'--json'];
+    const command=['./bin/temple.mjs','init',root,'--config',cfg,'--json'];
     await exec(process.execPath,[...command,'--dry-run'],{cwd:source});
     const result=await exec(process.execPath,command,{cwd:source});
     await put(path.join(root,'AGENTS.md'),(await fs.readFile(path.join(root,'AGENTS.md'),'utf8'))+'\n'+sharedRules+'\n# Authorized local coordinator delegation\nThe deterministic coordinator owns claim, handoff, transition, closeout and Git writes. Developer owns substantive design/implementation/self-tests. Distinct product Verifier supplies verification. Do not repeat coordinator administration. This approved bounded fixture exception changes no underlying gate.\n');
     await cli(root,'work-item','create','--title','Deliver explicit learning review tracking','--scope','Implement shared SPEC.md and INTERFACE.md in product/src and new learning-review tests; no migration or policy changes','--acceptance','All public behavior, shared oracle, preserved regressions, meaningful tests and full verification','--affected-path','product/src','--affected-path','product/test','--ui-mode','not-applicable','--workflow-profile','lean','--risk-tier','low','--scope-class','bounded','--profile-rationale','Additive local informational receipt/query behavior; no existing schema/data migration, gates, authority or external effects');
     await cli(root,'transition','--work-item','WI-0001','--to','build',...['work_order','approved_scope','acceptance_criteria','technical_design','risk_review','profile_eligibility'].flatMap(k=>['--satisfy',k+'=SPEC.md']));
     const doctor=await cli(root,'doctor');assert(doctor.summary.fail===0,'fixture-doctor');
-    const context=JSON.parse((await exec(process.execPath,['./templew.mjs','context','resolve',root,'--work-item','WI-0001','--position','developer','--compact','--no-write','--json'],{cwd:source})).stdout);
+    const context=JSON.parse((await exec(process.execPath,['./bin/temple.mjs','context','resolve',root,'--work-item','WI-0001','--position','developer','--compact','--no-write','--json'],{cwd:source})).stdout);
     await cli(root,'status','--no-write');await fs.unlink(cfg);
     await put(path.join(lab,'lean-bootstrap.json'),{dry_run_passed:true,init_output_sha256:digest(result.stdout),doctor:doctor.summary,context,requires_fresh_actor_reads:true});
   }else await put(path.join(root,'AGENTS.md'),sharedRules);

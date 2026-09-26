@@ -1,55 +1,73 @@
 # Repository instructions
 
-This repository builds Workkeel, a repository-native task coordination framework
-for coding agents. It retains Temple compatibility mode and currently self-hosts
-the legacy operating contract below; do not reinterpret it as a task-first project.
+This repository builds and self-hosts Workkeel using the native task lifecycle:
+intake -> build -> test -> release_gate -> done. Cancellation and rework are
+explicit operations. New work has no organization or Position workflow.
 
-- Never add project-specific Agent display names to `project-overlay/`.
-- Keep Position definitions separate from Agent Identity and Assignment data.
-- Treat files and evidence as canonical; chat titles and conversation memory are not state.
-- Preserve managed, project-owned, and generated boundaries.
-- Treat only exact `temple.lock.managed_files` entries as framework-managed; allowed roots are not ownership claims.
-- Never make Developer and Independent QA the same Agent Identity.
-- Follow `docs/extensions/skill-authoring.md` and `docs/extensions/skill-design.md` when creating or promoting a Skill.
-- Follow `docs/extensions/engineering-learning.md` when changing the learning schema, templates, promotion rules, or retrieval behavior; do not treat one Lesson as a framework-wide rule.
-- Follow `docs/concepts/ui-design.md` and ADR-0016 when changing UI ownership, delivery modes, evidence, or tool policy; do not make one design vendor a core dependency.
-- Follow `docs/operations/task-and-tracker-coordination.md` and ADR-0020 when changing external-tracker mapping, field ownership, observations, reconciliation, or write policy; never store credentials or infer permission to mutate an external system.
-- Use `apply_patch` for edits. Follow `docs/getting-started/testing.md`: run `npm run verify:fast` for prose-only changes and `npm run verify` for behavioral candidates or releases; focused groups are editing aids, not full-verification evidence. Run Doctor after canonical organization-state changes and the browser gate for UI changes.
-- Do not vendor or activate optional integrations without an ADR, pinned version, license review, and tests.
+## Current entrypoint
 
-<!-- temple:instructions:start -->
-# Project AI development organization instructions
+Read the whole WORKKEEL.md and the approved native task contract. Use this
+checkout's pinned launcher without downloading a package:
 
-Read the whole `TEMPLE.md` operating contract before governed work. Applicable
-native and project instructions remain required; a compact view never waives them.
-Use the repository's `node ./templew.mjs` and `$temple-work` for lifecycle, claim,
-worker, handoff, closeout and task-registry mutations. Never hand-edit supported
-canonical JSON or substitute an unversioned global CLI after a bootstrap mismatch.
-
-For a known Work Item, start with:
-
-```text
-node ./templew.mjs context resolve . --work-item WI-#### --position <position> --compact --no-write --json
+```sh
+WORKKEEL_CLI_PATH=./bin/workkeel.mjs node ./workkeelw.mjs status .
+WORKKEEL_CLI_PATH=./bin/workkeel.mjs node ./workkeelw.mjs doctor .
 ```
 
-Stage and `primary` purpose default to the item; choose `--purpose integration` or
-`--purpose recovery` deliberately. Follow routed scope, authority and evidence, not
-every discovered Skill. Use `capability find` when the Skill is uncertain. Opt-in
-Lean `context enter` may replace this preview under the Work Skill's Lean reference.
+Use the same prefix for task, intake, context and workflow commands. Follow
+docs/operations/workkeel-daily-work.md for the brief, claim, handoff, independent
+review and acceptance. This public checkout retains the previously published
+legacy history and uses a separately initialized native project. Its publication
+boundary is recorded in .ai-org/artifacts/public-source/README.md. Private task
+records and execution sources are retained in the maintainer's local checkout.
 
-Repository files and exact evidence are canonical. Chat memory/titles, external
-observations and generated views are not lifecycle authority. Context, discovery,
-plans and runtime completion grant no permission and do not satisfy a gate.
+## History and authority
 
-Record affected paths and explicit routes with `--context-ref`, coordinate named
-Work Item overlaps, then claim before writing. Sequential work needs no parallel plan.
-Before governed parallel execution, follow
-the Work Skill's parallel reference: prepare only a fresh safe wave, attach actual
-runtimes, and join exact evidence. Informational helpers use its read-only-support reference
-only when eligible and authorized. A Position change needs no new task.
+- TEMPLE.md, temple.lock, templew.mjs and the Temple lifecycle Skills are retained
+  compatibility/history material, not instructions for current repository work.
+  Do not select temple-work or temple-init to manage new tasks.
+- Work Items listed in workkeel.lock's legacy_manifest are immutable, read-only
+  history. Pending legacy review remains pending; migration never accepts it.
+  Continue approved outstanding work in a separately approved native task.
+- Never hand-edit canonical tasks, forge review identity or turn a test result
+  into acceptance. A distinct registered Agent performs review.
+- Use the actual user's scope and authority. A design discussion does not start
+  implementation. Plans, generated documents and service liveness grant nothing.
+- Keep model/provider choice with the execution host. The observer reads existing
+  records without model calls. Do not infer permission for new model runs,
+  credentials, external messages, publication, or account/global setting changes.
+- For newly approved delegated work, include the reviewed project dispatch policy
+  in the task's pinned data policy refs. Follow docs/operations/workkeel-native-dispatch.md:
+  plan nonconflicting scopes, prepare a dispatch ticket before spawning, pass its
+  model/reasoning explicitly to the host, then bind the exact child turn and report
+  activity. Never silently inherit the coordinator's model. Record an explicit
+  host capability limitation when the requested model cannot be selected.
+  This repository's current approved policy is docs/policies/development-dispatch.json
+  (bounded work: Luna medium; conservative/review: Sol medium; up to three workers).
+  This is repository development configuration, not a framework-wide provider default.
+- The main conversation keeps the user's chosen model. Execution IDs are generated;
+  nicknames are optional. Existing registered actor IDs remain accountability keys.
+- Files and exact evidence are canonical. Never rewrite historical schema IDs,
+  evidence digests or old timestamps as a branding change.
+- Retain framework-managed, project-owned and generated boundaries. Exact legacy
+  managed-file entries describe compatibility files, not arbitrary allowed roots.
 
-Never make Developer and Independent QA the same Agent Identity. Respect the
-effective workflow/risk profile, exact managed-file ownership and human authority
-in `TEMPLE.md`. An inspection request is read-only. Finish only the authorized
-slice; no subsequent task, experiment, merge, publication or deployment is implied.
-<!-- temple:instructions:end -->
+## Implementation and verification
+
+- Use apply_patch for edits.
+- Follow docs/getting-started/testing.md. Run verify:fast for prose-only changes
+  and npm run verify once on the final behavioral candidate. Run native Doctor
+  after canonical state changes. Browser gates apply to UI implementation;
+  respect the user's direction to defer repeated layout checks during discussion.
+- Read relevant Skills and only their required references. Follow the Skill
+  authoring/design and engineering-learning guides when changing those systems.
+- Follow docs/concepts/ui-design.md and ADR-0016 for UI contracts. No design
+  vendor is mandatory. Follow the tracker coordination guide before integrations.
+- Do not vendor or activate optional integrations without their required ADR,
+  pinned version, license review and tests.
+- Legacy compatibility remains tested in isolated fixtures. Its Position and
+  organization policy is not the native project workflow.
+
+<!-- workkeel:begin -->
+Read [WORKKEEL.md](WORKKEEL.md) for this project's task and verification workflow. Before acting, match the task to the available Skills, read the applicable Skill instructions, and report what was applied and verified. Read only task-relevant material; do not load the whole catalog.
+<!-- workkeel:end -->

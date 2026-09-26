@@ -59,7 +59,9 @@ async function selfHostFixture() {
     await fs.cp(path.join(root, directory), path.join(toolkit, directory), { recursive: true });
   }
   await fs.cp(path.join(root, "package.json"), path.join(toolkit, "package.json"));
-  await fs.cp(path.join(root, "AGENTS.md"), path.join(toolkit, "AGENTS.md"));
+  // This fixture exercises legacy self-host initialization, independently of
+  // the source checkout's native Workkeel operating contract.
+  await fs.cp(path.join(root, "project-overlay/AGENTS.md"), path.join(toolkit, "AGENTS.md"));
   await fs.mkdir(path.join(toolkit, ".agents/skills"), { recursive: true });
   await fs.cp(
     path.join(root, ".agents/skills/temple-init"),

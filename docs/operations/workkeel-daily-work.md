@@ -6,13 +6,39 @@ They do not create untracked product changes or publish conversation links throu
 ordinary Git staging. Export needed records deliberately when preserving evidence;
 changing the ignore policy blocks new observation writes for inspection.
 
-Use this path in an initialized task-first project. Your Codex conversation is
+Use this path in an initialized task-first project. Your coding-tool conversation is
 the place to agree on work and execute it; the optional observer is read-only.
 No desktop plugin, global model change, background service or extra dependency
 is required. Commands below use `workkeel` as shorthand for
 `node /path/to/workkeel/bin/workkeel.mjs` from the reviewed source checkout.
 
+## Keep one delivery together
+
+Use one native task for one approved user outcome. Implementation, documentation,
+review and verification can be dispatch nodes under that task. Before intake,
+check their shared files, dependencies, candidate integration and release boundary.
+Use the existing dispatch planner for parallel nodes with nonconflicting scopes.
+Separate checkouts are appropriate when independently claimed tasks need separate
+candidates; a combined checkout must not bypass either task's path restrictions.
+
+Check the brief's paths, current launcher, approval/document conventions and
+publication prerequisites before pinning it. Run the relevant inexpensive checks
+before the final full suite. A changed approved scope still requires explicit
+authority; never edit a pinned contract merely to make a candidate fit.
+
+For resumption, start with the [compact delivery context](workkeel-native-dispatch.md#compact-resumption-and-execution-receipts).
+Read required project instructions and follow the current scope, attention reasons,
+candidate and evidence references. Open detailed history only to resolve a concrete
+question. A status question needs no new claim or repeat of completed verification.
+Task creation, handoff and local acceptance do not establish external publication.
+
 ## One brief instead of repeating the full contract
+
+For relevant work with reusable prior evidence, use native
+[Learning search and use records](../extensions/workkeel-learning.md). Query the
+task's concrete topic, check applicability, and record a decision only when the
+guidance actually changes the work. Found/read/applied/outcome remain separate;
+there is no mandatory retrospective for every task or silent historical import.
 
 Run `workkeel start .` to identify the next setup step and obtain an incomplete
 brief draft. After saving the approved brief, `workkeel start . --request brief.json`
@@ -64,6 +90,12 @@ guard. Identical replays do not create duplicate tasks. Continue with the existi
 [claim, handoff, review and close commands](../getting-started/workkeel.md).
 Only separately approved [workflows](workkeel-workflows.md) launch a model.
 
+Keep each executor's prompt bounded to its goal, permitted files, relevant
+interfaces, acceptance and required instructions. Link supporting evidence instead
+of copying the full parent discussion into every node. One executor reports its
+own work; the coordinator alone performs lifecycle mutations. Prepare each exact
+host binding at dispatch and complete its report before the task's closing steps.
+
 ## Handoff and quality
 
 `task summary` reports the current lifecycle, goal, acceptance, next action,
@@ -71,7 +103,16 @@ exact delivery revision, handoff/review/closeout summaries, evidence digest stat
 and task timeline. Rework counts rejected native deliveries, not arbitrary model
 requests; workflow attempts remain separately visible. First-review quality is
 unknown before a review. Lifecycle duration includes waits and human/coordinator
-work; recorded adapter time and tokens cover workflow runs only.
+work; recorded time and tokens cover workflow runs and explicitly bound native
+reports only.
+
+Timeline rows distinguish a failed review followed by rework from a voluntary
+release of the task claim. A release returns the task to intake so another
+executor can claim it; it does not establish a review failure. New history events
+retain the operation summary and review judgment in their hash chain. For older
+events, the observer can recover the summary from a bounded, task-local operation
+request only when its complete request digest matches that history event. Missing
+requests stay unexplained; the current task title is not a transition reason.
 
 ## Optional attributed observations
 
@@ -110,18 +151,43 @@ separate; a grouping label alone does not prove a matched comparison.
 ## Observer surfaces and limits
 
 - **Work overview:** attention-first cards, search and status filter.
-- **Task detail:** next action, acceptance, delivery evidence, observed links,
-  timeline and recorded model operations.
-- **Usage & quality:** per-task sample kind, token coverage, adapter/lifecycle time,
+- **Task detail:** next action, acceptance, recorded execution time by stage,
+  timeline, delivery evidence and observed links.
+- **Usage & quality:** per-task sample kind, token coverage, recorded operation time,
   rework and review. It does not rank models or infer subscription costs.
 
-The viewer validates the execution inventory once per snapshot. Task
-summaries are read with bounded concurrency and fresh validation; results
-are not cached across snapshots. This changes no authority or acceptance rules.
+The stage chart intersects recorded dispatch-to-completion intervals with the
+task's implementation, review and rework stages. Overlapping intervals count once
+in task details. Time without an execution interval, including time awaiting a
+person, is never filled in from lifecycle residence. These intervals include the
+execution tool's work; they are not measurements of model compute alone. A missing
+completion timestamp or stage history leaves that portion unavailable or
+unassigned. A recorded zero is preserved; missing measurements are not zero.
+Usage analysis instead sums matching operations, so parallel work can make its
+total larger than the non-overlapping time in task details.
+
+Host-owned tasks report lifecycle transitions independently from usage. The
+optional [native measurement collector](workkeel-native-usage.md) reads metadata
+from explicitly bound operations; it does not scan unrelated conversations or
+call models. Native tokens can arrive before timing. A total turn duration is
+kept separate when human waiting cannot be excluded; only measured execution
+intervals appear in stage and activity charts. Task content, documents and events
+remain available when either measurement is missing.
+The activity page opens its bounded event list by default;
+the backlog separates current tasks from retained pre-migration history and links
+document counts to each task's document list.
+
+The indexed viewer validates the execution inventory when rebuilding its local
+projection. Task summaries use bounded concurrency and a memory cache invalidated
+by changes to their source files; fresh reconciliation runs every 30 seconds.
+Task details and documents are revalidated when opened. The compatibility
+full-snapshot endpoint uses fresh reads without this cross-request cache.
+This changes no authority or acceptance rules.
 Attributable errors mark the affected task incomplete; unknown run attribution marks every
 task's measurement total incomplete. Healthy task state can remain visible.
-Fatal snapshot errors hide old content until recovery. Up to 200 visible native
-tasks, 4,096 inventory entries and 4 MiB response are supported. Retained legacy
+Fatal snapshot errors hide old content until recovery. The indexed workspace supports
+up to 2,000 native tasks; the compatibility full-snapshot endpoint remains capped at
+200. Execution inventory remains bounded at 4,096 entries and responses at 4 MiB. Retained legacy
 tasks are excluded from the visible-task count. This is a point-in-time,
 single-project view; it does not guarantee process liveness or collect arbitrary
 native-session tokens. Keep the capability URL private and stop with Ctrl-C.

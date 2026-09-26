@@ -45,7 +45,8 @@ test("CI is one bounded Node.js 24 repository gate", async () => {
 
   assert.match(workflow, /pull_request:/);
   assert.match(workflow, /push:\n    branches:\n      - main/);
-  assert.match(workflowStep(workflow, "doctor"), /templew\.mjs doctor/);
+  assert.match(workflowStep(workflow, "doctor"), /WORKKEEL_CLI_PATH=\.\/bin\/workkeel\.mjs node \.\/workkeelw\.mjs doctor/);
+  assert.doesNotMatch(workflowStep(workflow, "doctor"), /templew\.mjs/, "This repository uses native Workkeel; legacy Doctor belongs to compatibility fixtures");
   assert.doesNotMatch(workflow, /templew\.mjs schema validate/, "Doctor already validates schemas");
   for (const id of ["install", "governance", "doctor", "behavior"]) {
     assert.match(workflowStep(workflow, id), /if:.*always\(\)/, id);
