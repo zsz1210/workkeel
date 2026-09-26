@@ -1,0 +1,10 @@
+{
+  "schema_version": "workkeel.dispatch-policy/v1",
+  "models": [
+    {"alias":"bounded","provider":"openai","model":"gpt-6-luna","reasoning":"medium","data_classes":["public","internal"]},
+    {"alias":"conservative","provider":"openai","model":"gpt-6-sol","reasoning":"medium","data_classes":["public","internal"]}
+  ],
+  "default_alias": "conservative",
+  "conservative_alias": "conservative",
+  "parallelism": 3
+}

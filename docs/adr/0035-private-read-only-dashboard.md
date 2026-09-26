@@ -34,3 +34,28 @@ An authenticated device on the same permitted tailnet can observe current projec
 Remote Agent Commands remain a separate future decision. They require application-level authorization, exact target and turn preconditions, explicit confirmation, short-lived capability, audit, revocation, and real-device failure testing. Private connectivity alone grants none of those permissions.
 
 The exact Tailscale version pin must be intentionally reviewed and updated as the integration is revalidated. Existing Tailscale Serve configuration is not merged or overwritten automatically.
+
+## Native observer extension
+
+The task-first Workkeel observer uses a separate loopback reverse proxy rather than
+the historical Control Plane. The user explicitly authorized private access from
+their existing Tailscale network. The validated optional client remains 1.98.8;
+no vendor code or dependency is added. Only GET requests for native observer page,
+assets and task APIs are forwarded, with exact Host, Origin when supplied, and
+owner Login checks. Requests from other identities fail closed. The proxy forwards
+fresh headers to the fixed loopback target with the existing capability, bounded
+response size and timeout; credentials are never included in browser responses.
+
+The native UI has no mutation or command gateway. This owner-authorized route
+shows the same task documents and already-sanitized measurements as the local UI,
+not the historical redacted Control Plane projection. Source logs, private native
+binding paths and the local access capability remain outside the HTTP projection.
+The browser's trusted-proxy marker changes only bootstrap behavior. Localhost API
+requests still require their capability. Loopback is a transport trust boundary,
+not isolation from other local OS processes that can forge proxy headers.
+
+The native deployment retains an explicitly reviewed Serve background mapping;
+it does not reset that mapping on every observer restart. It records ownership
+and offers removal of only its route. It never enables Funnel, changes grants,
+renames the device or installs an additional login service. Tests cover identity,
+origin, routes, method rejection, malformed URLs and preserving upstream auth.

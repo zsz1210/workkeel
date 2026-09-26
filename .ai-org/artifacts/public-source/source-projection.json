@@ -1,0 +1,29 @@
+{
+  "schema_version": "workkeel.public-source-evidence/v1",
+  "public_base_revision": "960cf0ea94422bea66d38e9a307936d3366e2228",
+  "local_source_revision": "f3b38b6ebb072fe8b813333a2576e42fef292fc6",
+  "local_source_ancestry_published": false,
+  "compared_product_files": 890,
+  "byte_identical_product_files": 886,
+  "reviewed_product_exceptions": [
+    {"path":"AGENTS.md","reason":"Point current-project guidance to the public projection, not private migration evidence"},
+    {"path":"docs/validation/native-dispatch-retained-history.md","reason":"Identify excluded private task history instead of directing public readers to absent records"},
+    {"path":"docs/validation/native-learning-wire-contract.md","reason":"Separate private reuse records from reproducible public mechanism tests"},
+    {"path":"scripts/verify-workkeel-monitor.mjs","reason":"Align stale browser assertions with current timing, activity labels/help and collapsed evidence; no UI or measurement behavior changes"}
+  ],
+  "local_state_excluded": ["New .ai-org task, artifact, event, learning and view changes", "Local workkeel.lock"],
+  "public_state": {
+    "previously_public_files_modified": 0,
+    "legacy_work_items_retained": 277,
+    "unfinished_legacy_items": 0,
+    "initialization": "Pinned Workkeel migration preview/apply, over unchanged public legacy state",
+    "initial_native_tasks": 0
+  },
+  "repository_audit": {
+    "blocked_findings": 0,
+    "inherited_binary_review_entries": 117,
+    "new_or_changed_binaries": 0,
+    "scope": "Current public candidate; existing binary content is byte-identical to the published base, not newly certified"
+  },
+  "publication_scope": "Source integration only; no tag, GitHub Release or npm publication"
+}

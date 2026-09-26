@@ -1,4 +1,5 @@
 import fs from 'node:fs/promises';
+import { constants } from 'node:fs';
 import path from 'node:path';
 import { readNativeTask } from './workkeel-tasks.mjs';
 import { readTaskProject, assertActor, safeDirectory, existsEntry } from './workkeel-project.mjs';
@@ -7,6 +8,7 @@ import { withProjectMutationLock } from './project.mjs';
 import { durableAtomicCreate } from './files.mjs';
 import { executionDigest, exactKeys } from './workkeel-execution-policy.mjs';
 import { projectTaskTiming } from './workkeel-task-timing.mjs';
+import { observeFileRead, observeSource } from './workkeel-read-metrics.mjs';
 
 const SHA = /^[a-f0-9]{40}(?:[a-f0-9]{24})?$/;
 const bounded = (value, max=2000) => typeof value==='string' && value.trim().length>0 && value.length<=max;
@@ -82,6 +84,80 @@ async function observation(target,task) {
   const value=records[0]??null;
   return {status:!value?'unobserved':value.candidate_revision===null?'unbound':value.candidate_revision===task.delivery?.revision?'candidate-matched':'stale',value};
 }
+
+const REASON_ACTIONS=new Set(['release','handoff','review','rework','close','cancel']);
+const REQUEST_NAME=/^(?:request|release|handoff|review|rework|close|cancel)(?:-[A-Za-z0-9][A-Za-z0-9._-]{0,95})?\.json$/;
+const REQUEST_FILE_LIMIT=64*1024,REQUEST_TOTAL_LIMIT=512*1024;
+// Read only bounded operation-request candidates in this task's own artifact
+// directory. Keep decoding separate from the exact parsed-request digest.
+async function readReasonRequest(target,ref,limit) {
+  const name=path.join(target,ref);
+  observeSource(target,ref);
+  const file=await fs.open(name,constants.O_RDONLY|constants.O_NOFOLLOW|constants.O_NONBLOCK);
+  let length=0;
+  try {
+    const before=await file.stat();
+    if(!before.isFile()||before.size>limit)return {document:null,bytes:0};
+    const buffer=Buffer.alloc(limit+1);
+    while(length<buffer.length) {
+      const {bytesRead}=await file.read(buffer,length,buffer.length-length,null);
+      if(!bytesRead)break;
+      length+=bytesRead;
+    }
+    const after=await file.stat(),entry=await fs.lstat(name);
+    if(length>limit||length!==before.size||before.size!==after.size||before.mtimeMs!==after.mtimeMs||before.ctimeMs!==after.ctimeMs||
+      before.dev!==entry.dev||before.ino!==entry.ino||entry.isSymbolicLink()||await fs.realpath(name)!==name)return {document:null,bytes:length};
+    try {return {document:JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(buffer.subarray(0,length))),bytes:length};}
+    catch {return {document:null,bytes:length};}
+  } catch {return {document:null,bytes:length};
+  } finally {observeFileRead(length);await file.close();}
+}
+async function recordedReasons(target,task) {
+  const missing=new Map(task.history.filter(e=>REASON_ACTIONS.has(e.action)&&
+    (!bounded(e.summary,8000)||e.action==='review'&&!['pass','fail'].includes(e.judgment))).map(e=>[e.operation_id,e]));
+  const recovered=new Map();
+  if(!missing.size)return recovered;
+  const root=await fs.realpath(target),ref=`.ai-org/artifacts/${task.id}`;
+  // Watching the directory also invalidates summaries when a missing request
+  // is restored or a previously nonmatching request is replaced.
+  observeSource(root,ref);
+  try {
+    const directory=await fs.opendir(await safeDirectory(root,ref)),names=[];
+    let entries=0;
+    for await(const entry of directory) {
+      if(++entries>128)return recovered;
+      if(entry.isFile()&&REQUEST_NAME.test(entry.name))names.push(entry.name);
+    }
+    if(names.length>64)return recovered;
+    let remaining=REQUEST_TOTAL_LIMIT;
+    for(const name of names.sort()) {
+      if(remaining<=0||recovered.size===missing.size)break;
+      let input;
+      try {input=await readReasonRequest(root,`${ref}/${name}`,Math.min(REQUEST_FILE_LIMIT,remaining));}
+      catch {continue;}
+      remaining-=input.bytes;
+      const request=input.document;
+      if(!request||typeof request!=='object'||Array.isArray(request))continue;
+      const event=missing.get(request.operation_id);
+      if(!event||executionDigest({action:event.action,request})!==event.request_sha256)continue;
+      recovered.set(event.operation_id,{reason:bounded(request.summary,8000)?request.summary:null,
+        outcome:event.action==='review'&&['pass','fail'].includes(request.judgment)?request.judgment:null});
+    }
+  } catch {/* Unavailable historical requests never invalidate canonical state. */}
+  return recovered;
+}
+async function taskTimeline(target,task) {
+  const recovered=await recordedReasons(target,task);
+  return task.history.map(event=>{
+    const recorded=bounded(event.summary,8000),request=recovered.get(event.operation_id);
+    return {action:event.action,at:event.at,state:event.state,revision:event.revision,
+      actor:bounded(event.actor?.agent_id,96)&&bounded(event.actor?.principal_id,96)?
+        {agent_id:event.actor.agent_id,principal_id:event.actor.principal_id}:null,
+      reason:recorded?event.summary:request?.reason??null,
+      outcome:event.action==='review'?(['pass','fail'].includes(event.judgment)?event.judgment:request?.outcome??null):null,
+      reason_source:recorded?'event':request?.reason?'request':'unknown'};
+  });
+}
 export async function readTaskSummary(target,id,{now=new Date()}={}) {
   const task=await readNativeTask(target,id);
   const project=await readTaskProject(target),policyCurrent=executionDigest(project.policy)===task.policy_sha256;
@@ -96,8 +172,8 @@ export async function readTaskSummary(target,id,{now=new Date()}={}) {
   if(observed.status==='unavailable')next='Inspect the observation record and its referenced evidence.';
   const evidenceStatus=[];
   for(const stage of ['authority','delivery','review','closeout'])for(const pin of (stage==='authority'?task.authority_pins:task[stage]?.evidence)??[]){
-    let status='verified';try{if((await readTaskFile(target,pin.path)).digest!==pin.sha256)status='changed';}catch{status='unavailable';}
-    evidenceStatus.push({stage,...pin,status});
+    let status='verified',current_digest=null;try{current_digest=(await readTaskFile(target,pin.path)).digest;if(current_digest!==pin.sha256)status='changed';}catch{status='unavailable';}
+    evidenceStatus.push({stage,...pin,status,current_digest});
   }
   if(evidenceStatus.some(p=>p.status!=='verified'))next='Recover the exact recorded evidence before continuing this task.';
   if(!policyCurrent)next='Inspect the project policy change and re-establish task authority before continuing.';
@@ -125,6 +201,6 @@ export async function readTaskSummary(target,id,{now=new Date()}={}) {
       approval_status:authorityExpired?'expired':'current',
       locally_accepted:task.state==='done',evidence_current:policyCurrent&&evidenceStatus.every(p=>p.status==='verified'),policy_current:policyCurrent,
       lifecycle_elapsed_ms:['done','cancelled'].includes(task.state)?lifecycle.elapsed_ms:null},
-    timeline:task.history.map(e=>({action:e.action,at:e.at,state:e.state,revision:e.revision})),
+    timeline:await taskTimeline(target,task),
     limitations:['Recorded task state is not process liveness.','Attribution is not provider authentication.','Check and PR observations never satisfy acceptance gates.']};
 }

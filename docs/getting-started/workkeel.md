@@ -312,13 +312,38 @@ workkeel migration preview . --policy task-policy.json
 workkeel migration apply . --policy task-policy.json --fingerprint <reviewed-sha256>
 ```
 
+For explicitly authorized retirement of an old workflow, inactive unfinished
+items can remain unfinished, read-only history. Save a retention request:
+
+```json
+{
+  "schema_version": "workkeel.legacy-retention/v1",
+  "approved_by": "owner",
+  "approval_ref": "docs/migration-approval.md",
+  "open_work_items": [
+    {"id": "WI-0001", "sha256": "<sha256-of-exact-source-record>"}
+  ]
+}
+```
+
+Pass `--retain-open retention.json` to both migration preview and apply. The
+request must name every unfinished item exactly; its approval and original record
+digests are bound by the preview. Active claims, running workers, configured team
+governance, High-Assurance history and changed core policies remain unsupported.
+This does not close an item or accept its candidate. Create a separately approved
+native task to continue work, referencing the retained evidence.
+
+The event journal is hashed incrementally with a fixed 64 KiB buffer and an 8 MiB
+archive ceiling. Authority JSON and individual task inputs retain their 1 MiB
+bound. Doctor rechecks the frozen journal and retained records after migration.
+
 The preview binds legacy policy, events, tasks and the proposed policy. Apply
 rechecks that fingerprint, adds new files and preserves old ones byte-for-byte.
 Status marks old records `legacy-read-only`; their terminal labels are not native
 dependency grants. Review native/AGENTS instructions with the maintainer when
 switching; init never rewrites user guidance. Old lifecycle writers reject the
 new mode when invoked from this release. Previously installed old binaries cannot
-know this new marker and must not be used after opting in. Larger, active, team and verified-identity migrations stay unsupported
+know this new marker and must not be used after opting in. Active-runtime, team and verified-identity migrations stay unsupported
 rather than dropping safeguards. Inputs over the bounded size also fail closed.
 
 Do not remove the new lock to roll back a populated project. Preserve versioned

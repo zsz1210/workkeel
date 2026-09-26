@@ -10,7 +10,9 @@ tasks, execution and review evidence together in your repository.
 | Understand the framework and its concepts | [README](../README.md), [terminology](concepts/terminology.md), [architecture](concepts/architecture.md) |
 | Initialize, claim, hand off and accept a task | [Quick start](getting-started/workkeel.md), [task contract](concepts/task-contract.md) |
 | Prepare a daily brief, resume a handoff and observe delivery | [Daily work](operations/workkeel-daily-work.md) |
-| Execute a graph using the Codex subscription and selected models | [Workflow and routing guide](operations/workkeel-workflows.md) |
+| Validate, find and reuse lessons; inspect source changes | [Native Learning](extensions/workkeel-learning.md) |
+| Observe tasks, read their documents, and compare recorded time and tokens | [Local observer workspace](operations/workkeel-observer.md) |
+| Explore optional workflow adapters and model routing | [Workflow and routing guide](operations/workkeel-workflows.md) |
 | Connect Codex/Claude instructions, check Skill use, plan Headroom | [Project context](extensions/workkeel-context.md) |
 | Inspect measurements and qualification limits | [Automation validation](validation/workkeel-automation.md), [testing policy](getting-started/testing.md) |
 | Review dependencies and licenses | [Third-party notices](../THIRD_PARTY_NOTICES.md), [execution ADR](adr/0073-opt-in-workflow-execution.md) |

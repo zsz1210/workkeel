@@ -6,7 +6,7 @@ import { promisify } from "node:util";
 import { durableAtomicCreate, durableAtomicWrite, formatJson, sha256 } from "./files.mjs";
 import { withProjectMutationLock } from "./project.mjs";
 import { readTaskContractInput, readTaskFile, validateTaskContract } from "./task-contract.mjs";
-import { assertActor, assertApprover, readTaskProject, safeDirectory, existsEntry } from "./workkeel-project.mjs";
+import { assertActor, assertApprover, readTaskProject, safeDirectory, existsEntry, readLegacyDigest } from "./workkeel-project.mjs";
 
 const exec = promisify(execFile);
 const ID = /^[A-Za-z0-9][A-Za-z0-9._-]{0,95}$/;
@@ -46,6 +46,9 @@ async function evidence(target, refs) {
 async function assertPins(target, pins) {
   for (const pin of pins) if ((await readTaskFile(target, pin.path)).digest !== pin.sha256) throw new Error("Referenced approval, policy or evidence changed; preserve this attempt and obtain fresh authorization");
 }
+async function assertLegacyPin(target, pin) {
+  if (await readLegacyDigest(target, pin.path) !== pin.sha256) throw Error("Retained legacy history changed; inspect the original evidence");
+}
 function assertRecord(item, id) {
   if (item?.schema_version !== "workkeel.work-item/v1" || item.id !== id || item.contract?.id !== id ||
       !Number.isSafeInteger(item.version) || item.version < 1 || !Array.isArray(item.history) || item.history.length !== item.version ||
@@ -55,6 +58,8 @@ function assertRecord(item, id) {
   for (const [index, event] of item.history.entries()) {
     const { hash, ...body } = event;
     if (event.sequence !== index + 1 || event.previous_hash !== previous || hash !== digest(body)) throw new Error("Task operation history integrity failure");
+    if (Object.hasOwn(event, "summary")) assertText(event.summary);
+    if (Object.hasOwn(event, "judgment") && (event.action !== "review" || !["pass", "fail"].includes(event.judgment))) throw new Error("Invalid recorded review judgment");
     previous = hash;
   }
   if (item.history.at(-1).record_sha256 !== bodyHash(item)) throw new Error("Task state differs from its recorded operation");
@@ -63,6 +68,11 @@ export async function readNativeTask(target, id) {
   const input = await readTaskContractInput(target, fileRef(id));
   assertRecord(input.document, id);
   return input.document;
+}
+/** Integrity check for an explicitly retained snapshot; never current authority. */
+export function validateNativeTaskSnapshot(item, id) {
+  assertRecord(item, id);
+  return item;
 }
 export async function listTaskItems(target, { isolateErrors = false } = {}) {
   const project = await readTaskProject(target);
@@ -73,7 +83,7 @@ export async function listTaskItems(target, { isolateErrors = false } = {}) {
     if (entry === "README.md") {
       const pin = project.legacy_manifest?.find(p => p.path === ".ai-org/work-items/README.md");
       if (!pin) throw new Error("Unregistered legacy documentation in task-first store");
-      await assertPins(target, [pin]);
+      await assertLegacyPin(target, pin);
       continue;
     }
     if (!entry.endsWith(".json")) throw new Error("Unexpected file in task store");
@@ -85,7 +95,7 @@ export async function listTaskItems(target, { isolateErrors = false } = {}) {
       if (item.id !== id) throw new Error("Legacy task ID differs from its filename");
       const pin = project.legacy_manifest?.find(p => p.path === fileRef(id));
       if (!pin) throw new Error("Unregistered legacy record in task-first store");
-      await assertPins(target, [pin]);
+      await assertLegacyPin(target, pin);
       items.push({ id, state: item.state, title: item.title, mode: "legacy-read-only" });
     } else {
       assertRecord(item, id);
@@ -149,6 +159,8 @@ function append(item, action, request) {
     request_sha256: digest({ action, request }), actor: request.actor, at: new Date().toISOString(),
     state: item.state, revision: item.delivery?.revision ?? null,
     previous_hash: item.history.at(-1)?.hash ?? null, record_sha256: bodyHash(item) };
+  if (Object.hasOwn(request, "summary")) { assertText(request.summary); event.summary = request.summary; }
+  if (action === "review") event.judgment = request.judgment;
   item.history.push({ ...event, hash: digest(event) });
 }
 function assertRequest(request, fields) {
@@ -328,7 +340,8 @@ export async function diagnoseTaskProject(target) {
   let items = [];
   try {
     const project = await readTaskProject(target);
-    if (project.legacy_manifest) await assertPins(target, project.legacy_manifest);
+    for (const pin of project.legacy_manifest ?? []) if (await readLegacyDigest(target, pin.path) !== pin.sha256)
+      throw Error("Retained legacy history changed; inspect the original evidence");
     items = await listTaskItems(target);
     for (const summary of items.filter(i => i.mode === "task-first")) {
       const item = await readNativeTask(target, summary.id);

@@ -1,6 +1,6 @@
 # Testing strategy
 
-Temple separates the bounded remote repository gate from complete local verification. The goal is to preserve the safety guarantees of a repository-writing framework without spending several hosted runner-minutes after every push.
+Workkeel separates the bounded remote repository gate from complete local verification. This repository uses the native task lifecycle: claim, exact-candidate handoff, independent Agent review, and authorized Principal acceptance. Retained Temple organization and Position behavior remains covered by isolated compatibility fixtures. The goal is to preserve the safety guarantees of a repository-writing framework without spending several hosted runner-minutes after every push.
 
 `npm run check` validates repository structure, documentation language boundaries, local Markdown link targets, and the actual npm dry-run package boundary. These checks run for every change. The full suite is offline: it tests code, contracts, and simulated providers, not paid model calls.
 
@@ -44,7 +44,7 @@ npm run verify:changed -- --base origin/main
 
 Selection includes committed changes since the merge base, staged and unstaged changes, and untracked files. Prose-only changes select fast tests; changed test files select their entire group plus fast tests. Shared source, scripts, fixtures, package metadata, canonical state, deleted tests, unknown paths, or an unavailable base select the full suite. This is deliberately a local editing aid, not a dependency graph or a hosted CI selector. The `--list` form only previews selection and does not verify anything.
 
-Prose-only changes require `npm run verify:fast` and appropriate rendered review. Changes to Agent instructions, Skills, executable examples, manifests, schemas, package contents, or behavioral contracts are not prose-only. Canonical organization-state changes also require `node ./templew.mjs doctor . --json`. Do not classify a mixed change by its smallest component.
+Prose-only changes require `npm run verify:fast` and appropriate rendered review. Changes to Agent instructions, Skills, executable examples, manifests, schemas, package contents, or behavioral contracts are not prose-only. This repository self-hosts native Workkeel; canonical task-state changes also require `WORKKEEL_CLI_PATH=./bin/workkeel.mjs node ./workkeelw.mjs doctor .`. Legacy compatibility is verified in isolated fixtures. Do not classify a mixed change by its smallest component.
 
 Before proposing a behavioral change, run the complete suite:
 
@@ -75,26 +75,28 @@ calls; its report distinguishes real journal states from injected UI projections
 
 ## Continuous integration
 
-Ordinary GitHub Actions is intentionally a short remote consistency check, not Temple's complete test environment. Every pull request and push to `main` runs one Node.js 24 job with an eight-minute ceiling. The job uses a clean checkout and performs:
+Ordinary GitHub Actions is intentionally a short remote consistency check, not Workkeel's complete test environment. Every pull request and push to `main` runs one Node.js 24 job with an eight-minute ceiling. The job uses a clean checkout and performs:
 
 - lockfile-strict dependency installation without lifecycle scripts;
 - repository, documentation-link, and package-boundary checks;
-- Temple Doctor, including organization schema validation (once, not a duplicate standalone step);
+- Native Workkeel Doctor, including retained-history and task-evidence validation;
 - `npm run test:fast`.
 
 The workflow reports every required result and fails if any required step fails. It uses immutable Action revisions, read-only repository permission, and cancels an older in-progress run when the same pull request receives a newer commit.
 
-Ordinary PR/push CI does not run `npm run test:full` or `npm run test:browser`. The separate GitHub Release publishing workflow does run `npm run verify` against the Release source before publication. A green ordinary CI badge is only the remote repository gate: it does not prove the complete integration suite, browser behavior, Independent QA, or release readiness.
+Ordinary PR/push CI does not run `npm run test:full` or `npm run test:browser`. The separate GitHub Release publishing workflow does run `npm run verify` against the Release source before publication. A green ordinary CI badge is only the remote repository gate: it does not prove the complete integration suite, browser behavior, independent review, or release readiness.
 
 Complete evidence stays local and revision-specific:
 
 - run `npm run verify` before proposing a behavioral candidate;
 - run `npm run test:browser` for Management Console or other user-interface changes;
-- record the exact tested revision and preserve the normal evaluation, Independent QA, and Release Gate separation.
+- record the exact tested revision and preserve the native task's independent review and authorized acceptance gates. Tests do not accept a task or authorize publication.
+
+Legacy compatibility fixtures retain the original evaluation, Independent QA, and Release Gate rules for Position-based projects. They do not require native-task contributors to configure those Positions.
 
 ## Release and live validation
 
-Temple requires Node.js 24 or later. Node.js 24 is the remote baseline and must pass exact-candidate local verification. A newer local Node.js version may provide an additional compatibility signal, but passing on that machine does not by itself qualify a separate runtime line.
+Workkeel requires Node.js 24 or later. Node.js 24 is the remote baseline and must pass exact-candidate local verification. A newer local Node.js version may provide an additional compatibility signal, but passing on that machine does not by itself qualify a separate runtime line.
 
 Release candidates should also review the allowlisted package manifest, verify clean-source recovery, and pin every result to the exact candidate revision.
 

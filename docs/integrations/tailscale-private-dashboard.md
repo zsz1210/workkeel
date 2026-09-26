@@ -1,4 +1,17 @@
-# Tailscale private Temple Workspace
+# Tailscale private observer
+
+## Native Workkeel observer
+
+The current task-first website uses the optional native private viewer described
+in [Workkeel observer operations](../operations/workkeel-observer.md#private-access-over-tailscale).
+It serves the same read-only task UI through Tailscale Serve and keeps the local
+capability on the Mac. The route is restricted to the explicitly configured owner.
+It does not require the historical Control Plane or Agent Command gateway.
+
+## Historical Control Plane integration
+
+The remaining instructions describe the retained Temple-compatible workspace.
+Do not use this command to deploy the native Workkeel observer.
 
 Temple can expose a redacted, read-only Temple Workspace to another device in the same Tailscale network. The full Human Inbox and Agent Command gateway remain available only at the Mac's loopback URL.
 

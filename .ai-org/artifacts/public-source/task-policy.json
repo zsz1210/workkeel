@@ -1,0 +1,10 @@
+{
+  "schema_version": "workkeel.task-policy/v1",
+  "principals": ["owner"],
+  "agents": [
+    {"agent_id":"builder","principal_id":"owner"},
+    {"agent_id":"reviewer","principal_id":"owner"}
+  ],
+  "approvers": ["owner"],
+  "review_separation": "distinct-agent"
+}

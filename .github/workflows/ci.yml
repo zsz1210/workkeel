@@ -39,7 +39,7 @@ jobs:
       - id: doctor
         name: Governance — Doctor including schema validation
         if: ${{ always() && steps.install.outcome == 'success' }}
-        run: node ./templew.mjs doctor . --json
+        run: WORKKEEL_CLI_PATH=./bin/workkeel.mjs node ./workkeelw.mjs doctor .
       - id: behavior
         name: Behavior — bounded contract suite
         if: ${{ always() && steps.install.outcome == 'success' }}

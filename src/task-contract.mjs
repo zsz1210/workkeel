@@ -5,6 +5,7 @@ import Ajv from "ajv";
 import addFormats from "ajv-formats";
 import { isWorkItemId } from "./ids.mjs";
 import { sha256 } from "./files.mjs";
+import { observeFileRead, observeSource } from './workkeel-read-metrics.mjs';
 
 export const TASK_CONTRACT_SCHEMA = "workkeel.task-contract/v1";
 const MAX_BYTES = 1024 * 1024;
@@ -156,6 +157,7 @@ export function validateTaskContract(document, { now = new Date() } = {}) {
 export async function readTaskFile(target, source, { preserveBom = false } = {}) {
   if (!repositoryPath(source)) throw new Error("Contract input must be a normalized repository-relative file path");
   const root = await fs.realpath(target);
+  observeSource(root,source);
   let current = root;
   const parts = source.split("/");
   for (let index = 0; index < parts.length; index++) {
@@ -184,6 +186,7 @@ export async function readTaskFile(target, source, { preserveBom = false } = {})
     let content;
     try { content = new TextDecoder("utf-8", { fatal: true, ignoreBOM: preserveBom }).decode(buffer.subarray(0, length)); }
     catch { throw new Error("Contract input is not valid UTF-8"); }
+    observeFileRead(length);
     return { content, digest: sha256(content), bytes_digest: sha256(buffer.subarray(0, length)) };
   } finally { await file.close(); }
 }

@@ -24,12 +24,25 @@ test("partial interrupted observations are known subtotals, never final totals",
   assert.equal(summary.usage.input_tokens.total, null); assert.equal(summary.usage.input_tokens.complete, false);
 });
 
+test('completed native binding remains a subtotal when other task work is unobserved',()=>{
+  const op={...projectOperationMeasurement(record()),coverage_complete:false};
+  const summary=summarizeMeasurements([op]);
+  assert.equal(summary.usage.input_tokens.known_subtotal,10);
+  assert.equal(summary.usage.input_tokens.total,null);
+  assert.equal(summary.usage.input_tokens.complete,false);
+  assert.equal(summary.timing.known_adapter_work_ms,20);
+  assert.equal(summary.timing.adapter_work_ms,null);
+});
+
 test("unknown final result is not filled with stale progress and old timing is unknown", () => {
   const op = projectOperationMeasurement(record({ result: { ...result, usage: usage(null, null) }, measurement: undefined }));
   assert.equal(op.adapter_elapsed_ms, null);
   assert.equal(summarizeMeasurements([op]).timing.adapter_work_ms, null);
   const missing = projectOperationMeasurement(record({ result: { ...result, usage: usage(null, null) } }));
   assert.equal(missing.usage.input_tokens, null);
+  const finalUnknown = projectOperationMeasurement(record({ result: { ...result, runtime_model: null, observed_model: null } }));
+  assert.equal(finalUnknown.runtime_model, null);
+  assert.equal(finalUnknown.observed_model, null);
 });
 
 test("parallel attempt work sums but is not wall time; partial coverage and unobserved native work stay explicit", () => {

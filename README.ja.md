@@ -1,141 +1,139 @@
 # Workkeel
 
-コーディングエージェントのための、リポジトリを基盤としたワークフローフレームワーク。
+コーディングエージェントのタスクと検証記録を、リポジトリで管理するフレームワークです。
 
-**会話が変わっても、タスク・モデル選択・検証結果をつなぐ。**
+承認済みの作業範囲、実行、引き継ぎ、レビューの証拠をコードと一緒に保存します。
+プロジェクトの指示に従える開発ツールで、クラウドモデルにもローカルモデルにも利用できます。
+OpenAI、Codex、特定のモデルを前提としません。
 
 [English](README.md) · [繁體中文](README.zh-TW.md) · 日本語
 
 [![CI](https://github.com/zsz1210/workkeel/actions/workflows/ci.yml/badge.svg)](https://github.com/zsz1210/workkeel/actions/workflows/ci.yml)
 Early Alpha · Node.js 24+ · [MIT](LICENSE)
 
-## なぜ Workkeel？
+## できること
 
-コーディングエージェントは変更を実装できます。しかし、複数の工程や会話をまたぐと、
-決定事項の消失、作業の重複、曖昧な権限、高コストな既定モデルの使い続け、
-未レビューの成果を完了扱いするといった問題が起こります。
+- **作業の再開：** ツールや会話が変わっても、目標、制約、判断、途中成果を確認できます。
+- **実行の調整：** 担当、依存関係、引き渡し、再試行の上限、復旧方法を記録します。
+- **ツールとモデルの選択：** ネイティブツールは既存のモデル設定を維持し、自動ワークフローでは明示的に承認されたポリシーを使います。
+- **特定の版のレビュー：** 証拠と別の Agent によるレビューを Git の版に結び付け、受け入れを記録します。
+- **記録の閲覧：** 任意のローカル観測サイトで、タスク、文書、学習、Skill、実行時間、トークンをモデル呼び出しなしで確認できます。
 
-Workkeel はタスクの合意をコードのそばに保存し、実行と証拠に結び付けます。
-
-- **文脈を引き継ぐ：**承認範囲、担当、引き継ぎ、失敗履歴を保持。
-- **実行を制御する：**依存関係、承認、上限付き再試行、中断からの復旧を定義。
-- **モデルを明確に選ぶ：**既存の Codex サブスクリプションで適切な工程を Luna や Sol に振り分け。
-  明示指定を保ち、黙って Astra に切り替えません。
-- **実際の成果をレビューする：**検証と別エージェントのレビューを、正確な Git リビジョンに紐付けて受け入れ。
-
-コーディングループとツールは既存ランタイムが担当します。Workkeel は周囲の作業を調整するもので、
-アプリケーションフレームワークやモデルの代替ではありません。
+実際の操作と権限の強制は実行ツールが担当します。Workkeel の記録自体はサンドボックスではありません。
+実行が終了しても、成果物が受け入れられたとは限りません。
 
 ## 依頼から受け入れまで
 
 <picture>
   <source media="(max-width: 640px)" srcset="docs/assets/workkeel-workflow-mobile.svg">
-  <img src="docs/assets/workkeel-workflow.svg" alt="目的と範囲を承認し、工程とモデルを計画、実行して正確な候補をレビューし、受け入れる。レビュー不合格なら実装に戻る。">
+  <img src="docs/assets/workkeel-workflow.svg" alt="範囲を承認し、実行し、特定の版をレビューして受け入れる。不合格なら実装へ戻る。">
 </picture>
 
-状態の動きは [`workkeel-flow.html`](docs/assets/workkeel-flow.html) をダウンロード、または clone
-からブラウザーで開いて確認できます。承認・修正・中断を再生、一時停止、コマ送りできます。
-オフラインの説明用シミュレーションであり、ライブ監視ではありません。GitHub ではソースのみ表示されます。
+不具合修正なら、目標と変更可能なファイルを承認してから、開発ツールで調査と実装を行います。
+テストの証拠を保存し、別の Agent に候補版をレビューしてもらいます。
+複数工程を同じモデルに任せることも、異なるモデルに分けることもできます。記録はプロジェクトに残ります。
 
-例：Luna でカート合計の不具合を調査し、方針の承認を待ってから Sol で実装・テスト。
-証拠を残して候補を引き継ぎ、別エージェントがレビューします。
-グラフの終了は承認、受け入れ、デプロイを意味しません。
-[ワークフローガイド →](docs/operations/workkeel-workflows.md)
+[クイックスタート](docs/getting-started/workkeel.md) ·
+[ワークフロー実行](docs/operations/workkeel-workflows.md)
 
 ## ソースから始める
 
-Git、Node.js 24+、既存のコーディングエージェントが必要です。
-この開発ソースは、公開済み Workkeel npm リリースではありません。
+Git、Node.js 24+、既存の開発ツールが必要です。Workkeel の npm パッケージはまだ公開されていません。
 
 ```sh
 git clone https://github.com/zsz1210/workkeel.git
 cd workkeel
 npm ci --omit=optional --ignore-scripts
 node bin/workkeel.mjs help
+node bin/workkeel.mjs start /path/to/project
 ```
 
-`node /path/to/workkeel/bin/workkeel.mjs start /path/to/project` で、読み取り専用の
-セットアップ案内と、記入が必要なポリシー／タスクの下書きを取得できます。ファイル変更やモデル起動は行いません。
-[クイックスタート](docs/getting-started/workkeel.md)に沿ってプロジェクトを初期化し、
-タスクを承認・取得してレビューを記録します。
-プレビュー可能な [AGENTS／CLAUDE ブリッジ](docs/extensions/workkeel-context.md)は既存の指示を保持します。
-基本的なタスク調整には、現在のコーディングエージェントを利用できます。
-タスク中心のプロジェクトは `WORKKEEL.md` と `workkeel` CLI を使います。
-残している `TEMPLE.md`／`temple-work` の指示は旧モードとの互換用であり、新モードの設定前提ではありません。
+最後のコマンドは、セットアップの案内と未完成のポリシー／タスク草案を表示するだけです。
+モデルは起動しません。[クイックスタート](docs/getting-started/workkeel.md)に従い、初期化、
+タスクの承認、担当の登録、レビューを進めてください。
 
-グラフを自動実行する場合は `npm ci --include=optional --ignore-scripts` で任意依存を導入し、
-[Codex サブスクリプション設定](docs/operations/workkeel-workflows.md#choose-how-to-run)を参照してください。
-実験的なプロファイルには macOS と Codex `0.155.0-alpha.9.2` 以降が必要です。
-追加 API キーや LiteLLM サーバーは不要です。モデル選択は Workkeel が起動する工程に適用され、
-既存のデスクトップ会話やグローバル既定値は変更しません。
+Task-first プロジェクトでは WORKKEEL.md と workkeel CLI を使います。任意の
+[AGENTS／CLAUDE ブリッジ](docs/extensions/workkeel-context.md)は既存の指示を保持します。
+この repository もネイティブの5段階フローを使用します。workkeel-init／workkeel-work は
+ネイティブの初期設定と引き渡し用です。TEMPLE.md と temple-work は旧版の互換資料として保持します。
 
-## 既定値・オプション・対応範囲
+## ローカル観測サイト
 
-| 機能 | 既定 | 対応と制限 |
+```sh
+node bin/workkeel.mjs monitor /path/to/task-first-project
+```
+
+端末に表示される完全なローカルアクセス URL を開くと、次の情報を確認できます。
+
+- Dashboard、Task board、Activity、Backlog の文書テーブル。
+- 実行時間／トークンの棒グラフ、タスク散布図、日次／週次推移と共通フィルター。
+- プロジェクト Skill の出所と全文検索、学習記録と段階表示。
+- 読み取り専用の設定、タスク詳細、図解付きの仕組みの説明。
+- 繁体字中国語と英語。Settings で切り替えられます。
+
+**観測サイトはモデルを呼び出しません。** ローカルプログラムが既存の記録を読み取り、
+集計します。グラフ、検索、更新によるモデルのトークン消費はありません。
+タスクを実行するツールの消費とは別です。欠損値と部分的な値を明示し、料金は推定しません。
+ページ表示中に更新し、非表示時は停止します。Ctrl-C で前景サービスを終了できます。
+常駐プロセスや外部グラフサービスは導入しません。
+
+[観測サイトの使い方とデータの制約](docs/operations/workkeel-observer.md)
+
+## 既定値、オプション、対応範囲
+
+### 経験の再利用
+
+ネイティブな[学習記録](docs/extensions/workkeel-learning.md)は、出所、検証、後続タスクでの利用をつなぎます。
+`workkeel learning search` は明示した多言語キーワードから現在有効な指針を探し、
+`learning impact` は出所の変更が影響する Lesson、Practice、Skill を調べます。
+発見、閲覧、適用、結果の検証は別々に記録し、観測サイトは読み取りのみを行います。
+提案条件を満たしても Skill は自動作成されず、時間やトークンの節約が証明されたことにもなりません。
+
+| 機能 | 既定 | 現在の範囲 |
 | --- | --- | --- |
-| タスク調整 | コア／有効 | リポジトリ内の契約、取得、引き継ぎ、正確な候補のレビュー。サーバー不要 |
-| コーディングエージェント | 既存のエージェント | Codex、Claude Code など指示に従えるエージェント。ネイティブ利用ではモデルを選択しない |
-| Graph エンジン | 無効／任意 | LangGraph 依存と承認済みフロー。順序、分岐、直接結合、チェックポイント |
-| 自動モデル選択 | 無効／任意 | Workkeel 方針：工程の明示指定 → 一致ルール → 承認済み既定値。分類用モデル呼び出しなし |
-| Codex 月額契約 | 任意／実験段階 | 既存 ChatGPT ログイン、macOS、Codex ≥ `0.155.0-alpha.9.2`。限定的な Luna／Sol サンプルは成功。一般的な信頼性の認定ではない |
-| LiteLLM gateway | 無効／任意 | 固定の承認済み接続のみ。サーバー同梱なし。実環境検証は未完了 |
-| LiteLLM Auto Router | 未統合 | Workkeel のルール選択とは別。gateway を使っても Auto は有効にならない |
-| Headroom | 無効 | ホスト所有の統合で可逆ビューを利用。Codex 標準ツール出力の傍受は非対応 |
-| 日常タスクの入口 | 明示的なプレビュー／適用 | 承認済み brief から既存のタスク契約を生成。引き継ぎとレビューは引き続き必要。[ガイド](docs/operations/workkeel-daily-work.md) |
-| タスクモニター | 無効／任意 | `workkeel monitor /path/to/project`：繁体字中国語の一覧、阻害要因、コピー可能な引き継ぎ要約、タスク段階の時間と使用量／品質。読み取り専用、モデル呼び出し・常駐サービスなし。[ガイド](docs/operations/workkeel-measurements.md#full-task-time-and-handoff) |
-| タスク計測 | Workflow 実行中に記録 | モデル・token・所要時間の読み取り専用クエリ。ネイティブの作業セッションは未収集。[ガイド](docs/operations/workkeel-measurements.md) |
-| 工程別の資料と引き継ぎ | オプション | 今回の資料を組み立て、再検証後に確認済みの中断作業を継続。[ガイド](docs/operations/workkeel-material-and-continuation.md) |
+| タスク調整 | コア | 契約、担当、引き渡し、レビュー、受け入れ。サーバー不要 |
+| 開発ツールとモデル | 既存ホスト | 指示に従えるホスト。ローカルモデルを使うホストも含む。全体のモデル設定は変更しない |
+| 自動ワークフロー | 任意 | 任意の LangGraph 依存と承認済みグラフ。自動実行には実際の adapter が必要 |
+| モデルルーティング | 任意 | 明示指定 → 承認ルール → 承認済み既定値。分類モデルは呼び出さない |
+| 組み込み自動 adapter | 任意／実験段階 | Codex app-server。サブスクリプション構成には macOS と Codex ≥ 0.155.0-alpha.9.2 が必要 |
+| Gateway 接続 | 任意 | 対応実行ホスト経由で、承認済みの固定 OpenAI-compatible／LiteLLM 接続を利用。実機検証は別途 |
+| Headroom | 無効 | ホスト統合による可逆的な出力ビュー。すべてのツール出力を自動取得するものではない |
+| 観測サイト | 任意 | ローカル、読み取り専用、モデル呼び出しなし。記録済み task-first データを表示 |
+| 学習と Skill | 任意の記録 | Lesson、Practice、範囲を定めた作成提案。承認だけでは Skill を作成・有効化しない |
 
-Luna／Sol／Astra の共通既定値はありません。ネイティブエージェントは自身の設定を維持し、
-自動フローには承認済み方針が必要です。macOS app や必須の常駐サービスはインストールしません。
-[実行設定と制限](docs/operations/workkeel-workflows.md)を参照してください。
-
-個人開発用のモデル選択はフレームワーク外です。任意の外部ツールが LiteLLM のローカル
-ヒューリスティックで Luna／Sol を提案し、ネイティブ Codex を起動します。LiteLLM Auto
-gateway ではなく、既存の App 会話を切り替えず、同梱もしません。
-[限定サンプルの評価](docs/validation/workkeel-development-routing.md)を参照してください。
+自動実行の依存関係と実装済み adapter は[実行ガイド](docs/operations/workkeel-workflows.md)に記載しています。
+ネイティブな連携に使えるツールでも、組み込み自動 adapter や使用量の自動収集があるとは限りません。
+フレームワーク共通のモデルやプロバイダーは指定していません。
 
 ## アーキテクチャ
 
 <picture>
   <source media="(max-width: 640px)" srcset="docs/assets/workkeel-architecture-mobile.svg">
-  <img src="docs/assets/workkeel-architecture.svg" alt="リポジトリのタスク契約を Workkeel と任意の LangGraph 実行器が利用。モデルを固定したランタイムがホスト権限内でツールを使い、結果を返す。チェックポイントと受け入れ記録は別管理。">
+  <img src="docs/assets/workkeel-architecture.svg" alt="プロジェクトのタスク契約をもとに調整と任意の実行を行う。ホストが証拠を返し、レビューと受け入れは別に記録する。">
 </picture>
 
-リポジトリはタスクの権限とレビュー証拠を保持し、任意の実行器がグラフの進行とモデル方針を管理。
-Codex はホストが実際に強制する権限内で作業します。SQLite チェックポイントと dispatch journal で
-復旧を支え、副作用が不明な場合は確認のため停止し、無条件に再実行しません。
+プロジェクトのファイルが権限と証拠を保持し、任意の実行器がグラフの進行と承認済みモデル選択を管理します。
+開発ホストは強制された権限の範囲で作業します。チェックポイントとディスパッチ記録が復旧を支え、
+副作用が不明な場合は再実行前に照合します。観測サイトは記録を読むだけで、作業を実行しません。
 
-## 採用している概念
+[アーキテクチャ](docs/concepts/architecture.md) ·
+[実行計測](docs/operations/workkeel-measurements.md) ·
+[範囲を限定した再開](docs/operations/workkeel-material-and-continuation.md) ·
+[Skill の選択と証拠](docs/extensions/workkeel-context.md)
 
-| 関連する概念 | Workkeel での適用 |
-| --- | --- |
-| Agent harness engineering | エージェントの周囲にタスク境界、ランタイム契約、証拠チェックを配置 |
-| Context engineering | 必要な指示、Skills、限定した証拠と、任意の可逆なツール出力ビュー |
-| State machines／graph orchestration | 条件付き状態遷移と LangGraph の順序、分岐、直接結合、チェックポイント |
-| Feedback loops／human-in-the-loop | 上限付き継続、承認のための中断、レビューと修正のループ |
-| Policy-based model routing | 承認済みルール、説明可能な選択、会話単位で固定するモデル設定 |
+## 検証と制約
 
-[用語集](docs/concepts/terminology.md)と[設計](docs/concepts/architecture.md)を参照してください。
-Skills はプロジェクト固有の手順です。「読んだ」という記録だけでは適切な適用を証明できません。
-[選択と成果の確認 →](docs/extensions/workkeel-context.md)
+現在は Alpha です。ローカルロックは分散調整ではなく、記録上の身元はプロバイダー認証ではありません。
+ネイティブセッションの使用量は、ホストが記録しなければ自動取得されません。
+Skill の指定は適切な適用の証明ではなく、学習の段階表示も自動昇格を意味しません。
 
-## 検証データと制限
-
-2026-09-24 の Codex 互換性変更は、139 テストファイルの完全オフライン検証に通過しました。
-Mac Mini と Codex `0.155.0-alpha.16.3` による単発の誤字修正も成功しました。以前の
-Luna／Sol 比較とモニターモジュールの実装／レビューも、それぞれ記録された範囲で成功しています。
-Luna が有効な承認を期限切れと誤判断し、Sol の前に停止した過去の失敗記録は保持しています。
-自動実行は実験段階です。これらのサンプルは一般的な信頼性、利用枠の節約、将来の全 Codex
-バージョンとの互換性を証明しません。バージョンの許可と実環境での検証は別の結果です。
-[方法・結果・未検証事項 →](docs/validation/workkeel-automation.md)
-
-Headroom は原文を保持しますが、このアダプターは Codex 標準ツール出力の自動圧縮に未対応です。
-LiteLLM は任意のゲートウェイ経路で、実サービスの検証は未完了です。
-ロックはローカル、身元は帰属記録です。分散調整や人間の認証済み承認は保証しません。
+プロバイダー実験が確認するのは記録された条件だけです。過去の Codex 互換性や Luna／Sol の結果は例であり、
+他のモデル、ツール、サブスクリプションの節約や将来の版についての証明ではありません。
+[実験記録](docs/validation/workkeel-automation.md) ·
+[個人用ルーティング実験](docs/validation/workkeel-development-routing.md)
 
 [ドキュメント](docs/README.md) · [テスト](docs/getting-started/testing.md) ·
 [貢献](CONTRIBUTING.md) · [セキュリティ](SECURITY.md) ·
 [互換性と移行](docs/getting-started/workkeel.md#legacy-history-and-migration)
 
-[MIT](LICENSE)。依存関係と任意統合の出典・ライセンスは[第三者通知](THIRD_PARTY_NOTICES.md)に記載しています。
+[MIT](LICENSE) · [第三者通知](THIRD_PARTY_NOTICES.md)

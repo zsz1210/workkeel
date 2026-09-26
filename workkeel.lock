@@ -1,0 +1,1429 @@
+{
+  "schema_version": "workkeel.project/v1",
+  "cli": {
+    "package_name": "@zsz1210/workkeel",
+    "version": "0.1.0-alpha.34"
+  },
+  "policy": {
+    "schema_version": "workkeel.task-policy/v1",
+    "principals": [
+      "owner"
+    ],
+    "agents": [
+      {
+        "agent_id": "builder",
+        "principal_id": "owner"
+      },
+      {
+        "agent_id": "reviewer",
+        "principal_id": "owner"
+      }
+    ],
+    "approvers": [
+      "owner"
+    ],
+    "review_separation": "distinct-agent"
+  },
+  "legacy_manifest": [
+    {
+      "path": ".ai-org/work-items/README.md",
+      "sha256": "63a3b4e9cb96862b2841fc53111437aa90a9ea239295ebfc9f2d11c2706c995a"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0001.json",
+      "sha256": "5ae425324bf1758202957c4c4347cfb7ee4ed566752583eba70bcd1744bebc35"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0002.json",
+      "sha256": "b4d72b9f72589a2fa119e4ca09c07846531b755624db4e2a8d05df404814b79a"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0003.json",
+      "sha256": "2976e3fe70402445e81e5b2e26f48d1ac342a4a751fd95643ed16f5faa31548a"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0004.json",
+      "sha256": "7bd24a71f7895c47df2bc926130fed50f0ba276488cad7bfb5bb5f3f1a083f59"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0005.json",
+      "sha256": "b377b5e9b7a0bb0b0c8de230d10f3f67b8b6a265319d5276f63750463a651310"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0006.json",
+      "sha256": "55c86cd6097cc1a01bad52ac659ed75ebf15a26819f37cb6e6b4c81aaa1d863e"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0007.json",
+      "sha256": "a9b24f3f98087b5c0a5fc9e925fce1e97f2b044afc3c4309e600684bcfdef3de"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0008.json",
+      "sha256": "b303bce078ed931baee14655c055150c6e586acfb1ea2f2484dbe8cd17c313ea"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0009.json",
+      "sha256": "717b7f7a48fb4e3f1a37894c1c6fafc27c8e5004425644f9ebd6ef676fa96d78"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0010.json",
+      "sha256": "8303389fe91b695482595b8068879f8d23dc25d7d4d7f965c1ddf50c11bff353"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0011.json",
+      "sha256": "f8f89553707242fa3492aaf32252af6cfd90eb41aba6ffd3713f6455fa5f3c3f"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0012.json",
+      "sha256": "2e0a3143f593e6736909a5095a2bc453fea62ad792b2879ec30d8e1225ac590d"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0013.json",
+      "sha256": "9e1a2cdc17821af9334ac69cab7ac372d5f1b358b035ee57396da6c7c0bee7d3"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0014.json",
+      "sha256": "ce6567b14f15e7f8696a29993a41244ed895183b2964767da971b3c7fd047da2"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0015.json",
+      "sha256": "80c6add4068a270e763436ae16839c9820a8178d1f2bca657f3ff997c986247f"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0016.json",
+      "sha256": "a1fd61ee7a1867b572745d0cf057b7fdff428f4e804bd750940b91eedef637bc"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0017.json",
+      "sha256": "fc1a71c5d14beab84ec739c33a6bcc7da6df5a26d967d835ae4e60f89940f007"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0018.json",
+      "sha256": "55e0bb1740a728e4b7ecb62e5ccb439d8b8d30bcad04db099f82dd5ea148c7f6"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0019.json",
+      "sha256": "6addab8f34838b59922c0fb4b7d8f7689380af59408cba28c6fb76d931b5704e"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0020.json",
+      "sha256": "52eb3f68985554710fe0f5a15be8906c425b6beaf6089b1039e01eaa22cfa6c0"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0021.json",
+      "sha256": "2c82fda8ad34032c8a64d8fd498c38272e91f8acfd2c35c376d8847bae656b90"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0022.json",
+      "sha256": "b2486e47507bd54eee5adaea9a37cbbf1e5c849fca4cf5600d4e648ce51a7897"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0023.json",
+      "sha256": "3c2f3444b936676aa4d34ca8d6b75550a08d76ac68f7ada69328aca7923456a8"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0024.json",
+      "sha256": "1520b3b94a6edcbe0e87283e03b800a5e11771cf460a72108014abaec847aaec"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0025.json",
+      "sha256": "5aed23e6c4c13e4e5a6ae39092b970a4c383e3acb3441e9078c5721640eff507"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0026.json",
+      "sha256": "a1937fc2fbac8b14ae8f2580fe1d9d58b568299f9371e56c8d4774ea93296d4f"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0027.json",
+      "sha256": "78cf372696b77d2e01dd2f9619ac832c17604b54e0006a5dc8119d4916658272"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0028.json",
+      "sha256": "52593908c427a74c8dd71b9208305ac11bbf0cf09d0ceef9c81aa9b99cdf89fb"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0029.json",
+      "sha256": "cb0967d74752d0045dff250cb4d905b8746344536b8bdba885e93b413954958c"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0030.json",
+      "sha256": "5813d92fdec7afd5cab472147c30589c420308c1ff7d9f0fbfc0d15cbeb295d4"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0031.json",
+      "sha256": "51a7cff9cdf90201aa6d85e72b60e637769073653f5e830e9b7a3186f673ad34"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0032.json",
+      "sha256": "a0cbba89be9aeec53e9b101f35f83e64ce556944b6fd6c694d0e2691d45a0a42"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0033.json",
+      "sha256": "a631cb819d1358427d53c730b36e6bdd26046baf2a698cbf594e7257511034d2"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0034.json",
+      "sha256": "48751d76a2e9ecf8db8ca7afdb5b0191d7567afd2594c46c0f67cb3886011f9c"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0035.json",
+      "sha256": "e274b4c71cc6496c6e6a09ad39b800003b62d0761f0908525f2ba7aabf9ae1e9"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0036.json",
+      "sha256": "dad1d21a66f0edcb47a94d4c47f4e7b0f0cb66326fa9988e9ee5d8d8c95f9d7d"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0037.json",
+      "sha256": "052891918a9b22229bcacd8d5792096c36b6aaa151d9d1d7be725f6b2a36985e"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0038.json",
+      "sha256": "8055bd6aef8fb661195c8f686a435b99a4227b902a8081fdfde53bcb8e387406"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0039.json",
+      "sha256": "bfe84e5dd1404b90755ef0674d74b5a0c48981c066a656f0157a016d840fc0f4"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0040.json",
+      "sha256": "495df45d4c83d9bb975bc96edddd148c01b840013b8d59c88754520b23383016"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0041.json",
+      "sha256": "8facc9d723122dec2ec702ca1853a261ce66bfe7c2040a3bdc28bc0f3ba67ee2"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0042.json",
+      "sha256": "8f12dfe22d4d40dbd440d281a5e9899332c5e7c0cd46154d186477baa9744d16"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0043.json",
+      "sha256": "8bd88b8482b00fda036c434d7130c2bf55c5390b1e7255ba5278b6cf90f7ae05"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0044.json",
+      "sha256": "2696e122b2cb400044b848db5d15175818222dbf723be41e3ce0a56301a58217"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0045.json",
+      "sha256": "d53dd9a8123fb9224756ef5f91f1aed1e1f81dc0d623db214f57047de94e0acc"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0046.json",
+      "sha256": "d9b5a78f7077fc63e252faa43237b936c1ad5ab1ab75c6463d4a6d26088439c3"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0047.json",
+      "sha256": "31a53f4129d6a0e24044b1d808ef14d65d25f42d62fcc96da055f2438792bc56"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0048.json",
+      "sha256": "47497ff8cb0b28cd486b3d6545718dcc5cfc2f5707b475eaefaacc98970e2908"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0049.json",
+      "sha256": "8cf9d14c415927f9abee2cd1680f29a80e0576bbc495a6a31689560cce5e4cce"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0050.json",
+      "sha256": "9c801737df391d56fb3aa842bcf291b0e062620e7c4f77ba9e749fab4e6962f9"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0051.json",
+      "sha256": "b26a54f79cd717787ec30bfaa5485d124f55255ffa5504a8ed9cd5da9d0b0458"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0052.json",
+      "sha256": "b98298d3d42a2ee0b6e95de2fbb104f49f22d7f34595161413734964b814c2bc"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0053.json",
+      "sha256": "2d088a7f7131b95f04a2eb351847d405157873995ee4dd27ccec1ad8fdffcad2"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0054.json",
+      "sha256": "ea91b4b3f763c9545b7a3e475aee34da0022a18584b312c77b60abaa9b35a283"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0055.json",
+      "sha256": "ae356f413c11c2807f3716bf175fc0d260e005f98b1032893482702cc8017c8a"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0056.json",
+      "sha256": "e26b047f095eea33fef939e9868817d447689c8757357e2620650855187fd2c6"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0057.json",
+      "sha256": "c3c50356d3686d697753eae69b027c96929cd802a9bb1c258de4f80c7bdfb20d"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0058.json",
+      "sha256": "b90daf306a94c59eeaa570e5d1a333f6360c10833f125fc37acdd3102d1aa5ed"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0059.json",
+      "sha256": "c9e352ea1cdc691404d3cc7412a421df5c3f29d6fe209dc98824f12cb6e7649f"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0060.json",
+      "sha256": "20cadea5909cc1db67dbbf73fccafd14dcb3b2a7394582b37388f21add24857f"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0061.json",
+      "sha256": "5dd9c14aed42a70d3348f75508de1cf845d2fafbfe4c91d8c1c032aab000dbb2"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0062.json",
+      "sha256": "93074be42ab0d400394aa651763d831f16dbec78c94bbb23d4827ce49e6fb848"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0063.json",
+      "sha256": "d348adbb46806e3d5183876db7b7d9e12c1cd86df18c1f1af2b9bc72868ceb29"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0064.json",
+      "sha256": "9da3c810ee4d08d6c04acd40cf701f8f13d448332f49d5669a840bd55d365fd9"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0065.json",
+      "sha256": "55be3cde3326734246700ae66225f415c32c67217422ab3b529fe76b8c161ebd"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0066.json",
+      "sha256": "223222ae3cdc66c231e290c540d4e6af21ee136ad418d1ab0fa863eaaee1bddd"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0067.json",
+      "sha256": "ff77f288e817c47282756149ee9fdbff65bd33bd7e0217a30a03bd6ba7f4d56d"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0068.json",
+      "sha256": "95614f1eec307735ed14281da693a1308305911ba8bdb67c4a23430b625bb65d"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0069.json",
+      "sha256": "ed0bf4a5c7071a97c6b2291bc7521f2ff3154e43a29d2bac212a0b27f26132d2"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0070.json",
+      "sha256": "21541a2319e36ce50969bf9b79e89186dc92251b9a75c5dfc58b04f82a8f8797"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0071.json",
+      "sha256": "1db422c10a52aac454b43a669cb23a0c4b00467c8094aeac58bfe47339b894bd"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0072.json",
+      "sha256": "6b9d67b5e25d92c34033b7c084e3f13f693d65b4071f97fb52d22e96c93d31ae"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0073.json",
+      "sha256": "46ab183a11c4a885c114a91afcbc3fd6cf39fbc4ef1d8d31242321420bcbfdd6"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0074.json",
+      "sha256": "a08294fbd35b73a9f21a72444de48560a7db55443778e7654ba3acceed9b3020"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0075.json",
+      "sha256": "33d90a98f7999b9655db8a6aa3927f314bd4de9d519c95efee0b48506249a03f"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0076.json",
+      "sha256": "b7fe2157e7a2d2485019112997795d82387ae53b4156ed792a41146550ec2581"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0077.json",
+      "sha256": "2723802cb69b7513d8e217fe239b9470bf5e3f494ed746219931c6bd80871e0f"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0078.json",
+      "sha256": "0c1221fea3ffecc017964d5a45b527a2e6ccce68f7fae7d8360ee1dbe30dac17"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0079.json",
+      "sha256": "a044f469365c4bf8b069ddb0882c05629b63377026f5361d41ab90596adcede2"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0080.json",
+      "sha256": "964f3458ffa939f49d953d09dbd4fe04bdd8150fb1049722b4d293e7d9855d99"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0081.json",
+      "sha256": "a148fd5c951f1fcd2633b2b967736a0a3d20fcc8a082058f15b1dc73acfe23f4"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0082.json",
+      "sha256": "7232dbb39188ee66d736094f490121e968c33e36499e6d4724d5a1c54ab34944"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0083.json",
+      "sha256": "0826a21286e14c1a83b50871b8f3582d6a7e2c954384eefbe75307b4ba6bd1cb"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0084.json",
+      "sha256": "eb80c903939066a8f41002802a891fe6b7a64f948d012d77babbb9d5e0843a1b"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0085.json",
+      "sha256": "bd790bc5a01258f40b4157c982a6c70ef7d24594328b291d04a3f31fe611e246"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0086.json",
+      "sha256": "ffa502f8ae6eaefc3ec9d93c7c14dd8fee5e2430e25df28d873384d0f15c7e46"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0087.json",
+      "sha256": "43829ff6fcba9dcd453f16300f004c1abe5b319b3be1d721385bd357c2839daf"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0088.json",
+      "sha256": "b9e8e8773bf811dd048c80e5485997335b2862dd12483b70e4e973feb74fd1df"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0089.json",
+      "sha256": "290364e669bbe18859970edc923cc860c6c2cb92ef9521451a5c98be5a528a30"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0090.json",
+      "sha256": "af7ae026274c6113a33886786c39cc4e3e4492fc3dafbda03b925fa3682e8c98"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0091.json",
+      "sha256": "3b254282c3f8e2b4484a106c64b0ae633f312f9619f18e2d7dd72b6c7e95aa66"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0092.json",
+      "sha256": "1203583645b5d3176c4686b89019efcb4effdda3fc17b2ad03ad08f23cca92d2"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0093.json",
+      "sha256": "a7ff3a948d5f972196cb49ce8839d3e1264bbff0225bd6dfa32d1f3aced0da1b"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0094.json",
+      "sha256": "8b17f9285f5b70627e157ab1685d50648a69191cadd304282530ae10e72a1f3f"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0095.json",
+      "sha256": "10456ba8cec6fdf4866f83dc2f7b4c1d3d118d1ffccd20547f533bbe1cf97ca8"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0096.json",
+      "sha256": "3feccfc068a06bfda778a9dc7e17fa6a02e6a8cdd8bced1dc8766caa5f6c1606"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0097.json",
+      "sha256": "f18051a9b73710bc77347597a071c513f35b39ddc0bc33723926f017e4d845df"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0098.json",
+      "sha256": "9487acf9210cc39def00ccef52387592c4da73e772b1be50e6d90d211149ea43"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0099.json",
+      "sha256": "f5abc3a0c86c7ed2ecd8d3b0dd3b1e98a692105ebbb33a32e5d2eb97e9ad1fdb"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0100.json",
+      "sha256": "3013681b3dab8c6ee7ace4d3270818c7a7f3ce4a1b2c447271d5bdda49d8f509"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0101.json",
+      "sha256": "fff2c9865037edeb207f8a344551187e4bc509c0e71fc2aff7e864ff9da30a14"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0102.json",
+      "sha256": "10c8913cd8e777c7fca2022ea0d1662ead3b9793446fab5594b06bba9855ee0d"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0103.json",
+      "sha256": "955b9c9a1bbc9b3c82e85ff47e093d4349fd8822dae0e9d7e65d8dba294bad93"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0104.json",
+      "sha256": "8ae55ccb121ad4a784c99607c08365162096c595830dbacf7e745acd13f0605d"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0105.json",
+      "sha256": "fc5b27f1dbdc4a5e00094cd8aedd6a1358a4143c54c3c63857e457a5a5319b30"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0106.json",
+      "sha256": "884a6872c063760e07d5f8b8a1f809580b4e8bd1e1f40354e3ee740d282e9bc2"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0107.json",
+      "sha256": "bb87bc99191dc59264c086a55ecefa55f3f5ea75a1310fb1424911c1b7802ba2"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0108.json",
+      "sha256": "f20d665391e281e3d8291acc602ddfa321a7823221ee4b01667b0d0d4240a39d"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0109.json",
+      "sha256": "117080c2d40837eac5ecff03d68cfb01adbaa8ec39b30b08709e545f23d27cb7"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0110.json",
+      "sha256": "07a100c33d4a3d783a38a20c90776aa66114b97dd20df1d5741cc642028bb6f6"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0111.json",
+      "sha256": "7577d0199ce7e9bd7c57aa492db25d1d29d0b2097344125769b818d929889b14"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0112.json",
+      "sha256": "684a09e0ce8d9aeb54dd4a2c69bef0d75fe731f1f60f8f6b56cf5f89527c7154"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0113.json",
+      "sha256": "32b7517cc4536295ae2990833d090b0fd02760cdf04889b99fdee5382a4b466d"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0114.json",
+      "sha256": "81516495366913d2ba81d28a8826bb6430d22df33eeb5bf4420b3e05492dd4be"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0115.json",
+      "sha256": "ae059a5c7944a3557cbcf8c49af269d5e0ea04f949ea24538134b10222dca9b4"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0116.json",
+      "sha256": "be20ef572ac41e75dbb44b2b41017d0f76ba2017f60ebc523ef06fc7cd28eeec"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0117.json",
+      "sha256": "cc804e38c48cac014cce9f4484d16b2438702b0c13351df29cf76fd2b3c66791"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0118.json",
+      "sha256": "cd47b1a6cc230bb8a37401c7c7c2f9af9ca4afc7678a839970cff4eb38bbb5d0"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0119.json",
+      "sha256": "f18657d101ea2b862a5fdf42aa81156455662069060145cdda48a332aa48d947"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0120.json",
+      "sha256": "055d1beb1d82ca632bfba83b2309ad7ae87e56d5342a58f4c972fe36c4d0faa4"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0121.json",
+      "sha256": "3c84cfaee1f83653fd6a025002a8a751335c3919309d1e6f5643a5671e8f93a5"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0122.json",
+      "sha256": "076e8174aa9aa54a18be5964f09906100d78b9f661f1b4568d8ed8d92f6625cc"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0123.json",
+      "sha256": "750898d354713fbde9d7a83de6ee397d362eae7f5a5af7c19f58be2273be1457"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0124.json",
+      "sha256": "7508335e8a0d1dfa68d87beed27a7e543dc13f53e0a1913d6ac5f027ad8a7d73"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0125.json",
+      "sha256": "57154976c2adddbede0226f9fbe5f63bb4c7ce605f7ab61a79007a4133946ac6"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0126.json",
+      "sha256": "6f9de59929f38b65bfbd7ab47351aa4212e5a3d49fe3b7621d8f9d2d2a88dcd5"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0127.json",
+      "sha256": "a48be40ecfae80fe4d855fe7ecd91bbd423c74ab3183d3e436d7d471fabb8ef9"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0128.json",
+      "sha256": "41797fd30f783a5eb888ba225d58a1050992437e2b8bb727faeaf10bffed8068"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0129.json",
+      "sha256": "7b5a48ce2d77b95a9b126d4468646a3d6e8a66b0087285d75ba3b86fc196acf0"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0130.json",
+      "sha256": "440ef78a5eaf07760d96d2db300ecdca1a98ff7a6498aaa2f81f3d3eb67abf72"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0131.json",
+      "sha256": "23eb22f21d07e49bf5fc8bff53891418699a2553bb05fe1ca4d528f9e6bd08ce"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0132.json",
+      "sha256": "8b25451cd99cac226aa3ffb2344553c1bcd6c6ba67e346ff38689a65009f6926"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0133.json",
+      "sha256": "ae3227d5f788f40b2628abc73c7e333ba220172e8f309360853544e4a3116089"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0134.json",
+      "sha256": "59747b4e002a45c732449c80a4fbc9207d1427fa0d417cd665f8402f1e414037"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0135.json",
+      "sha256": "a2eca7c839d57eece9f02b9eccba62f81399a95ef7c28f7a284e8e1a2fdb8e47"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0136.json",
+      "sha256": "2fbf323bebbe5dbda381ae90974ba8612a6bc7d7210da2485fed14990793f446"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0137.json",
+      "sha256": "b4f67aeb0801f373b5a6f6b36b000ea0c5f2c30ede52e989d057458ee9513bf5"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0138.json",
+      "sha256": "fd1425a1a662163ce7834fc3c88e7aaf5c39a8d247527268239f0659831b5c4c"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0139.json",
+      "sha256": "4a09153bea639d79352446eecbb4bbc24b9600809be5928f97a9679043dfe53e"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0140.json",
+      "sha256": "c87524b643350f2d9bf1dfa7f1dbf56c2e09ca2d5b1d509504975ddf18971aef"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0141.json",
+      "sha256": "b303fa7437546d5b6daed736c9e717bf8b7ebbde037a124425ddb7de7c413d85"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0142.json",
+      "sha256": "e8af7032e1c1d811ee1f365453c2d1fb78991f0d4a0f24583ff9344b37ce1065"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0143.json",
+      "sha256": "5d3f96a78a33881812f1c1b74b810b215b0b67064ae3205e4f7cff4a5fdf9e78"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0144.json",
+      "sha256": "8abf5fbecb776ba5ba52d822d20c500953b9c3573f85239c8d12f7b1e76322eb"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0145.json",
+      "sha256": "92e310ac7d51a2e18c723f08504c1cdedb8f76713233c149777bb2721b108d68"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0146.json",
+      "sha256": "afde2a723cbdaff73d121e7e3a4acc77d7fc763d4cfffe5b345802758d5daf87"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0147.json",
+      "sha256": "30653ce37e7a2719b07899f748ede6511d467cbdf0de7f7be7df2871e55d204c"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0148.json",
+      "sha256": "d9d647a63d9a5ce400ed76704b2fbae772a9854ae6ec8d73f762553ea3492b3c"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0149.json",
+      "sha256": "f3e86138e6a9020ef50a943d78742e0f3123051f71565aa9e0a043743a63cb95"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0150.json",
+      "sha256": "6f4f25c14c3c0764c17229fb061dac131ef924f0526ebb411cd311db2449c073"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0151.json",
+      "sha256": "692fc8ced726ee6531d56825dd77fa2676146cdb6eb3ceaf7f9aed2dd502a5ad"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0152.json",
+      "sha256": "e6d92c7ba25bd0f7e1b3b87a2fb655eebdd61c3600ce823c2a8b07490b24308a"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0153.json",
+      "sha256": "ac6d43b36be566b2519c5e5f21854c4d6ec8015ffb4c52fe7156ed98e7460d37"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0154.json",
+      "sha256": "d123ea433f8ae0911b75e3ddb99891b0521cbde7a675b75b077bb20e8b4ed300"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0155.json",
+      "sha256": "a05de72b48dde53517eb04ea08510ce744e37da842a580d2eb882f04310b3b8e"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0156.json",
+      "sha256": "2291c5d2a29df1e3d6af28f009616f795dcf41c524b85d98d70bca77fb61454d"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0157.json",
+      "sha256": "718cea058c34526e89f7ae95011466f12daa8f0bde827176d70fe404d2b5f9db"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0158.json",
+      "sha256": "e1972aa61beee2456fa5908543c42290d1f95f6d983a83fbc4a5ecf1a80de1d5"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0159.json",
+      "sha256": "d795a9027081dfc7e20d5e212952b441052a3a2cd41743e3eb4ab8a2bc3737b4"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0160.json",
+      "sha256": "585e2ac6d695bedea72684c906d0cb1d5a8a4775d5079fc8c6f54184e3ade495"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0161.json",
+      "sha256": "8d9077ba06de5f7592d0b0c3b5406640465d69a07711745c4bb0ff9fe99bf5b6"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0162.json",
+      "sha256": "88a2f7538827d285e0fa7120a54232f127b133b88b1ff88b5a5f4ea259227f3d"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0163.json",
+      "sha256": "b687d5786f399a8d7a805e2f42cc435f2a72726c0d802fa1207986041869e070"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0164.json",
+      "sha256": "b97e37eb7dacd4c5c92bd24e9a4486ca8fe99e367cfcf878fbcfa5a5c9c5df89"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0165.json",
+      "sha256": "9661a786f5d5ba22b3ce8e331a3ac0619213cdac5dec3673920cfd49ff949efe"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0166.json",
+      "sha256": "ac9d3961db7404d55802ff65e0dcd0cba45b1ea7690d556ca720e6c61f25a0c4"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0167.json",
+      "sha256": "96e6431bccb63d1dd3c4148a4a6e799756859fddfbac01c5986bf8b5af7e0151"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0168.json",
+      "sha256": "d9abe10945f488d07aa6be6e90c41a8b3577adf613ae762fbecc04b34625950e"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0169.json",
+      "sha256": "83af8c8c9b8514bf5ba694c60e37e97ad7272c72452eaca83bd687f961b256b8"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0170.json",
+      "sha256": "c12512e8a430e6c6b7fcf8647abc5dc37bdfc12adf88e19fc3d28e69de3edebd"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0171.json",
+      "sha256": "6d6f3ba3b1a634fd6e9eb779a28d828635d231c1164ffb938a27b12bd6045f82"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0172.json",
+      "sha256": "9ff0e842dd6891db4919a2478e8f6337727dadc6150955d4eedb9cf9f79552b7"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0173.json",
+      "sha256": "00e4f90316b906ffba729fc9a357e265fbf40f353fee32d9bbea3abc2e40680c"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0174.json",
+      "sha256": "b6ca122f1b9ccc9d587bbb9f10379e45489090505489489d4bcce7ea78e908a9"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0175.json",
+      "sha256": "8ffe109ca07c58476ccce2ef266dcf098be9e556e4a39093f24b17df2a829bd5"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0176.json",
+      "sha256": "6ad789a0d46175f53bcfe324b8830e68ef7d6c2ea78a9a3871c093ca8b5901b3"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0177.json",
+      "sha256": "01cceb69267ead7ac03b4bc53e675db18516f582baba56bf928e526bb42008cc"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0178.json",
+      "sha256": "5a21158d5c324449b6d7206fd3bd64be6239c670b72fa58de420592203d06eaf"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0179.json",
+      "sha256": "dfebbc462308dcfc6e88f532d8846b5bc3cc364b5b202664999415d79179e0ad"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0180.json",
+      "sha256": "600344aaa3884c858c1b134b61298c0b7bb17a47b4bc9840360e7763ae72c663"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0181.json",
+      "sha256": "8e4a1cb94aa1d4a3ba569160937a18373ed10f7ef22bfb1f6ba98b682984a46b"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0182.json",
+      "sha256": "8e910eb44f9e55ccdc7bc710b48a435b152d4524b3ae5b891d4cc4cd241e98d6"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0183.json",
+      "sha256": "2cfc075dde2158e42acfa786deb2d56d6d1074ed779b1ecc020460cf8eb2e6b7"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0184.json",
+      "sha256": "ade50a3b9d7854c718ca26490fdb2cbed68fe7277991c6e4e03bacca03c8d8c8"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0185.json",
+      "sha256": "54b855dd33e9dd01aed88cce7666e13201103d88aa81aab8dd5030b77736ff37"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0186.json",
+      "sha256": "47901b0985aa238064c97810faf3fe0cb372eccce4b6a44bbe01bbadfcba7156"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0187.json",
+      "sha256": "1fd2e403c7feb2799c363128e26c906252073dd078c0c2248ceb5c012313046b"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0188.json",
+      "sha256": "f09acc56ae0e7a245c1eb2496170bf26aa826f765288988ffb6d09397dc98768"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0189.json",
+      "sha256": "c29d99afe446e1ae3fdb547a28aaef4688afeb87fcd93dacf0eb32360fb0f062"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0190.json",
+      "sha256": "a992f16ce1629112f40ed1a56092b1312de8c7f0ae6e0d9d973b9b8811ef899f"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0191.json",
+      "sha256": "26db6d578d8c134a1efb724c4e96163b007f7dd6ced2f05e1e655395b1ecb850"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0192.json",
+      "sha256": "85fbe698f902b9dcc3f97d64740fcde277940e0fee5cd921d94b8b8f5eb9acc9"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0193.json",
+      "sha256": "5d7fb6ed4e516a09fc21a0de703c153a9b20262fc8bca7bc016ccd7935f844ab"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0194.json",
+      "sha256": "88eeb1dee9025492a54a31ac54a07a2a1b807a4c1cce43d76ce50aa95ad7a017"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0195.json",
+      "sha256": "cabebf46e324521f0e83ccd1080019bac1f7c8121e010c6f1a3a5a2fe1416543"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0196.json",
+      "sha256": "f2e30081b17d1c33907e941e01e3f4a80b67e8404cae39ad3eaef3c9ecdd8bb1"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0197.json",
+      "sha256": "a4152bf9e4897d509e53078c508ae471990b1eace9754f9858a85b735fdf3560"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0198.json",
+      "sha256": "199659d5aed656c10ea3074874e48d7481a5de8a2cc1b0ecdf3d5166f0c75469"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0199.json",
+      "sha256": "89d7c5ddc4758a9d2351c8a4d8dc74a6ff15ab2dd4e5be73e69863033d5c0925"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0200.json",
+      "sha256": "074ba287f4fbbf78f12c86826540ef0ca5c9eea07e095dd66389ef2456fa1240"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0201.json",
+      "sha256": "3f4510a9d0ffcaeff42ddca35d06c3871541f410dca8eedb1170b204b5a7fc9d"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0202.json",
+      "sha256": "d516cf39e2e759d80ee3eb760a9b336023ab6fd5960aa218a0e07394fbfcb5d8"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0203.json",
+      "sha256": "bfeaacd2dc9fdc7d015486b0ede82d45e9ed053fd70c230ef0ee8499487741f9"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0204.json",
+      "sha256": "85673dd9ef2d933878423f77106860fac576ad937416c8568836f0c6bf997c1b"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0205.json",
+      "sha256": "4a3550f77859dca1c8bb0b7da1727e5fb345ee53dad0fafb9a66930f4989a8d8"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0206.json",
+      "sha256": "8d7583fc52cb513e37d57d818115a8806d99a0b6abd0e8b41397f70ccfdba7fb"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0207.json",
+      "sha256": "2082a10e800f35835f74bdaa660049f19e40125910909d41aa5f5ed15747b8cd"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0208.json",
+      "sha256": "291227c07d7c386d453d6f12587b7b2feefc1407cb15fc8ef41916cbfcdc4a3f"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0209.json",
+      "sha256": "9760d96d68450ff0d4f0ec844c79f20ad9aea46451a14edc69ec69dd379972ab"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0210.json",
+      "sha256": "9e236d9f8278084baa46c83521877285bf3478b35d8044d76894d1478d2eab9c"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0211.json",
+      "sha256": "73d2888f6bdf01f7515f9cefe2a7335e3a5ea7d2b62ba033f4d6004f00caa193"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0212.json",
+      "sha256": "0de2422bf14026a68de849fda84e9bdab0a394df9dd86708064e5a7ba67f0383"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0213.json",
+      "sha256": "b15bbf5aa3a9866cacec8fa6c6f7920b6f9c90c4ae65fbf29629157aa41fbce9"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0214.json",
+      "sha256": "cc56a87a81ed4492e6bce8baf64c318c88c73d363056529ba8ce6e92472027e3"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0215.json",
+      "sha256": "55fed7127afae10e0fc54f121dd4c64fef60101704f1644f113ff1e135199923"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0216.json",
+      "sha256": "5c9f71c91e3f43a0cbb15b0d5033c8e899ca8fbbb8516d2746c6f1d61422ba3a"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0217.json",
+      "sha256": "39b9c8d72293f3c1d66de85be3231fa75a1268fd014560798c638a9d0b8169ab"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0218.json",
+      "sha256": "4a08305df3c86f858b0b4b2ebb366a9c651509bb4ec406bf74c06632eb5399bd"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0219.json",
+      "sha256": "cd0d54a026d3ef551153113406d22c7a60419dd9628004a860688488b5c0f15d"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0220.json",
+      "sha256": "f164f471b0cf10954763f5ba35ab2fe6c0ed946095f90b18be5fe01a3fb84326"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0221.json",
+      "sha256": "62ee8934742eff97a852dfce120107cf306413005ec258cb9a47a6af13474f70"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0222.json",
+      "sha256": "1c99315fb0475707730cd6f026d4040f1f07c5805e2f18a80e4a615ed709a50f"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0223.json",
+      "sha256": "8e2300d4a752db1323e822339f52dcaa64b6a85d2359d223e6a7a9c0aab635f9"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0224.json",
+      "sha256": "b1f28e2e425af8490e2cfa54cfed7ecb6646934cda4d30c592789587c512f118"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0225.json",
+      "sha256": "e7fab2e1b746a36c7faf48b4dad3149311b59902b34032aec6faf95ddd067ac2"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0226.json",
+      "sha256": "dc807a1c025eeb1a4a40f9325fda6cd4abf1654cf4f8f0a5c6f05b07ab03b8a6"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0227.json",
+      "sha256": "82b9233a15a606c7e1086659c7365791571d5eecf7634434701b50b22f4e1852"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0228.json",
+      "sha256": "ca550fb3a5e94eb83d197f08e3b9933c3ae8290c0a3d64d759df7665685f5588"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0229.json",
+      "sha256": "125ad420c04fb79e8d974a4fe19042fbe7ddf43a862632f4b39b5a000b45067a"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0230.json",
+      "sha256": "ed2607ccf77a597bda4dc996b06b2f57347913aa9375df982229b2c95c89511b"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0231.json",
+      "sha256": "80dfcf9b801641c5ea3e8d31ef2fa865a0475c11865d6ec3a47dbe7cb8c763ef"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0232.json",
+      "sha256": "098c5647eeffa03024c9d39c653b800d68afa740f87ec8897e43752b79d4cf5d"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0233.json",
+      "sha256": "e5cbffedcae1659042533141593eb6d64a0f3bd6e3f942ffa660c7b7549f0609"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0234.json",
+      "sha256": "240a1c2a1b7c946953ed02444694f0fb8589bf4785db99895229bfc13087a4be"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0235.json",
+      "sha256": "4c77df7032e94164fe996a2af3cd0843608b75eeebe0893d923fe53e1112ebd5"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0236.json",
+      "sha256": "62d4c487bdd4dd617935febdfbadfe6063acbbbd9ff4f5f8ad5feedf3b4c8a78"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0237.json",
+      "sha256": "ae7191c25bd8b87b7c1c29f1d39cf6382f12ab798581d986eb0be491e9a98d6b"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0238.json",
+      "sha256": "ffc5fb4e2251f132c9767a57daf17e41ff10b317cc5bf986bf77e6a40c775a14"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0239.json",
+      "sha256": "7eb1d9725eaf635b3906f08636f6431e7baaa768eead7f9ae9f644550d300f59"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0240.json",
+      "sha256": "f4a0b1f38be67e6eb90215f593c7ca0507a507ac13ca298a63465841f42a5005"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0241.json",
+      "sha256": "2a47583447b6fbe57790c143d21013a9cc8f66c0f3ef0f9bab59bab02e9ef012"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0242.json",
+      "sha256": "52c0270d0050b61b1dbb8444b45bcef79d776e85fa670709d91ea37fda547652"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0243.json",
+      "sha256": "437851d15cafe536e2bfb08d0a5ea8887e3adf807a6afbdea3d8bbf13950cf4d"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0244.json",
+      "sha256": "0f00e121f0309f5a7b91e4a7712f08559765aef55444ed8f08eb6ec0b962fcc7"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0245.json",
+      "sha256": "e216641000ee99166b4cdb8762555992b95560707678ddf078557dce4c7ce908"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0246.json",
+      "sha256": "e1eb59d23b37abd110d24604a74cbe62fdbdfd4e116aeb23a910e919a8a0e407"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0247.json",
+      "sha256": "167c54eff5bc0f5e364224327fbd8d9c06620036c84d8112030bf4551b5d1650"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0248.json",
+      "sha256": "e2aecfb6b49b11cee12f38151853a2a09ab3efcd5b71ac4faf9d0f2c8a3f55ba"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0249.json",
+      "sha256": "d3b201a318c44f5577a8b9185b5625225928907d925dd11dbe80c7d27e562ef4"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0250.json",
+      "sha256": "9a42721db3f16df245f261bf9578c33265406fd207ed7fe715650327452c818d"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0251.json",
+      "sha256": "4fd0807ff60e48041f7f06b4b2b83d127906d2e93eeef3ad090809cc0cacafd1"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0252.json",
+      "sha256": "7127a6e0fcb8e3487ca5099cbad8cd05be39f06647b492cfb3ecfce1dbd85b7c"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0253.json",
+      "sha256": "f2c985d4000f3e3007a9f5c25bc94bb083cf91508b22e412e6e59b3bbf71c959"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0254.json",
+      "sha256": "627b80da0042a6f12444c590c91cdf1be04eedffb8dbc48dda19517f8791d70a"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0255.json",
+      "sha256": "5c0f07848b6a53d700d93396907820a340352d052be62c31beaa3b364480c889"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0256.json",
+      "sha256": "5182d95db0e1b401b248fc0186b49363a4386ee38be66d2a996435c6e2a3da03"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0257.json",
+      "sha256": "b07cbd686fb7070fecc48901378d68bc703ca80d0518aaab8819f0946650573d"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0258.json",
+      "sha256": "c1175aa7b8470b08889b364df98a6b9c5b78244b1f758160b3e27f6d37378a67"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0259.json",
+      "sha256": "8638e69052756c7c0b228da858fbb9861b474e65bfde4ac45b8db4a71d335ce3"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0260.json",
+      "sha256": "d4ca1e13807b72c6633fb03680a4f5ffe7a9b292b8a603c431064e2253d120ae"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0261.json",
+      "sha256": "94c020ccb2ecf296741cea7d3c249f2f35b8d81f704789b8cf44f4cc1ebc8340"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0262.json",
+      "sha256": "7f3eef72293687213d9efc30045e660cbeb6caa8994b557dfd7038c6b2f2c6ed"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0263.json",
+      "sha256": "ca825536693659ba946a238f8efd0305e893612f67b54f3bf55735b1e5de2824"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0264.json",
+      "sha256": "d2914c8a7d8b1545f2a4b2ea17f44fd0f2822a0734e7c85b4c00a66d4d43f132"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0265.json",
+      "sha256": "aa8df815336af887921809fb657e7f09c120648d9a36361053235d661f6b08eb"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0266.json",
+      "sha256": "b42fcc7c81e0aa1f5eae3052cff044658ff2bb5fd75ddeb6dd0a6b86bcdb010d"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0267.json",
+      "sha256": "78d109ccfa628b01d2c76ef4daf62c12cbcb220db0dc98e3feffbcf8e942c504"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0268.json",
+      "sha256": "b317cc4dde1f4bd70cd17faf95dc0480f04c23cf829411b4a6b70b4eb8c62417"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0269.json",
+      "sha256": "24d3186a5f2ccb7b7d9f0e944ee4188ad0cc8ae642a45989d825030ce691571c"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0270.json",
+      "sha256": "c0ba40db41aeebcca8fdf3b0e53be15b860b99633c423593957cc96dfad34f95"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0271.json",
+      "sha256": "725135cbbc9e8e2802601f69004a8d8ed3e52937ec64c44c9ecba991bd7f11dc"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0272.json",
+      "sha256": "31a1822d3f36e4d9abb797ce975d72ce5c16eaf091bb17034ac12286d1fa6171"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0273.json",
+      "sha256": "db1abffa5e8da601991b6202b1061a58e6545d89344c5b43a0526897d3b6fdc0"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0274.json",
+      "sha256": "c8954796f7386c4bc93b15dfef75849fb59f873e81abf10be75c5ddc4bcd43ec"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0275.json",
+      "sha256": "657f6ca9e26020d3b81b8c4520a4499e4473a323ddae6b0bcdd8f05025e98a05"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0276.json",
+      "sha256": "b72dcb67873f457a10c40cde16d6b68cf765543608f0934c77a68efd314351c5"
+    },
+    {
+      "path": ".ai-org/work-items/WI-0277.json",
+      "sha256": "cebd319513123fb82081e7f3a05ac643e0ec70946bb257899463783be13afa79"
+    },
+    {
+      "path": ".ai-org/project/agents.json",
+      "sha256": "22ddaef971c201022fe45ce5f0a7ad9036d3a455c9e39e332abad358740d201d"
+    },
+    {
+      "path": ".ai-org/project/assignments.json",
+      "sha256": "4601f67d3687df15bb1ce563eaf95b8d941c30909b9b3c21924f1882ec007650"
+    },
+    {
+      "path": ".ai-org/project/collaboration.json",
+      "sha256": "3be8857bd7f9446116ff5794a98a95d80bea562a03bcc932ef5fda17be73d58e"
+    },
+    {
+      "path": ".ai-org/project/context-map.json",
+      "sha256": "bb7695f26163da959a6de18d6d8f535c650c4266fcb70f826bf04d2573f119af"
+    },
+    {
+      "path": ".ai-org/project/control-plane.json",
+      "sha256": "160cf59a74e7a91a844b314ef822b186420095dfc0ebebb5f8bfb67a4c4ec737"
+    },
+    {
+      "path": ".ai-org/project/domain-glossary.md",
+      "sha256": "3649e351199ebd5b7b79b9fddee41ff3c91f792058bb94a6f7c17d9f1a8a983b"
+    },
+    {
+      "path": ".ai-org/project/evidence-profiles.json",
+      "sha256": "a2461c92e9842777032a9ca1277e4a480e458c5db01a19316d566eedf4771ea0"
+    },
+    {
+      "path": ".ai-org/project/evidence.json",
+      "sha256": "f0b3f0f58200a111828dda9fafc99046a586f49ec95107dee3e3bef3758b16e3"
+    },
+    {
+      "path": ".ai-org/project/execution-policy.json",
+      "sha256": "588e14a90ac6904ac07fd0a504899293378ab32463de235423ed20f193bb9c4b"
+    },
+    {
+      "path": ".ai-org/project/federation.json",
+      "sha256": "a320ab60e0316a26cdab8be9a8d76643c01c050af1b15abda482f6dc8533764d"
+    },
+    {
+      "path": ".ai-org/project/project.json",
+      "sha256": "3bbc258c7cf8d9f1611d2824b5bf9a1d0e6010a592554a209ddc24d3a249ec27"
+    },
+    {
+      "path": ".ai-org/project/repository-integration.json",
+      "sha256": "e3fb3e2d7882526042d071509363ea5dd428540db09c144696b82654cc844d02"
+    },
+    {
+      "path": ".ai-org/project/resources.json",
+      "sha256": "982a06783c278c31e78088e0ce4b857ab38784dde6f653bc2309449c324f7faa"
+    },
+    {
+      "path": ".ai-org/project/retrieval.json",
+      "sha256": "fb9f4df76a0fdeb842d9511edc882ad876f2dfafd224040abc0511f81afc4e1c"
+    },
+    {
+      "path": ".ai-org/project/runtime-workers.json",
+      "sha256": "f6dae2ee1e3de5c27c1c4dac798b6be0513ebf42855ed13ea4911183af196925"
+    },
+    {
+      "path": ".ai-org/project/spec-index.json",
+      "sha256": "ae2f7ef9856f13f23e2e55a66ad0e1a085501d67928328557494b7c9d8529c85"
+    },
+    {
+      "path": ".ai-org/project/tasks.json",
+      "sha256": "ff500215d17e1d5c03b33c5473900a8279148802833136c0846f21f0f0273712"
+    },
+    {
+      "path": ".ai-org/project/tracker.json",
+      "sha256": "a0333bbc6945c6971d79b730407d46ec50ac9a653d0d8529c9db4953d6e36188"
+    },
+    {
+      "path": ".ai-org/project/usage-policy.json",
+      "sha256": "a1c228f2af59529293f6af55e2e443834361a4a652ab53dfc393e385d7f5a32c"
+    },
+    {
+      "path": ".ai-org/core/adversarial-scenarios.json",
+      "sha256": "b00f4d148d774492731ffa5171f4b9e453423579cb6032fac95fc49abb75afcb"
+    },
+    {
+      "path": ".ai-org/core/collaboration-profiles.json",
+      "sha256": "adbc271a1f64e36ee844f71b5e9080cc65c0dd01ae738306a014d2f931f8c6f2"
+    },
+    {
+      "path": ".ai-org/core/high-assurance.json",
+      "sha256": "47b580fd826d5121c41eab8e40e64ccb958935cae7498b63fe46ed64e397dd2f"
+    },
+    {
+      "path": ".ai-org/core/migrations.json",
+      "sha256": "44ebe5457b3351fd509d67e7e2fe557139e510368039cc0350f95ceb7c81590b"
+    },
+    {
+      "path": ".ai-org/core/policies.json",
+      "sha256": "b6b7c56c14615e887a82c86eb40428bb14d8e0fcfaeabbddc482e9e9b946a7e5"
+    },
+    {
+      "path": ".ai-org/core/positions.json",
+      "sha256": "196012586b9b68da2aaf949a7715dcd213827422df449793e8f7c9f0099f529b"
+    },
+    {
+      "path": ".ai-org/core/schemas/adversarial-scenarios.schema.json",
+      "sha256": "ea84c283e245148ffe3725292820c8e44a1f9efc29fe27c74008ad30f2982340"
+    },
+    {
+      "path": ".ai-org/core/schemas/agents.schema.json",
+      "sha256": "74f8f7fb39cbbf536f6d832511336bbf5b30c807bee9a15e989de892390ca6fc"
+    },
+    {
+      "path": ".ai-org/core/schemas/approval.schema.json",
+      "sha256": "1f818e10747958c52c4d5fc99dc6fab96cb55cdd65266593889f3c29d1bff6fe"
+    },
+    {
+      "path": ".ai-org/core/schemas/assignments.schema.json",
+      "sha256": "5e860b09567cd39ab6ef0ed38faaae0b44e422ecb733709035092f7e939b5c57"
+    },
+    {
+      "path": ".ai-org/core/schemas/capability-registry.schema.json",
+      "sha256": "f6d857bd2766a306e6ca37ac947f4de45369b50429f6974d5d353452e5798cb8"
+    },
+    {
+      "path": ".ai-org/core/schemas/collaboration.schema.json",
+      "sha256": "0771ce9f340f4279c338c6c158302e07983727532b6b3024b80623afd8f1eeb6"
+    },
+    {
+      "path": ".ai-org/core/schemas/context-capsule.schema.json",
+      "sha256": "2cbccad6f7c637ec7d624958d055201cc0fc919d0ad80abd1f72809891a42e26"
+    },
+    {
+      "path": ".ai-org/core/schemas/context-map.schema.json",
+      "sha256": "9771e28c20799ea2eaf5be82f84455d22506cfa38e3d28d866051cd5dff64201"
+    },
+    {
+      "path": ".ai-org/core/schemas/control-plane-config.schema.json",
+      "sha256": "9ce04d164812ed3af28dcb14d24e343f7e142e72573c0c8a144f18d8d12fa519"
+    },
+    {
+      "path": ".ai-org/core/schemas/evidence-profiles.schema.json",
+      "sha256": "661a921ea78fa35a685171557af19575c23de1ef00eee824d9a1a4884105bc28"
+    },
+    {
+      "path": ".ai-org/core/schemas/evidence-registry.schema.json",
+      "sha256": "e8d9b9505cda1d5398ff80ea616b9551ffd6407bffd3e1aad4330f64966a4890"
+    },
+    {
+      "path": ".ai-org/core/schemas/execution-policy.schema.json",
+      "sha256": "e33e185a698d77ac430c63e9b78c4346f59202fe6f6109a3c221aa499eab7c2e"
+    },
+    {
+      "path": ".ai-org/core/schemas/execution-request.schema.json",
+      "sha256": "be8bcea41d700ad0a6088a26d85f7ee7c591fa21968f998a9624221cdb813d9b"
+    },
+    {
+      "path": ".ai-org/core/schemas/execution-route.schema.json",
+      "sha256": "97b2f77fbd1811e39c2d4b346b1f9fa9f74398ead0b9f21ca4609586b371013d"
+    },
+    {
+      "path": ".ai-org/core/schemas/federated-portfolio.schema.json",
+      "sha256": "88f57b061349e05a6fcef30eb0336d4b9e7c881ed862ce4c1ba52d5a993069ca"
+    },
+    {
+      "path": ".ai-org/core/schemas/federation.schema.json",
+      "sha256": "0dc3f4df300895d1455ae41074d930dfa1bd2e6a99be1ec8526037356a17af90"
+    },
+    {
+      "path": ".ai-org/core/schemas/high-assurance.schema.json",
+      "sha256": "55569de92977cf455815173b20ed4c06239d8211b2b703efbb757e81fbd6220b"
+    },
+    {
+      "path": ".ai-org/core/schemas/init.schema.json",
+      "sha256": "71fc7bf42ef91defed6e0bafedff3d18b70fa57b9784e484f22d2268b67fb9f0"
+    },
+    {
+      "path": ".ai-org/core/schemas/learning-index.schema.json",
+      "sha256": "40400b30eb53914f9885ca59a6e5c976581c5c2a24d1782a3985d54c15c41563"
+    },
+    {
+      "path": ".ai-org/core/schemas/learning-review.schema.json",
+      "sha256": "fd4557e6fcd806592e819a481c7eefb65c049b6a56db42b073427b930c5d8241"
+    },
+    {
+      "path": ".ai-org/core/schemas/matched-model-evaluation.schema.json",
+      "sha256": "c8628071cdf854e727b486bb83d2fb76d4f66fbda25b422206b487781dea6a9b"
+    },
+    {
+      "path": ".ai-org/core/schemas/model-onboarding-input.schema.json",
+      "sha256": "82b1d1efba9ddbf5166ae1494f7ac422abb259d4a56aa6efd34433b057f462a4"
+    },
+    {
+      "path": ".ai-org/core/schemas/model-onboarding-plan.schema.json",
+      "sha256": "fd097947949a0847e0e9b5deb8f47794d33082355e6cd2de3aaae7175074c8b5"
+    },
+    {
+      "path": ".ai-org/core/schemas/parallel-plan.schema.json",
+      "sha256": "f67ef14f4d6fce1470d299943ce7f2a70065a514e6836eb5d596cd8d87432927"
+    },
+    {
+      "path": ".ai-org/core/schemas/parallel-readiness.schema.json",
+      "sha256": "55a72b4413c7112e424ace6a96bebad8e1e8f1122d0ec935827948a1b6c0ed37"
+    },
+    {
+      "path": ".ai-org/core/schemas/policy-evaluation-result.schema.json",
+      "sha256": "72d35473f95a6bea700c509b76c60dcfa270aaa6ee60c191ebaf5d0ce73e54b3"
+    },
+    {
+      "path": ".ai-org/core/schemas/project.schema.json",
+      "sha256": "9e7bf7d28da4bcf73a548e7f603081df3c3ac04406e9f0307162fd64016a7579"
+    },
+    {
+      "path": ".ai-org/core/schemas/repository-integration.schema.json",
+      "sha256": "887487099e2f626ddab0ab6c808cb8d8b773c57ad85ea9a12dff0a524d1e994b"
+    },
+    {
+      "path": ".ai-org/core/schemas/resource-registry.schema.json",
+      "sha256": "c0668ee960d2ea43a12d1e8ce9acebafffc22904e2bbdc13716097c71fb7ffe6"
+    },
+    {
+      "path": ".ai-org/core/schemas/retrieval-config.schema.json",
+      "sha256": "948d84a6dba134f0fc88582756e377c1656928803882432f091e2fb746faa040"
+    },
+    {
+      "path": ".ai-org/core/schemas/retrieval-provider.schema.json",
+      "sha256": "bbd780b80281f19c82446f6fbcbf49af6a21385280054f4e2627534edd8639a9"
+    },
+    {
+      "path": ".ai-org/core/schemas/runtime-worker-registry.schema.json",
+      "sha256": "f79a67829cfe89a901736bbcb70fe195b71d210793ef1b4b02ad49e0cffc2d22"
+    },
+    {
+      "path": ".ai-org/core/schemas/schema-catalog.json",
+      "sha256": "50f8fa12db5b83e4caac0e29fe42d370936af8f2d8b279ff0eada3f702f82513"
+    },
+    {
+      "path": ".ai-org/core/schemas/spec-index.schema.json",
+      "sha256": "0aa56c54352513874408745dc0fba54709bcb2cc3753da21a6dbbfcc8cedbb6b"
+    },
+    {
+      "path": ".ai-org/core/schemas/task-registry.schema.json",
+      "sha256": "89590de18740e993c5397ab2da30f3bbc13175143b85af9956d5aee41b9b7cd5"
+    },
+    {
+      "path": ".ai-org/core/schemas/tracker.schema.json",
+      "sha256": "16a25e5c7a1c2ee046ae9ae43df87d14509c1d30bace82c7c4deaf8d68ebcc45"
+    },
+    {
+      "path": ".ai-org/core/schemas/usage-baseline.schema.json",
+      "sha256": "435f8427660f462d0f6ef48570f398b60c074a15c2a23dbc82782aeab9486487"
+    },
+    {
+      "path": ".ai-org/core/schemas/usage-policy.schema.json",
+      "sha256": "ff142b1be5f8355e58300bf31a42ecd497ed49021153415a6d079ab677ec27f6"
+    },
+    {
+      "path": ".ai-org/core/schemas/validation-program-report.schema.json",
+      "sha256": "15d84148f5c8bbe0f67028df66a83564157fb2582dc030c28e63836b1693f0f6"
+    },
+    {
+      "path": ".ai-org/core/schemas/validation-program.schema.json",
+      "sha256": "d2471c5d4b002a07a2b084feae74f62cc72bdd8874c36d1616bfddedc1fd3c48"
+    },
+    {
+      "path": ".ai-org/core/schemas/work-item.schema.json",
+      "sha256": "6659907116cfe7c66506dfd21b286e73f0f437b97ee63f833a7b3485956d5a23"
+    },
+    {
+      "path": ".ai-org/core/schemas/workflow.schema.json",
+      "sha256": "95e5b081322919e3465c71dd4ee6f576613b68a832ddec37d672a66a4910b022"
+    },
+    {
+      "path": ".ai-org/core/ui-design.json",
+      "sha256": "0ee2c90fce6d26ee1c1d644e46f9fd1913d128ad524a1614893ac52882d2f89b"
+    },
+    {
+      "path": ".ai-org/core/workflow.json",
+      "sha256": "faf331a25d95b74d9beaecc3c0b4d6036485bf1352961b31382aa8adef42a9c1"
+    },
+    {
+      "path": ".ai-org/events/events.jsonl",
+      "sha256": "a85cf5dc0b4d60d81219b297a4de31a64768e7db86a321169f8985a2c990ca87"
+    },
+    {
+      "path": ".ai-org/events/README.md",
+      "sha256": "1a7fa1c44378a9129e8590380487e2771e9f61b2c5ee3448326fe9500124012a"
+    },
+    {
+      "path": "temple.lock",
+      "sha256": "5f60fced6e9263a7c93376836045b4be5c6e4b5cd413828e69b542e6bb154294"
+    }
+  ]
+}

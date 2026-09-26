@@ -32,6 +32,15 @@ check(
 );
 
 const localizedDocumentation = new Set([
+  // Generated from project-authored task titles; preserve their original language.
+  ".ai-org/views/status.md",
+  // Accepted user-facing Traditional Chinese audit; its evidence bytes are immutable.
+  ".ai-org/artifacts/WK-observer-followup/audit.md",
+  // Immutable task authority quotes the user's exact source-conversation title.
+  ".ai-org/artifacts/WK-learning-reuse/approval.md",
+  ".ai-org/artifacts/WK-learning-records/approval.md",
+  // Immutable task authority quotes the user's exact approval in Chinese.
+  ".ai-org/artifacts/WK-usage-comparison/approval.md",
   "README.md",
   "README.ja.md",
   "README.zh-TW.md",
@@ -48,7 +57,10 @@ for (const file of (await walkFiles(root)).filter(
     !localizedDocumentation.has(candidate)
 )) {
   const content = await fs.readFile(path.join(root, file), "utf8");
-  check(!cjkText.test(content), `${file} contains CJK text; non-localized documentation must use English`);
+  // English prose may quote exact UI labels and file names as inline code.
+  // Keep those literals intact, including in immutable review evidence.
+  const prose = content.replace(/`[^`\r\n]+`/g, "");
+  check(!cjkText.test(prose), `${file} contains CJK text; non-localized documentation must use English`);
 }
 
 const projectOverlayRoot = path.join(root, "project-overlay");

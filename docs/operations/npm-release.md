@@ -34,6 +34,13 @@ npm trust github @zsz1210/workkeel \
 
 This is a one-time external permission change, not part of ordinary release preparation. Confirm the exact package, repository, workflow filename, and allowed action before completing it.
 
+The package must already exist before `npm trust` can configure it. If the renamed
+Workkeel package is absent, the owner must complete its first publication with the
+required account authentication and two-factor confirmation, then establish the
+trust relationship. Keep the GitHub release as a draft until that prerequisite
+and the exact archive are ready; do not trigger a known-unconfigured OIDC upload
+or silently substitute a token. See [npm trust](https://docs.npmjs.com/cli/v11/commands/npm-trust/).
+
 After the first successful OIDC release, the package owner should confirm the registry provenance and may change npm's traditional publishing access to require two-factor authentication while disallowing tokens. Keep any interactive maintainer access needed for recovery until the OIDC path has succeeded once.
 
 ## Prepare a release
