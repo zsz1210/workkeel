@@ -36,7 +36,7 @@ body:
     id: version
     attributes:
       label: Workkeel version or commit (include task-first or legacy mode)
-      placeholder: 0.1.0-alpha.x or a full Git revision
+      placeholder: 0.1.0-beta.1 or a full Git revision
     validations:
       required: true
   - type: input

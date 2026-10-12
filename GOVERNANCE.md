@@ -11,7 +11,11 @@ candidate before an authorized Principal accepts the task. GitHub checks and
 task acceptance are separate from merge and release authorization.
 
 The public repository contains framework source, documentation, examples, and
-reproducible tests. Actual maintainer task state and evidence are private and
-backed up separately. See [ADR-0083](docs/adr/0083-public-source-private-state.md).
+reproducible tests. Actual maintainer tasks, plans, experiments and evidence live
+in a separate private workspace outside the public checkout, even when Git ignore
+rules could hide them. Back up that workspace separately. Public issues and PRs
+describe product changes, not internal task history.
+See [ADR-0083](docs/adr/0083-public-source-private-state.md).
 Contributors should use the [contribution guide](CONTRIBUTING.md) and this
-checkout's [AGENTS.md](AGENTS.md) and [native setup guide](docs/getting-started/workkeel.md).
+checkout's [AGENTS.md](AGENTS.md) and
+[framework development guide](docs/operations/framework-development.md).

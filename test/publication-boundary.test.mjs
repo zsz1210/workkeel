@@ -6,6 +6,7 @@ import path from 'node:path';
 import {execFileSync,spawnSync} from 'node:child_process';
 import {fileURLToPath} from 'node:url';
 import {checkPublication,inspectPublicFile,readAllowlist} from '../scripts/check-publication.mjs';
+import {checkSourceCheckout} from '../scripts/check-source-checkout.mjs';
 
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
 function fixture(t){
@@ -20,6 +21,29 @@ function fixture(t){
 test('clean working, staged and committed content passes without publishing',t=>{
  const {cwd}=fixture(t);
  for(const mode of ['working','staged','history'])assert.equal(checkPublication(cwd,{mode}).passed,true,mode);
+});
+test('clean public checkout permits dependencies and nested synthetic framework templates',t=>{
+ const {cwd}=fixture(t);
+ for(const directory of ['node_modules','project-overlay/.ai-org','docs/getting-started'])fs.mkdirSync(path.join(cwd,directory),{recursive:true});
+ fs.writeFileSync(path.join(cwd,'docs/getting-started/workkeel.md'),'Public guide');
+ assert.equal(checkSourceCheckout(cwd).passed,true);
+});
+test('ignored real-state paths fail the public-checkout check without exposing or modifying contents',t=>{
+ const {cwd,git}=fixture(t),content='Synthetic private record that must not appear in a report';
+ fs.copyFileSync(path.join(root,'.gitignore'),path.join(cwd,'.gitignore'));
+ for(const name of ['.ai-org','output']){
+  fs.mkdirSync(path.join(cwd,name));fs.writeFileSync(path.join(cwd,name,'record.json'),content);
+ }
+ for(const name of ['WORKKEEL.md','workkeel.lock','workkeelw.mjs','session.log'])fs.writeFileSync(path.join(cwd,name),content);
+ assert.equal(git('status','--short','--','.ai-org','output','WORKKEEL.md','workkeel.lock','workkeelw.mjs','session.log'),'');
+ const report=checkSourceCheckout(cwd);
+ assert.equal(report.passed,false);assert.equal(report.failures.length,6);
+ assert.ok(!JSON.stringify(report).includes(content));
+ assert.equal(fs.readFileSync(path.join(cwd,'.ai-org/record.json'),'utf8'),content);
+});
+test('dangling private-state symlinks are rejected without following their targets',t=>{
+ const {cwd}=fixture(t);fs.symlinkSync('missing-private-target',path.join(cwd,'.ai-org'));
+ assert.deepEqual(checkSourceCheckout(cwd).failures,[{path:'.ai-org',rule:'private-state-in-public-checkout'}]);
 });
 test('private paths and undeclared files fail even if force-staged',t=>{
  const {cwd,git}=fixture(t);fs.mkdirSync(path.join(cwd,'.ai-org'));
@@ -104,10 +128,14 @@ test('content checks cover personal paths and credentials without echoing their 
 });
 test('pre-push runs history verification and refuses its failure',t=>{
  const {cwd,git}=fixture(t);fs.mkdirSync(path.join(cwd,'scripts'));
+ fs.copyFileSync(path.join(root,'scripts/check-source-checkout.mjs'),path.join(cwd,'scripts/check-source-checkout.mjs'));
  fs.writeFileSync(path.join(cwd,'scripts/check-publication.mjs'),'process.exit(17)');
  const oid=git('rev-parse','HEAD'),hook=path.join(root,'.githooks/pre-push');
  const r=spawnSync('sh',[hook],{cwd,input:`refs/heads/main ${oid} refs/heads/main ${'0'.repeat(40)}\n`,encoding:'utf8'});
  assert.equal(r.status,17);
+ fs.mkdirSync(path.join(cwd,'.ai-org'));
+ const privateState=spawnSync('sh',[hook],{cwd,input:`refs/heads/main ${oid} refs/heads/main ${'0'.repeat(40)}\n`,encoding:'utf8'});
+ assert.equal(privateState.status,1);assert.match(privateState.stdout,/private-state-in-public-checkout/);
  const removed=spawnSync('sh',[hook],{cwd,input:`(delete) ${'0'.repeat(40)} refs/heads/old ${oid}\n`,encoding:'utf8'});
  assert.equal(removed.status,0);
 });

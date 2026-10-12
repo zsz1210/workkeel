@@ -17,10 +17,17 @@ maintainer's work history look like a default installation.
   license notices, and reproducible tests in a fresh source history.
 - Keep actual task records, approvals, dispatch records, review evidence,
   raw execution output, machine settings, `.ai-org/`, and `workkeel.lock`
-  in ignored local state. Back up needed state separately with access suited
-  to its contents.
-- A clean clone does not contain maintainer tasks. Its developer initializes
-  local task state deliberately under the native Workkeel contract.
+  in an independent private development workspace outside the public source
+  checkout. Git ignore rules are defense in depth, not permission to store real
+  development data in that checkout. Back up private state separately with access
+  suited to its contents.
+- A public source checkout does not contain or initialize maintainer tasks. Run
+  the native lifecycle in a private working copy of the same source revision.
+  Promote only reviewed source commits into the clean public checkout. There is
+  one framework source history, not a second implementation in the private archive.
+- Public issues, PR descriptions and release notes contain product-facing reports
+  and concise sanitized verification summaries. Never mirror the internal task
+  ledger or upload actual development records, raw outputs or evidence attachments.
 - Use fictional examples in public guidance. Product tests demonstrate
   behavior; private acceptance evidence and local measurements remain
   candidate-specific and are not represented as public test results.

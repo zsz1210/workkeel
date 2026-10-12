@@ -4,7 +4,9 @@ Workkeel separates the bounded remote repository gate from complete local
 verification. This source repository uses the native task lifecycle: claim,
 exact-candidate handoff, different-Agent review, and authorized Principal
 acceptance. Retained Temple Position behavior is covered by isolated
-compatibility fixtures. A clean public clone has no maintainer task history.
+compatibility fixtures. The native lifecycle and actual verification evidence live
+in a [separate private development workspace](../operations/framework-development.md).
+A public source checkout has no maintainer task history or raw development output.
 
 `npm run check` validates repository structure, documentation language boundaries, local Markdown link targets, and the actual npm dry-run package boundary. These checks run for every change. The full suite is offline: it tests code, contracts, and simulated providers, not paid model calls.
 
@@ -47,7 +49,7 @@ npm run verify:changed -- --base origin/main
 
 Selection includes committed changes since the merge base, staged and unstaged changes, and untracked files. Prose-only changes select fast tests; changed test files select their entire group plus fast tests. Shared source, scripts, fixtures, package metadata, canonical state, deleted tests, unknown paths, or an unavailable base select the full suite. This is deliberately a local editing aid, not a dependency graph or a hosted CI selector. The `--list` form only previews selection and does not verify anything.
 
-Prose-only changes require `npm run verify:fast` and appropriate rendered review. Changes to Agent instructions, Skills, executable examples, manifests, schemas, package contents, or behavioral contracts are not prose-only. When a developer has initialized private local task state, canonical task-state changes also require native Doctor through that project's pinned launcher. Legacy compatibility is verified in isolated fixtures. Do not classify a mixed change by its smallest component.
+Prose-only changes require `npm run verify:fast` and appropriate rendered review. Changes to Agent instructions, Skills, executable examples, manifests, schemas, package contents, or behavioral contracts are not prose-only. Canonical task-state changes in the separate private workspace also require native Doctor through that project's pinned launcher. Legacy compatibility is verified in isolated fixtures. Do not classify a mixed change by its smallest component.
 
 Before proposing a behavioral change, run the complete suite:
 
@@ -57,7 +59,8 @@ npm run verify
 
 Run it once on the final behavioral candidate, not after every intermediate edit. Further code, fixture, dependency, or contract changes invalidate that result. Later evidence/prose-only updates require their applicable checks and an explicit link to the tested code revision; they do not turn an untested code revision into a tested one. Release verification remains complete regardless of local selection.
 
-Management Console changes also require the real-browser gate:
+Management Console changes also require the real-browser gate. Run browser checks
+in the private workspace so failure screenshots and raw results stay there:
 
 ```bash
 npm run test:browser
@@ -83,6 +86,7 @@ Ordinary GitHub Actions is intentionally a short remote consistency check, not W
 - lockfile-strict dependency installation without lifecycle scripts;
 - repository, documentation-link, and package-boundary checks;
 - source and package-boundary checks that need no private task state;
+- public-checkout cleanliness before and after the bounded tests;
 - `npm run test:fast`.
 
 The workflow reports every required result and fails if any required step fails. It uses immutable Action revisions, read-only repository permission, and cancels an older in-progress run when the same pull request receives a newer commit.

@@ -9,12 +9,13 @@ What is included, and what is intentionally left out?
 ## Verification
 
 - [ ] `npm ci --ignore-scripts`
-- [ ] `npm run verify`
+- [ ] Required gate passed: `npm run verify:fast` for prose only, `npm run verify` for behavioral changes
 - [ ] Focused or runtime checks are listed below
-- [ ] No real-project identity, prompt, credential, telemetry, or evidence is included
+- [ ] Public checkout passed `npm run check:source-checkout` and publication/history checks
+- [ ] Actual tasks, plans, prompts, telemetry, raw output and review evidence stayed in the separate private workspace
 - [ ] Third-party code, assets, and AI-assisted output were reviewed for license and privacy concerns
 
-Verification details:
+Verification summary (exact candidate, commands, results and limits; no private evidence attachments):
 
 ## Risk and rollback
 

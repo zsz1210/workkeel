@@ -7,6 +7,9 @@
     "type": "git",
     "url": "git+https://github.com/zsz1210/workkeel.git"
   },
+  "homepage": "https://github.com/zsz1210/workkeel#readme",
+  "bugs": {"url": "https://github.com/zsz1210/workkeel/issues"},
+  "keywords": ["ai-agents", "agent-coordination", "developer-tools", "workflow"],
   "type": "module",
   "files": [
     "bin/",
@@ -43,6 +46,7 @@
   },
   "scripts": {
     "release:pack": "node scripts/pack-npm-release.mjs",
+    "check:source-checkout": "node scripts/check-source-checkout.mjs",
     "check:publication": "node scripts/check-publication.mjs --working",
     "check:public-history": "node scripts/check-publication.mjs --history",
     "setup:hooks": "git config --local core.hooksPath .githooks",

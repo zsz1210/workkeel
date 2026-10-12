@@ -1,5 +1,7 @@
 # Workkeel
 
+[![CI](https://github.com/zsz1210/workkeel/actions/workflows/ci.yml/badge.svg)](https://github.com/zsz1210/workkeel/actions/workflows/ci.yml)
+
 Workkeel は、コーディング作業の承認済みスコープ、担当、引き継ぎ、レビュー、
 受け入れをリポジトリ内のローカル記録に残します。モデル、ツール、
 アクセス制御は実行ホストが提供します。Workkeel 自体はサンドボックスではありません。
@@ -7,6 +9,9 @@ Workkeel は、コーディング作業の承認済みスコープ、担当、�
 [English](README.md) · [繁體中文](README.zh-TW.md) · 日本語
 
 実験的な Beta.1 · Node.js 24 以降 · [MIT](LICENSE)
+
+[クイックスタート](docs/getting-started/workkeel.md) · [ドキュメント](docs/README.md) ·
+[貢献](CONTRIBUTING.md) · [セキュリティ](SECURITY.md)
 
 ## はじめに
 
@@ -22,11 +27,19 @@ npx --no-install workkeel start .
 作業承認は行いません。[ネイティブのクイックスタート](docs/getting-started/workkeel.md)
 に従い、ローカルの方針を確認してタスク状態を初期化し、承認済みの依頼からタスクを作成します。
 
-ソースの確認には `npm ci --omit=optional --ignore-scripts` の後に
-`node bin/workkeel.mjs help` を実行します。ソースは公開済み Beta.1
-パッケージと異なる場合があります。[テストガイド](docs/getting-started/testing.md)
-は貢献者向けのチェックを説明します。一つのチェックアウトでのテスト成功は
-リリースの認定を意味しません。
+タスク状態を作らずにフレームワークのソースを確認できます。
+
+```sh
+git clone https://github.com/zsz1210/workkeel.git
+cd workkeel
+npm ci --omit=optional --ignore-scripts
+node bin/workkeel.mjs help
+```
+
+ソースは公開済み Beta.1 パッケージと異なる場合があります。CI バッジは
+限定されたリポジトリ検査の結果です。候補とリリースの完全な検証は
+[テストガイド](docs/getting-started/testing.md)を参照してください。変更する際は、
+先に[独立した非公開の開発環境](docs/operations/framework-development.md)を用意します。
 
 ## タスクの流れ
 
@@ -44,12 +57,18 @@ npx --no-install workkeel start .
 
 ## ソースと私的状態の境界
 
-このソースリポジトリを新規クローンしても、保守担当者のタスク履歴は含まれません。
-フレームワーク開発時はタスク状態をローカルで初期化してください。実際のタスク、
-承認、実行ログ、レビュー証拠、`.ai-org/`、`workkeel.lock` を
-公開 Git 履歴に含めず、必要な私的状態は別途バックアップします。
-[分離の決定](docs/adr/0083-public-source-private-state.md)と
-[貢献ガイド](CONTRIBUTING.md)に詳細があります。
+このリポジトリには**フレームワークだけ**を置きます。ソース、公開ドキュメント、
+汎用テンプレート、架空の例、再現可能なテストが対象です。実際の開発タスク、計画、
+承認、会話、計測、実行ログ、レビュー証拠は、**公開チェックアウトの外にある
+独立した非公開の作業環境**で管理します。Git の無視対象でも、ここに保守担当者の
+タスク状態を初期化しないでください。
+
+公開 Issue と PR は架空の再現例で製品の問題とソース変更を説明する場です。
+非公開タスク台帳の同期先ではありません。私的記録を公開コミット、ブランチ、タグ、
+添付ファイル、リリースに含めないでください。
+[開発ガイド](docs/operations/framework-development.md)、
+[公開範囲](docs/operations/publication-boundary.md)、
+[分離の決定](docs/adr/0083-public-source-private-state.md)に詳細があります。
 
 新規プロジェクトではネイティブ Workkeel が既定です。既存の Temple
 プロジェクトは固定済みの旧ライフサイクルを維持できます。変更前に
