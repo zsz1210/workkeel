@@ -37,8 +37,11 @@ node scripts/check-publication.mjs --staged
 npm run check:public-history
 ```
 
-`check:source-checkout` rejects known runtime/data paths in the public checkout,
-including ignored entries and symlinks. It does not run in the private workspace,
+`check:source-checkout` recursively rejects known runtime/data paths in the public
+checkout, including nested ignored output and symlinks. It skips Git metadata and
+root dependencies. Private-looking template paths are allowed only where the exact
+public manifest declares them; extra records under a template directory fail too.
+It does not run in the private workspace,
 where those records deliberately live. It permits nested generic templates and
 does not inspect or print private contents. Run it again after verification.
 

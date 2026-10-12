@@ -169,7 +169,8 @@ test("fresh initialization installs a compact authority-equivalent instruction r
   assert.equal(installed, distribution);
   assert.equal(toolkit.match(marker), null, "Native self-hosting must not route current work through the legacy router");
   assert.match(toolkit, /node \.\/bin\/workkeel\.mjs/);
-  assert.match(toolkit, /docs\/getting-started\/workkeel\.md/);
+  assert.match(toolkit, /docs\/operations\/framework-development\.md/);
+  assert.match(toolkit, /private development workspace outside the public source checkout/);
   assert.match(toolkit, /generated WORKKEEL\.md/);
   assert.ok(Buffer.byteLength(installed, "utf8") < 9310);
   // Structural reachability, not semantic equivalence proven by text matching.

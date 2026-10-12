@@ -26,7 +26,13 @@ test('clean public checkout permits dependencies and nested synthetic framework 
  const {cwd}=fixture(t);
  for(const directory of ['node_modules','project-overlay/.ai-org','docs/getting-started'])fs.mkdirSync(path.join(cwd,directory),{recursive:true});
  fs.writeFileSync(path.join(cwd,'docs/getting-started/workkeel.md'),'Public guide');
+ fs.writeFileSync(path.join(cwd,'project-overlay/.ai-org/template.json'),'{}');
+ const manifest=path.join(cwd,'public-files.json'),policy=JSON.parse(fs.readFileSync(manifest,'utf8'));
+ policy.files.push('docs/getting-started/workkeel.md','project-overlay/.ai-org/template.json');
+ fs.writeFileSync(manifest,JSON.stringify(policy));
  assert.equal(checkSourceCheckout(cwd).passed,true);
+ fs.writeFileSync(path.join(cwd,'project-overlay/.ai-org/private-record.json'),'Synthetic unexpected task');
+ assert.deepEqual(checkSourceCheckout(cwd).failures,[{path:'project-overlay/.ai-org/private-record.json',rule:'private-state-in-public-checkout'}]);
 });
 test('ignored real-state paths fail the public-checkout check without exposing or modifying contents',t=>{
  const {cwd,git}=fixture(t),content='Synthetic private record that must not appear in a report';
@@ -43,7 +49,20 @@ test('ignored real-state paths fail the public-checkout check without exposing o
 });
 test('dangling private-state symlinks are rejected without following their targets',t=>{
  const {cwd}=fixture(t);fs.symlinkSync('missing-private-target',path.join(cwd,'.ai-org'));
- assert.deepEqual(checkSourceCheckout(cwd).failures,[{path:'.ai-org',rule:'private-state-in-public-checkout'}]);
+ assert.deepEqual(checkSourceCheckout(cwd).failures,[{path:'.ai-org',rule:'symlink-in-public-checkout'}]);
+});
+test('nested ignored output cannot bypass the public-checkout or pre-push guard',t=>{
+ const {cwd,git}=fixture(t);
+ fs.copyFileSync(path.join(root,'.gitignore'),path.join(cwd,'.gitignore'));
+ fs.mkdirSync(path.join(cwd,'docs/output'),{recursive:true});
+ fs.writeFileSync(path.join(cwd,'docs/output/private-evidence.json'),'Synthetic private evidence');
+ assert.equal(git('status','--short','--','docs/output'),'');
+ assert.deepEqual(checkSourceCheckout(cwd).failures,[{path:'docs/output',rule:'private-state-in-public-checkout'}]);
+ fs.mkdirSync(path.join(cwd,'scripts'));
+ for(const file of ['check-source-checkout.mjs','check-publication.mjs'])fs.copyFileSync(path.join(root,'scripts',file),path.join(cwd,'scripts',file));
+ const oid=git('rev-parse','HEAD');
+ const pushed=spawnSync('sh',[path.join(root,'.githooks/pre-push')],{cwd,input:`refs/heads/main ${oid} refs/heads/main ${'0'.repeat(40)}\n`,encoding:'utf8'});
+ assert.equal(pushed.status,1);assert.match(pushed.stdout,/docs\/output/);
 });
 test('private paths and undeclared files fail even if force-staged',t=>{
  const {cwd,git}=fixture(t);fs.mkdirSync(path.join(cwd,'.ai-org'));
@@ -129,7 +148,7 @@ test('content checks cover personal paths and credentials without echoing their 
 test('pre-push runs history verification and refuses its failure',t=>{
  const {cwd,git}=fixture(t);fs.mkdirSync(path.join(cwd,'scripts'));
  fs.copyFileSync(path.join(root,'scripts/check-source-checkout.mjs'),path.join(cwd,'scripts/check-source-checkout.mjs'));
- fs.writeFileSync(path.join(cwd,'scripts/check-publication.mjs'),'process.exit(17)');
+ fs.writeFileSync(path.join(cwd,'scripts/check-publication.mjs'),"export function readAllowlist(){return new Set(['README.md','public-files.json']);}\nif(process.argv.includes('--history'))process.exit(17);");
  const oid=git('rev-parse','HEAD'),hook=path.join(root,'.githooks/pre-push');
  const r=spawnSync('sh',[hook],{cwd,input:`refs/heads/main ${oid} refs/heads/main ${'0'.repeat(40)}\n`,encoding:'utf8'});
  assert.equal(r.status,17);

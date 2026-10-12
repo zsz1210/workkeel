@@ -98,6 +98,8 @@ check summary in the PR and full evidence privately. Run `check:source-checkout`
 again after local verification to detect newly created data paths.
 
 `check:source-checkout` is deliberately for the public checkout and will reject
-an initialized private workspace. It is a known-path check, not a proof that all
-arbitrary prose is public. The [publication guard](publication-boundary.md), file
+an initialized private workspace. It recursively checks known private path names
+while skipping Git metadata and root dependencies; generic templates require exact
+manifest entries. It cannot prove that all arbitrary prose is public.
+The [publication guard](publication-boundary.md), file
 review and private backup are separate controls.
