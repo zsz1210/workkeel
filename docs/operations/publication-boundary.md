@@ -13,6 +13,13 @@ legacy project instructions, and internal development reports are never public.
 Generic `project-overlay/` templates and synthetic product fixtures are deliberate
 exceptions to the distinction between runtime data and source templates.
 
+Two generic bootstrap files existed in the fresh source history before local
+initialization was separated. `historical_files` pins only those exact reviewed
+Git blobs. They are allowed only in past commits, never in a working/index check
+or any outgoing branch/tag tip. Changed historical content still fails. This
+exception does not allow a developer's generated instructions or launcher to be
+added to public source.
+
 For a clean clone, install pinned dependencies with `npm ci --ignore-scripts` and
 enable the local hook with `npm run setup:hooks`. The source repository ignores
 the generated `WORKKEEL.md`, `workkeelw.mjs` and `workkeel.lock`, so approved native

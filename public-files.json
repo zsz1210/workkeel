@@ -28,7 +28,6 @@
     "README.zh-TW.md",
     "SECURITY.md",
     "THIRD_PARTY_NOTICES.md",
-    "WORKKEEL.md",
     "bin/temple.mjs",
     "bin/workkeel.mjs",
     "docs/README.md",
@@ -552,7 +551,10 @@
     "test/workkeel-task-timing.test.mjs",
     "test/workkeel-usage-scope.test.mjs",
     "test/workkeel-visuals.test.mjs",
-    "test/workkeel-workflows.test.mjs",
-    "workkeelw.mjs"
+    "test/workkeel-workflows.test.mjs"
+  ],
+  "historical_files": [
+    {"path":"WORKKEEL.md","blob":"27ad21da3d305893d707c9ca523e97e3eb41bd5a","mode":"100644"},
+    {"path":"workkeelw.mjs","blob":"2a4fc89318b4848c11df3ed66c53a82d3d6f9520","mode":"100644"}
   ]
 }

@@ -50,10 +50,37 @@ test('symlinks and gitlinks cannot smuggle data through an allowlisted filename'
 test('path traversal, private-path additions and revision options fail closed',t=>{
  const {cwd}=fixture(t);
  assert.throws(()=>checkPublication(cwd,{mode:'history',revisions:['--all']}),/full Git object IDs/);
- for(const file of ['../escape','.ai-org/data.json','docs/validation/result.md','x/../README.md']){
+ for(const file of ['../escape','.ai-org/data.json','docs/validation/result.md','x/../README.md','WORKKEEL.md','workkeelw.mjs']){
   fs.writeFileSync(path.join(cwd,'public-files.json'),JSON.stringify({schema_version:'workkeel.public-files/v1',files:['public-files.json',file]}));
   assert.throws(()=>readAllowlist(cwd),/Invalid or private/);
  }
+});
+test('exact bootstrap history exceptions never permit setup files in the index or outgoing tips',t=>{
+ const {cwd,git}=fixture(t),file=path.join(cwd,'WORKKEEL.md'),manifest=path.join(cwd,'public-files.json');
+ fs.writeFileSync(file,'Generic bootstrap instructions');git('add','WORKKEEL.md');git('commit','-qm','Generic bootstrap');
+ const bootstrap=git('rev-parse','HEAD'),blob=git('rev-parse','HEAD:WORKKEEL.md');
+ const policy=JSON.parse(fs.readFileSync(manifest,'utf8'));
+ policy.historical_files=[{path:'WORKKEEL.md',blob,mode:'100644'}];fs.writeFileSync(manifest,JSON.stringify(policy));
+ git('rm','WORKKEEL.md');git('add','public-files.json');git('commit','-qm','Separate local initialization');
+ for(const mode of ['working','staged','history'])assert.equal(checkPublication(cwd,{mode}).passed,true,mode);
+ assert.equal(checkPublication(cwd,{mode:'history',revisions:[bootstrap,git('rev-parse','HEAD')]}).passed,false);
+ fs.writeFileSync(file,'Generic bootstrap instructions');git('add','WORKKEEL.md');
+ for(const mode of ['working','staged'])assert.equal(checkPublication(cwd,{mode}).passed,false,mode);
+ git('commit','-qm','Attempt to reintroduce setup file');
+ assert.equal(checkPublication(cwd,{mode:'history'}).passed,false);
+ fs.writeFileSync(file,'Different unapproved instructions');git('add','WORKKEEL.md');git('commit','-qm','Unapproved historical content');
+ git('rm','WORKKEEL.md');git('commit','-qm','Remove from current tree');
+ assert.equal(checkPublication(cwd,{mode:'history'}).passed,false);
+ policy.historical_files=[{path:'.ai-org/private.json',blob,mode:'100644'}];fs.writeFileSync(manifest,JSON.stringify(policy));
+ assert.throws(()=>checkPublication(cwd,{mode:'history'}),/Invalid historical-file/);
+});
+test('historical path exceptions do not suppress credential detection',t=>{
+ const {cwd,git}=fixture(t),manifest=path.join(cwd,'public-files.json');
+ fs.writeFileSync(path.join(cwd,'WORKKEEL.md'),'npm_'+'D'.repeat(36));git('add','WORKKEEL.md');git('commit','-qm','Synthetic bad bootstrap');
+ const policy=JSON.parse(fs.readFileSync(manifest,'utf8'));
+ policy.historical_files=[{path:'WORKKEEL.md',blob:git('rev-parse','HEAD:WORKKEEL.md'),mode:'100644'}];
+ fs.writeFileSync(manifest,JSON.stringify(policy));git('rm','WORKKEEL.md');git('add','public-files.json');git('commit','-qm','Remove synthetic bootstrap');
+ assert.ok(checkPublication(cwd,{mode:'history'}).failures.some(r=>r.rule==='npm-token'));
 });
 test('content checks cover personal paths and credentials without echoing their values',()=>{
  const allowed=new Set(['README.md']);
