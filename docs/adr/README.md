@@ -7,7 +7,7 @@ Native Workkeel decisions for new projects include
 [ADR-0073: opt-in execution](0073-opt-in-workflow-execution.md), and
 [ADR-0072: task-first lifecycle](0072-task-first-lifecycle.md).
 Earlier Temple decisions below preserve compatibility rationale; they do not
-change this source checkout's [native instructions](../../WORKKEEL.md).
+change this source checkout's [native instructions](../../AGENTS.md).
 
 - [ADR-0079: Stage material and confirmed continuation](0079-stage-material-and-confirmed-continuation.md)
 

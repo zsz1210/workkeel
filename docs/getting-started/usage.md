@@ -5,7 +5,7 @@ start with the [Workkeel quickstart](workkeel.md) and
 [daily-work guide](../operations/workkeel-daily-work.md). This toolkit itself now
 self-hosts native Workkeel; contributors follow the source-checkout
 [AGENTS.md](https://github.com/zsz1210/workkeel/blob/main/AGENTS.md) and
-[WORKKEEL.md](https://github.com/zsz1210/workkeel/blob/main/WORKKEEL.md).
+[native source instructions](https://github.com/zsz1210/workkeel/blob/main/AGENTS.md).
 The links show development `main`; follow the local copies when changing a checkout.
 
 Existing Temple projects keep their pinned operating contract. For a first Work

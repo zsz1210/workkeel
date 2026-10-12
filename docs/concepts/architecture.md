@@ -10,7 +10,7 @@ candidate, evidence digests, review, closeout and failed-attempt history.
 This toolkit repository self-hosts native Workkeel. Its current operating
 instructions are the source-checkout files
 [AGENTS.md](https://github.com/zsz1210/workkeel/blob/main/AGENTS.md) and
-[WORKKEEL.md](https://github.com/zsz1210/workkeel/blob/main/WORKKEEL.md).
+[native source instructions](https://github.com/zsz1210/workkeel/blob/main/AGENTS.md).
 These links show development `main`; follow the local copies in the checkout
 being changed.
 Use the [native quickstart](../getting-started/workkeel.md) for new projects and
