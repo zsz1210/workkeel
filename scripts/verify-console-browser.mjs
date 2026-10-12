@@ -2,8 +2,11 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { execFileSync } from "node:child_process";
 import { chromium } from "playwright-core";
 import { startControlPlaneServer } from "../src/control-plane-server.mjs";
+import { planInit, executeInit } from "../src/install.mjs";
+import { validateInitConfig } from "../src/model.mjs";
 
 const scriptDirectory = path.dirname(fileURLToPath(import.meta.url));
 const repositoryRoot = path.resolve(scriptDirectory, "..");
@@ -377,7 +380,20 @@ async function fieldAttentionContract(browser, serverUrl) {
   } finally { await context.close(); }
 }
 
+async function createConsoleFixture(directory) {
+  const target = path.join(directory, "synthetic-project");
+  const raw = JSON.parse(await fs.readFile(path.join(repositoryRoot, "docs/getting-started/temple-init.example.json"), "utf8"));
+  raw.project = { id: "console-fixture", name: "Console Fixture" };
+  await executeInit(await planInit(target, await validateInitConfig(raw)));
+  const git = (...args) => execFileSync("git", ["-C", target, ...args], { stdio: "ignore" });
+  git("init", "-q");
+  git("add", "--", ...(await fs.readdir(target)).filter(name => name !== ".git"));
+  git("-c", "user.name=Browser Fixture", "-c", "user.email=fixture@example.invalid", "commit", "-qm", "Synthetic browser fixture");
+  return target;
+}
+
 export async function verifyConsoleBrowser({
+  prepareRepository = createConsoleFixture,
   startServer = startControlPlaneServer,
   launchBrowser = () => chromium.launch({ channel: "chrome", headless: true }),
   checkViews = async (browser, url) => {
@@ -390,7 +406,8 @@ export async function verifyConsoleBrowser({
   let controlPlane;
   let browser;
   try {
-    controlPlane = await startServer(repositoryRoot, {
+    const fixtureRoot = await prepareRepository(stateDirectory);
+    controlPlane = await startServer(fixtureRoot, {
       host: "127.0.0.1",
       port: 0,
       stateDirectory,

@@ -57,6 +57,10 @@ test("browser harness cleans temporary state and acquired resources on failures 
     const operation = verifyConsoleBrowser({
       startServer: async (_root, options) => {
         stateDirectory = options.stateDirectory;
+        assert.notEqual(_root, root, "The browser gate must not read maintainer state");
+        assert.ok(_root.startsWith(`${stateDirectory}${path.sep}`));
+        const config = JSON.parse(await fs.readFile(path.join(_root, ".ai-org/project/control-plane.json"), "utf8"));
+        assert.deepEqual(config.providers, [{id: "repository", kind: "repository", enabled: true}]);
         assert.equal(options.host, "127.0.0.1");
         assert.equal(options.port, 0);
         assert.ok((await fs.stat(stateDirectory)).isDirectory());
@@ -74,6 +78,19 @@ test("browser harness cleans temporary state and acquired resources on failures 
     await assert.rejects(fs.stat(stateDirectory), { code: "ENOENT" });
     assert.deepEqual(closed, stage === "server" ? [] : stage === "launch" ? ["server"] : ["browser", "server"]);
   }
+});
+
+test("browser harness removes partial synthetic initialization when setup fails", async () => {
+  let directory;
+  await assert.rejects(verifyConsoleBrowser({
+    prepareRepository: async temporary => {
+      directory = temporary;
+      await fs.writeFile(path.join(temporary, "partial-fixture"), "synthetic");
+      throw new Error("initialization failed");
+    },
+    startServer: async () => { assert.fail("Server must not start after failed initialization"); }
+  }), /initialization failed/);
+  await assert.rejects(fs.stat(directory), {code: "ENOENT"});
 });
 
 test("Playwright Core is exact, development-only, licensed, and absent from package files", async () => {

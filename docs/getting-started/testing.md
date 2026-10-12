@@ -63,7 +63,7 @@ Management Console changes also require the real-browser gate:
 npm run test:browser
 ```
 
-This command starts the repository-local Control Plane on loopback and opens four responsive layouts in an installed Google Chrome. It checks primary navigation, live rendering, browser errors, keyboard tabs, reduced-motion behavior, horizontal overflow, primary-text clipping, and named high-level layout regions. It does not download a browser or use the contributor's normal Chrome profile. A failure writes an actionable screenshot below `output/playwright/`.
+This command initializes an isolated synthetic compatibility project, starts its Control Plane on loopback, and opens four responsive layouts in an installed Google Chrome. It reads no maintainer task state. It checks primary navigation, live rendering, browser errors, keyboard tabs, reduced-motion behavior, horizontal overflow, primary-text clipping, and named high-level layout regions. It does not download a browser or use the contributor's normal Chrome profile. A failure writes an actionable screenshot below `output/playwright/`. Temporary fixture data and acquired servers/browser processes are cleaned up on success or failure.
 
 For the task-first monitor, also run its focused browser gate:
 
