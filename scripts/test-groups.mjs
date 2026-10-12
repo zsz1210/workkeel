@@ -10,7 +10,7 @@ const optional = new Set([
 ].map((name) => `test/${name}.test.mjs`));
 export const fastFiles = [
   "ci-scope", "doc-links", "evidence-git", "model", "npm-release-workflow", "publication-audit", "publication-boundary",
-  "release-package", "skill-policy", "specifications", "test-groups"
+  "release-package", "skill-policy", "specifications", "test-groups", "workkeel-visuals"
 ].map((name) => `test/${name}.test.mjs`);
 export const dailyFiles = [...new Set([...fastFiles, ...[
   "app-server-protocol-replay", "audit-export", "autonomous-delivery", "cli", "collaboration-governance",

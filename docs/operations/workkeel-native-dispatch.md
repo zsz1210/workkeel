@@ -600,6 +600,11 @@ independent review or prove all requirements were tested.
 
 ### Recorder adoption limits
 
+For original candidate/environment snapshots and separate criterion confirmation,
+use the optional [check evidence adapter](workkeel-review-assessment.md#original-check-evidence). It composes
+this recorder with the existing assessor and retains exact bundle/log handoff
+registration. Raw receipts without original snapshots cannot be backfilled.
+
 The recorder remains optional and direct lifecycle requests remain the default.
 It supports approved Node tests on POSIX hosts and imposes no provider or model
 requirement. A receipt is evidence for the recorded command and listed inputs;
