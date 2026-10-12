@@ -158,14 +158,14 @@ test('leaf and parent symlinks, escape paths, oversized files and non-commit can
   const result=await readDeliveryPreflight(f.root,{...f.request,candidate_revision:blob});assert.ok(result.candidate_issues.includes('candidate-not-commit'));
 });
 
-test('shared documentation policy rejects new CJK Markdown while retaining the exact historic exception',async t=>{
-  const f=await fixture(t),exception='.ai-org/artifacts/WK-observer-followup/audit.md';
-  await fs.mkdir(path.dirname(f.root+'/'+exception),{recursive:true});
+test('shared documentation policy allows localized entrypoints and rejects private or new CJK Markdown',async t=>{
+  const f=await fixture(t),exception='README.zh-TW.md';
   await fs.writeFile(f.root+'/'+exception,'中文報告');await fs.writeFile(f.root+'/docs/new.md','中文報告');
   f.git('add',exception,'docs/new.md');f.git('commit','-qm','Language fixtures');
   const request={...f.request,candidate_revision:f.git('rev-parse','HEAD')};
   assert.equal(documentationLanguageIssue(exception,'中文報告'),null);
   assert.ok(documentationLanguageIssue('docs/new.md','中文報告'));
+  assert.ok(documentationLanguageIssue('.ai-org/artifacts/WK-example/audit.md','中文報告'));
   const passed=await readDeliveryPreflight(f.root,{...request,evidence:[exception]});assert.equal(passed.evidence_preflight_passed,true);
   const failed=await readDeliveryPreflight(f.root,{...request,evidence:['docs/new.md']});assert.ok(failed.evidence[0].issues.includes('documentation-language-policy'));
 });
