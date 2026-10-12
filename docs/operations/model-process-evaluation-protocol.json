@@ -1,0 +1,192 @@
+{
+  "schema_version": "temple.model-process-evaluation-protocol/v1",
+  "status": "draft-template",
+  "id": "replace-with-evaluation-id",
+  "work_item_id": "WI-0000",
+  "title": "Replace with the decision this evaluation supports",
+  "decision": {
+    "question": "Replace with one decision that can change after this evaluation",
+    "baseline": "replace-with-baseline-arm-id",
+    "candidate": "replace-with-candidate-arm-id",
+    "minimum_effect": null,
+    "minimum_effect_basis": "derive from pilot evidence before protocol freeze",
+    "decision_rule": "freeze an objective rule before observing candidate results"
+  },
+  "hypotheses": [
+    {
+      "id": "quality-non-inferiority",
+      "kind": "quality",
+      "statement": "The candidate satisfies the same objective quality gates as the baseline.",
+      "primary": true
+    },
+    {
+      "id": "efficiency-effect",
+      "kind": "efficiency",
+      "statement": "The candidate changes a named efficiency measure without reducing quality.",
+      "primary": false
+    }
+  ],
+  "causal_factor": {
+    "kind": "select-one-before-freeze",
+    "allowed_kinds": [
+      "process-only",
+      "model-only",
+      "process-by-model-factorial"
+    ],
+    "changed_dimensions": [],
+    "held_constant_dimensions": [
+      "task-fixture",
+      "source-revision",
+      "instruction",
+      "output-schema",
+      "sandbox",
+      "tool-policy"
+    ],
+    "confounded_comparison_allowed": false
+  },
+  "task_strata": [
+    {
+      "id": "replace-with-task-shape",
+      "fixture_path": "replace-with-repository-relative-fixture-path",
+      "representativeness_basis": "replace with production history, user scenario, or bounded risk rationale",
+      "expected_result_path": "replace-with-repository-relative-oracle-path"
+    }
+  ],
+  "arms": [
+    {
+      "id": "replace-with-baseline-arm-id",
+      "process_profile": "replace-with-versioned-process-profile",
+      "model": "replace-with-provider-model-id",
+      "reasoning_effort": "replace-with-supported-value"
+    },
+    {
+      "id": "replace-with-candidate-arm-id",
+      "process_profile": "replace-with-versioned-process-profile",
+      "model": "replace-with-provider-model-id",
+      "reasoning_effort": "replace-with-supported-value"
+    }
+  ],
+  "assignment": {
+    "unit": "task-fixture-and-repetition",
+    "order_method": "counterbalanced-or-randomized-before-freeze",
+    "order_seed": null,
+    "independent_repetitions": null,
+    "sample_size_basis": "derive from pilot variance, minimum effect, alpha, and power before approval",
+    "alpha": null,
+    "power": null
+  },
+  "cache_control": {
+    "method": "select-before-freeze",
+    "allowed_methods": [
+      "provider-cache-disabled",
+      "matched-cache-share",
+      "randomized-blocks",
+      "uncontrolled-descriptive-only"
+    ],
+    "predeclared": false,
+    "provider_acknowledged": false,
+    "maximum_pair_delta_percentage_points": null,
+    "limit_basis": "derive from Provider contract and pilot evidence before approval",
+    "uncontrolled_claim_policy": "block-causal-efficiency"
+  },
+  "quality": {
+    "objective_gates": [
+      "replace-with-machine-checkable-acceptance-gate"
+    ],
+    "candidate_must_pass_before_efficiency_interpretation": true,
+    "blind_judgment": {
+      "required": false,
+      "judge_model": null,
+      "judge_reasoning_effort": null,
+      "rubric_path": null,
+      "arm_identity_hidden": true
+    },
+    "rework_and_human_intervention_recorded": true
+  },
+  "metrics": {
+    "required": [
+      "objective-quality",
+      "gross-input-tokens",
+      "cached-input-tokens",
+      "non-cached-input-tokens",
+      "output-tokens",
+      "operational-tokens",
+      "latency-ms",
+      "human-interventions",
+      "rework"
+    ],
+    "derived": {
+      "non_cached_input_tokens": "gross_input_tokens - cached_input_tokens",
+      "operational_tokens": "non_cached_input_tokens + output_tokens",
+      "cache_share": "cached_input_tokens / gross_input_tokens"
+    },
+    "unknown_values_are_zero": false
+  },
+  "provider_contract": {
+    "provider_id": "replace-with-provider-id",
+    "provider_version": "replace-with-observed-version",
+    "model_availability_verified": false,
+    "reasoning_control_verified": false,
+    "usage_fields_verified": false,
+    "cache_behavior_verified": false,
+    "pricing_source": null,
+    "pricing_effective_at": null
+  },
+  "execution": {
+    "model_generation_authorized": false,
+    "condition_order": [],
+    "per_condition_operational_token_limits": {},
+    "aggregate_operational_token_limit": null,
+    "wall_clock_limit_ms": null,
+    "retry_count": 0,
+    "fallback_allowed": false,
+    "fresh_thread_per_condition": true,
+    "exclusive_observation_output": true,
+    "limit_basis": "derive from a generation-free rehearsal and bounded pilot before approval"
+  },
+  "stop_conditions": [
+    "first run-level protocol or Provider failure",
+    "quality gate failure",
+    "cache-control failure when causal efficiency is in scope",
+    "condition, aggregate, time, or disk ceiling",
+    "repository or fixture drift",
+    "unapproved model reroute, retry, fallback, external write, or spend"
+  ],
+  "privacy": {
+    "raw_prompts_retained": false,
+    "raw_responses_retained": false,
+    "hidden_reasoning_retained": false,
+    "raw_commands_retained": false,
+    "raw_command_output_retained": false,
+    "credentials_retained": false,
+    "path_metadata": "bounded-repository-relative-only"
+  },
+  "analysis": {
+    "separate_by_task_stratum": true,
+    "separate_quality_route_and_efficiency_hypotheses": true,
+    "report_each_repetition": true,
+    "report_cache_and_token_components_together": true,
+    "report_uncertainty_and_missingness": true,
+    "allow_causal_efficiency_claim": false,
+    "allow_monetary_claim_without_versioned_price_source": false,
+    "allow_automatic_routing_authority": false
+  },
+  "authority": {
+    "external_write": false,
+    "external_spend": false,
+    "purchase_credits": false,
+    "automatic_refill": false,
+    "usage_reset": false,
+    "deployment": false,
+    "publication": false,
+    "automatic_model_routing": false
+  },
+  "protocol_sha256": null,
+  "approval": {
+    "approved": false,
+    "approved_protocol_sha256": null,
+    "approved_by": null,
+    "approved_at": null,
+    "account_impact_boundary": null
+  }
+}

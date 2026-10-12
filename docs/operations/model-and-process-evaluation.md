@@ -2,7 +2,8 @@
 
 Use this method when you need evidence that a Temple workflow change or model choice improves delivery. It is designed for recurring comparisons—not just one benchmark—and keeps quality, Token use, latency, cache behavior, rework, and human intervention visible without turning a test result into automatic routing authority.
 
-Prepare a task-local draft protocol in private state. Replace every placeholder,
+Start from the [non-executable draft protocol](model-process-evaluation-protocol.json)
+and copy it into the task's private workspace. Replace every placeholder,
 freeze its digest, and obtain exact approval before any Provider generation.
 The draft itself is non-executable.
 

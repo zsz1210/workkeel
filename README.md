@@ -1,22 +1,52 @@
 # Workkeel
 
-[![CI](https://github.com/zsz1210/workkeel/actions/workflows/ci.yml/badge.svg)](https://github.com/zsz1210/workkeel/actions/workflows/ci.yml)
+A repository-native task coordination framework for coding agents.
 
-Workkeel keeps a coding task's approved scope, ownership, handoff, review, and
-acceptance in repository-local records. It coordinates coding agents while the
-execution host supplies the model, tools, and access controls. Workkeel records
-authority; it does not enforce a sandbox.
+Workkeel records approved task scope, execution, handoffs and review evidence beside
+your code. It works with instruction-following coding tools using cloud or local
+models. It is not tied to OpenAI, Codex or a particular model.
 
 English · [繁體中文](README.zh-TW.md) · [日本語](README.ja.md)
 
-Experimental Beta.1 · Node.js 24+ · [MIT](LICENSE)
+[![CI](https://github.com/zsz1210/workkeel/actions/workflows/ci.yml/badge.svg)](https://github.com/zsz1210/workkeel/actions/workflows/ci.yml)
+Beta.1 experimental prerelease · Node.js 24+ · [MIT](LICENSE)
 
-[Quick start](docs/getting-started/workkeel.md) · [Documentation](docs/README.md) ·
-[Contributing](CONTRIBUTING.md) · [Security](SECURITY.md)
+## What it does
 
-## Start
+- **Keep work resumable:** preserve goals, boundaries, decisions and partial results
+  when tools or conversations change.
+- **Coordinate execution:** record ownership, dependencies, handoffs, bounded retries
+  and recovery.
+- **Use the right tools and models:** native hosts keep their own model settings;
+  optional automatic workflows use an explicitly approved model policy.
+- **Review exact changes:** bind evidence and a different Agent's review to a Git
+  revision before accepting the task.
+- **Observe existing records:** view tasks, documents, learning, Skills, execution
+  time and Tokens in an optional local website without calling a model.
 
-Install the published prerelease in a project that uses a coding tool:
+The execution host owns its tools and enforces permissions. Workkeel's records are
+not a sandbox. An execution completing does not mean its output was accepted.
+
+## From request to accepted change
+
+<picture>
+  <source media="(max-width: 640px)" srcset="docs/assets/workkeel-workflow-mobile.svg">
+  <img src="docs/assets/workkeel-workflow.svg" alt="Approve scope, execute, review the exact candidate, and accept; failed review returns to implementation.">
+</picture>
+
+For a bug fix, approve the goal and allowed files, let a coding tool investigate and
+implement, preserve test evidence, then have another Agent review the candidate.
+The same model may perform several steps, or different models may handle different
+steps. The task records remain in the project.
+
+[Quick start](docs/getting-started/workkeel.md) ·
+[Workflow execution](docs/operations/workkeel-workflows.md)
+
+<a id="start"></a>
+
+## Install Beta.1
+
+Requires Node.js 24+ and an existing coding tool. From your project directory:
 
 ```sh
 npm install --save-dev --save-exact --ignore-scripts @zsz1210/workkeel@0.1.0-beta.1
@@ -24,63 +54,141 @@ npx --no-install workkeel --version
 npx --no-install workkeel start .
 ```
 
-`start` previews setup and task-intake guidance. It does not initialize the
-project, run a model, or approve work. Follow the
-[native quick start](docs/getting-started/workkeel.md) to review a local policy,
-initialize task state, and create a task from an approved brief.
+Beta.1 is published on npm's `next` channel for early evaluation. See the
+[release notes](CHANGELOG.md#010-beta1) and [testing policy](docs/getting-started/testing.md)
+for scope and qualification limits. Installation does not initialize or migrate a project;
+`start` only previews setup guidance. Follow the [quick start](docs/getting-started/workkeel.md).
 
-To inspect the framework source without creating task state:
+## Start from source
+
+For development, use Git and Node.js 24+. The main branch may contain changes
+after the immutable Beta.1 package.
 
 ```sh
 git clone https://github.com/zsz1210/workkeel.git
 cd workkeel
 npm ci --omit=optional --ignore-scripts
 node bin/workkeel.mjs help
+node bin/workkeel.mjs start /path/to/project
 ```
 
-Source may differ from the published Beta.1 package. The CI badge represents
-the bounded repository gate; see the [testing guide](docs/getting-started/testing.md)
-for complete candidate and release checks. To change the framework, first set up
-the [separate private development workspace](docs/operations/framework-development.md).
+The final command only previews setup guidance and incomplete policy/brief drafts.
+Follow the [quick start](docs/getting-started/workkeel.md) to initialize the project,
+approve a task, claim work and record review. It does not start a model.
 
-## A task's path
+Task-first projects use WORKKEEL.md and the workkeel CLI. The optional
+[AGENTS/CLAUDE bridge](docs/extensions/workkeel-context.md) preserves existing
+instructions. The workkeel-init/workkeel-work Skills cover native setup and delivery.
+Framework development uses the native five-stage workflow in a
+[separate private workspace](docs/operations/framework-development.md). This public
+checkout contains framework source, public documentation, generic templates and
+reproducible tests. Actual tasks, approvals, experiments, logs and review evidence
+stay outside it, including files that Git would ignore. TEMPLE.md and temple-work
+belong to existing projects' historical compatibility mode.
 
-1. A human approves the goal, paths, environment, data handling, and acceptance
-   criteria.
-2. An agent claims the task and records work and evidence against a Git candidate.
-3. A different registered Agent reviews that exact candidate.
-4. An authorized Principal accepts or returns it for rework.
+## Local observer
 
-The same workflow works across coding hosts and model providers. Optional
-[workflow execution](docs/operations/workkeel-workflows.md) and
-[native dispatch](docs/operations/workkeel-native-dispatch.md) add approved
-routing and recovery; neither is required for the task lifecycle. The optional
-[local observer](docs/operations/workkeel-observer.md) reads recorded state
-without making model calls. Host-reported usage may be incomplete.
+```sh
+npx --no-install workkeel monitor /path/to/task-first-project
+```
 
-## Repository and project boundaries
+From a source checkout, use `node bin/workkeel.mjs monitor` instead.
+Open the complete local access URL printed by the command. The website includes:
 
-This repository contains **only the framework**, including its public documentation,
-generic templates, synthetic examples and reproducible tests. Actual development
-tasks, plans, approvals, conversations, measurements, execution logs and review
-evidence belong in a **separate private workspace outside the public checkout**.
-Do not initialize maintainer task state here, even under Git-ignored paths.
+- An attention-first Dashboard, a recent-work board and paginated task history.
+- Tool-time/token bars and daily/weekly trends with shared filters; task scatter
+  pairs full-turn duration and tokens from the same recorded operations.
+- Cached input, uncached input and output subtotals with per-field coverage.
+- Project Skills with origin labels and content search; learning milestones.
+- Read-only settings with contextual popovers, task drawers and full detail pages.
+- Recorded execution intervals, connection/source health and illustrated workflow guidance.
+- Traditional Chinese and English, selectable in Settings.
 
-Public issues and pull requests describe product problems and source changes with
-synthetic reproductions; they are not a mirror of the private task ledger. Private
-records must not enter public commits, branches, tags, attachments or releases.
-The [development guide](docs/operations/framework-development.md),
-[publication boundary](docs/operations/publication-boundary.md) and
-[separation decision](docs/adr/0083-public-source-private-state.md) explain the workflow.
+**The observer makes zero model calls.** Local code reads and aggregates existing
+records; charts, filtering and updates do not consume model tokens. Task execution
+may consume tokens separately. Unknown and partial values stay visible; costs are
+not estimated. A local index watches source changes; the visible page checks its
+revision and connection health, then fetches changed data. Hidden pages pause. Ctrl-C stops
+the foreground service; no daemon or external chart service is installed.
 
-Native Workkeel is the default for new projects. Existing Temple projects can
-keep their pinned legacy lifecycle. Read the
-[compatibility and migration guide](docs/getting-started/migration-from-temple.md)
-before changing one. Compatibility code and fixtures are retained; their
-Position-based instructions do not govern this source checkout.
+Background updates preserve open explanations, task tabs, keyboard focus and reading
+position. A changed document offers a reload action while retaining the text being read.
 
-Workkeel is experimental. Local locks are not distributed coordination,
-attributed identities are not authentication, and recorded completion is not
-acceptance or publication. Review the [architecture](docs/concepts/architecture.md),
-[documentation index](docs/README.md), [security policy](SECURITY.md), and
-[third-party notices](THIRD_PARTY_NOTICES.md).
+Coverage counts only collected operations in the selected range. Even 100% field
+coverage does not prove that every agent or earlier task operation was captured.
+Full-turn duration includes tools and possible waits; it is separate from recorded
+active intervals and is not model compute time or an efficiency ranking.
+
+[Observer guide and data limits](docs/operations/workkeel-observer.md)
+
+## Defaults, options and support
+
+### Reuse a lesson
+
+Native [Learning records](docs/extensions/workkeel-learning.md) keep the source,
+validation, and later task use together. `workkeel learning search` finds current
+guidance using explicit multilingual aliases; `learning impact` traces affected
+lessons, practices and linked Skills after a source changes. Found, read, applied
+and verified outcomes are separate records. The observer displays them read-only.
+Proposal readiness does not create a Skill or establish time/token savings.
+
+| Capability | Default | Current boundary |
+| --- | --- | --- |
+| Task coordination | Core | Task contracts, claims, handoffs, review and acceptance; no server required |
+| Coding tool and model | Existing host | Instruction-following hosts, including those using local models; no global model changes |
+| Automatic workflow | Opt-in | Optional LangGraph dependencies and an approved graph; automatic execution needs an actual adapter |
+| Model routing | Opt-in | Pinned project policy, explicit native dispatch tickets or approved workflow rules; local classifier advice makes no model call |
+| Built-in automatic adapter | Optional / experimental | Codex app-server; its subscription profile requires macOS and Codex ≥ 0.155.0-alpha.9.2 |
+| Gateway connection | Optional | Fixed approved OpenAI-compatible/LiteLLM connection through a supporting runtime; live qualification is separate |
+| Headroom | Off | Optional lossless views through host integration; no universal tool-output interception |
+| Observer | Optional | Local, read-only, no model calls; observes recorded task-first data |
+| Learning and Skills | Optional records | Lessons, practices and bounded authoring proposals; approval does not create or activate a Skill |
+
+For automatic execution, the [runtime guide](docs/operations/workkeel-workflows.md)
+describes optional dependencies and the implemented adapter. Supporting native
+coordination with a tool does not imply a built-in automatic adapter or automatic
+usage collection for that tool. The framework imposes no universal provider or model.
+
+[Native dispatch](docs/operations/workkeel-native-dispatch.md) connects a local
+classifier to the host you already use. It records the requested model, reason,
+execution identity and bounded parallel work before execution; the host returns
+actual model and usage metadata. An existing local classifier can plug
+into this path without a Proxy or a new model call. Other classifiers and local
+model runners use the same policy and reporting interfaces.
+
+## Architecture
+
+<picture>
+  <source media="(max-width: 640px)" srcset="docs/assets/workkeel-architecture-mobile.svg">
+  <img src="docs/assets/workkeel-architecture.svg" alt="Project task contracts feed coordination and optional workflow execution. The execution host uses tools and returns evidence. Review and acceptance remain separate.">
+</picture>
+
+Project files hold task authority and evidence. An optional runner manages graph
+progress and approved model selections. The coding host executes within enforced
+permissions. Checkpoints and a dispatch journal support recovery; uncertain effects
+stop for reconciliation. The observer reads these records without executing work.
+
+[Architecture](docs/concepts/architecture.md) ·
+[Measurements](docs/operations/workkeel-measurements.md) ·
+[Scoped continuation](docs/operations/workkeel-material-and-continuation.md) ·
+[Skill selection and evidence](docs/extensions/workkeel-context.md)
+
+## Evidence and limits
+
+The framework is an experimental Beta. Full interruption/rejected-delivery recovery and fresh-machine installation remain unqualified. Local locks are not distributed coordination, attributed
+identities are not provider-authenticated identities, and native host sessions have
+no automatic usage data unless their host records it. Skill selection does not prove
+application quality. Learning milestones do not imply automatic Skill promotion.
+
+Provider experiments qualify only their recorded conditions. Historical Codex
+compatibility and Luna/Sol results are examples, not framework defaults or proof
+about other models, tools, subscription savings or future versions.
+Actual experiment records remain in the private development workspace.
+[Measurement definitions and limits](docs/operations/workkeel-measurements.md) ·
+[Reproducible checks](docs/getting-started/testing.md)
+
+[Documentation](docs/README.md) · [Testing](docs/getting-started/testing.md) ·
+[Contributing](CONTRIBUTING.md) · [Security](SECURITY.md) ·
+[Compatibility and migration](docs/getting-started/workkeel.md#legacy-history-and-migration)
+
+[MIT](LICENSE) · [Third-party notices](THIRD_PARTY_NOTICES.md)
