@@ -1,0 +1,42 @@
+---
+config:
+  theme: base
+  fontFamily: "Inter, Arial, sans-serif"
+  block:
+    padding: 18
+  themeVariables:
+    background: "#0b0f14"
+    primaryTextColor: "#f8fafc"
+    lineColor: "#94a3b8"
+---
+block-beta
+  columns 8
+  R["EACH STEP RESOLVES · Responsible Position · Relevant Context · Eligible Execution Route"]:8
+  H["HUMAN DIRECTION"]:2 S1["1 · Define outcome"]:2 space:2 S2["2 · Approve boundary"]:2
+  D["DELIVERY"]:2 S4["4 · Produce outcome (Build)"]:2 space:2 S3["3 · Shape approach (Design)"]:2
+  A["ASSURANCE"]:2 S5["5 · Evaluate (Test + Eval)"]:2 S6["6 · Independent review"]:2 S7["7 · Decide + close"]:2
+  P["WORKFLOW PROFILE + RISK · set independent review and Release Gate depth"]:8
+  E["PROJECT REPOSITORY · Evidence accumulates throughout the Work Item"]:8
+
+  S1 --> S2
+  S2 --> S3
+  S3 --> S4
+  S4 --> S5
+  S5 --> S6
+  S6 --> S7
+
+  classDef lane fill:#0b0f14,stroke:#0b0f14,color:#94a3b8,font-weight:700,font-size:14px;
+  classDef human fill:#172033,stroke:#60a5fa,color:#f8fafc,stroke-width:2px;
+  classDef delivery fill:#0f2f2d,stroke:#2dd4bf,color:#f8fafc,stroke-width:2px;
+  classDef assurance fill:#33280f,stroke:#fbbf24,color:#f8fafc,stroke-width:2px;
+  classDef route fill:#102329,stroke:#38bdf8,color:#e0f2fe,stroke-width:1px;
+  classDef profile fill:#211d16,stroke:#a78bfa,color:#ede9fe,stroke-width:1px;
+  classDef evidence fill:#171c24,stroke:#64748b,color:#e2e8f0,stroke-width:2px;
+
+  class H,D,A lane
+  class R route
+  class S1,S2 human
+  class S3,S4 delivery
+  class S5,S6,S7 assurance
+  class P profile
+  class E evidence

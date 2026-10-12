@@ -1,8 +1,10 @@
 # Workkeel source development
 
 This repository contains the Workkeel framework, its documentation and reproducible
-tests. Use the native Workkeel lifecycle for approved development. Read WORKKEEL.md
-and the approved task contract. A discussion or inspection does not authorize edits.
+tests. Use the native Workkeel lifecycle for approved development. For a clean clone,
+follow docs/getting-started/workkeel.md to initialize private local state. Then read
+the generated WORKKEEL.md and approved task contract. A discussion or inspection
+does not authorize edits.
 
 - Use this checkout's pinned source CLI: `node ./bin/workkeel.mjs`. Initialize local
   task state deliberately if it is absent; a clean clone contains no maintainer tasks.

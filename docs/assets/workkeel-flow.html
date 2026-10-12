@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src 'none'; connect-src 'none'; base-uri 'none'; form-action 'none'">
+<title>Workkeel · flow explorer</title>
+<style>
+:root{color-scheme:light dark;--background:light-dark(#fbfcfe,#141c26);--foreground:light-dark(#203346,#e1ebf4);--card:light-dark(#fff,#1d2a38);--muted:light-dark(#edf2f7,#25384b);--muted-foreground:light-dark(#526478,#afbfce);--border:light-dark(#cad5df,#41566b);--blue:light-dark(#2763ac,#8dbdff);--green:light-dark(#236447,#99d8b8);--orange:light-dark(#815617,#f4c583);--purple:light-dark(#635089,#c8b4ed)}
+*{box-sizing:border-box}body{margin:0;background:var(--background);color:var(--foreground);font:17px/1.55 system-ui,-apple-system,sans-serif}main{max-width:1120px;margin:auto;padding:32px 26px 52px}h1{font-size:32px;line-height:1.2;margin:10px 0}h2{font-size:20px;margin:0 0 10px}p{margin:8px 0}.eyebrow{font-size:14px;letter-spacing:.12em;color:var(--blue)}.intro{max-width:780px;color:var(--muted-foreground)}.toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:end;margin:28px 0 20px}label{display:flex;flex-direction:column;font-size:14px;gap:5px}button,select{font:inherit;color:var(--foreground);background:var(--card);border:1px solid var(--border);border-radius:8px;padding:10px 14px;min-height:44px}button:disabled{opacity:.45}button:focus-visible,select:focus-visible{outline:3px solid var(--blue);outline-offset:3px}#play{background:var(--foreground);color:var(--background)}.language{margin-left:auto}.badge{display:inline-block;font:14px ui-monospace,monospace;background:var(--muted);border-radius:6px;padding:4px 8px}.section-head{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:28px}.track{position:relative;padding-top:24px}.states{list-style:none;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:22px;padding:0;margin:0}.state{position:relative;background:var(--card);border:1px solid var(--border);border-radius:12px;padding:18px 14px;min-height:135px}.state:not(:last-child)::after{content:'→';position:absolute;right:-19px;top:48%;color:var(--muted-foreground)}.state strong{display:block;font-weight:600}.state code{display:block;font-size:14px;color:var(--muted-foreground);margin-top:10px}.state small{display:block;font-size:14px;margin-top:8px}.state.active{border-color:var(--blue);box-shadow:inset 0 3px var(--blue)}.state.visited{background:color-mix(in srgb,var(--blue) 8%,var(--card))}#token{position:absolute;left:0;top:0;width:14px;height:14px;border-radius:50%;background:var(--blue);transition:transform .65s ease;z-index:1;pointer-events:none}.detail{min-height:80px;border-left:3px solid var(--blue);padding:12px 18px;margin:24px 0;background:var(--muted)}.detail p{margin:0}#caption{font-weight:500}#frame{font-size:14px;color:var(--muted-foreground)}.execution{padding:20px;border:1px solid var(--border);border-radius:12px;background:var(--card)}.nodes{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:22px;margin:16px 0}.node{position:relative;padding:12px;background:var(--muted);border-radius:8px}.node:not(:last-child)::after{content:'→';position:absolute;right:-18px;top:30%}.node.active{box-shadow:inset 3px 0 var(--green)}.node strong,.node span{display:block}.node span{font-size:14px;color:var(--muted-foreground)}.principle{margin-top:22px;color:var(--muted-foreground)}.legend{font-size:14px;color:var(--muted-foreground)}[hidden]{display:none!important}@media(prefers-reduced-motion:reduce){#token{transition:none}}@media(max-width:640px){main{padding:22px 18px}.language{margin-left:0}h1{font-size:27px}.states{grid-template-columns:1fr;gap:18px;padding-left:20px}.state{min-height:88px;padding:12px 16px}.state code{margin-top:4px}.state small{margin-top:2px}.state:not(:last-child)::after{right:50%;top:auto;bottom:-22px}.nodes{grid-template-columns:1fr;gap:18px}.node:not(:last-child)::after{right:50%;top:auto;bottom:-23px}.detail{min-height:100px}.toolbar label{max-width:100%}select{max-width:100%}}
+</style>
+<style>@media(max-width:640px){.state:not(:last-child)::after,.node:not(:last-child)::after{content:'↓'}}</style>
+</head>
+<body>
+<main id="workkeel-explorer">
+  <div class="eyebrow">WORKKEEL / FLOW EXPLORER</div>
+  <h1 data-en="Watch a task move, not just an agent run." data-zh="看清楚任務怎麼走，不只看 Agent 在跑。">Watch a task move, not just an agent run.</h1>
+  <p class="intro" data-en="An explanatory simulation. No real tasks, model calls, network access or telemetry. Nothing starts automatically." data-zh="這是流程示範，不是即時監控；不讀取任務、不呼叫模型、不連網，也不會自動播放。">An explanatory simulation. No real tasks, model calls, network access or telemetry. Nothing starts automatically.</p>
+  <div class="toolbar">
+    <label><span data-en="Scenario" data-zh="情境">Scenario</span><select id="scenario" aria-label="Scenario">
+      <option value="graph" data-en="Graph + approval → accepted" data-zh="Graph → 等待核准 → 驗收">Graph + approval → accepted</option>
+      <option value="native" data-en="Default: native coding agent" data-zh="預設：使用原生 Coding Agent">Default: native coding agent</option>
+      <option value="rework" data-en="Review fails → rework" data-zh="審查失敗 → 保留證據 → 返工">Review fails → rework</option>
+      <option value="blocked" data-en="Execution blocked" data-zh="執行受阻 → 等待釐清">Execution blocked</option>
+      <option value="paused" data-en="Execution paused" data-zh="執行暫停 → 保留檢查點">Execution paused</option>
+      <option value="rejected" data-en="Approval rejected" data-zh="拒絕執行核准">Approval rejected</option>
+      <option value="cancelled" data-en="Run cancelled (task stays open)" data-zh="中止執行（不等於取消任務）">Run cancelled (task stays open)</option>
+    </select></label>
+    <button id="play" type="button">Play</button><button id="previous" type="button">Previous</button><button id="next" type="button">Next</button>
+    <label class="language"><span data-en="Language" data-zh="語言">Language</span><select id="language" aria-label="Language"><option value="en">English</option><option value="zh">繁體中文</option></select></label>
+  </div>
+  <div class="section-head"><h2 data-en="1 · Task lifecycle — the durable agreement" data-zh="1 · 任務狀態：保存工作約定與驗收">1 · Task lifecycle — the durable agreement</h2><span class="badge" id="task-state">intake</span></div>
+  <div class="track" id="track"><div id="token" aria-hidden="true"></div><ol class="states">
+    <li class="state" data-state="intake"><strong data-en="Agree" data-zh="確認任務">Agree</strong><code>intake</code><small data-en="Scope + acceptance" data-zh="範圍、權限與驗收條件">Scope + acceptance</small></li>
+    <li class="state" data-state="build"><strong data-en="Implement" data-zh="實作">Implement</strong><code>build</code><small data-en="Claim + execute" data-zh="認領後才執行">Claim + execute</small></li>
+    <li class="state" data-state="test"><strong data-en="Review" data-zh="審查">Review</strong><code>test</code><small data-en="Exact candidate + checks" data-zh="確切版本與檢查證據">Exact candidate + checks</small></li>
+    <li class="state" data-state="release_gate"><strong data-en="Accept" data-zh="驗收">Accept</strong><code>release_gate</code><small data-en="Required review + approval" data-zh="確認審查與必要核准">Required review + approval</small></li>
+    <li class="state" data-state="done"><strong data-en="Done" data-zh="完成">Done</strong><code>done</code><small data-en="Accepted revision, not deploy" data-zh="接受成果，不會自動部署">Accepted revision, not deploy</small></li>
+  </ol></div>
+  <div class="detail" role="status" aria-live="polite"><p id="caption"></p><span id="frame"></span></div>
+  <section class="execution" aria-labelledby="execution-heading">
+    <div class="section-head" style="margin-top:0"><h2 id="execution-heading" data-en="2 · Optional graph — runs inside build" data-zh="2 · 選配 Graph：在 build 內執行">2 · Optional graph — runs inside build</h2><span class="badge" id="run-state">not-started</span></div>
+    <div class="nodes">
+      <div class="node" data-node="inspect"><strong data-en="Inspect" data-zh="檢查問題">Inspect</strong><span>Luna · example policy</span></div>
+      <div class="node" data-node="approve"><strong data-en="Approval" data-zh="等待核准">Approval</strong><span data-en="Human-in-the-loop" data-zh="Human-in-the-loop">Human-in-the-loop</span></div>
+      <div class="node" data-node="implement"><strong data-en="Implement + verify" data-zh="實作與驗證">Implement + verify</strong><span>Sol · example policy</span></div>
+    </div>
+    <p class="legend" data-en="Luna and Sol are examples, not universal defaults. Graph states do not advance the task lifecycle automatically." data-zh="Luna、Sol 是範例政策，不是全域預設。Graph 的執行狀態不會自動推進任務驗收。">Luna and Sol are examples, not universal defaults. Graph states do not advance the task lifecycle automatically.</p>
+  </section>
+  <p class="principle" data-en="Core use needs no graph or always-on service. Review failure returns to intake with the previous evidence preserved. Missing telemetry is unknown, never zero." data-zh="基本使用不需要 Graph 或常駐服務。審查失敗會保留證據並回到 intake。觀測不到的數值是未知，不是零。">Core use needs no graph or always-on service. Review failure returns to intake with the previous evidence preserved. Missing telemetry is unknown, never zero.</p>
+  <noscript>This simulation requires local JavaScript. Use the adjacent static workflow SVG for the complete task path.</noscript>
+</main>
+<script>
+(() => {
+  const root = document.getElementById('workkeel-explorer');
+  const get = id => root.querySelector('#' + id);
+  const f = (task,run,node,en,zh) => ({task,run,node,en,zh});
+  const start = f('intake','not-started',null,'Agree on the goal, allowed environment and acceptance criteria.','先確認目標、允許的環境與驗收條件。');
+  const claim = f('build','created',null,'A matching claim starts implementation. The optional runner is created.','認領工作後進入實作；選配執行器建立本輪紀錄。');
+  const inspect = f('build','running','inspect','The policy chooses Luna for this inspection node.','政策把這個檢查步驟交給 Luna。');
+  const approve = f('build','awaiting-approval','approve','Execution waits for a recorded approval; the task remains in build.','執行等待有紀錄的核准；任務仍在 build。');
+  const implement = f('build','running','implement','After approval, Sol implements within the same task boundaries.','核准後由 Sol 實作；任務權限不會擴大。');
+  const completed = f('build','completed',null,'The graph completed. The task is not reviewed or accepted yet.','Graph 已跑完，但任務尚未經過審查與驗收。');
+  const review = f('test','completed',null,'Handoff pins an exact candidate. Review uses that revision and its evidence.','交接綁定確切候選版本，依這個版本與證據進行審查。');
+  const accept = f('release_gate','completed',null,'The required review passed; check acceptance and approval records.','必要審查通過，再確認驗收條件與核准紀錄。');
+  const done = f('done','completed',null,'Accepted and recorded. This does not publish or deploy the change.','成果已驗收並保存；不代表已發布或部署。');
+  const scenarios = {
+    graph: [start,claim,inspect,approve,implement,completed,review,accept,done],
+    native: [start,f('build','not-used',null,'Your native coding agent works under the task contract. No graph or model routing.','既有 Coding Agent 按任務契約工作；不啟用 Graph 或自動選模。'), ...[review,accept,done].map(s => ({...s,run:'not-used'}))],
+    rework: [start,claim,inspect,approve,implement,completed,review,f('intake','completed',null,'Review failed. Preserve this candidate and its evidence; prepare a same-scope claim.','審查未通過，保留失敗版本與證據；同一範圍重新認領。'),f('build','not-used',null,'A new claim starts the correction with a native agent. Previous run history stays intact.','重新認領後由原生 Agent 修正；前次執行紀錄完整保留。'),...[review,accept,done].map(s => ({...s,run:'not-used'}))],
+    blocked: [start,claim,inspect,f('build','blocked','inspect','A refusal or uncertain effect stops dispatch. Inspect evidence before continuing.','拒絕或不確定的執行效果會停止派工；先查證據，不盲目重跑。')],
+    paused: [start,claim,inspect,f('build','paused',null,'Execution has remaining work and a checkpoint. Resume only after validating current authority.','還有工作未完成，保留檢查點；續跑前重新確認授權。')],
+    rejected: [start,claim,inspect,approve,f('build','rejected','approve','Approval was declined. This run is terminal; the task is not automatically cancelled.','核准被拒絕，這次執行結束；任務不會被自動取消。')],
+    cancelled: [start,claim,inspect,f('build','cancelled',null,'Cancellation stops the run after cleanup. The task remains open; uncertain cleanup is blocked instead.','清理完成後中止執行；任務仍未結案。若清理無法確認，則記為 blocked。')]
+  };
+  let index = 0, timer = null, language = location.hash === '#zh' ? 'zh' : 'en';
+  const frames = () => scenarios[get('scenario').value];
+  function stop(){clearInterval(timer);timer=null;}
+  function moveToken(){
+    const active=root.querySelector('.state.active');if(!active)return;
+    const box=active.getBoundingClientRect(), track=get('track').getBoundingClientRect();
+    const mobile=matchMedia('(max-width:640px)').matches;
+    get('token').style.transform='translate('+(mobile?box.left-track.left-19:box.left-track.left+box.width/2-7)+'px,'+(mobile?box.top-track.top+box.height/2-7:box.top-track.top-18)+'px)';
+  }
+  function render(){
+    const list=frames(), current=list[index];
+    document.documentElement.lang=language==='zh'?'zh-Hant':'en';
+    root.querySelectorAll('[data-en]').forEach(el=>el.textContent=el.dataset[language]);
+    get('play').textContent=language==='zh'?(timer?'暫停':index===list.length-1?'重播':'播放'):(timer?'Pause':index===list.length-1?'Replay':'Play');
+    get('play').setAttribute('aria-pressed',String(Boolean(timer)));
+    get('previous').textContent=language==='zh'?'上一步':'Previous';get('next').textContent=language==='zh'?'下一步':'Next';
+    get('previous').disabled=index===0;get('next').disabled=index===list.length-1;
+    get('task-state').textContent=current.task;get('run-state').textContent=current.run;
+    get('caption').textContent=current[language];get('frame').textContent=(language==='zh'?'示範畫面 ':'Illustration frame ')+(index+1)+' / '+list.length;
+    root.querySelectorAll('.state').forEach(el=>{const active=el.dataset.state===current.task;el.classList.toggle('active',active);el.classList.toggle('visited',list.slice(0,index).some(s=>s.task===el.dataset.state));if(active)el.setAttribute('aria-current','step');else el.removeAttribute('aria-current');});
+    root.querySelectorAll('.node').forEach(el=>el.classList.toggle('active',el.dataset.node===current.node));
+    root.querySelector('.nodes').hidden=current.run==='not-used';
+    requestAnimationFrame(moveToken);
+  }
+  get('scenario').addEventListener('change',()=>{stop();index=0;render();});
+  get('language').value=language;
+  get('language').addEventListener('change',()=>{language=get('language').value;render();});
+  get('previous').addEventListener('click',()=>{stop();index=Math.max(0,index-1);render();});
+  get('next').addEventListener('click',()=>{stop();index=Math.min(frames().length-1,index+1);render();});
+  get('play').addEventListener('click',()=>{if(timer)stop();else{if(index===frames().length-1)index=0;timer=setInterval(()=>{index++;if(index>=frames().length-1)stop();render();},2400);}render();});
+  document.addEventListener('visibilitychange',()=>{if(document.hidden){stop();render();}});
+  window.addEventListener('pagehide',stop);
+  new ResizeObserver(moveToken).observe(get('track'));
+  render();
+})();
+</script>
+</body>
+</html>

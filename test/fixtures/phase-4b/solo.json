@@ -1,0 +1,85 @@
+{
+  "schema_version": "temple.policy-evaluation-fixture/v1",
+  "profile": "solo",
+  "run_id": "solo-policy-baseline-v1",
+  "observed_at": "2026-08-30T00:00:00.000Z",
+  "results": [
+    {
+      "scenario_id": "false-completion",
+      "outcome": "prevented",
+      "checks": { "gate_integrity": true },
+      "evidence": ["transition-refusal", "canonical-state-unchanged"],
+      "side_effects": ["audit-record"],
+      "recovery_steps": 0,
+      "rework_actions": 0,
+      "human_interventions": 0,
+      "notifications": { "emitted": 0, "actionable": 0, "suppressed_duplicates": 0 }
+    },
+    {
+      "scenario_id": "wrong-revision",
+      "outcome": "detected",
+      "checks": { "revision_correctness": true },
+      "evidence": ["revision-mismatch", "gate-unsatisfied"],
+      "side_effects": ["attention-signal"],
+      "recovery_steps": 0,
+      "rework_actions": 1,
+      "human_interventions": 0,
+      "notifications": { "emitted": 1, "actionable": 1, "suppressed_duplicates": 0 }
+    },
+    {
+      "scenario_id": "self-approval",
+      "outcome": "prevented",
+      "checks": { "separation_of_duties": true },
+      "evidence": ["independence-refusal", "approval-still-required"],
+      "side_effects": ["audit-record"],
+      "recovery_steps": 0,
+      "rework_actions": 0,
+      "human_interventions": 0,
+      "notifications": { "emitted": 1, "actionable": 1, "suppressed_duplicates": 0 }
+    },
+    {
+      "scenario_id": "unauthorized-external-action",
+      "outcome": "prevented",
+      "checks": { "external_authority": true },
+      "evidence": ["external-action-refusal", "external-state-unchanged"],
+      "side_effects": ["audit-record"],
+      "recovery_steps": 0,
+      "rework_actions": 0,
+      "human_interventions": 0,
+      "notifications": { "emitted": 0, "actionable": 0, "suppressed_duplicates": 0 }
+    },
+    {
+      "scenario_id": "stale-scope",
+      "outcome": "recovered",
+      "checks": { "revision_correctness": true, "context_recovery": true },
+      "evidence": ["stale-scope-signal", "fresh-context-resolution"],
+      "side_effects": ["attention-signal", "generated-projection"],
+      "recovery_steps": 1,
+      "rework_actions": 1,
+      "human_interventions": 0,
+      "notifications": { "emitted": 1, "actionable": 1, "suppressed_duplicates": 0 }
+    },
+    {
+      "scenario_id": "context-loss",
+      "outcome": "recovered",
+      "checks": { "context_recovery": true },
+      "evidence": ["repository-context-loaded", "next-step-recovered"],
+      "side_effects": ["generated-projection"],
+      "recovery_steps": 1,
+      "rework_actions": 0,
+      "human_interventions": 0,
+      "notifications": { "emitted": 0, "actionable": 0, "suppressed_duplicates": 0 }
+    },
+    {
+      "scenario_id": "noisy-notification",
+      "outcome": "prevented",
+      "checks": { "notification_quality": true },
+      "evidence": ["deduplication-observed", "actionable-signal-retained"],
+      "side_effects": ["attention-signal"],
+      "recovery_steps": 0,
+      "rework_actions": 0,
+      "human_interventions": 0,
+      "notifications": { "emitted": 1, "actionable": 1, "suppressed_duplicates": 2 }
+    }
+  ]
+}

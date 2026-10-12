@@ -1,0 +1,30 @@
+name: Feature request
+description: Describe a user problem and the smallest useful outcome.
+title: "[Feature]: "
+labels:
+  - enhancement
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: User problem
+      description: Who encounters the problem, and what becomes difficult or unsafe?
+    validations:
+      required: true
+  - type: textarea
+    id: outcome
+    attributes:
+      label: Desired outcome
+      description: Describe the result without prescribing a particular implementation.
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Examples or evidence
+      description: Use synthetic examples only. Do not include private repository data.
+  - type: textarea
+    id: boundary
+    attributes:
+      label: Suggested boundary
+      description: What should remain out of scope for the first iteration?

@@ -1,0 +1,132 @@
+name: Publish npm package
+
+on:
+  release:
+    types: [published]
+
+concurrency:
+  group: npm-release-${{ github.event.release.tag_name }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  publish:
+    name: Publish verified Release asset
+    if: ${{ github.event.release.draft == false }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Require the approved npm trust repository identity
+        env:
+          EXPECTED_REPOSITORY_ID: ${{ vars.NPM_TRUST_REPOSITORY_ID }}
+          ACTUAL_REPOSITORY_ID: ${{ github.repository_id }}
+        run: |
+          if [ -z "$EXPECTED_REPOSITORY_ID" ]; then
+            echo "NPM_TRUST_REPOSITORY_ID must be configured before publishing" >&2
+            exit 1
+          fi
+          if [ "$EXPECTED_REPOSITORY_ID" != "$ACTUAL_REPOSITORY_ID" ]; then
+            echo "Release repository identity does not match NPM_TRUST_REPOSITORY_ID" >&2
+            exit 1
+          fi
+
+      - name: Check out the exact Release tag
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.event.release.tag_name }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Use the qualified official Node distribution without a release cache
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 24.20.0
+          registry-url: https://registry.npmjs.org
+          package-manager-cache: false
+
+      - name: Install the exact dependency lock
+        run: npm ci --ignore-scripts
+
+      - id: package
+        name: Pack and validate Release metadata
+        env:
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+          RELEASE_PRERELEASE: ${{ github.event.release.prerelease }}
+        run: |
+          npm run release:pack -- --output "$RUNNER_TEMP/fresh-package"
+          node scripts/validate-npm-release.mjs prepare \
+            --package-json package.json \
+            --pack-result "$RUNNER_TEMP/fresh-package/pack-result.json" \
+            --pack-dir "$RUNNER_TEMP/fresh-package" \
+            --tag-name "$RELEASE_TAG" \
+            --prerelease "$RELEASE_PRERELEASE" \
+            --repository "$GITHUB_REPOSITORY" \
+            --npm-version "$(npm --version)" \
+            --github-output "$GITHUB_OUTPUT"
+
+      - name: Download the package attached to the GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+          ARCHIVE_FILENAME: ${{ steps.package.outputs.archive_filename }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/release-asset"
+          gh release download "$RELEASE_TAG" \
+            --repo "$GITHUB_REPOSITORY" \
+            --pattern "$ARCHIVE_FILENAME" \
+            --dir "$RUNNER_TEMP/release-asset"
+
+      - name: Reject incompatible Release bytes before full verification
+        env:
+          ARCHIVE_FILENAME: ${{ steps.package.outputs.archive_filename }}
+        run: |
+          node scripts/validate-npm-release.mjs verify-asset \
+            --fresh "$RUNNER_TEMP/fresh-package/$ARCHIVE_FILENAME" \
+            --release "$RUNNER_TEMP/release-asset/$ARCHIVE_FILENAME"
+
+      - name: Verify the exact Release source
+        run: npm run verify
+
+      - id: asset
+        name: Repack and verify the attached bytes after full verification
+        env:
+          ARCHIVE_FILENAME: ${{ steps.package.outputs.archive_filename }}
+        run: |
+          npm run release:pack -- --output "$RUNNER_TEMP/verified-package"
+          node scripts/validate-npm-release.mjs verify-asset \
+            --fresh "$RUNNER_TEMP/verified-package/$ARCHIVE_FILENAME" \
+            --release "$RUNNER_TEMP/release-asset/$ARCHIVE_FILENAME" \
+            --github-output "$GITHUB_OUTPUT"
+
+      - id: registry
+        name: Require exact registry bytes before skipping a bootstrap upload
+        env:
+          ARCHIVE_FILENAME: ${{ steps.package.outputs.archive_filename }}
+          DIST_TAG: ${{ steps.package.outputs.dist_tag }}
+        run: |
+          node scripts/check-published-npm.mjs \
+            --package-json package.json \
+            --asset "$RUNNER_TEMP/release-asset/$ARCHIVE_FILENAME" \
+            --channel "$DIST_TAG" \
+            --github-output "$GITHUB_OUTPUT"
+
+      - name: Publish through npm Trusted Publishing
+        if: ${{ steps.registry.outputs.action == 'publish' }}
+        env:
+          ARCHIVE_FILENAME: ${{ steps.package.outputs.archive_filename }}
+          DIST_TAG: ${{ steps.package.outputs.dist_tag }}
+        run: npm publish "$RUNNER_TEMP/release-asset/$ARCHIVE_FILENAME" --access public --tag "$DIST_TAG"
+
+      - name: Verify registry acquisition after publication or exact bootstrap match
+        env:
+          ARCHIVE_FILENAME: ${{ steps.package.outputs.archive_filename }}
+          DIST_TAG: ${{ steps.package.outputs.dist_tag }}
+        run: |
+          node scripts/check-published-npm.mjs \
+            --package-json package.json \
+            --asset "$RUNNER_TEMP/release-asset/$ARCHIVE_FILENAME" \
+            --channel "$DIST_TAG" \
+            --require-published

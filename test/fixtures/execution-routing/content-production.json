@@ -1,0 +1,83 @@
+{
+  "schema_version": "temple.execution-extension-fixture/v1",
+  "capabilities": [
+    {
+      "id": "content.storyboard",
+      "kind": "method",
+      "description": "Turn an approved narrative into a shot-level storyboard.",
+      "modalities": ["text", "image"]
+    },
+    {
+      "id": "media.video.render",
+      "kind": "service",
+      "description": "Render an approved storyboard into a video artifact.",
+      "modalities": ["video"]
+    }
+  ],
+  "profile": {
+    "id": "local-video-production",
+    "status": "active",
+    "model_class": "specialized",
+    "reasoning_class": "none",
+    "provider_id": "local-media-pipeline",
+    "model": "storyboard-renderer-v1",
+    "reasoning_effort": "none",
+    "capabilities": ["content.storyboard", "media.video.render"],
+    "modalities": ["text", "image", "video"],
+    "allowed_data_classes": ["public", "internal"],
+    "execution_boundaries": ["local"],
+    "risk_classes": ["low", "standard"],
+    "resource_estimates": [
+      {
+        "measure_id": "video.duration",
+        "value": 60,
+        "quality": "observed",
+        "evidence_ref": "test/fixtures/execution-routing/content-production.json"
+      }
+    ]
+  },
+  "rule": {
+    "id": "local-video-production",
+    "match": {
+      "task_kinds": ["video-production"],
+      "lifecycle_stages": ["build"],
+      "risk_classes": ["low", "standard"]
+    },
+    "preference_order": ["local-video-production"]
+  },
+  "request": {
+    "schema_version": "temple.execution-request/v1",
+    "work_item_id": "WI-MEDIA-0001",
+    "steps": [
+      {
+        "step_id": "render-storyboard",
+        "responsibility": "video_producer",
+        "task_shape": {
+          "position_id": "video_producer",
+          "lifecycle_stage": "build",
+          "task_kind": "video-production",
+          "risk_class": "low",
+          "context_profile_digest": "fixture:storyboard-v1"
+        },
+        "capability_route": {
+          "required": ["content.storyboard", "media.video.render"],
+          "optional": []
+        },
+        "constraints": {
+          "required_modalities": ["video"],
+          "allowed_provider_ids": ["local-media-pipeline"],
+          "data_class": "internal",
+          "execution_boundary": "local",
+          "resource_limits": [
+            { "measure_id": "video.duration", "maximum": 120, "unknown_handling": "reject" }
+          ]
+        },
+        "selection": { "mode": "advisory" },
+        "resource_observations": [
+          { "measure_id": "image.count", "status": "unavailable", "value": null, "source": "fixture", "quality": "declared" },
+          { "measure_id": "human.editing", "status": "observed", "value": 12, "source": "fixture", "quality": "observed" }
+        ]
+      }
+    ]
+  }
+}

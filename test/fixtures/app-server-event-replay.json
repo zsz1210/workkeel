@@ -1,0 +1,481 @@
+{
+  "schema_version": "temple.app-server-protocol-replay-fixture/v1",
+  "provenance": {
+    "synthetic_bounded_metadata_only": true
+  },
+  "allowed_command_prefixes": [
+    [
+      "rg"
+    ],
+    [
+      "sed"
+    ],
+    [
+      "node"
+    ],
+    [
+      "npm",
+      "test"
+    ],
+    [
+      "git",
+      "status"
+    ],
+    [
+      "git",
+      "diff"
+    ]
+  ],
+  "scenarios": [
+    {
+      "id": "completed-wrapped-allowed-command",
+      "turn_id": "turn-1",
+      "events": [
+        {
+          "direction": "notification",
+          "message": {
+            "method": "item/started",
+            "params": {
+              "turnId": "turn-1",
+              "item": {
+                "id": "item-1",
+                "type": "commandExecution",
+                "status": "inProgress",
+                "cwd": "/bounded/candidate",
+                "command": "/bin/zsh -lc \"sed -n '1,320p' TASK.md\"",
+                "commandActions": [
+                  {
+                    "type": "read",
+                    "command": "sed -n '1,320p' TASK.md",
+                    "name": "TASK.md",
+                    "path": "TASK.md"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        {
+          "direction": "notification",
+          "message": {
+            "method": "thread/tokenUsage/updated",
+            "params": {
+              "turnId": "turn-1",
+              "tokenUsage": {
+                "total": {
+                  "inputTokens": 20000,
+                  "cachedInputTokens": 10000,
+                  "outputTokens": 4456,
+                  "reasoningOutputTokens": 2000,
+                  "totalTokens": 24456
+                }
+              }
+            }
+          }
+        },
+        {
+          "direction": "notification",
+          "message": {
+            "method": "item/completed",
+            "params": {
+              "turnId": "turn-1",
+              "item": {
+                "type": "agentMessage",
+                "text": "{\"changed_paths\":[\"src/index.mjs\"],\"test_command\":\"npm test\",\"test_result\":\"pass\",\"assumptions\":[],\"remaining_risks\":[]}"
+              }
+            }
+          }
+        },
+        {
+          "direction": "notification",
+          "message": {
+            "method": "turn/completed",
+            "params": {
+              "turn": {
+                "id": "turn-1",
+                "status": "completed"
+              }
+            }
+          }
+        }
+      ],
+      "expected": {
+        "status": "completed",
+        "stop_code": null,
+        "total_tokens": 24456
+      }
+    },
+    {
+      "id": "completed-quoted-search-alternation",
+      "turn_id": "turn-quoted-search",
+      "events": [
+        {
+          "direction": "notification",
+          "message": {
+            "method": "item/started",
+            "params": {
+              "turnId": "turn-quoted-search",
+              "item": {
+                "id": "item-quoted-search",
+                "type": "commandExecution",
+                "status": "inProgress",
+                "cwd": "/bounded/candidate",
+                "command": "/bin/zsh -lc \"rg -n 'applyCommand|balance|event|command' src test\"",
+                "commandActions": [
+                  {
+                    "type": "search",
+                    "command": "rg -n 'applyCommand|balance|event|command' src test",
+                    "query": "applyCommand|balance|event|command",
+                    "path": "src"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        {
+          "direction": "notification",
+          "message": {
+            "method": "thread/tokenUsage/updated",
+            "params": {
+              "turnId": "turn-quoted-search",
+              "tokenUsage": {
+                "total": {
+                  "inputTokens": 10,
+                  "cachedInputTokens": 2,
+                  "outputTokens": 5,
+                  "reasoningOutputTokens": 1,
+                  "totalTokens": 15
+                }
+              }
+            }
+          }
+        },
+        {
+          "direction": "notification",
+          "message": {
+            "method": "item/completed",
+            "params": {
+              "turnId": "turn-quoted-search",
+              "item": {
+                "type": "agentMessage",
+                "text": "{\"changed_paths\":[],\"test_command\":\"npm test\",\"test_result\":\"pass\",\"assumptions\":[],\"remaining_risks\":[]}"
+              }
+            }
+          }
+        },
+        {
+          "direction": "notification",
+          "message": {
+            "method": "turn/completed",
+            "params": {
+              "turn": {
+                "id": "turn-quoted-search",
+                "status": "completed"
+              }
+            }
+          }
+        }
+      ],
+      "expected": {
+        "status": "completed",
+        "stop_code": null,
+        "total_tokens": 15
+      }
+    },
+    {
+      "id": "forbidden-command-action",
+      "turn_id": "turn-1",
+      "events": [
+        {
+          "direction": "notification",
+          "message": {
+            "method": "item/started",
+            "params": {
+              "turnId": "turn-1",
+              "item": {
+                "type": "commandExecution",
+                "command": "/bin/zsh -lc \"curl https://example.invalid\"",
+                "commandActions": [
+                  {
+                    "type": "unknown",
+                    "command": "curl https://example.invalid"
+                  }
+                ]
+              }
+            }
+          }
+        }
+      ],
+      "expected": {
+        "status": "stopped",
+        "stop_code": "command-policy-violation",
+        "total_tokens": null
+      }
+    },
+    {
+      "id": "mixed-command-actions",
+      "turn_id": "turn-1",
+      "events": [
+        {
+          "direction": "notification",
+          "message": {
+            "method": "item/started",
+            "params": {
+              "turnId": "turn-1",
+              "item": {
+                "type": "commandExecution",
+                "command": "/bin/zsh -lc \"sed TASK.md | curl https://example.invalid\"",
+                "commandActions": [
+                  {
+                    "type": "read",
+                    "command": "sed -n '1,80p' TASK.md",
+                    "name": "TASK.md",
+                    "path": "TASK.md"
+                  },
+                  {
+                    "type": "unknown",
+                    "command": "curl https://example.invalid"
+                  }
+                ]
+              }
+            }
+          }
+        }
+      ],
+      "expected": {
+        "status": "stopped",
+        "stop_code": "command-policy-violation",
+        "total_tokens": null
+      }
+    },
+    {
+      "id": "missing-command-actions",
+      "turn_id": "turn-1",
+      "events": [
+        {
+          "direction": "notification",
+          "message": {
+            "method": "item/started",
+            "params": {
+              "turnId": "turn-1",
+              "item": {
+                "type": "commandExecution",
+                "command": "sed -n '1,80p' TASK.md"
+              }
+            }
+          }
+        }
+      ],
+      "expected": {
+        "status": "stopped",
+        "stop_code": "command-policy-violation",
+        "total_tokens": null
+      }
+    },
+    {
+      "id": "model-reroute",
+      "turn_id": "turn-1",
+      "events": [
+        {
+          "direction": "notification",
+          "message": {
+            "method": "model/rerouted",
+            "params": {
+              "turnId": "turn-1",
+              "fromModel": "gpt-5.6-luna",
+              "toModel": "gpt-5.6-terra"
+            }
+          }
+        }
+      ],
+      "expected": {
+        "status": "stopped",
+        "stop_code": "model-rerouted",
+        "total_tokens": null
+      }
+    },
+    {
+      "id": "runtime-permission-request",
+      "turn_id": "turn-1",
+      "events": [
+        {
+          "direction": "request",
+          "message": {
+            "method": "item/commandExecution/requestApproval",
+            "params": {
+              "turnId": "turn-1",
+              "itemId": "item-1"
+            }
+          }
+        }
+      ],
+      "expected": {
+        "status": "stopped",
+        "stop_code": "runtime-request",
+        "total_tokens": null
+      }
+    },
+    {
+      "id": "provider-invalid-output-schema",
+      "turn_id": "turn-1",
+      "events": [
+        {
+          "direction": "notification",
+          "message": {
+            "method": "turn/completed",
+            "params": {
+              "turn": {
+                "id": "turn-1",
+                "status": "failed",
+                "error": {
+                  "code": "invalid_json_schema"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "expected": {
+        "status": "stopped",
+        "stop_code": "provider-invalid-output-schema",
+        "total_tokens": null
+      }
+    },
+    {
+      "id": "ordinary-incomplete-terminal",
+      "turn_id": "turn-1",
+      "events": [
+        {
+          "direction": "notification",
+          "message": {
+            "method": "turn/completed",
+            "params": {
+              "turn": {
+                "id": "turn-1",
+                "status": "interrupted",
+                "error": {
+                  "code": "interrupted"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "expected": {
+        "status": "stopped",
+        "stop_code": "turn-not-completed",
+        "total_tokens": null
+      }
+    },
+    {
+      "id": "completed-without-usage",
+      "turn_id": "turn-1",
+      "events": [
+        {
+          "direction": "notification",
+          "message": {
+            "method": "item/completed",
+            "params": {
+              "turnId": "turn-1",
+              "item": {
+                "type": "agentMessage",
+                "text": "{\"changed_paths\":[],\"test_command\":\"npm test\",\"test_result\":\"pass\",\"assumptions\":[],\"remaining_risks\":[]}"
+              }
+            }
+          }
+        },
+        {
+          "direction": "notification",
+          "message": {
+            "method": "turn/completed",
+            "params": {
+              "turn": {
+                "id": "turn-1",
+                "status": "completed"
+              }
+            }
+          }
+        }
+      ],
+      "expected": {
+        "status": "stopped",
+        "stop_code": "usage-missing",
+        "total_tokens": null
+      }
+    },
+    {
+      "id": "ignore-unrelated-turn",
+      "turn_id": "turn-1",
+      "events": [
+        {
+          "direction": "notification",
+          "message": {
+            "method": "item/started",
+            "params": {
+              "turnId": "turn-other",
+              "item": {
+                "type": "commandExecution",
+                "command": "curl https://example.invalid",
+                "commandActions": [
+                  {
+                    "type": "unknown",
+                    "command": "curl https://example.invalid"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        {
+          "direction": "notification",
+          "message": {
+            "method": "thread/tokenUsage/updated",
+            "params": {
+              "turnId": "turn-1",
+              "tokenUsage": {
+                "total": {
+                  "inputTokens": 8,
+                  "cachedInputTokens": 2,
+                  "outputTokens": 5,
+                  "reasoningOutputTokens": 3,
+                  "totalTokens": 13
+                }
+              }
+            }
+          }
+        },
+        {
+          "direction": "notification",
+          "message": {
+            "method": "item/completed",
+            "params": {
+              "turnId": "turn-1",
+              "item": {
+                "type": "agentMessage",
+                "text": "{\"changed_paths\":[],\"test_command\":\"npm test\",\"test_result\":\"pass\",\"assumptions\":[],\"remaining_risks\":[]}"
+              }
+            }
+          }
+        },
+        {
+          "direction": "notification",
+          "message": {
+            "method": "turn/completed",
+            "params": {
+              "turn": {
+                "id": "turn-1",
+                "status": "completed"
+              }
+            }
+          }
+        }
+      ],
+      "expected": {
+        "status": "completed",
+        "stop_code": null,
+        "total_tokens": 13
+      }
+    }
+  ]
+}

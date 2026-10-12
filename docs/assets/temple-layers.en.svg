@@ -1,0 +1,75 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="650" viewBox="0 0 1200 650" role="img" aria-labelledby="title desc">
+  <title id="title">Temple Concept Layers</title>
+  <desc id="desc">Human direction sits above six connected concerns: responsibility, work, guidance, coordination, assurance, and memory and learning. Repository-backed organizational memory supports every layer. Context routing and adaptive execution routing are separate parts of guidance.</desc>
+  <style>
+    text { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", sans-serif; }
+    .title { fill: #f8fafc; font-size: 28px; font-weight: 650; }
+    .subtitle { fill: #94a3b8; font-size: 15px; }
+    .eyebrow { fill: #7dd3fc; font-size: 13px; font-weight: 700; letter-spacing: 1.6px; }
+    .name { fill: #f8fafc; font-size: 18px; font-weight: 650; }
+    .question { fill: #cbd5e1; font-size: 15px; }
+    .mechanism { fill: #94a3b8; font-size: 14px; }
+    .index { fill: #5eead4; font-size: 13px; font-weight: 700; letter-spacing: 1px; }
+  </style>
+  <rect width="1200" height="650" rx="18" fill="#0b0f14"/>
+  <text x="48" y="48" class="title">Temple Concept Layers</text>
+  <text x="48" y="74" class="subtitle">The organization Temple puts in your repository. Each layer answers a different question.</text>
+
+  <rect x="48" y="100" width="1104" height="66" rx="12" fill="#142033" stroke="#60a5fa"/>
+  <text x="72" y="126" class="eyebrow">HUMAN DIRECTION &amp; AUTHORITY</text>
+  <text x="72" y="150" class="question">Goals · priorities · business truth · approval boundaries</text>
+
+  <line x1="76" y1="185" x2="76" y2="556" stroke="#2dd4bf" stroke-width="2"/>
+
+  <g transform="translate(48 184)">
+    <circle cx="28" cy="31" r="7" fill="#2dd4bf"/>
+    <rect x="48" width="1056" height="62" rx="10" fill="#111820" stroke="#263341"/>
+    <text x="70" y="25" class="index">L1</text>
+    <text x="116" y="25" class="name">Responsibility</text>
+    <text x="370" y="25" class="question">Who owns the work and who may approve?</text>
+    <text x="370" y="48" class="mechanism">Position · Agent Identity · Assignment · stable responsibility, separate from the executor</text>
+  </g>
+  <g transform="translate(48 254)">
+    <circle cx="28" cy="31" r="7" fill="#2dd4bf"/>
+    <rect x="48" width="1056" height="62" rx="10" fill="#0f161d" stroke="#263341"/>
+    <text x="70" y="25" class="index">L2</text>
+    <text x="116" y="25" class="name">Work</text>
+    <text x="370" y="25" class="question">What outcome and boundary were approved?</text>
+    <text x="370" y="48" class="mechanism">Spec · Work Item · Acceptance criteria · a durable unit that survives task and chat changes</text>
+  </g>
+  <g transform="translate(48 324)">
+    <circle cx="28" cy="31" r="7" fill="#2dd4bf"/>
+    <rect x="48" width="1056" height="62" rx="10" fill="#0e2525" stroke="#2dd4bf"/>
+    <text x="70" y="25" class="index">L3</text>
+    <text x="116" y="25" class="name">Guidance</text>
+    <text x="370" y="25" class="question">What should be read, and how should this step run?</text>
+    <text x="370" y="48" class="mechanism">Context Route · Skills · Adaptive Execution Route · knowledge and execution selection stay separate</text>
+  </g>
+  <g transform="translate(48 394)">
+    <circle cx="28" cy="31" r="7" fill="#2dd4bf"/>
+    <rect x="48" width="1056" height="62" rx="10" fill="#0f161d" stroke="#263341"/>
+    <text x="70" y="25" class="index">L4</text>
+    <text x="116" y="25" class="name">Coordination</text>
+    <text x="370" y="25" class="question">How can work move safely across people and Agents?</text>
+    <text x="370" y="48" class="mechanism">Claims · Dependencies · Parallel work · Handoffs · visible integration responsibility</text>
+  </g>
+  <g transform="translate(48 464)">
+    <circle cx="28" cy="31" r="7" fill="#fbbf24"/>
+    <rect x="48" width="1056" height="62" rx="10" fill="#251f11" stroke="#f59e0b"/>
+    <text x="70" y="25" class="index" style="fill:#fbbf24">L5</text>
+    <text x="116" y="25" class="name">Assurance</text>
+    <text x="370" y="25" class="question">What evidence supports the next decision?</text>
+    <text x="370" y="48" class="mechanism">Test · Evaluation · Independent QA · Release Gate · independently reviewable claims</text>
+  </g>
+  <g transform="translate(48 534)">
+    <circle cx="28" cy="31" r="7" fill="#2dd4bf"/>
+    <rect x="48" width="1056" height="62" rx="10" fill="#111820" stroke="#263341"/>
+    <text x="70" y="25" class="index">L6</text>
+    <text x="116" y="25" class="name">Memory &amp; learning</text>
+    <text x="370" y="25" class="question">What can the next task recover and improve?</text>
+    <text x="370" y="48" class="mechanism">Evidence · Decisions · Lessons · Recovery · learning is reviewed before it becomes policy</text>
+  </g>
+
+  <rect x="48" y="612" width="1104" height="2" fill="#475569"/>
+  <text x="48" y="637" class="eyebrow" style="fill:#cbd5e1">REPOSITORY-BACKED ORGANIZATIONAL MEMORY · CANONICAL · VERSIONED · RECOVERABLE</text>
+</svg>

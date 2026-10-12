@@ -1,0 +1,14 @@
+#!/bin/sh
+set -eu
+revisions=""
+while read -r local_ref local_oid remote_ref remote_oid; do
+  case "$local_oid" in
+    0000000000000000000000000000000000000000) continue ;;
+    *[!0-9a-f]*|'') echo "Invalid push object ID" >&2; exit 1 ;;
+  esac
+  revisions="$revisions $local_oid"
+done
+if [ -n "$revisions" ]; then
+  # Only full hexadecimal Git object IDs reach this deliberate word splitting.
+  node scripts/check-publication.mjs --history $revisions
+fi

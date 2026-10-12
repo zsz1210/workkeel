@@ -1,0 +1,88 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: Verify (Node.js 24)
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: package-lock.json
+      - id: install
+        name: Install pinned dependencies
+        if: ${{ always() }}
+        run: npm ci --ignore-scripts
+      - id: governance
+        name: Governance — repository and documentation checks
+        if: ${{ always() && steps.install.outcome == 'success' }}
+        run: npm run check
+      - id: doctor
+        name: Native clean-clone entrypoint and publication boundary
+        if: ${{ always() && steps.install.outcome == 'success' }}
+        run: |
+          node ./bin/workkeel.mjs start .
+          npm run check:publication
+          npm run check:public-history
+      - id: behavior
+        name: Behavior — bounded contract suite
+        if: ${{ always() && steps.install.outcome == 'success' }}
+        run: npm run test:fast
+      - name: Report verification results
+        if: ${{ always() }}
+        env:
+          INSTALL_OUTCOME: ${{ steps.install.outcome }}
+          GOVERNANCE_OUTCOME: ${{ steps.governance.outcome }}
+          DOCTOR_OUTCOME: ${{ steps.doctor.outcome }}
+          BEHAVIOR_OUTCOME: ${{ steps.behavior.outcome }}
+        run: |
+          {
+            echo "### Bounded CI verification"
+            echo
+            echo "- Runtime: \`Node.js 24\`"
+            echo "- Dependency install: \`$INSTALL_OUTCOME\`"
+            echo "- Repository checks: \`$GOVERNANCE_OUTCOME\`"
+            echo "- Clean-clone entrypoint and publication boundary: \`$DOCTOR_OUTCOME\`"
+            echo "- Fast contracts: \`$BEHAVIOR_OUTCOME\`"
+            echo
+            echo "Behavioral candidates require local full verification; Release publishing reruns it. Browser verification remains local."
+          } >> "$GITHUB_STEP_SUMMARY"
+      - name: Enforce aggregated verification result
+        if: ${{ always() }}
+        env:
+          INSTALL_OUTCOME: ${{ steps.install.outcome }}
+          GOVERNANCE_OUTCOME: ${{ steps.governance.outcome }}
+          DOCTOR_OUTCOME: ${{ steps.doctor.outcome }}
+          BEHAVIOR_OUTCOME: ${{ steps.behavior.outcome }}
+        run: |
+          failed=0
+          require_success() {
+            if [ "$2" != "success" ]; then
+              echo "$1 failed or did not run: $2"
+              failed=1
+            fi
+          }
+          require_success "Dependency install" "$INSTALL_OUTCOME"
+          require_success "Governance repository checks" "$GOVERNANCE_OUTCOME"
+          require_success "Clean-clone entrypoint and publication boundary" "$DOCTOR_OUTCOME"
+          require_success "Bounded contract suite" "$BEHAVIOR_OUTCOME"
+          exit "$failed"

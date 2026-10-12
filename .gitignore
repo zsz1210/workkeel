@@ -5,5 +5,7 @@ coverage/
 output/
 .ai-org/
 workkeel.lock
+workkeelw.mjs
+WORKKEEL.md
 .temple-tmp/
 .workkeel-private/
