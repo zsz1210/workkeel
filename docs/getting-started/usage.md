@@ -58,9 +58,11 @@ The npm installation exposes the CLI. It does not give an uninitialized project 
 
 ### Recommended: use Codex assistance
 
-For the first run, open Codex in the central framework repository and provide the absolute path to the target repository:
+For explicitly selected legacy initialization, open Codex in the target repository
+and provide the absolute path to the reviewed compatibility Skill in the framework
+source checkout:
 
-> Use temple-init with `/absolute/path/to/target`. Inspect its existing branch, review, and integration policy first; ask only about missing choices that affect execution. Then suggest English names for the five Assignment slots, show me the Position mapping and integration summary, wait for my confirmation, and initialize the project.
+> Initialize this target in legacy compatibility mode using `/absolute/path/to/workkeel/project-overlay/.agents/skills/temple-init/SKILL.md`. Inspect its existing branch, review, and integration policy first; ask only about missing choices that affect execution. Then suggest English names for the five Assignment slots, show me the Position mapping and integration summary, wait for my confirmation, and initialize the target project.
 
 The AI first inspects repository-local evidence such as `CONTRIBUTING.md`, governance or delivery documentation, CI configuration, and Git state. If those sources already define the workflow, the AI summarizes and cites them instead of asking the user to restate the rules. If an execution-relevant choice remains unclear, it asks only for that missing choice. The pre-write proposal combines the workflow summary, Position mappings, and names; the AI may create the configuration and run `init` only after confirmation.
 
