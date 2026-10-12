@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "temple.retrieval-config/v1",
+  "type": "object",
+  "required": ["schema_version", "selected_provider", "deterministic", "local_hybrid", "installs_model", "installs_embeddings", "installs_vector_database", "installs_daemon", "remote_search_enabled"],
+  "properties": {
+    "schema_version": { "const": "temple.retrieval-config/v1" },
+    "selected_provider": { "const": "repository-deterministic" },
+    "deterministic": { "type": "object", "required": ["enabled", "provider_id"], "properties": { "enabled": { "const": true }, "provider_id": { "const": "repository-deterministic" } }, "additionalProperties": false },
+    "local_hybrid": { "type": "object", "required": ["status", "provider_id", "command", "privacy", "deterministic_fallback"], "properties": { "status": { "enum": ["available_not_configured", "configured_unvalidated", "validated"] }, "provider_id": { "type": ["string", "null"] }, "command": { "type": ["array", "null"], "items": { "type": "string" } }, "privacy": { "const": "local-only" }, "deterministic_fallback": { "const": true } }, "additionalProperties": false },
+    "installs_model": { "const": false },
+    "installs_embeddings": { "const": false },
+    "installs_vector_database": { "const": false },
+    "installs_daemon": { "const": false },
+    "remote_search_enabled": { "const": false }
+  },
+  "additionalProperties": false
+}

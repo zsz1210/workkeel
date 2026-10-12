@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "temple.parallel-readiness/v1",
+  "type": "object",
+  "required": ["schema_version", "work_item_id", "requested_mode", "ready", "recommended_mode", "checks", "overlaps"],
+  "properties": {
+    "schema_version": { "const": "temple.parallel-readiness/v1" },
+    "work_item_id": { "type": "string" },
+    "requested_mode": { "enum": ["pending", "parallel", "sequential", "blocked"] },
+    "ready": { "type": "boolean" },
+    "recommended_mode": { "enum": ["parallel", "sequential", "blocked"] },
+    "checks": { "type": "array" },
+    "overlaps": { "type": "array" },
+    "specification_references": { "type": "object" }
+  },
+  "additionalProperties": true
+}

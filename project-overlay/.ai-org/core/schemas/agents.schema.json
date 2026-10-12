@@ -1,0 +1,12 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "temple.agents/v1",
+  "type": "object",
+  "required": ["schema_version", "naming_mode", "agents"],
+  "properties": {
+    "schema_version": { "const": "temple.agents/v1" },
+    "naming_mode": { "enum": ["manual", "ai-suggested"] },
+    "agents": { "type": "array", "minItems": 2, "items": { "type": "object", "required": ["id", "display_name", "active", "created_at"], "properties": { "id": { "type": "string", "pattern": "^agent-[a-z0-9][a-z0-9-]*$" }, "display_name": { "type": "string", "minLength": 2 }, "active": { "type": "boolean" }, "created_at": { "type": "string", "format": "date-time" } }, "additionalProperties": false } }
+  },
+  "additionalProperties": false
+}

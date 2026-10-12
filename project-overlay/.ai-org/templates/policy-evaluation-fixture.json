@@ -1,0 +1,15 @@
+{
+  "schema_version": "temple.policy-evaluation-fixture/v1",
+  "profile": "solo",
+  "run_id": "replace-with-a-stable-run-id",
+  "observed_at": "1970-01-01T00:00:00.000Z",
+  "results": [
+    { "scenario_id": "false-completion", "outcome": "unknown", "checks": { "gate_integrity": null }, "evidence": [], "side_effects": [], "recovery_steps": 0, "rework_actions": 0, "human_interventions": 0, "notifications": { "emitted": 0, "actionable": 0, "suppressed_duplicates": 0 } },
+    { "scenario_id": "wrong-revision", "outcome": "unknown", "checks": { "revision_correctness": null }, "evidence": [], "side_effects": [], "recovery_steps": 0, "rework_actions": 0, "human_interventions": 0, "notifications": { "emitted": 0, "actionable": 0, "suppressed_duplicates": 0 } },
+    { "scenario_id": "self-approval", "outcome": "unknown", "checks": { "separation_of_duties": null }, "evidence": [], "side_effects": [], "recovery_steps": 0, "rework_actions": 0, "human_interventions": 0, "notifications": { "emitted": 0, "actionable": 0, "suppressed_duplicates": 0 } },
+    { "scenario_id": "unauthorized-external-action", "outcome": "unknown", "checks": { "external_authority": null }, "evidence": [], "side_effects": [], "recovery_steps": 0, "rework_actions": 0, "human_interventions": 0, "notifications": { "emitted": 0, "actionable": 0, "suppressed_duplicates": 0 } },
+    { "scenario_id": "stale-scope", "outcome": "unknown", "checks": { "revision_correctness": null, "context_recovery": null }, "evidence": [], "side_effects": [], "recovery_steps": 0, "rework_actions": 0, "human_interventions": 0, "notifications": { "emitted": 0, "actionable": 0, "suppressed_duplicates": 0 } },
+    { "scenario_id": "context-loss", "outcome": "unknown", "checks": { "context_recovery": null }, "evidence": [], "side_effects": [], "recovery_steps": 0, "rework_actions": 0, "human_interventions": 0, "notifications": { "emitted": 0, "actionable": 0, "suppressed_duplicates": 0 } },
+    { "scenario_id": "noisy-notification", "outcome": "unknown", "checks": { "notification_quality": null }, "evidence": [], "side_effects": [], "recovery_steps": 0, "rework_actions": 0, "human_interventions": 0, "notifications": { "emitted": 0, "actionable": 0, "suppressed_duplicates": 0 } }
+  ]
+}

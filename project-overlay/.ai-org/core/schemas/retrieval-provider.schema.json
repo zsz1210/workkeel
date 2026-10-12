@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "temple.retrieval-provider/v1",
+  "title": "Retrieval Provider descriptor contract",
+  "description": "A provider exposes this metadata and implements search(request), which returns ranked repository references. Functions are validated at runtime rather than serialized in JSON.",
+  "type": "object",
+  "required": ["schema_version", "id", "mode", "semantic"],
+  "properties": {
+    "schema_version": { "const": "temple.retrieval-provider/v1" },
+    "id": { "type": "string", "minLength": 1 },
+    "mode": { "type": "string", "minLength": 1 },
+    "semantic": { "type": "boolean" }
+  },
+  "additionalProperties": false
+}

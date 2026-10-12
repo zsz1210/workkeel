@@ -1,0 +1,329 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "temple.execution-route/v1",
+  "$defs": {
+    "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9._-]*$" },
+    "nonBlank": { "type": "string", "minLength": 1, "pattern": ".*\\S.*" },
+    "strings": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/nonBlank" }
+    },
+    "ids": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/id" }
+    },
+    "resourceLimit": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["measure_id", "maximum", "unknown_handling"],
+      "properties": {
+        "measure_id": { "$ref": "#/$defs/id" },
+        "maximum": { "type": "number", "minimum": 0 },
+        "unknown_handling": { "enum": ["reject", "allow"] }
+      }
+    },
+    "resourceObservation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["measure_id", "status", "value", "source", "quality"],
+      "properties": {
+        "measure_id": { "$ref": "#/$defs/id" },
+        "status": { "enum": ["observed", "unavailable"] },
+        "value": { "type": ["number", "null"] },
+        "source": { "$ref": "#/$defs/nonBlank" },
+        "quality": { "enum": ["declared", "observed", "qualified"] }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "status": { "const": "observed" } }, "required": ["status"] },
+          "then": { "properties": { "value": { "type": "number", "minimum": 0 } } },
+          "else": { "properties": { "value": { "const": null } } }
+        }
+      ]
+    },
+    "taskShape": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["position_id", "lifecycle_stage", "task_kind", "risk_class", "context_profile_digest"],
+      "properties": {
+        "position_id": { "$ref": "#/$defs/nonBlank" },
+        "lifecycle_stage": { "$ref": "#/$defs/nonBlank" },
+        "task_kind": { "$ref": "#/$defs/nonBlank" },
+        "risk_class": { "enum": ["low", "standard", "high", "critical"] },
+        "context_profile_digest": { "$ref": "#/$defs/nonBlank" }
+      }
+    },
+    "capabilityRoute": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["required", "optional", "unknown_required", "unknown_optional"],
+      "properties": {
+        "required": { "allOf": [{ "$ref": "#/$defs/ids" }, { "minItems": 1 }] },
+        "optional": { "$ref": "#/$defs/ids" },
+        "unknown_required": { "$ref": "#/$defs/ids" },
+        "unknown_optional": { "$ref": "#/$defs/ids" }
+      }
+    },
+    "selection": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mode", "authority", "status", "rule_id", "fallback_applied", "unresolved_reason"],
+      "properties": {
+        "mode": { "enum": ["pinned", "shadow", "advisory"] },
+        "authority": { "enum": ["human-or-coordinator-pinned", "advisory", "none"] },
+        "status": { "enum": ["resolved", "unresolved"] },
+        "rule_id": { "type": ["string", "null"], "pattern": "^[a-z0-9][a-z0-9._-]*$" },
+        "fallback_applied": { "type": "boolean" },
+        "unresolved_reason": {
+          "enum": [null, "pinned-profile-not-found", "pinned-profile-ineligible", "unknown-required-capability", "no-eligible-profile"]
+        }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "mode": { "const": "pinned" } }, "required": ["mode"] },
+          "then": {
+            "properties": {
+              "authority": { "const": "human-or-coordinator-pinned" },
+              "fallback_applied": { "const": false },
+              "unresolved_reason": { "enum": [null, "pinned-profile-not-found", "pinned-profile-ineligible"] }
+            }
+          },
+          "else": {
+            "properties": {
+              "unresolved_reason": { "enum": [null, "unknown-required-capability", "no-eligible-profile"] }
+            }
+          }
+        },
+        {
+          "if": { "properties": { "mode": { "const": "advisory" } }, "required": ["mode"] },
+          "then": { "properties": { "authority": { "const": "advisory" } } }
+        },
+        {
+          "if": { "properties": { "mode": { "const": "shadow" } }, "required": ["mode"] },
+          "then": { "properties": { "authority": { "const": "none" } } }
+        }
+      ]
+    },
+    "selectedProfile": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["profile_id", "requested", "effective"],
+      "properties": {
+        "profile_id": { "$ref": "#/$defs/id" },
+        "requested": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["provider_id", "model", "reasoning_effort", "model_class", "reasoning_class"],
+          "properties": {
+            "provider_id": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/nonBlank" }] },
+            "model": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/nonBlank" }] },
+            "reasoning_effort": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/nonBlank" }] },
+            "model_class": { "enum": ["efficient", "balanced", "frontier", "specialized", "local"] },
+            "reasoning_class": { "enum": ["none", "light", "balanced", "deep"] }
+          },
+          "oneOf": [
+            {
+              "properties": {
+                "provider_id": { "const": null },
+                "model": { "const": null },
+                "reasoning_effort": { "const": null }
+              }
+            },
+            {
+              "properties": {
+                "provider_id": { "$ref": "#/$defs/nonBlank" },
+                "model": { "$ref": "#/$defs/nonBlank" },
+                "reasoning_effort": { "$ref": "#/$defs/nonBlank" }
+              }
+            }
+          ]
+        },
+        "effective": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["status", "provider_id", "model", "reasoning_effort"],
+          "properties": {
+            "status": { "const": "unobserved" },
+            "provider_id": { "const": null },
+            "model": { "const": null },
+            "reasoning_effort": { "const": null }
+          }
+        }
+      }
+    },
+    "eligibility": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["eligible_profile_ids", "rejected"],
+      "properties": {
+        "eligible_profile_ids": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/id" }
+        },
+        "rejected": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["profile_id", "reasons"],
+            "properties": {
+              "profile_id": { "$ref": "#/$defs/id" },
+              "reasons": {
+                "type": "array",
+                "minItems": 1,
+                "uniqueItems": true,
+                "items": { "$ref": "#/$defs/nonBlank" }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "generated_at", "policy", "request", "authority", "summary", "steps"],
+  "properties": {
+    "schema_version": { "const": "temple.execution-route/v1" },
+    "generated_at": { "type": "string", "format": "date-time" },
+    "policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema_version", "source"],
+      "properties": {
+        "schema_version": { "const": "temple.execution-policy/v1" },
+        "source": { "enum": ["project", "framework-default", "provided"] }
+      }
+    },
+    "request": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema_version", "work_item_id"],
+      "properties": {
+        "schema_version": { "const": "temple.execution-request/v1" },
+        "work_item_id": { "$ref": "#/$defs/nonBlank" }
+      }
+    },
+    "authority": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["automatic_execution", "provider_contact", "mutation_performed"],
+      "properties": {
+        "automatic_execution": { "const": false },
+        "provider_contact": { "const": false },
+        "mutation_performed": { "const": false }
+      }
+    },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["steps", "resolved", "unresolved"],
+      "properties": {
+        "steps": { "type": "integer", "minimum": 1 },
+        "resolved": { "type": "integer", "minimum": 0 },
+        "unresolved": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "steps": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["step_id", "responsibility", "task_shape", "capability_route", "selection", "selected", "eligibility", "resource_limits", "resource_observations"],
+        "properties": {
+          "step_id": { "$ref": "#/$defs/id" },
+          "responsibility": { "type": ["string", "null"], "pattern": "^[a-z0-9][a-z0-9._-]*$" },
+          "task_shape": { "$ref": "#/$defs/taskShape" },
+          "capability_route": { "$ref": "#/$defs/capabilityRoute" },
+          "selection": { "$ref": "#/$defs/selection" },
+          "selected": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/selectedProfile" }] },
+          "eligibility": { "$ref": "#/$defs/eligibility" },
+          "resource_limits": { "type": "array", "items": { "$ref": "#/$defs/resourceLimit" } },
+          "resource_observations": { "type": "array", "items": { "$ref": "#/$defs/resourceObservation" } }
+        },
+        "allOf": [
+          {
+            "if": {
+              "properties": { "selection": { "properties": { "status": { "const": "resolved" } }, "required": ["status"] } },
+              "required": ["selection"]
+            },
+            "then": {
+              "properties": {
+                "selected": { "$ref": "#/$defs/selectedProfile" },
+                "selection": { "properties": { "unresolved_reason": { "const": null } } }
+              },
+              "allOf": [
+                {
+                  "if": {
+                    "properties": {
+                      "selection": {
+                        "properties": { "mode": { "enum": ["advisory", "shadow"] } },
+                        "required": ["mode"]
+                      }
+                    },
+                    "required": ["selection"]
+                  },
+                  "then": {
+                    "properties": {
+                      "selection": {
+                        "anyOf": [
+                          { "properties": { "rule_id": { "$ref": "#/$defs/id" } }, "required": ["rule_id"] },
+                          { "properties": { "fallback_applied": { "const": true } }, "required": ["fallback_applied"] }
+                        ]
+                      }
+                    }
+                  }
+                }
+              ]
+            },
+            "else": {
+              "properties": {
+                "selected": { "type": "null" },
+                "selection": { "properties": { "unresolved_reason": { "not": { "type": "null" } } } }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "capability_route": {
+                  "properties": { "unknown_required": { "minItems": 1 } },
+                  "required": ["unknown_required"]
+                }
+              },
+              "required": ["capability_route"]
+            },
+            "then": {
+              "properties": {
+                "selection": {
+                  "properties": {
+                    "status": { "const": "unresolved" },
+                    "fallback_applied": { "const": false }
+                  },
+                  "allOf": [
+                    {
+                      "if": { "properties": { "mode": { "const": "pinned" } }, "required": ["mode"] },
+                      "then": {
+                        "properties": {
+                          "unresolved_reason": { "enum": ["pinned-profile-not-found", "pinned-profile-ineligible"] }
+                        }
+                      },
+                      "else": {
+                        "properties": { "unresolved_reason": { "const": "unknown-required-capability" } }
+                      }
+                    }
+                  ]
+                },
+                "selected": { "type": "null" }
+              }
+            }
+          }
+        ]
+      }
+    }
+  }
+}

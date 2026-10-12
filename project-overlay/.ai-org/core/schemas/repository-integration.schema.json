@@ -1,0 +1,75 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "temple.repository-integration/v1",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "status",
+    "authority",
+    "source",
+    "policy_refs",
+    "summary",
+    "integration_target",
+    "change_isolation",
+    "review_gate",
+    "recorded_at",
+    "recorded_by"
+  ],
+  "properties": {
+    "schema_version": { "const": "temple.repository-integration/v1" },
+    "status": { "enum": ["unconfirmed", "deferred", "confirmed"] },
+    "authority": { "const": "project" },
+    "source": { "enum": ["not-inspected", "repository-policy", "human-confirmed"] },
+    "policy_refs": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 },
+      "uniqueItems": true
+    },
+    "summary": { "type": ["string", "null"], "minLength": 1 },
+    "integration_target": { "type": ["string", "null"], "minLength": 1 },
+    "change_isolation": {
+      "enum": ["unknown", "project-defined", "required", "recommended", "not-required"]
+    },
+    "review_gate": { "enum": ["unknown", "project-defined", "required", "not-required"] },
+    "recorded_at": { "type": ["string", "null"], "format": "date-time" },
+    "recorded_by": { "type": ["string", "null"], "minLength": 1 }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "status": { "const": "unconfirmed" } } },
+      "then": {
+        "properties": {
+          "source": { "const": "not-inspected" },
+          "policy_refs": { "maxItems": 0 },
+          "summary": { "const": null },
+          "integration_target": { "const": null },
+          "change_isolation": { "const": "unknown" },
+          "review_gate": { "const": "unknown" },
+          "recorded_at": { "const": null },
+          "recorded_by": { "const": null }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "status": { "enum": ["deferred", "confirmed"] } } },
+      "then": {
+        "properties": {
+          "source": { "enum": ["repository-policy", "human-confirmed"] },
+          "summary": { "type": "string", "minLength": 1 },
+          "recorded_at": { "type": "string", "format": "date-time" },
+          "recorded_by": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "status": { "const": "confirmed" } } },
+      "then": {
+        "properties": {
+          "change_isolation": { "enum": ["project-defined", "required", "recommended", "not-required"] },
+          "review_gate": { "enum": ["project-defined", "required", "not-required"] }
+        }
+      }
+    }
+  ],
+  "additionalProperties": false
+}

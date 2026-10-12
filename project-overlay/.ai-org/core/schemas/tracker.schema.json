@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "temple.tracker/v1",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "profile",
+    "sync_granularity",
+    "default_provider_id",
+    "providers",
+    "field_ownership",
+    "updated_at",
+    "updated_by"
+  ],
+  "properties": {
+    "schema_version": { "const": "temple.tracker/v1" },
+    "profile": { "enum": ["repository-only", "linked-tracker", "externally-planned"] },
+    "sync_granularity": { "enum": ["parent-only", "team-visible", "full"] },
+    "default_provider_id": { "type": ["string", "null"] },
+    "providers": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "kind", "status", "project", "base_url", "read_policy", "write_policy"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$" },
+          "kind": { "enum": ["github", "jira", "generic"] },
+          "status": { "enum": ["active", "paused"] },
+          "project": { "type": "string", "minLength": 1 },
+          "base_url": { "type": "string", "format": "uri", "pattern": "^https://" },
+          "read_policy": { "enum": ["manual", "live"] },
+          "write_policy": { "enum": ["disabled", "plan-only", "approved"] }
+        },
+        "additionalProperties": false
+      }
+    },
+    "field_ownership": {
+      "type": "object",
+      "required": ["temple", "external", "negotiated"],
+      "properties": {
+        "temple": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
+        "external": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
+        "negotiated": { "type": "array", "items": { "type": "string" }, "uniqueItems": true }
+      },
+      "additionalProperties": false
+    },
+    "updated_at": { "type": ["string", "null"] },
+    "updated_by": { "type": ["string", "null"] }
+  },
+  "additionalProperties": false
+}

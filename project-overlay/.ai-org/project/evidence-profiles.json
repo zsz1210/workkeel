@@ -1,0 +1,47 @@
+{
+  "schema_version": "temple.evidence-profiles/v1",
+  "active_profile": "private",
+  "profiles": [
+    {
+      "id": "private",
+      "local_environment": "review-required",
+      "retained_legacy_repository": "review-required"
+    },
+    {
+      "id": "public",
+      "local_environment": "blocked",
+      "retained_legacy_repository": "review-required"
+    },
+    {
+      "id": "restricted",
+      "local_environment": "blocked",
+      "retained_legacy_repository": "blocked"
+    }
+  ],
+  "reviewed_legacy_baseline": null,
+  "reviewed_adapter_fixtures": [],
+  "public_evidence": [
+    "lifecycle-and-handoffs",
+    "quality-and-release-gates",
+    "model-routing-metadata",
+    "token-counts-and-budgets",
+    "credits-reset-retry-and-fallback-approvals",
+    "experiment-protocols-observations-and-outcomes"
+  ],
+  "local_only_evidence": [
+    "credentials-and-secret-values",
+    "raw-provider-telemetry",
+    "raw-prompts-and-responses",
+    "live-account-balance-and-reset-availability"
+  ],
+  "synthetic_usernames": [
+    "demo",
+    "example",
+    "fixture",
+    "sample",
+    "test",
+    "tester"
+  ],
+  "max_text_file_bytes": 2097152,
+  "binary_review": "required"
+}

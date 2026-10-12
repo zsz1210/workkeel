@@ -1,0 +1,92 @@
+{
+  "schema_version": "temple.workflow/v2",
+  "initial_state": "intake",
+  "default_profile": "standard",
+  "profile_order": ["lean", "standard", "high-assurance"],
+  "terminal_states": ["done", "concluded", "cancelled"],
+  "states": [
+    { "id": "intake", "owner_position": "engineering_manager" },
+    { "id": "spec", "owner_position": "product_manager" },
+    { "id": "design", "owner_position": "tech_lead" },
+    { "id": "build", "owner_position": "developer" },
+    { "id": "test", "owner_position": "quality_evaluator" },
+    { "id": "eval", "owner_position": "quality_evaluator" },
+    { "id": "independent_qa", "owner_position": "independent_qa" },
+    { "id": "release_gate", "owner_position": "release_manager" },
+    { "id": "done", "owner_position": "engineering_manager" },
+    { "id": "concluded", "owner_position": "engineering_manager" },
+    { "id": "blocked", "owner_position": "engineering_manager" },
+    { "id": "cancelled", "owner_position": "engineering_manager" }
+  ],
+  "profiles": [
+    {
+      "id": "lean",
+      "transitions": [
+        {
+          "from": "intake",
+          "to": "build",
+          "requires": ["work_order", "approved_scope", "acceptance_criteria", "technical_design", "risk_review", "profile_eligibility"]
+        },
+        { "from": "build", "to": "test", "requires": ["developer_handoff", "developer_evidence"] },
+        { "from": "test", "to": "done", "requires": ["test_evidence", "lean_closeout"] }
+      ]
+    },
+    {
+      "id": "standard",
+      "transitions": [
+        { "from": "intake", "to": "spec", "requires": ["work_order"] },
+        { "from": "spec", "to": "design", "requires": ["approved_scope", "acceptance_criteria"] },
+        { "from": "design", "to": "build", "requires": ["technical_design", "risk_review"] },
+        { "from": "build", "to": "test", "requires": ["developer_handoff", "developer_evidence"] },
+        { "from": "test", "to": "eval", "requires": ["test_evidence"] },
+        { "from": "eval", "to": "independent_qa", "requires": ["evaluation_report"] },
+        { "from": "independent_qa", "to": "release_gate", "requires": ["independent_qa_pass"] },
+        { "from": "release_gate", "to": "done", "requires": ["release_record", "required_human_approval"] }
+      ]
+    },
+    {
+      "id": "high-assurance",
+      "transitions": [
+        { "from": "intake", "to": "spec", "requires": ["work_order"] },
+        { "from": "spec", "to": "design", "requires": ["approved_scope", "acceptance_criteria"] },
+        { "from": "design", "to": "build", "requires": ["technical_design", "risk_review"] },
+        { "from": "build", "to": "test", "requires": ["developer_handoff", "developer_evidence"] },
+        { "from": "test", "to": "eval", "requires": ["test_evidence"] },
+        { "from": "eval", "to": "independent_qa", "requires": ["evaluation_report"] },
+        { "from": "independent_qa", "to": "release_gate", "requires": ["independent_qa_pass"] },
+        { "from": "release_gate", "to": "done", "requires": ["release_record", "required_human_approval"] }
+      ]
+    }
+  ],
+  "profile_assessment": {
+    "risk_tier_floors": {
+      "low": "lean",
+      "standard": "standard",
+      "high": "high-assurance",
+      "critical": "high-assurance"
+    },
+    "scope_class_floors": {
+      "bounded": "lean",
+      "ordinary": "standard",
+      "cross-system": "standard"
+    },
+    "escalation_triggers": [
+      { "id": "external-write", "minimum_profile": "standard" },
+      { "id": "publication", "minimum_profile": "standard" },
+      { "id": "schema-or-data-migration", "minimum_profile": "standard" },
+      { "id": "cross-repository-contract", "minimum_profile": "standard" },
+      { "id": "unresolved-scope", "minimum_profile": "standard" },
+      { "id": "independent-assurance-required", "minimum_profile": "standard" },
+      { "id": "deployment", "minimum_profile": "high-assurance" },
+      { "id": "production-release", "minimum_profile": "high-assurance" },
+      { "id": "irreversible-action", "minimum_profile": "high-assurance" },
+      { "id": "sensitive-data", "minimum_profile": "high-assurance" },
+      { "id": "security-boundary", "minimum_profile": "high-assurance" }
+    ]
+  },
+  "escape_transitions": [
+    { "from": "*", "to": "blocked", "requires": ["blocker_record"] },
+    { "from": "blocked", "to": "previous", "requires": ["resolution_evidence"] },
+    { "from": "*", "to": "cancelled", "requires": ["cancellation_reason"] }
+  ]
+}

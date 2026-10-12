@@ -1,0 +1,40 @@
+{
+  "schema_version": "temple.ui-design-policy/v1",
+  "principle": "When a work item has a user-facing interface, UI design is owned; a separate pre-implementation visual artifact is required only when risk, collaboration cost, or visual sensitivity justifies it.",
+  "delivery_modes": [
+    {
+      "id": "not-applicable",
+      "purpose": "Record explicitly that the work item has no user-facing interface and therefore needs no UI artifact.",
+      "preimplementation_visual_artifact_required": false,
+      "prebuild_evidence": [],
+      "minimum_evidence": []
+    },
+    {
+      "id": "code-first",
+      "purpose": "Move quickly on low-risk or exploratory UI through an executable implementation.",
+      "preimplementation_visual_artifact_required": false,
+      "prebuild_evidence": ["ui_brief", "required_state_coverage"],
+      "minimum_evidence": ["ui_brief", "runtime_visual_review", "required_state_coverage"]
+    },
+    {
+      "id": "preview-first",
+      "purpose": "Confirm important layout, states, and interaction direction before full implementation.",
+      "preimplementation_visual_artifact_required": true,
+      "prebuild_evidence": ["ui_brief", "preview_artifact", "review_record"],
+      "minimum_evidence": ["ui_brief", "preview_artifact", "review_record", "runtime_visual_review"]
+    },
+    {
+      "id": "design-led",
+      "purpose": "Use an approved design source for brand-sensitive, high-rework-cost, or multi-party delivery.",
+      "preimplementation_visual_artifact_required": true,
+      "prebuild_evidence": ["ui_brief", "versioned_design_source", "approval_record", "implementation_mapping"],
+      "minimum_evidence": ["ui_brief", "versioned_design_source", "approval_record", "implementation_mapping", "runtime_visual_review"]
+    }
+  ],
+  "tool_policy": {
+    "required_tool": null,
+    "allowed_examples": ["Figma", "SwiftUI Preview", "Storybook", "HTML prototype", "annotated screenshots", "Markdown UI specification"],
+    "selection_rule": "Choose the lightest tool that can produce the required evidence for the selected delivery mode."
+  },
+  "selection_scope": "Record the selected mode on the Work Item. For interface work, preserve the rationale and evidence in a project-owned UI brief; a later project profile may define a default."
+}

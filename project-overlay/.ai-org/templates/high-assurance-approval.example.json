@@ -1,0 +1,14 @@
+{
+  "schema_version": "temple.approval/v1",
+  "work_item_id": "WI-0001",
+  "decision": "go",
+  "scope_revision": "0000000000000000000000000000000000000000",
+  "approved_at": "2026-01-01T00:00:00.000Z",
+  "approvals": [
+    {
+      "principal_id": "principal-reviewer",
+      "approved_at": "2026-01-01T00:00:00.000Z"
+    }
+  ],
+  "external_action_authorized": false
+}

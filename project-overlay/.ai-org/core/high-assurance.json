@@ -1,0 +1,60 @@
+{
+  "schema_version": "temple.high-assurance/v1",
+  "profile": "high-assurance",
+  "human_accountability": {
+    "minimum_active_principals": 2,
+    "all_active_agents_require_sponsors": true,
+    "developer_independent_qa_separation": true,
+    "developer_release_manager_separation": true
+  },
+  "risk_tiers": {
+    "low": {
+      "artifact_depth": "lean",
+      "allowed_ui_modes": ["not-applicable", "code-first", "preview-first", "design-led"],
+      "minimum_approvals": 1,
+      "rollback_status": "planned"
+    },
+    "standard": {
+      "artifact_depth": "standard",
+      "allowed_ui_modes": ["not-applicable", "code-first", "preview-first", "design-led"],
+      "minimum_approvals": 1,
+      "rollback_status": "planned"
+    },
+    "high": {
+      "artifact_depth": "controlled",
+      "allowed_ui_modes": ["not-applicable", "preview-first", "design-led"],
+      "minimum_approvals": 1,
+      "rollback_status": "planned"
+    },
+    "critical": {
+      "artifact_depth": "controlled",
+      "allowed_ui_modes": ["not-applicable", "design-led"],
+      "minimum_approvals": 2,
+      "rollback_status": "verified"
+    }
+  },
+  "transition_requirements": {
+    "design->build": {
+      "requirement": "assurance_risk_review",
+      "evidence_kind": "risk",
+      "accepted_outcomes": ["accepted", "mitigated"]
+    },
+    "build->test": {
+      "requirement": "exact_candidate_revision",
+      "evidence_kind": "git-revision",
+      "accepted_outcomes": ["verified"]
+    },
+    "test->eval": {
+      "requirement": "normalized_test_evidence",
+      "evidence_kind": "test",
+      "accepted_outcomes": ["pass"]
+    },
+    "independent_qa->release_gate": {
+      "requirement": "normalized_independent_qa_evidence",
+      "evidence_kinds": ["test", "runtime"],
+      "accepted_outcomes": ["pass"],
+      "required_position": "independent_qa"
+    }
+  },
+  "external_action_performed": false
+}

@@ -3,9 +3,9 @@ node_modules/
 coverage/
 *.log
 output/
-.ai-org/
-workkeel.lock
-workkeelw.mjs
-WORKKEEL.md
+/.ai-org/
+/workkeel.lock
+/workkeelw.mjs
+/WORKKEEL.md
 .temple-tmp/
 .workkeel-private/

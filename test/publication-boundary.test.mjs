@@ -28,6 +28,18 @@ test('private paths and undeclared files fail even if force-staged',t=>{
  fs.writeFileSync(path.join(cwd,'unreviewed.txt'),'public-looking but unreviewed');
  assert.ok(checkPublication(cwd).failures.some(r=>r.path==='unreviewed.txt'&&r.rule==='not-allowlisted'));
 });
+test('source ignore rules retain nested framework templates while excluding local task state',t=>{
+ const {cwd,git}=fixture(t);
+ fs.copyFileSync(path.join(root,'.gitignore'),path.join(cwd,'.gitignore'));
+ const publicPaths=['project-overlay/.ai-org/core/positions.json','docs/getting-started/workkeel.md'];
+ const localPaths=['.ai-org/private/task.json','WORKKEEL.md','workkeelw.mjs','workkeel.lock'];
+ for(const file of [...publicPaths,...localPaths]){
+  fs.mkdirSync(path.dirname(path.join(cwd,file)),{recursive:true});fs.writeFileSync(path.join(cwd,file),'Synthetic fixture');
+ }
+ const visible=git('ls-files','--others','--exclude-standard').split('\n');
+ for(const file of publicPaths)assert.ok(visible.includes(file),file);
+ for(const file of localPaths)assert.ok(!visible.includes(file),file);
+});
 test('a secret deleted from the latest tree remains rejected in outgoing history',t=>{
  const {cwd,git}=fixture(t);fs.writeFileSync(path.join(cwd,'README.md'),'ghp_'+'A'.repeat(36));
  git('add','README.md');git('commit','-qm','Synthetic forbidden token');

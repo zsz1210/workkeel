@@ -1,0 +1,128 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "temple.high-assurance/v1",
+  "type": "object",
+  "required": ["schema_version", "profile", "human_accountability", "risk_tiers", "transition_requirements", "external_action_performed"],
+  "properties": {
+    "schema_version": { "const": "temple.high-assurance/v1" },
+    "profile": { "const": "high-assurance" },
+    "human_accountability": {
+      "type": "object",
+      "required": ["minimum_active_principals", "all_active_agents_require_sponsors", "developer_independent_qa_separation", "developer_release_manager_separation"],
+      "properties": {
+        "minimum_active_principals": { "const": 2 },
+        "all_active_agents_require_sponsors": { "const": true },
+        "developer_independent_qa_separation": { "const": true },
+        "developer_release_manager_separation": { "const": true }
+      },
+      "additionalProperties": false
+    },
+    "risk_tiers": {
+      "type": "object",
+      "required": ["low", "standard", "high", "critical"],
+      "properties": {
+        "low": { "$ref": "#/$defs/lowRisk" },
+        "standard": { "$ref": "#/$defs/standardRisk" },
+        "high": { "$ref": "#/$defs/highRisk" },
+        "critical": { "$ref": "#/$defs/criticalRisk" }
+      },
+      "additionalProperties": false
+    },
+    "transition_requirements": {
+      "type": "object",
+      "required": ["design->build", "build->test", "test->eval", "independent_qa->release_gate"],
+      "properties": {
+        "design->build": {
+          "type": "object",
+          "required": ["requirement", "evidence_kind", "accepted_outcomes"],
+          "properties": {
+            "requirement": { "const": "assurance_risk_review" },
+            "evidence_kind": { "const": "risk" },
+            "accepted_outcomes": { "const": ["accepted", "mitigated"] }
+          },
+          "additionalProperties": false
+        },
+        "build->test": {
+          "type": "object",
+          "required": ["requirement", "evidence_kind", "accepted_outcomes"],
+          "properties": {
+            "requirement": { "const": "exact_candidate_revision" },
+            "evidence_kind": { "const": "git-revision" },
+            "accepted_outcomes": { "const": ["verified"] }
+          },
+          "additionalProperties": false
+        },
+        "test->eval": {
+          "type": "object",
+          "required": ["requirement", "evidence_kind", "accepted_outcomes"],
+          "properties": {
+            "requirement": { "const": "normalized_test_evidence" },
+            "evidence_kind": { "const": "test" },
+            "accepted_outcomes": { "const": ["pass"] }
+          },
+          "additionalProperties": false
+        },
+        "independent_qa->release_gate": {
+          "type": "object",
+          "required": ["requirement", "evidence_kinds", "accepted_outcomes", "required_position"],
+          "properties": {
+            "requirement": { "const": "normalized_independent_qa_evidence" },
+            "evidence_kinds": { "const": ["test", "runtime"] },
+            "accepted_outcomes": { "const": ["pass"] },
+            "required_position": { "const": "independent_qa" }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "external_action_performed": { "const": false }
+  },
+  "$defs": {
+    "lowRisk": {
+      "type": "object",
+      "required": ["artifact_depth", "allowed_ui_modes", "minimum_approvals", "rollback_status"],
+      "properties": {
+        "artifact_depth": { "const": "lean" },
+        "allowed_ui_modes": { "const": ["not-applicable", "code-first", "preview-first", "design-led"] },
+        "minimum_approvals": { "const": 1 },
+        "rollback_status": { "const": "planned" }
+      },
+      "additionalProperties": false
+    },
+    "standardRisk": {
+      "type": "object",
+      "required": ["artifact_depth", "allowed_ui_modes", "minimum_approvals", "rollback_status"],
+      "properties": {
+        "artifact_depth": { "const": "standard" },
+        "allowed_ui_modes": { "const": ["not-applicable", "code-first", "preview-first", "design-led"] },
+        "minimum_approvals": { "const": 1 },
+        "rollback_status": { "const": "planned" }
+      },
+      "additionalProperties": false
+    },
+    "highRisk": {
+      "type": "object",
+      "required": ["artifact_depth", "allowed_ui_modes", "minimum_approvals", "rollback_status"],
+      "properties": {
+        "artifact_depth": { "const": "controlled" },
+        "allowed_ui_modes": { "const": ["not-applicable", "preview-first", "design-led"] },
+        "minimum_approvals": { "const": 1 },
+        "rollback_status": { "const": "planned" }
+      },
+      "additionalProperties": false
+    },
+    "criticalRisk": {
+      "type": "object",
+      "required": ["artifact_depth", "allowed_ui_modes", "minimum_approvals", "rollback_status"],
+      "properties": {
+        "artifact_depth": { "const": "controlled" },
+        "allowed_ui_modes": { "const": ["not-applicable", "design-led"] },
+        "minimum_approvals": { "const": 2 },
+        "rollback_status": { "const": "verified" }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

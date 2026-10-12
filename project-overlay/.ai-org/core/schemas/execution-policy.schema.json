@@ -1,0 +1,133 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "temple.execution-policy/v1",
+  "$defs": {
+    "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9._-]*$" },
+    "strings": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "type": "string", "minLength": 1 } },
+    "riskClasses": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "enum": ["low", "standard", "high", "critical"] }
+    }
+  },
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "authority", "capabilities", "profiles", "rules", "fallback_profile_id", "resource_measures"],
+  "properties": {
+    "schema_version": { "const": "temple.execution-policy/v1" },
+    "authority": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["default_selection_mode", "supported_selection_modes", "automatic_execution", "provider_contact", "mutation_performed"],
+      "properties": {
+        "default_selection_mode": { "enum": ["pinned", "shadow", "advisory"] },
+        "supported_selection_modes": {
+          "type": "array",
+          "minItems": 3,
+          "maxItems": 3,
+          "uniqueItems": true,
+          "items": { "enum": ["pinned", "shadow", "advisory"] }
+        },
+        "automatic_execution": { "const": false },
+        "provider_contact": { "const": false },
+        "mutation_performed": { "const": false }
+      }
+    },
+    "capabilities": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "kind", "description", "modalities"],
+        "properties": {
+          "id": { "$ref": "#/$defs/id" },
+          "kind": { "$ref": "#/$defs/id" },
+          "description": { "type": "string", "minLength": 1 },
+          "modalities": { "$ref": "#/$defs/strings" }
+        }
+      }
+    },
+    "profiles": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "status", "model_class", "reasoning_class", "provider_id", "model", "reasoning_effort", "capabilities", "modalities", "allowed_data_classes", "execution_boundaries", "risk_classes", "resource_estimates"],
+        "properties": {
+          "id": { "$ref": "#/$defs/id" },
+          "status": { "enum": ["active", "disabled"] },
+          "model_class": { "enum": ["efficient", "balanced", "frontier", "specialized", "local"] },
+          "reasoning_class": { "enum": ["none", "light", "balanced", "deep"] },
+          "provider_id": { "type": ["string", "null"], "minLength": 1 },
+          "model": { "type": ["string", "null"], "minLength": 1 },
+          "reasoning_effort": { "type": ["string", "null"], "minLength": 1 },
+          "capabilities": { "$ref": "#/$defs/strings" },
+          "modalities": { "$ref": "#/$defs/strings" },
+          "allowed_data_classes": { "$ref": "#/$defs/strings" },
+          "execution_boundaries": { "$ref": "#/$defs/strings" },
+          "risk_classes": { "$ref": "#/$defs/riskClasses" },
+          "resource_estimates": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["measure_id", "value", "quality", "evidence_ref"],
+              "properties": {
+                "measure_id": { "$ref": "#/$defs/id" },
+                "value": { "type": "number", "minimum": 0 },
+                "quality": { "enum": ["declared", "observed", "qualified"] },
+                "evidence_ref": { "type": "string", "minLength": 1 }
+              }
+            }
+          }
+        }
+      }
+    },
+    "rules": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "match", "preference_order"],
+        "properties": {
+          "id": { "$ref": "#/$defs/id" },
+          "match": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["task_kinds", "lifecycle_stages", "risk_classes"],
+            "properties": {
+              "task_kinds": { "$ref": "#/$defs/strings" },
+              "lifecycle_stages": { "$ref": "#/$defs/strings" },
+              "risk_classes": {
+                "type": "array",
+                "minItems": 1,
+                "uniqueItems": true,
+                "items": { "enum": ["*", "low", "standard", "high", "critical"] }
+              }
+            }
+          },
+          "preference_order": { "$ref": "#/$defs/strings" }
+        }
+      }
+    },
+    "fallback_profile_id": { "$ref": "#/$defs/id" },
+    "resource_measures": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "unit", "aggregation"],
+        "properties": {
+          "id": { "$ref": "#/$defs/id" },
+          "unit": { "$ref": "#/$defs/id" },
+          "aggregation": { "enum": ["sum", "maximum", "latest"] }
+        }
+      }
+    }
+  }
+}

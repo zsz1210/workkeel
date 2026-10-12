@@ -1,0 +1,20 @@
+{
+  "schema_version": "temple.retrieval-config/v1",
+  "selected_provider": "repository-deterministic",
+  "deterministic": {
+    "enabled": true,
+    "provider_id": "repository-deterministic"
+  },
+  "local_hybrid": {
+    "status": "available_not_configured",
+    "provider_id": null,
+    "command": null,
+    "privacy": "local-only",
+    "deterministic_fallback": true
+  },
+  "installs_model": false,
+  "installs_embeddings": false,
+  "installs_vector_database": false,
+  "installs_daemon": false,
+  "remote_search_enabled": false
+}

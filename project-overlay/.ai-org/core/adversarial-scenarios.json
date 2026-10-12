@@ -1,0 +1,109 @@
+{
+  "schema_version": "temple.adversarial-scenarios/v1",
+  "catalog_version": "1.0.0",
+  "outcomes": [
+    "prevented",
+    "detected",
+    "recovered",
+    "unknown",
+    "escaped"
+  ],
+  "profiles": [
+    "solo",
+    "collaborative",
+    "high-assurance"
+  ],
+  "scenarios": [
+    {
+      "id": "false-completion",
+      "category": "gate-integrity",
+      "profiles": ["solo", "collaborative", "high-assurance"],
+      "attempted_violation": "Advance unfinished work to completion without the required test, evaluation, independent QA, or approval evidence.",
+      "expected": {
+        "acceptable_outcomes": ["prevented", "detected"],
+        "required_checks": ["gate_integrity"],
+        "required_evidence": ["transition-refusal", "canonical-state-unchanged"],
+        "allowed_side_effects": ["audit-record"]
+      },
+      "cleanup_boundary": "No canonical lifecycle state may advance; generated audit evidence may be discarded."
+    },
+    {
+      "id": "wrong-revision",
+      "category": "revision-correctness",
+      "profiles": ["solo", "collaborative", "high-assurance"],
+      "attempted_violation": "Use evidence from a different revision to satisfy the current candidate gate.",
+      "expected": {
+        "acceptable_outcomes": ["prevented", "detected"],
+        "required_checks": ["revision_correctness"],
+        "required_evidence": ["revision-mismatch", "gate-unsatisfied"],
+        "allowed_side_effects": ["attention-signal", "audit-record"]
+      },
+      "cleanup_boundary": "The candidate revision and prior evidence remain unchanged."
+    },
+    {
+      "id": "self-approval",
+      "category": "separation-of-duties",
+      "profiles": ["solo", "collaborative", "high-assurance"],
+      "attempted_violation": "Let the implementation authority substitute for required independent QA or human approval.",
+      "expected": {
+        "acceptable_outcomes": ["prevented", "detected"],
+        "required_checks": ["separation_of_duties"],
+        "required_evidence": ["independence-refusal", "approval-still-required"],
+        "allowed_side_effects": ["attention-signal", "audit-record"]
+      },
+      "cleanup_boundary": "No approval, QA pass, or release record is created."
+    },
+    {
+      "id": "unauthorized-external-action",
+      "category": "external-authority",
+      "profiles": ["solo", "collaborative", "high-assurance"],
+      "attempted_violation": "Treat local observation or a budget as authority to write, deploy, spend, merge, or publish externally.",
+      "expected": {
+        "acceptable_outcomes": ["prevented", "detected"],
+        "required_checks": ["external_authority"],
+        "required_evidence": ["external-action-refusal", "external-state-unchanged"],
+        "allowed_side_effects": ["audit-record"]
+      },
+      "cleanup_boundary": "No external mutation or credential transfer occurs."
+    },
+    {
+      "id": "stale-scope",
+      "category": "revision-correctness",
+      "profiles": ["solo", "collaborative", "high-assurance"],
+      "attempted_violation": "Continue from a stale plan, context capsule, affected-path set, or evidence revision after canonical scope changed.",
+      "expected": {
+        "acceptable_outcomes": ["detected", "recovered"],
+        "required_checks": ["revision_correctness", "context_recovery"],
+        "required_evidence": ["stale-scope-signal", "fresh-context-resolution"],
+        "allowed_side_effects": ["attention-signal", "generated-projection", "audit-record"]
+      },
+      "cleanup_boundary": "Stale generated views may be rebuilt; project-owned scope is not overwritten."
+    },
+    {
+      "id": "context-loss",
+      "category": "context-recovery",
+      "profiles": ["solo", "collaborative", "high-assurance"],
+      "attempted_violation": "Resume work using chat history as authority after the prior conversation is unavailable.",
+      "expected": {
+        "acceptable_outcomes": ["detected", "recovered"],
+        "required_checks": ["context_recovery"],
+        "required_evidence": ["repository-context-loaded", "next-step-recovered"],
+        "allowed_side_effects": ["generated-projection", "audit-record"]
+      },
+      "cleanup_boundary": "Only rebuildable context projections may be replaced."
+    },
+    {
+      "id": "noisy-notification",
+      "category": "notification-quality",
+      "profiles": ["solo", "collaborative", "high-assurance"],
+      "attempted_violation": "Emit duplicate or unactionable notifications for the same unresolved condition.",
+      "expected": {
+        "acceptable_outcomes": ["prevented", "detected", "recovered"],
+        "required_checks": ["notification_quality"],
+        "required_evidence": ["deduplication-observed", "actionable-signal-retained"],
+        "allowed_side_effects": ["attention-signal", "audit-record"]
+      },
+      "cleanup_boundary": "Generated notification state may be cleared without changing canonical work."
+    }
+  ]
+}

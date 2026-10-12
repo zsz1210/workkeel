@@ -1,0 +1,159 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "temple.federation/v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "participants", "initiatives", "dependencies", "contracts", "rollout_waves", "updated_at"],
+  "properties": {
+    "schema_version": { "const": "temple.federation/v1" },
+    "participants": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/participant" }
+    },
+    "initiatives": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/initiative" }
+    },
+    "dependencies": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/dependency" }
+    },
+    "contracts": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/contract" }
+    },
+    "rollout_waves": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/rollout_wave" }
+    },
+    "updated_at": { "type": "string", "format": "date-time" }
+  },
+  "$defs": {
+    "project_id": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9-]*$"
+    },
+    "record_id": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9-]{0,79}$"
+    },
+    "revision": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{40,64}$"
+    },
+    "non_empty_string": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200
+    },
+    "repository_path": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 500,
+      "pattern": "^(?!/)(?![A-Za-z]:)(?!.*\\\\)(?:\\.\\./)*(?!\\.{1,2}(?:/|$))(?!.*//)(?!.*\\/\\.{1,2}(?:/|$))(?!.*\\/$).+$"
+    },
+    "composite_reference": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["project_id", "work_item_id", "revision"],
+      "properties": {
+        "project_id": { "$ref": "#/$defs/project_id" },
+        "work_item_id": {
+          "type": "string",
+          "pattern": "^WI-(?:[0-9]{4,}|[0-9]{8}-[A-F0-9]{10})$"
+        },
+        "revision": { "$ref": "#/$defs/revision" }
+      }
+    },
+    "contract_reference": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "version", "revision"],
+      "properties": {
+        "id": { "$ref": "#/$defs/record_id" },
+        "version": { "$ref": "#/$defs/non_empty_string" },
+        "revision": { "$ref": "#/$defs/non_empty_string" }
+      }
+    },
+    "participant": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "path", "expected_project_id", "expected_revision", "expected_revision_observed_at"],
+      "properties": {
+        "id": { "$ref": "#/$defs/project_id" },
+        "path": { "$ref": "#/$defs/repository_path" },
+        "expected_project_id": { "$ref": "#/$defs/project_id" },
+        "expected_revision": { "$ref": "#/$defs/revision" },
+        "expected_revision_observed_at": { "type": "string", "format": "date-time" },
+        "max_age_seconds": { "type": "integer", "minimum": 1, "maximum": 31536000 },
+        "max_work_items": { "type": "integer", "minimum": 1, "maximum": 250 }
+      }
+    },
+    "initiative": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "version", "revision", "work_items"],
+      "properties": {
+        "id": { "$ref": "#/$defs/record_id" },
+        "version": { "$ref": "#/$defs/non_empty_string" },
+        "revision": { "$ref": "#/$defs/non_empty_string" },
+        "work_items": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/composite_reference" }
+        }
+      }
+    },
+    "dependency": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "version", "revision", "predecessor", "successor"],
+      "properties": {
+        "id": { "$ref": "#/$defs/record_id" },
+        "version": { "$ref": "#/$defs/non_empty_string" },
+        "revision": { "$ref": "#/$defs/non_empty_string" },
+        "predecessor": { "$ref": "#/$defs/composite_reference" },
+        "successor": { "$ref": "#/$defs/composite_reference" }
+      }
+    },
+    "contract": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "kind", "version", "revision", "compatibility", "owner", "consumers"],
+      "properties": {
+        "id": { "$ref": "#/$defs/record_id" },
+        "kind": { "enum": ["api", "event"] },
+        "version": { "$ref": "#/$defs/non_empty_string" },
+        "revision": { "$ref": "#/$defs/non_empty_string" },
+        "compatibility": { "enum": ["compatible", "incompatible", "unknown"] },
+        "owner": { "$ref": "#/$defs/composite_reference" },
+        "consumers": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/composite_reference" }
+        }
+      }
+    },
+    "rollout_wave": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "version", "revision", "order", "work_items", "contract_refs"],
+      "properties": {
+        "id": { "$ref": "#/$defs/record_id" },
+        "version": { "$ref": "#/$defs/non_empty_string" },
+        "revision": { "$ref": "#/$defs/non_empty_string" },
+        "order": { "type": "integer", "minimum": 1 },
+        "work_items": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/composite_reference" }
+        },
+        "contract_refs": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/contract_reference" }
+        }
+      }
+    }
+  }
+}

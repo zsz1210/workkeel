@@ -1,0 +1,67 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "temple.workflow/v2",
+  "type": "object",
+  "required": ["schema_version", "initial_state", "default_profile", "profile_order", "terminal_states", "states", "profiles", "profile_assessment", "escape_transitions"],
+  "properties": {
+    "schema_version": { "const": "temple.workflow/v2" },
+    "initial_state": { "type": "string", "minLength": 1 },
+    "default_profile": { "$ref": "#/$defs/profile" },
+    "profile_order": { "const": ["lean", "standard", "high-assurance"] },
+    "terminal_states": { "type": "array", "contains": { "const": "concluded" }, "uniqueItems": true, "items": { "type": "string", "minLength": 1 } },
+    "states": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["id", "owner_position"],
+        "properties": { "id": { "type": "string", "minLength": 1 }, "owner_position": { "type": "string", "minLength": 1 } },
+        "additionalProperties": false
+      }
+    },
+    "profiles": {
+      "type": "array",
+      "minItems": 3,
+      "items": {
+        "type": "object",
+        "required": ["id", "transitions"],
+        "properties": { "id": { "$ref": "#/$defs/profile" }, "transitions": { "type": "array", "items": { "$ref": "#/$defs/transition" } } },
+        "additionalProperties": false
+      }
+    },
+    "profile_assessment": {
+      "type": "object",
+      "required": ["risk_tier_floors", "scope_class_floors", "escalation_triggers"],
+      "properties": {
+        "risk_tier_floors": { "$ref": "#/$defs/profileFloorMap" },
+        "scope_class_floors": { "$ref": "#/$defs/profileFloorMap" },
+        "escalation_triggers": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["id", "minimum_profile"],
+            "properties": { "id": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$" }, "minimum_profile": { "$ref": "#/$defs/profile" } },
+            "additionalProperties": false
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "escape_transitions": { "type": "array", "items": { "$ref": "#/$defs/transition" } }
+  },
+  "$defs": {
+    "profile": { "enum": ["lean", "standard", "high-assurance"] },
+    "profileFloorMap": { "type": "object", "minProperties": 1, "additionalProperties": { "$ref": "#/$defs/profile" } },
+    "transition": {
+      "type": "object",
+      "required": ["from", "to", "requires"],
+      "properties": {
+        "from": { "type": "string", "minLength": 1 },
+        "to": { "type": "string", "minLength": 1 },
+        "requires": { "type": "array", "uniqueItems": true, "items": { "type": "string", "minLength": 1 } }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

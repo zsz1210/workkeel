@@ -1,0 +1,160 @@
+{
+  "schema_version": "temple.usage-policy/v1",
+  "objective": "balanced",
+  "data_scope": {
+    "raw_observations": "project-local",
+    "organization_sharing": "disabled",
+    "framework_sharing": "disabled",
+    "raw_prompts_retained": false,
+    "hidden_reasoning_retained": false
+  },
+  "task_shape": {
+    "required_dimensions": [
+      "position_id",
+      "lifecycle_stage",
+      "task_kind",
+      "risk_class",
+      "context_profile_digest"
+    ],
+    "fallback_dimensions": [
+      "position_id",
+      "lifecycle_stage"
+    ],
+    "unknown_handling": "separate"
+  },
+  "seed_policy": {
+    "id": "framework-seed-v1",
+    "status": "active",
+    "profiles": [
+      {
+        "id": "mechanical-fast",
+        "model_class": "efficient",
+        "reasoning_class": "light",
+        "provider_id": null,
+        "model": null,
+        "reasoning_effort": null
+      },
+      {
+        "id": "lightweight-quality",
+        "model_class": "efficient",
+        "reasoning_class": "deep",
+        "provider_id": null,
+        "model": null,
+        "reasoning_effort": null
+      },
+      {
+        "id": "standard",
+        "model_class": "balanced",
+        "reasoning_class": "balanced",
+        "provider_id": null,
+        "model": null,
+        "reasoning_effort": null
+      },
+      {
+        "id": "critical-planning",
+        "model_class": "frontier",
+        "reasoning_class": "deep",
+        "provider_id": null,
+        "model": null,
+        "reasoning_effort": null
+      }
+    ],
+    "rules": [
+      {
+        "id": "mechanical-low-risk",
+        "task_kinds": ["mechanical"],
+        "risk_classes": ["low"],
+        "profile_id": "mechanical-fast"
+      },
+      {
+        "id": "explicit-bounded-delivery",
+        "task_kinds": ["bounded"],
+        "risk_classes": ["low", "standard"],
+        "profile_id": "standard"
+      },
+      {
+        "id": "semantic-ambiguity-escalation",
+        "task_kinds": ["semantic-ambiguity", "invariant-sensitive"],
+        "risk_classes": ["low", "standard"],
+        "profile_id": "lightweight-quality"
+      },
+      {
+        "id": "ordinary-delivery",
+        "task_kinds": ["implementation", "diagnosis", "documentation"],
+        "risk_classes": ["low", "standard"],
+        "profile_id": "standard"
+      },
+      {
+        "id": "consequential-work",
+        "task_kinds": ["planning", "architecture", "security", "migration", "independent-qa"],
+        "risk_classes": ["high", "critical"],
+        "profile_id": "critical-planning"
+      }
+    ],
+    "fallback_profile_id": "standard"
+  },
+  "calibration": {
+    "state": "cold-start",
+    "recommendation_mode": "shadow",
+    "observation_threshold": {
+      "completed_work_items": 10,
+      "task_shapes": 2,
+      "samples_per_candidate": 2,
+      "purpose": "diagnostic-only"
+    },
+    "statistical_qualification": {
+      "status": "unconfigured",
+      "method": null,
+      "minimum_effect": null,
+      "alpha": null,
+      "power": null,
+      "pilot_variance": null
+    },
+    "matched_evaluation": {
+      "sources": [],
+      "maximum_age_days": 90,
+      "supported_method": "paired-sign-test-v1"
+    },
+    "required_evidence": [
+      "matched-task-evaluation",
+      "quality",
+      "tokens",
+      "latency",
+      "human-intervention",
+      "rework",
+      "exact-task-shape"
+    ]
+  },
+  "cost": {
+    "accounting_unit": "credits",
+    "budget_limit": null,
+    "source": null,
+    "source_version": null,
+    "effective_at": null,
+    "status": "unknown",
+    "token_limits_are_financial_limits": false
+  },
+  "autonomy": {
+    "mode": "exceptions-only",
+    "routine_decision": "automatic",
+    "automatic_when": [
+      "approved-scope",
+      "reversible",
+      "local-only",
+      "within-configured-budget",
+      "allowlisted-provider-and-model",
+      "confidence-sufficient-for-risk"
+    ],
+    "approval_triggers": [
+      "external-spend",
+      "external-write",
+      "irreversible-action",
+      "deployment-or-release",
+      "privacy-boundary-change",
+      "unapproved-provider-or-model",
+      "budget-exceeded",
+      "high-risk-low-confidence",
+      "policy-change"
+    ]
+  }
+}

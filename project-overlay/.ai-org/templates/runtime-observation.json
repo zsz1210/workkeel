@@ -1,0 +1,10 @@
+{
+  "schema_version": "temple.runtime-observation/v1",
+  "revision": "HEAD",
+  "environment": "replace with the observed environment",
+  "scenario": "replace with the observed scenario",
+  "result": "pass",
+  "provenance": "live",
+  "observed_at": "2026-01-01T00:00:00.000Z",
+  "artifact_refs": []
+}

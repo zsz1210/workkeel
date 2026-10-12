@@ -1,0 +1,142 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "temple.spec-index/v1",
+  "type": "object",
+  "required": ["schema_version", "adoption_profile", "delivery_method", "entries"],
+  "properties": {
+    "schema_version": { "const": "temple.spec-index/v1" },
+    "adoption_profile": { "enum": ["federated", "hybrid", "temple-native"] },
+    "delivery_method": { "const": "contract-guided-iterative" },
+    "entries": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/entry" }
+    }
+  },
+  "$defs": {
+    "entry": {
+      "type": "object",
+      "required": [
+        "id",
+        "kind",
+        "title",
+        "authority",
+        "status",
+        "revision",
+        "source",
+        "owner_position",
+        "approved_by",
+        "approved_at",
+        "approval_ref",
+        "source_refs",
+        "related_work_items",
+        "updated_at"
+      ],
+      "properties": {
+        "id": { "type": "string", "pattern": "^[A-Z][A-Z0-9]*(?:-[A-Z0-9][A-Z0-9._-]*)+$" },
+        "kind": {
+          "enum": [
+            "product_charter",
+            "product_requirements",
+            "feature_spec",
+            "ux_flow",
+            "ui_contract",
+            "api_contract",
+            "technical_design"
+          ]
+        },
+        "title": { "type": "string", "minLength": 1 },
+        "authority": {
+          "enum": ["temple_native", "authoritative_external", "derived_projection", "legacy_unverified"]
+        },
+        "status": { "enum": ["draft", "approved", "superseded", "archived"] },
+        "revision": { "type": "string", "minLength": 1 },
+        "source": {
+          "type": "object",
+          "required": ["kind", "location", "system", "content_sha256"],
+          "properties": {
+            "kind": { "enum": ["repository", "external"] },
+            "location": { "type": "string", "minLength": 1 },
+            "system": { "type": "string", "minLength": 1 },
+            "content_sha256": {
+              "type": ["string", "null"],
+              "pattern": "^[a-f0-9]{64}$"
+            }
+          },
+          "additionalProperties": false
+        },
+        "owner_position": { "type": "string", "minLength": 1 },
+        "approved_by": { "type": ["string", "null"], "minLength": 1 },
+        "approved_at": { "type": ["string", "null"], "format": "date-time", "minLength": 1 },
+        "approval_ref": { "type": ["string", "null"], "minLength": 1 },
+        "source_refs": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/revisionReference" }
+        },
+        "related_work_items": { "type": "array", "items": { "type": "string" } },
+        "updated_at": { "type": "string", "minLength": 1 }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "authority": { "const": "temple_native" } }, "required": ["authority"] },
+          "then": { "properties": { "source": { "properties": { "kind": { "const": "repository" } } } } }
+        },
+        {
+          "if": { "properties": { "authority": { "const": "authoritative_external" } }, "required": ["authority"] },
+          "then": { "properties": { "source": { "properties": { "kind": { "const": "external" } } } } }
+        },
+        {
+          "if": { "properties": { "authority": { "const": "derived_projection" } }, "required": ["authority"] },
+          "then": {
+            "properties": {
+              "source": { "properties": { "kind": { "const": "repository" } } },
+              "status": { "enum": ["draft", "superseded", "archived"] },
+              "source_refs": { "minItems": 1 }
+            }
+          }
+        },
+        {
+          "if": { "properties": { "authority": { "const": "legacy_unverified" } }, "required": ["authority"] },
+          "then": { "properties": { "status": { "enum": ["draft", "superseded", "archived"] } } }
+        },
+        {
+          "if": { "properties": { "status": { "const": "approved" } }, "required": ["status"] },
+          "then": {
+            "properties": {
+              "approved_by": { "type": "string", "minLength": 1 },
+              "approved_at": { "type": "string", "format": "date-time", "minLength": 1 },
+              "approval_ref": { "type": "string", "minLength": 1 }
+            }
+          }
+        },
+        {
+          "if": {
+            "allOf": [
+              { "properties": { "authority": { "const": "temple_native" } }, "required": ["authority"] },
+              { "properties": { "status": { "const": "approved" } }, "required": ["status"] }
+            ]
+          },
+          "then": {
+            "properties": {
+              "source": {
+                "properties": {
+                  "content_sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+                }
+              }
+            }
+          }
+        }
+      ],
+      "additionalProperties": false
+    },
+    "revisionReference": {
+      "type": "object",
+      "required": ["id", "revision"],
+      "properties": {
+        "id": { "type": "string", "pattern": "^[A-Z][A-Z0-9]*(?:-[A-Z0-9][A-Z0-9._-]*)+$" },
+        "revision": { "type": "string", "minLength": 1 }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

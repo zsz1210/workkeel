@@ -1,0 +1,100 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "temple.validation-program/v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "id", "coordinator_project_id", "authority", "limits", "participants", "waves"],
+  "properties": {
+    "schema_version": { "const": "temple.validation-program/v1" },
+    "id": { "$ref": "#/$defs/id" },
+    "coordinator_project_id": { "$ref": "#/$defs/project_id" },
+    "authority": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["network_access", "external_writes", "external_spend_yen", "api_key_use", "usage_reset", "deployment", "publication", "fallback_allowed"],
+      "properties": {
+        "network_access": { "const": false },
+        "external_writes": { "const": false },
+        "external_spend_yen": { "const": 0 },
+        "api_key_use": { "const": false },
+        "usage_reset": { "const": false },
+        "deployment": { "const": false },
+        "publication": { "const": false },
+        "fallback_allowed": { "const": false }
+      }
+    },
+    "limits": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["max_turns", "max_launch_attempts", "max_retries", "max_concurrency", "per_turn_warning_tokens", "per_turn_hard_tokens", "aggregate_warning_tokens", "aggregate_hard_tokens", "per_turn_warning_ms", "per_turn_hard_ms", "program_warning_ms", "program_hard_ms", "per_repository_warning_bytes", "per_repository_hard_bytes", "aggregate_warning_bytes", "aggregate_hard_bytes"],
+      "properties": {
+        "max_turns": { "type": "integer", "minimum": 1, "maximum": 50 },
+        "max_launch_attempts": { "type": "integer", "minimum": 1, "maximum": 50 },
+        "max_retries": { "const": 0 },
+        "max_concurrency": { "type": "integer", "minimum": 1, "maximum": 8 },
+        "per_turn_warning_tokens": { "$ref": "#/$defs/positive_integer" },
+        "per_turn_hard_tokens": { "$ref": "#/$defs/positive_integer" },
+        "aggregate_warning_tokens": { "$ref": "#/$defs/positive_integer" },
+        "aggregate_hard_tokens": { "$ref": "#/$defs/positive_integer" },
+        "per_turn_warning_ms": { "$ref": "#/$defs/positive_integer" },
+        "per_turn_hard_ms": { "$ref": "#/$defs/positive_integer" },
+        "program_warning_ms": { "$ref": "#/$defs/positive_integer" },
+        "program_hard_ms": { "$ref": "#/$defs/positive_integer" },
+        "per_repository_warning_bytes": { "$ref": "#/$defs/positive_integer" },
+        "per_repository_hard_bytes": { "$ref": "#/$defs/positive_integer" },
+        "aggregate_warning_bytes": { "$ref": "#/$defs/positive_integer" },
+        "aggregate_hard_bytes": { "$ref": "#/$defs/positive_integer" }
+      }
+    },
+    "participants": { "type": "array", "minItems": 1, "maxItems": 20, "items": { "$ref": "#/$defs/participant" } },
+    "waves": { "type": "array", "minItems": 1, "maxItems": 50, "items": { "$ref": "#/$defs/wave" } }
+  },
+  "$defs": {
+    "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]{0,79}$" },
+    "project_id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" },
+    "work_item_id": { "type": "string", "pattern": "^WI-(?:[0-9]{4,}|[0-9]{8}-[A-F0-9]{10})$" },
+    "positive_integer": { "type": "integer", "minimum": 1, "maximum": 9007199254740991 },
+    "repository_path": { "type": "string", "minLength": 1, "maxLength": 500, "pattern": "^(?:\\.|(?:\\.\\./)*(?!\\.{1,2}(?:/|$))(?!.*\\\\)(?!.*//)(?!.*\\/\\.{1,2}(?:/|$))(?!.*\\/$).+)$" },
+    "project_path": { "type": "string", "minLength": 1, "maxLength": 500, "pattern": "^(?!/)(?!.*\\\\)(?!.*//)(?!.*(?:^|/)\\.{1,2}(?:/|$))(?!.*\\/$).+$" },
+    "participant": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "path", "expected_project_id", "allowed_paths"],
+      "properties": {
+        "id": { "$ref": "#/$defs/project_id" },
+        "path": { "$ref": "#/$defs/repository_path" },
+        "expected_project_id": { "$ref": "#/$defs/project_id" },
+        "allowed_paths": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "$ref": "#/$defs/project_path" } },
+        "usage_state_directory": { "$ref": "#/$defs/project_path" }
+      }
+    },
+    "wave": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "order", "turns"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "order": { "type": "integer", "minimum": 1, "maximum": 50 },
+        "turns": { "type": "array", "minItems": 1, "maxItems": 8, "items": { "$ref": "#/$defs/turn" } }
+      }
+    },
+    "turn": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "project_id", "work_item_id", "position_id", "requested_model", "requested_reasoning_effort", "sandbox_mode", "approval_policy", "network_access", "instruction_path", "allowed_paths"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "project_id": { "$ref": "#/$defs/project_id" },
+        "work_item_id": { "$ref": "#/$defs/work_item_id" },
+        "position_id": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" },
+        "requested_model": { "type": "string", "pattern": "^gpt-5\\.6-(?:sol|terra|luna)$" },
+        "requested_reasoning_effort": { "enum": ["low", "medium", "high", "xhigh", "max", "ultra"] },
+        "sandbox_mode": { "enum": ["read-only", "workspace-write"] },
+        "approval_policy": { "const": "never" },
+        "network_access": { "const": false },
+        "instruction_path": { "$ref": "#/$defs/project_path" },
+        "allowed_paths": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "$ref": "#/$defs/project_path" } }
+      }
+    }
+  }
+}

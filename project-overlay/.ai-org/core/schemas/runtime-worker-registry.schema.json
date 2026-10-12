@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "temple.runtime-workers/v1",
+  "type": "object",
+  "required": ["schema_version", "workers"],
+  "properties": {
+    "schema_version": { "const": "temple.runtime-workers/v1" },
+    "workers": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "id", "runtime_kind", "status", "work_item_id", "position_id", "agent_id", "principal_id", "claim_id",
+          "base_revision", "branch", "worktree", "plan_fingerprint", "plan_digest", "preparation_fingerprint", "wave_id", "runtime_id", "task_id",
+          "resource_reservation_ids", "current_revision", "evidence", "reserved_at", "attached_at", "completed_at", "updated_at"
+        ],
+        "properties": {
+          "id": { "type": "string", "pattern": "^worker-" },
+          "runtime_kind": { "enum": ["internal-subagent", "user-task"] },
+          "status": { "enum": ["reserved", "active", "waiting", "attention", "completed", "failed", "cancelled"] },
+          "work_item_id": { "type": "string", "minLength": 1 },
+          "position_id": { "type": "string", "minLength": 1 },
+          "agent_id": { "type": "string", "minLength": 1 },
+          "principal_id": { "type": "string", "minLength": 1 },
+          "claim_id": { "type": "string", "minLength": 1 },
+          "base_revision": { "type": "string", "minLength": 1 },
+          "branch": { "type": "string", "minLength": 1 },
+          "worktree": { "type": ["string", "null"] },
+          "plan_fingerprint": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+          "plan_digest": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+          "preparation_fingerprint": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+          "wave_id": { "type": "string", "pattern": "^wave-[0-9]{3}$" },
+          "runtime_id": { "type": ["string", "null"] },
+          "task_id": { "type": ["string", "null"] },
+          "resource_reservation_ids": { "type": "array", "uniqueItems": true, "items": { "type": "string" } },
+          "current_revision": { "type": ["string", "null"] },
+          "evidence": { "type": "array", "uniqueItems": true, "items": { "type": "string" } },
+          "reserved_at": { "type": "string", "format": "date-time" },
+          "attached_at": { "type": ["string", "null"], "format": "date-time" },
+          "completed_at": { "type": ["string", "null"], "format": "date-time" },
+          "updated_at": { "type": "string", "format": "date-time" }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

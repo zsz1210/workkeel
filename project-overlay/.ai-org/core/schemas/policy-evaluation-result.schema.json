@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "temple.policy-evaluation-result/v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "generated_at", "fixture", "run_id", "observed_at", "profile", "catalog", "status", "summary", "dimensions", "cases", "authority", "external_action_performed"],
+  "properties": {
+    "schema_version": { "const": "temple.policy-evaluation-result/v1" },
+    "generated_at": { "type": "string", "format": "date-time" },
+    "fixture": { "type": ["string", "null"] },
+    "run_id": { "type": "string", "minLength": 1 },
+    "observed_at": { "type": "string", "format": "date-time" },
+    "profile": { "enum": ["solo", "collaborative", "high-assurance"] },
+    "catalog": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema_version", "catalog_version", "scenarios"],
+      "properties": {
+        "schema_version": { "const": "temple.adversarial-scenarios/v1" },
+        "catalog_version": { "type": "string" },
+        "scenarios": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "status": { "enum": ["passed", "incomplete", "failed"] },
+    "summary": {
+      "type": "object",
+      "required": ["scenarios", "passed", "failed", "incomplete", "outcomes", "recovery_steps", "rework_actions", "human_interventions", "notification_precision", "notifications"]
+    },
+    "dimensions": { "type": "object" },
+    "cases": { "type": "array", "minItems": 1 },
+    "authority": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["lifecycle_gates_changed", "fixture_is_canonical_evidence"],
+      "properties": {
+        "lifecycle_gates_changed": { "const": false },
+        "fixture_is_canonical_evidence": { "const": false }
+      }
+    },
+    "external_action_performed": { "const": false }
+  }
+}

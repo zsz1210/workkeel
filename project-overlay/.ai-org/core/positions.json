@@ -1,0 +1,75 @@
+{
+  "schema_version": "temple.positions/v1",
+  "positions": [
+    {
+      "id": "engineering_manager",
+      "display_name": "Engineering Manager",
+      "purpose": "Own intake, decomposition, delegation, tracker mapping plans, handoffs, blockers, learning triage, organization-level status, and High-Assurance staffing readiness.",
+      "owns": ["work_order", "assignment_proposal", "tracker_mapping_plan", "tracker_reconciliation_plan", "handoff_quality", "learning_triage", "status_summary", "high_assurance_staffing_readiness"],
+      "cannot_approve": ["business_priority", "high_risk_release"]
+    },
+    {
+      "id": "product_manager",
+      "display_name": "Product Manager",
+      "purpose": "Define the user problem, product scope, outcome, and acceptance criteria.",
+      "owns": ["product_spec", "acceptance_criteria", "scope_decision", "team_visible_work_framing"],
+      "cannot_approve": ["technical_design", "release"]
+    },
+    {
+      "id": "ux_designer",
+      "display_name": "UX Designer",
+      "purpose": "Define user flows, states, interaction behavior, and UX risks.",
+      "owns": ["ux_flow", "interaction_notes", "copy_decision"],
+      "cannot_approve": ["implementation_quality", "release"]
+    },
+    {
+      "id": "ui_designer",
+      "display_name": "UI Designer",
+      "purpose": "Define visual hierarchy, layout, components, design-system guidance, and the proportionate UI delivery mode, including risk-tier constraints.",
+      "owns": ["ui_delivery_mode", "visual_direction", "ui_spec", "design_system_guidance", "risk_proportionate_ui_evidence"],
+      "cannot_approve": ["implementation_quality", "release"]
+    },
+    {
+      "id": "tech_lead",
+      "display_name": "Tech Lead",
+      "purpose": "Own architecture, interfaces, technical risk, implementation design, and normalized risk-review evidence.",
+      "owns": ["technical_design", "adr", "implementation_plan", "technical_practice", "risk_register", "assurance_risk_review"],
+      "cannot_approve": ["product_scope", "independent_qa"]
+    },
+    {
+      "id": "developer",
+      "display_name": "Developer",
+      "purpose": "Implement the approved design, tests, developer verification evidence, and an exact candidate revision for downstream evaluation.",
+      "owns": ["code", "unit_test", "developer_evidence", "developer_handoff", "exact_candidate_revision"],
+      "cannot_approve": ["own_independent_qa", "high_risk_release"]
+    },
+    {
+      "id": "quality_evaluator",
+      "display_name": "Quality & Evaluation Engineer",
+      "purpose": "Design and run test, evaluation, regression, and evidence-quality checks against the exact candidate revision.",
+      "owns": ["test_plan", "evaluation_report", "regression_evidence", "normalized_test_evidence"],
+      "cannot_approve": ["release"]
+    },
+    {
+      "id": "independent_qa",
+      "display_name": "Independent QA",
+      "purpose": "Independently reproduce, challenge, and verify acceptance criteria and runtime behavior, recording normalized evidence under the assigned Independent QA identity.",
+      "owns": ["independent_qa_report", "acceptance_result", "counterexample_search", "normalized_independent_qa_evidence"],
+      "cannot_approve": ["upstream_implementation", "high_risk_release"]
+    },
+    {
+      "id": "release_manager",
+      "display_name": "Release Manager",
+      "purpose": "Operate the release gate, version record, readiness check, approval-count check, and risk-proportionate rollback readiness without performing external release actions automatically.",
+      "owns": ["release_record", "go_no_go_proposal", "rollback_readiness", "approval_contract_check", "external_action_boundary"],
+      "cannot_approve": ["human_high_risk_approval"]
+    },
+    {
+      "id": "observer",
+      "display_name": "Observer",
+      "purpose": "Project canonical state into status, timeline, tracker-conflict, learning revalidation, assurance, adapter-health, stale-work, and evidence views without deciding outcomes.",
+      "owns": ["status_view", "timeline_view", "tracker_conflict_signal", "learning_status", "learning_revalidation_signal", "assurance_status", "adapter_health", "stale_signal"],
+      "cannot_approve": ["product_decision", "technical_decision", "qa_result", "release"]
+    }
+  ]
+}

@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "temple.usage-baseline/v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "generated_at", "project", "baseline_status", "source", "totals", "unknown_dimensions", "driver_groups", "policy", "routing", "privacy", "canonical_state_changed", "external_action_performed"],
+  "properties": {
+    "schema_version": { "const": "temple.usage-baseline/v1" },
+    "generated_at": { "type": "string", "format": "date-time" },
+    "project": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "name"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "name": { "type": "string", "minLength": 1 }
+      }
+    },
+    "baseline_status": { "enum": ["observed", "insufficient-data"] },
+    "source": { "type": "object" },
+    "totals": { "type": "object" },
+    "unknown_dimensions": { "type": "object" },
+    "driver_groups": { "type": "array" },
+    "policy": { "type": "object" },
+    "routing": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["recommendation_status", "recommendation_mode", "execution_status", "automatic_routing", "budget_can_skip_gates", "model_switch_performed", "approval_mode", "routine_human_approval_required", "approval_triggers"],
+      "properties": {
+        "recommendation_status": { "enum": ["not-qualified", "available"] },
+        "recommendation_source": { "type": ["string", "null"], "enum": ["matched-evaluation", "observational-shadow", null] },
+        "recommendation_mode": { "enum": ["shadow", "advisory", "automatic"] },
+        "shadow_recommendation": { "type": "object" },
+        "matched_advisory": { "type": "object" },
+        "execution_status": { "const": "not-implemented" },
+        "automatic_routing": { "const": false },
+        "budget_can_skip_gates": { "const": false },
+        "model_switch_performed": { "const": false },
+        "approval_mode": { "const": "exceptions-only" },
+        "routine_human_approval_required": { "const": false },
+        "approval_triggers": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "type": "string", "minLength": 1 } }
+      }
+    },
+    "privacy": { "type": "object" },
+    "canonical_state_changed": { "const": false },
+    "external_action_performed": { "const": false }
+  }
+}

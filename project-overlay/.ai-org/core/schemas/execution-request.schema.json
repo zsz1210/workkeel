@@ -1,0 +1,101 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "temple.execution-request/v1",
+  "$defs": {
+    "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9._-]*$" },
+    "ids": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/id" } },
+    "strings": { "type": "array", "uniqueItems": true, "items": { "type": "string", "minLength": 1 } },
+    "resourceLimit": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["measure_id", "maximum", "unknown_handling"],
+      "properties": {
+        "measure_id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9._-]*$" },
+        "maximum": { "type": "number", "minimum": 0 },
+        "unknown_handling": { "enum": ["reject", "allow"] }
+      }
+    },
+    "resourceObservation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["measure_id", "status", "value", "source", "quality"],
+      "properties": {
+        "measure_id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9._-]*$" },
+        "status": { "enum": ["observed", "unavailable"] },
+        "value": { "type": ["number", "null"], "minimum": 0 },
+        "source": { "type": "string", "minLength": 1 },
+        "quality": { "enum": ["declared", "observed", "qualified"] }
+      }
+    }
+  },
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "work_item_id", "steps"],
+  "properties": {
+    "schema_version": { "const": "temple.execution-request/v1" },
+    "work_item_id": { "type": "string", "minLength": 1 },
+    "steps": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["step_id", "task_shape", "capability_route", "constraints", "selection"],
+        "properties": {
+          "step_id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9._-]*$" },
+          "responsibility": { "type": ["string", "null"], "pattern": "^[a-z0-9][a-z0-9._-]*$" },
+          "task_shape": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["position_id", "lifecycle_stage", "task_kind", "risk_class", "context_profile_digest"],
+            "properties": {
+              "position_id": { "type": "string", "minLength": 1 },
+              "lifecycle_stage": { "type": "string", "minLength": 1 },
+              "task_kind": { "type": "string", "minLength": 1 },
+              "risk_class": { "enum": ["low", "standard", "high", "critical"] },
+              "context_profile_digest": { "type": "string", "minLength": 1 }
+            }
+          },
+          "capability_route": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["required", "optional"],
+            "properties": {
+              "required": { "allOf": [{ "$ref": "#/$defs/ids" }, { "minItems": 1 }] },
+              "optional": { "$ref": "#/$defs/ids" }
+            }
+          },
+          "constraints": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["required_modalities", "allowed_provider_ids", "data_class", "execution_boundary", "resource_limits"],
+            "properties": {
+              "required_modalities": { "allOf": [{ "$ref": "#/$defs/strings" }, { "minItems": 1 }] },
+              "allowed_provider_ids": { "$ref": "#/$defs/strings" },
+              "data_class": { "type": "string", "minLength": 1 },
+              "execution_boundary": { "type": "string", "minLength": 1 },
+              "resource_limits": { "type": "array", "items": { "$ref": "#/$defs/resourceLimit" } }
+            }
+          },
+          "selection": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["mode"],
+            "properties": {
+              "mode": { "enum": ["pinned", "shadow", "advisory"] },
+              "pinned_profile_id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9._-]*$" }
+            },
+            "allOf": [
+              {
+                "if": { "properties": { "mode": { "const": "pinned" } } },
+                "then": { "required": ["pinned_profile_id"] },
+                "else": { "not": { "required": ["pinned_profile_id"] } }
+              }
+            ]
+          },
+          "resource_observations": { "type": "array", "items": { "$ref": "#/$defs/resourceObservation" } }
+        }
+      }
+    }
+  }
+}

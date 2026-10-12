@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "temple.learning-review",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "work_item_id", "outcome_digest", "outcome", "result", "actor", "reviewed_at", "review_note", "lessons"],
+  "properties": {
+    "schema_version": {"enum": ["temple.learning-review/v1", "temple.learning-review/v2"]},
+    "supersedes": {"$ref": "#/$defs/hash"},
+    "reason": {"type": "string", "minLength": 1, "pattern": "\\S"},
+    "work_item_id": {"type": "string", "pattern": "^WI-[A-Za-z0-9-]+$"},
+    "outcome_digest": {"$ref": "#/$defs/hash"},
+    "result": {"enum": ["no-new-lesson", "linked-lessons"]},
+    "actor": {"type": "string", "minLength": 1},
+    "reviewed_at": {"type": "string", "format": "date-time"},
+    "review_note": {"$ref": "#/$defs/fingerprint"},
+    "lessons": {"type": "array", "items": {
+      "type": "object", "additionalProperties": false,
+      "required": ["id", "path", "sha256", "entry_digest"],
+      "properties": {
+        "id": {"type": "string", "pattern": "^LESSON-[0-9]{4,}$"},
+        "path": {"type": "string", "minLength": 1},
+        "sha256": {"$ref": "#/$defs/hash"}, "entry_digest": {"$ref": "#/$defs/hash"}
+      }
+    }},
+    "outcome": {
+      "type": "object", "additionalProperties": false,
+      "required": ["work_item_id", "state", "lifecycle_outcome", "revision", "developer_candidate_revision", "scope", "acceptance_criteria", "unresolved", "evidence", "gate_evidence", "sources"],
+      "properties": {
+        "work_item_id": {"type": "string"}, "state": {"enum": ["done", "concluded", "cancelled"]},
+        "lifecycle_outcome": {"enum": ["accepted", "no-go", "inconclusive", "cancelled", null]}, "revision": {"$ref": "#/$defs/revision"},
+        "developer_candidate_revision": {"anyOf": [{"$ref": "#/$defs/revision"}, {"type": "null"}]},
+        "scope": {"$ref": "#/$defs/strings"}, "acceptance_criteria": {"$ref": "#/$defs/strings"},
+        "unresolved": {"$ref": "#/$defs/strings"}, "evidence": {"$ref": "#/$defs/strings"},
+        "gate_evidence": {"type": "object", "additionalProperties": {"$ref": "#/$defs/strings"}},
+        "sources": {"type": "array", "items": {"oneOf": [
+          {"type": "object", "additionalProperties": false, "required": ["reference", "kind"], "properties": {"reference": {"type": "string"}, "kind": {"const": "opaque"}}},
+          {"type": "object", "additionalProperties": false, "required": ["reference", "kind", "sha256"], "properties": {"reference": {"type": "string"}, "kind": {"const": "registry"}, "sha256": {"$ref": "#/$defs/hash"}}},
+          {"type": "object", "additionalProperties": false, "required": ["reference", "kind", "path", "sha256"], "properties": {"reference": {"type": "string"}, "kind": {"const": "file"}, "path": {"type": "string"}, "sha256": {"$ref": "#/$defs/hash"}}}
+        ]}}
+      }
+    }
+  },
+  "allOf": [{"if": {"properties": {"schema_version": {"const": "temple.learning-review/v2"}}}, "then": {"required": ["supersedes", "reason"]}, "else": {"not": {"anyOf": [{"required": ["supersedes"]}, {"required": ["reason"]}]}}}],
+  "$defs": {
+    "hash": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "revision": {"type": "string", "pattern": "^[a-f0-9]{40}([a-f0-9]{24})?$"},
+    "strings": {"type": "array", "uniqueItems": true, "items": {"type": "string", "minLength": 1}},
+    "fingerprint": {"type": "object", "additionalProperties": false, "required": ["path", "sha256"], "properties": {"path": {"type": "string", "minLength": 1}, "sha256": {"$ref": "#/$defs/hash"}}}
+  }
+}

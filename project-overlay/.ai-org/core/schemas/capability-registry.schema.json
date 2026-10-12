@@ -1,0 +1,34 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "temple.capability-registry/v1",
+  "type": "object",
+  "required": ["schema_version", "generated_at", "project_id", "counts", "capabilities", "issues"],
+  "properties": {
+    "schema_version": { "const": "temple.capability-registry/v1" },
+    "generated_at": { "type": "string" },
+    "project_id": { "type": "string" },
+    "source_template_version": { "type": ["string", "null"] },
+    "counts": { "type": "object" },
+    "capabilities": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "description",
+          "path",
+          "lifecycle_owner",
+          "distribution",
+          "origin",
+          "invocation",
+          "declared_dependencies",
+          "position_hints",
+          "status"
+        ]
+      }
+    },
+    "issues": { "type": "array", "items": { "type": "string" } }
+  },
+  "additionalProperties": false
+}

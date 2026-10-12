@@ -1,0 +1,80 @@
+{
+  "schema_version": "temple.validation-program/v1",
+  "id": "local-validation",
+  "coordinator_project_id": "replace-with-project-id",
+  "authority": {
+    "network_access": false,
+    "external_writes": false,
+    "external_spend_yen": 0,
+    "api_key_use": false,
+    "usage_reset": false,
+    "deployment": false,
+    "publication": false,
+    "fallback_allowed": false
+  },
+  "limits": {
+    "max_turns": 1,
+    "max_launch_attempts": 1,
+    "max_retries": 0,
+    "max_concurrency": 1,
+    "per_turn_warning_tokens": 40000,
+    "per_turn_hard_tokens": 60000,
+    "aggregate_warning_tokens": 40000,
+    "aggregate_hard_tokens": 60000,
+    "per_turn_warning_ms": 600000,
+    "per_turn_hard_ms": 900000,
+    "program_warning_ms": 900000,
+    "program_hard_ms": 1200000,
+    "per_repository_warning_bytes": 26214400,
+    "per_repository_hard_bytes": 52428800,
+    "aggregate_warning_bytes": 26214400,
+    "aggregate_hard_bytes": 52428800
+  },
+  "participants": [
+    {
+      "id": "replace-with-project-id",
+      "path": ".",
+      "expected_project_id": "replace-with-project-id",
+      "allowed_paths": [
+        ".ai-org/artifacts",
+        ".ai-org/events/events.jsonl",
+        ".ai-org/project/tasks.json",
+        ".ai-org/views",
+        ".ai-org/work-items",
+        "docs",
+        "src",
+        "test"
+      ]
+    }
+  ],
+  "waves": [
+    {
+      "id": "wave-1",
+      "order": 1,
+      "turns": [
+        {
+          "id": "turn-1",
+          "project_id": "replace-with-project-id",
+          "work_item_id": "WI-0001",
+          "position_id": "developer",
+          "requested_model": "gpt-5.6-luna",
+          "requested_reasoning_effort": "max",
+          "sandbox_mode": "workspace-write",
+          "approval_policy": "never",
+          "network_access": false,
+          "instruction_path": ".ai-org/artifacts/WI-0001/instructions.md",
+          "allowed_paths": [
+            ".ai-org/artifacts",
+            ".ai-org/events/events.jsonl",
+            ".ai-org/project/tasks.json",
+            ".ai-org/views",
+            ".ai-org/work-items",
+            "docs",
+            "src",
+            "test"
+          ]
+        }
+      ]
+    }
+  ]
+}

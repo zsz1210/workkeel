@@ -1,0 +1,23 @@
+{
+  "schema_version": "temple.collaboration-profiles/v1",
+  "profiles": [
+    {
+      "id": "solo",
+      "status": "stable",
+      "selectable": true,
+      "description": "One Human Principal may operate several Agent Identities with lightweight repository coordination."
+    },
+    {
+      "id": "collaborative",
+      "status": "operational-contract",
+      "selectable": true,
+      "description": "Several Human Principals use clone-local actor binding, sponsor Agent Identities, qualify Position memberships, and govern scoped authority through repository evidence; real multi-human validation remains a separate gate."
+    },
+    {
+      "id": "high-assurance",
+      "status": "stable",
+      "selectable": true,
+      "description": "Risk-driven evidence, approval, rollback, and separation-of-duties gates backed by local exact-revision records; representative and High-Assurance drills remain separate validation gates."
+    }
+  ]
+}

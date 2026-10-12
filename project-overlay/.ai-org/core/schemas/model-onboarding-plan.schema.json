@@ -1,0 +1,165 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "temple.model-onboarding-plan/v1",
+  "$defs": {
+    "nonBlank": { "type": "string", "minLength": 1 },
+    "strings": { "type": "array", "items": { "$ref": "#/$defs/nonBlank" } },
+    "candidate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["provider_id", "model", "reasoning_effort"],
+      "properties": {
+        "provider_id": { "$ref": "#/$defs/nonBlank" },
+        "model": { "$ref": "#/$defs/nonBlank" },
+        "reasoning_effort": { "$ref": "#/$defs/nonBlank" }
+      }
+    },
+    "alternative": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["provider_id", "model", "reasoning_effort", "compatibility_status", "evidence_refs", "unknowns"],
+      "properties": {
+        "provider_id": { "$ref": "#/$defs/nonBlank" },
+        "model": { "$ref": "#/$defs/nonBlank" },
+        "reasoning_effort": { "$ref": "#/$defs/nonBlank" },
+        "compatibility_status": { "const": "compatible" },
+        "evidence_refs": { "$ref": "#/$defs/strings" },
+        "unknowns": { "$ref": "#/$defs/strings" }
+      }
+    }
+  },
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "generated_at", "input", "authority", "catalog", "unqualified_configurations", "summary", "profiles", "notices"],
+  "properties": {
+    "schema_version": { "const": "temple.model-onboarding-plan/v1" },
+    "generated_at": { "type": "string", "format": "date-time" },
+    "input": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema_version", "digest", "provider_id", "provider_kind", "observed_at", "source", "history_scope"],
+      "properties": {
+        "schema_version": { "const": "temple.model-onboarding-input/v1" },
+        "digest": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+        "provider_id": { "$ref": "#/$defs/nonBlank" },
+        "provider_kind": { "$ref": "#/$defs/nonBlank" },
+        "observed_at": { "type": "string", "format": "date-time" },
+        "source": { "$ref": "#/$defs/nonBlank" },
+        "history_scope": { "enum": ["aggregate-metadata-only", "not-provided"] }
+      }
+    },
+    "authority": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["provider_contact", "policy_mutation", "model_execution", "automatic_adoption", "raw_conversation_read"],
+      "properties": {
+        "provider_contact": { "const": false },
+        "policy_mutation": { "const": false },
+        "model_execution": { "const": false },
+        "automatic_adoption": { "const": false },
+        "raw_conversation_read": { "const": false }
+      }
+    },
+    "catalog": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "models"],
+      "properties": {
+        "status": { "const": "observed" },
+        "models": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["provider_id", "model", "supported_reasoning_efforts", "default_reasoning_effort", "input_modalities", "visibility", "is_default"],
+            "properties": {
+              "provider_id": { "$ref": "#/$defs/nonBlank" },
+              "model": { "$ref": "#/$defs/nonBlank" },
+              "supported_reasoning_efforts": { "$ref": "#/$defs/strings" },
+              "default_reasoning_effort": { "$ref": "#/$defs/nonBlank" },
+              "input_modalities": { "$ref": "#/$defs/strings" },
+              "visibility": { "enum": ["visible", "hidden"] },
+              "is_default": { "type": "boolean" }
+            }
+          }
+        }
+      }
+    },
+    "unqualified_configurations": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["provider_id", "model", "reasoning_effort", "compatibility_status", "evidence_refs", "unknowns"],
+        "properties": {
+          "provider_id": { "$ref": "#/$defs/nonBlank" },
+          "model": { "$ref": "#/$defs/nonBlank" },
+          "reasoning_effort": { "$ref": "#/$defs/nonBlank" },
+          "compatibility_status": { "enum": ["incompatible", "unknown"] },
+          "evidence_refs": { "$ref": "#/$defs/strings" },
+          "unknowns": { "$ref": "#/$defs/strings" }
+        }
+      }
+    },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["catalog_models", "compatibility_assessments", "compatible_configurations", "proposed", "already_adopted", "unresolved"],
+      "properties": {
+        "catalog_models": { "type": "integer", "minimum": 0 },
+        "compatibility_assessments": { "type": "integer", "minimum": 0 },
+        "compatible_configurations": { "type": "integer", "minimum": 0 },
+        "proposed": { "type": "integer", "minimum": 0 },
+        "already_adopted": { "type": "integer", "minimum": 0 },
+        "unresolved": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "profiles": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["profile_id", "status", "states", "existing_mapping", "recommendation", "alternatives", "unresolved_reasons"],
+        "properties": {
+          "profile_id": { "$ref": "#/$defs/nonBlank" },
+          "status": { "enum": ["proposed", "already-adopted", "unresolved"] },
+          "states": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["discovery", "compatibility", "proposal", "adoption", "requested", "effective"],
+            "properties": {
+              "discovery": { "const": "observed" },
+              "compatibility": { "enum": ["qualified", "unavailable"] },
+              "proposal": { "enum": ["proposed", "not-needed", "unresolved"] },
+              "adoption": { "enum": ["adopted", "unmapped"] },
+              "requested": { "const": "not-performed" },
+              "effective": { "const": "unobserved" }
+            }
+          },
+          "existing_mapping": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/candidate" }] },
+          "recommendation": {
+            "oneOf": [
+              { "type": "null" },
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["candidate", "basis", "confidence", "historical_executions", "evidence_refs", "explanation"],
+                "properties": {
+                  "candidate": { "$ref": "#/$defs/candidate" },
+                  "basis": { "enum": ["explicit-preference", "historical-familiarity", "sole-compatible-candidate"] },
+                  "confidence": { "enum": ["project-directed", "low"] },
+                  "historical_executions": { "type": ["integer", "null"], "minimum": 1 },
+                  "evidence_refs": { "$ref": "#/$defs/strings" },
+                  "explanation": { "$ref": "#/$defs/nonBlank" }
+                }
+              }
+            ]
+          },
+          "alternatives": { "type": "array", "items": { "$ref": "#/$defs/alternative" } },
+          "unresolved_reasons": { "$ref": "#/$defs/strings" }
+        }
+      }
+    },
+    "notices": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/nonBlank" } }
+  }
+}

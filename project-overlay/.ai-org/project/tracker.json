@@ -1,0 +1,33 @@
+{
+  "schema_version": "temple.tracker/v1",
+  "profile": "repository-only",
+  "sync_granularity": "team-visible",
+  "default_provider_id": null,
+  "providers": [],
+  "field_ownership": {
+    "temple": [
+      "lifecycle_state",
+      "specification_refs",
+      "interface_contracts",
+      "gate_evidence",
+      "claim",
+      "tested_revision",
+      "release_decision"
+    ],
+    "external": [
+      "priority",
+      "iteration",
+      "estimate",
+      "due_date",
+      "business_assignee",
+      "labels"
+    ],
+    "negotiated": [
+      "title",
+      "parent",
+      "dependencies"
+    ]
+  },
+  "updated_at": null,
+  "updated_by": null
+}

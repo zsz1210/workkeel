@@ -1,0 +1,8 @@
+{
+  "work_item_id": "WI-0001",
+  "revision": "REPLACE_WITH_FULL_RECORDED_OUTCOME_REVISION",
+  "result": "no-new-lesson",
+  "actor": "REPLACE_WITH_ACTIVE_AGENT_ID",
+  "evidence": "docs/review-note.md",
+  "learning_ids": []
+}

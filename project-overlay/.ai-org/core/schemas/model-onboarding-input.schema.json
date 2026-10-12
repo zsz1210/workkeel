@@ -1,0 +1,136 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "temple.model-onboarding-input/v1",
+  "$defs": {
+    "nonBlank": { "type": "string", "minLength": 1 },
+    "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9._-]*$" },
+    "uniqueStrings": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/nonBlank" }
+    },
+    "candidateIdentity": {
+      "type": "object",
+      "required": ["provider_id", "model", "reasoning_effort"],
+      "properties": {
+        "provider_id": { "$ref": "#/$defs/id" },
+        "model": { "$ref": "#/$defs/nonBlank" },
+        "reasoning_effort": { "$ref": "#/$defs/nonBlank" }
+      }
+    }
+  },
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "observation", "compatibility", "preferences", "history"],
+  "properties": {
+    "schema_version": { "const": "temple.model-onboarding-input/v1" },
+    "observation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["provider_id", "provider_kind", "observed_at", "source", "models"],
+      "properties": {
+        "provider_id": { "$ref": "#/$defs/id" },
+        "provider_kind": { "$ref": "#/$defs/nonBlank" },
+        "observed_at": { "type": "string", "format": "date-time" },
+        "source": { "$ref": "#/$defs/nonBlank" },
+        "models": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["model", "supported_reasoning_efforts", "default_reasoning_effort", "input_modalities", "visibility", "is_default"],
+            "properties": {
+              "model": { "$ref": "#/$defs/nonBlank" },
+              "supported_reasoning_efforts": { "$ref": "#/$defs/uniqueStrings" },
+              "default_reasoning_effort": { "$ref": "#/$defs/nonBlank" },
+              "input_modalities": { "$ref": "#/$defs/uniqueStrings" },
+              "visibility": { "enum": ["visible", "hidden"] },
+              "is_default": { "type": "boolean" }
+            }
+          }
+        }
+      }
+    },
+    "compatibility": {
+      "type": "array",
+      "items": {
+        "allOf": [
+          { "$ref": "#/$defs/candidateIdentity" },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["provider_id", "model", "reasoning_effort", "status", "eligible_profile_ids", "evidence_refs", "unknowns"],
+            "properties": {
+              "provider_id": { "$ref": "#/$defs/id" },
+              "model": { "$ref": "#/$defs/nonBlank" },
+              "reasoning_effort": { "$ref": "#/$defs/nonBlank" },
+              "status": { "enum": ["compatible", "incompatible", "unknown"] },
+              "eligible_profile_ids": { "$ref": "#/$defs/uniqueStrings" },
+              "evidence_refs": { "$ref": "#/$defs/uniqueStrings" },
+              "unknowns": { "$ref": "#/$defs/uniqueStrings" }
+            }
+          }
+        ]
+      }
+    },
+    "preferences": {
+      "type": "array",
+      "items": {
+        "allOf": [
+          { "$ref": "#/$defs/candidateIdentity" },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["profile_id", "provider_id", "model", "reasoning_effort", "source", "evidence_ref"],
+            "properties": {
+              "profile_id": { "$ref": "#/$defs/id" },
+              "provider_id": { "$ref": "#/$defs/id" },
+              "model": { "$ref": "#/$defs/nonBlank" },
+              "reasoning_effort": { "$ref": "#/$defs/nonBlank" },
+              "source": { "enum": ["user-stated", "project-decision"] },
+              "evidence_ref": { "$ref": "#/$defs/nonBlank" }
+            }
+          }
+        ]
+      }
+    },
+    "history": {
+      "oneOf": [
+        { "type": "null" },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["data_scope", "raw_content_included", "observations"],
+          "properties": {
+            "data_scope": { "const": "aggregate-metadata-only" },
+            "raw_content_included": { "const": false },
+            "observations": {
+              "type": "array",
+              "items": {
+                "allOf": [
+                  { "$ref": "#/$defs/candidateIdentity" },
+                  {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": ["profile_id", "provider_id", "model", "reasoning_effort", "executions", "source", "observed_from", "observed_to"],
+                    "properties": {
+                      "profile_id": { "$ref": "#/$defs/id" },
+                      "provider_id": { "$ref": "#/$defs/id" },
+                      "model": { "$ref": "#/$defs/nonBlank" },
+                      "reasoning_effort": { "$ref": "#/$defs/nonBlank" },
+                      "executions": { "type": "integer", "minimum": 1 },
+                      "source": { "$ref": "#/$defs/nonBlank" },
+                      "observed_from": { "type": "string", "format": "date-time" },
+                      "observed_to": { "type": "string", "format": "date-time" }
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

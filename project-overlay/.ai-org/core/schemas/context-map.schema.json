@@ -1,0 +1,86 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "temple.context-map/v2",
+  "$defs": {
+    "kind": {
+      "enum": [
+        "product-spec",
+        "technical-spec",
+        "adr",
+        "domain",
+        "module",
+        "runbook",
+        "test",
+        "documentation",
+        "other"
+      ]
+    },
+    "stringArray": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "routeV1": {
+      "type": "object",
+      "required": ["id", "kind", "title", "summary", "paths", "tags", "positions", "work_items", "read_when", "owner_position", "status"],
+      "properties": {
+        "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]{0,79}$" },
+        "kind": { "$ref": "#/$defs/kind" },
+        "title": { "type": "string", "minLength": 1 },
+        "summary": { "type": "string", "minLength": 1 },
+        "paths": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "type": "string", "minLength": 1 } },
+        "tags": { "$ref": "#/$defs/stringArray" },
+        "positions": { "$ref": "#/$defs/stringArray" },
+        "work_items": { "type": "array", "uniqueItems": true, "items": { "type": "string", "pattern": "^WI-(?:[0-9]{4,}|[0-9]{8}-[A-F0-9]{10})$" } },
+        "read_when": { "$ref": "#/$defs/stringArray" },
+        "owner_position": { "type": ["string", "null"] },
+        "status": { "enum": ["active", "deprecated"] }
+      },
+      "additionalProperties": false
+    },
+    "routeV2": {
+      "type": "object",
+      "required": ["id", "kind", "title", "summary", "paths", "tags", "positions", "work_items", "read_when", "owner_position", "status"],
+      "properties": {
+        "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]{0,79}$" },
+        "kind": { "$ref": "#/$defs/kind" },
+        "title": { "type": "string", "minLength": 1 },
+        "summary": { "type": "string", "minLength": 1 },
+        "paths": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "type": "string", "minLength": 1 } },
+        "tags": { "$ref": "#/$defs/stringArray" },
+        "positions": { "$ref": "#/$defs/stringArray" },
+        "work_items": { "type": "array", "uniqueItems": true, "items": { "type": "string", "pattern": "^WI-(?:[0-9]{4,}|[0-9]{8}-[A-F0-9]{10})$" } },
+        "read_when": { "$ref": "#/$defs/stringArray" },
+        "owner_position": { "type": ["string", "null"] },
+        "status": { "enum": ["active", "deprecated"] },
+        "stages": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "enum": ["intake", "spec", "design", "build", "test", "eval", "independent_qa", "release_gate", "done", "concluded", "blocked", "cancelled"] }
+        },
+        "purposes": { "type": "array", "uniqueItems": true, "items": { "enum": ["primary", "integration", "recovery"] } }
+      },
+      "additionalProperties": false
+    }
+  },
+  "oneOf": [
+    {
+      "type": "object",
+      "required": ["schema_version", "routes"],
+      "properties": {
+        "schema_version": { "const": "temple.context-map/v1" },
+        "routes": { "type": "array", "items": { "$ref": "#/$defs/routeV1" } }
+      },
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "required": ["schema_version", "routes"],
+      "properties": {
+        "schema_version": { "const": "temple.context-map/v2" },
+        "routes": { "type": "array", "items": { "$ref": "#/$defs/routeV2" } }
+      },
+      "additionalProperties": false
+    }
+  ]
+}

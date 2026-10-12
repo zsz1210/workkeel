@@ -1,0 +1,136 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "temple.control-plane-config/v1",
+  "type": "object",
+  "required": ["schema_version", "state_directory", "server", "retention", "privacy", "providers"],
+  "properties": {
+    "schema_version": { "const": "temple.control-plane-config/v1" },
+    "state_directory": { "type": ["string", "null"], "minLength": 1 },
+    "server": {
+      "type": "object",
+      "required": ["host", "port"],
+      "properties": {
+        "host": { "const": "127.0.0.1" },
+        "port": { "type": "integer", "minimum": 0, "maximum": 65535 }
+      },
+      "additionalProperties": false
+    },
+    "retention": {
+      "type": "object",
+      "required": ["max_events"],
+      "properties": {
+        "max_events": { "type": "integer", "minimum": 100, "maximum": 1000000 }
+      },
+      "additionalProperties": false
+    },
+    "alerts": {
+      "type": "object",
+      "required": ["stalled_after_ms", "pending_for_ms", "cooldown_ms", "token_budget"],
+      "properties": {
+        "stalled_after_ms": { "type": "integer", "minimum": 0, "maximum": 604800000 },
+        "pending_for_ms": { "type": "integer", "minimum": 0, "maximum": 604800000 },
+        "cooldown_ms": { "type": "integer", "minimum": 0, "maximum": 604800000 },
+        "token_budget": { "type": ["integer", "null"], "minimum": 1 }
+      },
+      "additionalProperties": false
+    },
+    "agent_commands": {
+      "type": "object",
+      "required": ["enabled", "max_instruction_chars"],
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "max_instruction_chars": { "type": "integer", "minimum": 1, "maximum": 20000 }
+      },
+      "additionalProperties": false
+    },
+    "privacy": {
+      "type": "object",
+      "required": ["capture_raw_payloads", "max_data_bytes", "redact_keys"],
+      "properties": {
+        "capture_raw_payloads": { "const": false },
+        "max_data_bytes": { "type": "integer", "minimum": 1024, "maximum": 1048576 },
+        "redact_keys": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "type": "string", "minLength": 1 }
+        }
+      },
+      "additionalProperties": false
+    },
+    "providers": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["id", "kind", "enabled"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" },
+          "kind": { "enum": ["repository", "fixture", "codex-app-server", "github"] },
+          "enabled": { "type": "boolean" },
+          "options": { "type": "object" }
+        },
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "kind": { "const": "codex-app-server" },
+                "enabled": { "const": true }
+              },
+              "required": ["kind", "enabled"]
+            },
+            "then": {
+              "properties": {
+                "options": {
+                  "type": "object",
+                  "properties": {
+                    "command": { "type": "string", "minLength": 1 },
+                    "command_args": {
+                      "type": "array",
+                      "items": { "type": "string" }
+                    },
+                    "resume_threads": { "type": "boolean" },
+                    "history_turn_limit": { "type": "integer", "minimum": 1, "maximum": 100 },
+                    "history_item_limit": { "type": "integer", "minimum": 1, "maximum": 1000 }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "kind": { "const": "github" },
+                "enabled": { "const": true }
+              },
+              "required": ["kind", "enabled"]
+            },
+            "then": {
+              "required": ["options"],
+              "properties": {
+                "options": {
+                  "type": "object",
+                  "required": ["repository", "pull_number", "head_sha", "work_item_id"],
+                  "properties": {
+                    "repository": { "type": "string", "pattern": "^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$" },
+                    "pull_number": { "type": "integer", "minimum": 1 },
+                    "head_sha": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+                    "work_item_id": { "type": "string", "minLength": 1 },
+                    "api_url": { "type": "string", "pattern": "^https://" },
+                    "poll_interval_ms": { "type": "integer", "minimum": 5000, "maximum": 3600000 },
+                    "token_env": { "type": "string", "pattern": "^[A-Za-z_][A-Za-z0-9_]*$" },
+                    "fixture_path": { "type": "string", "minLength": 1 }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

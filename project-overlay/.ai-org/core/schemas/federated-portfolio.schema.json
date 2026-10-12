@@ -1,0 +1,278 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "temple.federated-portfolio/v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "generated_at", "authority", "summary", "participants", "coordination"],
+  "properties": {
+    "schema_version": { "const": "temple.federated-portfolio/v1" },
+    "generated_at": { "type": "string", "format": "date-time" },
+    "authority": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mode", "lifecycle_owner", "coordination_owner", "lifecycle_mutations_performed", "external_actions_performed"],
+      "properties": {
+        "mode": { "const": "read-only-projection" },
+        "lifecycle_owner": { "const": "participant-repositories" },
+        "coordination_owner": { "const": "coordinator-repository" },
+        "lifecycle_mutations_performed": { "const": false },
+        "external_actions_performed": { "const": false }
+      }
+    },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["participants", "current", "unknown", "work_items_projected", "overall_completion"],
+      "properties": {
+        "participants": { "type": "integer", "minimum": 0 },
+        "current": { "type": "integer", "minimum": 0 },
+        "unknown": { "type": "integer", "minimum": 0 },
+        "work_items_projected": { "type": "integer", "minimum": 0 },
+        "overall_completion": { "type": "null" }
+      }
+    },
+    "participants": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/participant" }
+    },
+    "coordination": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["initiatives", "dependencies", "contracts", "rollout_waves"],
+      "properties": {
+        "initiatives": { "type": "array", "items": { "$ref": "#/$defs/initiative" } },
+        "dependencies": { "type": "array", "items": { "$ref": "#/$defs/dependency" } },
+        "contracts": { "type": "array", "items": { "$ref": "#/$defs/contract" } },
+        "rollout_waves": { "type": "array", "items": { "$ref": "#/$defs/rollout_wave" } }
+      }
+    }
+  },
+  "$defs": {
+    "project_id": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9-]*$"
+    },
+    "record_id": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9-]{0,79}$"
+    },
+    "work_item_id": {
+      "type": "string",
+      "pattern": "^WI-(?:[0-9]{4,}|[0-9]{8}-[A-F0-9]{10})$"
+    },
+    "source_revision": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{40,64}$"
+    },
+    "non_empty_string": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 500
+    },
+    "counts": {
+      "type": "object",
+      "additionalProperties": { "type": "integer", "minimum": 0 }
+    },
+    "composite_reference": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["project_id", "work_item_id", "revision"],
+      "properties": {
+        "project_id": { "$ref": "#/$defs/project_id" },
+        "work_item_id": { "$ref": "#/$defs/work_item_id" },
+        "revision": { "$ref": "#/$defs/source_revision" }
+      }
+    },
+    "document_reference": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "revision"],
+      "properties": {
+        "id": { "$ref": "#/$defs/non_empty_string" },
+        "revision": { "$ref": "#/$defs/non_empty_string" }
+      }
+    },
+    "work_item": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["ref", "title", "state", "updated_at", "specification_mode", "ui_delivery_mode", "spec_refs", "ux_refs", "ui_refs", "contract_refs"],
+      "properties": {
+        "ref": { "$ref": "#/$defs/composite_reference" },
+        "title": { "$ref": "#/$defs/non_empty_string" },
+        "state": { "$ref": "#/$defs/non_empty_string" },
+        "updated_at": {
+          "anyOf": [
+            { "type": "string", "format": "date-time" },
+            { "type": "null" }
+          ]
+        },
+        "specification_mode": { "type": ["string", "null"] },
+        "ui_delivery_mode": { "type": ["string", "null"] },
+        "spec_refs": { "type": "array", "items": { "$ref": "#/$defs/document_reference" } },
+        "ux_refs": { "type": "array", "items": { "$ref": "#/$defs/document_reference" } },
+        "ui_refs": { "type": "array", "items": { "$ref": "#/$defs/document_reference" } },
+        "contract_refs": { "type": "array", "items": { "$ref": "#/$defs/document_reference" } }
+      }
+    },
+    "signal": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "source_kind", "authoritative"],
+      "properties": {
+        "status": { "enum": ["observed", "unknown"] },
+        "source_kind": { "enum": ["canonical-aggregate", "generated-projection"] },
+        "authoritative": { "const": false },
+        "reason_code": { "$ref": "#/$defs/non_empty_string" },
+        "work_items_projected": { "type": "integer", "minimum": 0 },
+        "work_items_with_risk": { "type": "integer", "minimum": 0 },
+        "by_state": { "$ref": "#/$defs/counts" },
+        "by_tier": { "$ref": "#/$defs/counts" },
+        "by_kind": { "$ref": "#/$defs/counts" },
+        "active_resources": { "type": "integer", "minimum": 0 },
+        "total_capacity_units": { "type": "integer", "minimum": 0 },
+        "active_reserved_units": { "type": "integer", "minimum": 0 },
+        "entries": { "type": "integer", "minimum": 0 },
+        "not_expired_or_invalidated": { "type": "integer", "minimum": 0 },
+        "expired": { "type": "integer", "minimum": 0 },
+        "invalidated": { "type": "integer", "minimum": 0 },
+        "generated_at": { "type": "string", "format": "date-time" },
+        "observations": { "type": "integer", "minimum": 0 },
+        "total_tokens": {
+          "anyOf": [
+            { "type": "integer", "minimum": 0 },
+            { "type": "null" }
+          ]
+        }
+      }
+    },
+    "participant": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["participant_id", "expected_project_id", "status", "diagnostics", "provenance", "project", "work_items", "signals"],
+      "properties": {
+        "participant_id": { "$ref": "#/$defs/project_id" },
+        "expected_project_id": { "$ref": "#/$defs/project_id" },
+        "status": { "enum": ["current", "unknown"] },
+        "diagnostics": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["code"],
+            "properties": { "code": { "$ref": "#/$defs/non_empty_string" } }
+          }
+        },
+        "provenance": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["expected_revision", "source_revision", "observed_at"],
+          "properties": {
+            "expected_revision": { "$ref": "#/$defs/source_revision" },
+            "source_revision": {
+              "anyOf": [
+                { "$ref": "#/$defs/source_revision" },
+                { "type": "null" }
+              ]
+            },
+            "observed_at": { "type": "string", "format": "date-time" },
+            "template_version": { "$ref": "#/$defs/non_empty_string" }
+          }
+        },
+        "project": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["id", "name"],
+              "properties": {
+                "id": { "$ref": "#/$defs/project_id" },
+                "name": { "$ref": "#/$defs/non_empty_string" }
+              }
+            },
+            { "type": "null" }
+          ]
+        },
+        "work_items": { "type": "array", "items": { "$ref": "#/$defs/work_item" } },
+        "signals": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["status", "capacity", "evidence", "risk", "usage"],
+          "properties": {
+            "status": { "$ref": "#/$defs/signal" },
+            "capacity": { "$ref": "#/$defs/signal" },
+            "evidence": { "$ref": "#/$defs/signal" },
+            "risk": { "$ref": "#/$defs/signal" },
+            "usage": { "$ref": "#/$defs/signal" }
+          }
+        }
+      }
+    },
+    "contract_reference": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "version", "revision"],
+      "properties": {
+        "id": { "$ref": "#/$defs/record_id" },
+        "version": { "$ref": "#/$defs/non_empty_string" },
+        "revision": { "$ref": "#/$defs/non_empty_string" }
+      }
+    },
+    "initiative": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "id", "version", "revision", "work_items", "resolution"],
+      "properties": {
+        "kind": { "const": "initiative" },
+        "id": { "$ref": "#/$defs/record_id" },
+        "version": { "$ref": "#/$defs/non_empty_string" },
+        "revision": { "$ref": "#/$defs/non_empty_string" },
+        "work_items": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/composite_reference" } },
+        "resolution": { "enum": ["current", "unknown"] }
+      }
+    },
+    "dependency": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "id", "version", "revision", "predecessor", "successor", "resolution"],
+      "properties": {
+        "kind": { "const": "dependency" },
+        "id": { "$ref": "#/$defs/record_id" },
+        "version": { "$ref": "#/$defs/non_empty_string" },
+        "revision": { "$ref": "#/$defs/non_empty_string" },
+        "predecessor": { "$ref": "#/$defs/composite_reference" },
+        "successor": { "$ref": "#/$defs/composite_reference" },
+        "resolution": { "enum": ["current", "unknown"] }
+      }
+    },
+    "contract": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "id", "version", "revision", "compatibility", "owner", "consumers", "resolution"],
+      "properties": {
+        "kind": { "enum": ["api", "event"] },
+        "id": { "$ref": "#/$defs/record_id" },
+        "version": { "$ref": "#/$defs/non_empty_string" },
+        "revision": { "$ref": "#/$defs/non_empty_string" },
+        "compatibility": { "enum": ["compatible", "incompatible", "unknown"] },
+        "owner": { "$ref": "#/$defs/composite_reference" },
+        "consumers": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/composite_reference" } },
+        "resolution": { "enum": ["current", "unknown"] }
+      }
+    },
+    "rollout_wave": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "id", "version", "revision", "order", "work_items", "contract_refs", "resolution"],
+      "properties": {
+        "kind": { "const": "rollout-wave" },
+        "id": { "$ref": "#/$defs/record_id" },
+        "version": { "$ref": "#/$defs/non_empty_string" },
+        "revision": { "$ref": "#/$defs/non_empty_string" },
+        "order": { "type": "integer", "minimum": 1 },
+        "work_items": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/composite_reference" } },
+        "contract_refs": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/contract_reference" } },
+        "resolution": { "enum": ["current", "unknown"] }
+      }
+    }
+  }
+}

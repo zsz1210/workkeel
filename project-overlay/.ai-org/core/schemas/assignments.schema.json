@@ -1,0 +1,11 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "temple.assignments/v1",
+  "type": "object",
+  "required": ["schema_version", "assignments"],
+  "properties": {
+    "schema_version": { "const": "temple.assignments/v1" },
+    "assignments": { "type": "array", "items": { "type": "object", "required": ["position_id", "agent_id", "active"], "properties": { "position_id": { "type": "string", "minLength": 1 }, "agent_id": { "type": "string", "pattern": "^agent-[a-z0-9][a-z0-9-]*$" }, "active": { "type": "boolean" } }, "additionalProperties": false } }
+  },
+  "additionalProperties": false
+}

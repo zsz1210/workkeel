@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "temple.approval/v1",
+  "type": "object",
+  "required": ["schema_version", "work_item_id", "decision", "scope_revision", "approved_at", "approvals", "external_action_authorized"],
+  "properties": {
+    "schema_version": { "const": "temple.approval/v1" },
+    "work_item_id": { "type": "string", "pattern": "^WI-(?:[0-9]{4,}|[0-9]{8}-[A-F0-9]{10})$" },
+    "decision": { "enum": ["go", "no-go"] },
+    "scope_revision": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+    "approved_at": { "type": "string", "format": "date-time" },
+    "approvals": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["principal_id", "approved_at"],
+        "properties": {
+          "principal_id": { "type": "string", "pattern": "^principal-[a-z0-9][a-z0-9-]*$" },
+          "approved_at": { "type": "string", "format": "date-time" }
+        },
+        "additionalProperties": false
+      }
+    },
+    "external_action_authorized": { "const": false }
+  },
+  "additionalProperties": false
+}

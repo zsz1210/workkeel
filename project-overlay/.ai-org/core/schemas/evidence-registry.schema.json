@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "temple.evidence/v1",
+  "type": "object",
+  "required": ["schema_version", "entries"],
+  "properties": {
+    "schema_version": { "const": "temple.evidence/v1" },
+    "entries": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "work_item_id", "kind", "title", "outcome", "scope_revision", "recorded_at", "recorded_by", "observed_at", "summary", "adapter", "artifacts", "details", "expires_at", "invalidated_at", "invalidated_by", "invalidation_reason", "external_action_performed"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^EVID-[0-9]{8}T[0-9]{6}Z-[A-F0-9]{8}$" },
+          "work_item_id": { "type": "string", "pattern": "^WI-(?:[0-9]{4,}|[0-9]{8}-[A-F0-9]{10})$" },
+          "kind": { "enum": ["git-revision", "test", "runtime", "unverified-claim", "risk", "rollback", "github"] },
+          "title": { "type": "string", "minLength": 1 },
+          "outcome": { "type": "string", "minLength": 1 },
+          "scope_revision": { "type": ["string", "null"], "pattern": "^[0-9a-f]{40}$" },
+          "recorded_at": { "type": "string", "format": "date-time" },
+          "recorded_by": { "type": "string", "minLength": 1 },
+          "observed_at": { "type": "string", "format": "date-time" },
+          "summary": { "type": "string", "minLength": 1 },
+          "adapter": { "type": "object" },
+          "artifacts": { "type": "array", "items": { "type": "object", "required": ["path", "sha256"], "properties": { "path": { "type": "string" }, "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" } }, "additionalProperties": false } },
+          "details": { "type": "object" },
+          "expires_at": { "type": ["string", "null"], "format": "date-time" },
+          "invalidated_at": { "type": ["string", "null"], "format": "date-time" },
+          "invalidated_by": { "type": ["string", "null"] },
+          "invalidation_reason": { "type": ["string", "null"] },
+          "external_action_performed": { "const": false }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}
