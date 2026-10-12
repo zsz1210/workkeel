@@ -1,2 +1,8 @@
 blank_issues_enabled: false
-contact_links: []
+contact_links:
+  - name: Documentation and setup
+    url: https://github.com/zsz1210/workkeel/blob/main/docs/README.md
+    about: Start with the public guides. Keep actual development tasks and data private.
+  - name: Report a vulnerability privately
+    url: https://github.com/zsz1210/workkeel/security/advisories/new
+    about: Do not disclose vulnerabilities in public issues.

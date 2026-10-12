@@ -5,6 +5,11 @@ Your existing coding agent executes the work. The repository retains the approve
 task, identities, boundaries, handoff and acceptance. Optional executable workflows
 add explicit model routing and recoverable steps; start with the task lifecycle below.
 
+This guide installs Workkeel in a project that will use it. To develop the
+Workkeel framework itself, use the
+[separate private development workspace](../operations/framework-development.md).
+Do not run task initialization in the public framework source checkout.
+
 ## Availability and compatibility
 
 Use Node.js 24 or newer. Beta.1 is published as
@@ -86,7 +91,10 @@ so the coding agent can discover Workkeel. The source override is version-checke
 The launcher uses a matching local package when present; it never silently fetches
 an unpublished package. Network package fetching requires the explicit
 `WORKKEEL_ALLOW_PACKAGE_FETCH=1` opt-in and an actually published pinned version.
-Commit policy, guidance and baseline product files before claiming work.
+Prepare the approved policy, guidance and baseline product commit before claiming
+work. Follow the target project's data policy when deciding what to commit.
+Workkeel framework development keeps all actual task policy and evidence in its
+private workspace, outside the public source checkout and public Git history.
 
 Below, `workkeel` means the installed command or
 `node /path/to/workkeel/bin/workkeel.mjs` from the reviewed source checkout.

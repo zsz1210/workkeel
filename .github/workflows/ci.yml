@@ -41,12 +41,15 @@ jobs:
         if: ${{ always() && steps.install.outcome == 'success' }}
         run: |
           node ./bin/workkeel.mjs start .
+          npm run check:source-checkout
           npm run check:publication
           npm run check:public-history
       - id: behavior
         name: Behavior — bounded contract suite
         if: ${{ always() && steps.install.outcome == 'success' }}
-        run: npm run test:fast
+        run: |
+          npm run test:fast
+          npm run check:source-checkout
       - name: Report verification results
         if: ${{ always() }}
         env:

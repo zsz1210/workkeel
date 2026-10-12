@@ -8,21 +8,23 @@ older versions may need an upgrade.
 
 ## Report a vulnerability
 
-Use GitHub's private **Security → Report a vulnerability** flow when it is
-available for this repository. Do not place a vulnerability, token, private
-prompt, customer record, or task evidence in a public issue. If private
-reporting is unavailable, email `zsz1210+oss.temple@gmail.com` with
-`[Workkeel][SECURITY]` in the subject. There is no response-time
-service-level agreement.
+Use [GitHub's private vulnerability report](https://github.com/zsz1210/workkeel/security/advisories/new)
+to contact the maintainer. Describe affected versions, impact and a minimal
+synthetic reproduction. Do not place a vulnerability, token, private prompt,
+customer record or task evidence in a public issue or PR. There is no response-time
+service-level agreement. If the private form is unavailable, do not disclose the
+details publicly; ask for the private reporting route to be restored without
+including vulnerability details.
 
 ## Boundaries
 
 - Workkeel records permissions and attribution; the execution host enforces
   filesystem, tool, network, and model access. Recorded identities are not
   authentication.
-- Do not commit secrets, actual task records, approvals, raw execution output,
-  `.ai-org/`, or `workkeel.lock` to public source history. Keep a separate
-  private backup of needed state.
+- Keep actual tasks, approvals, conversations, raw execution output, measurements,
+  review evidence and machine settings in a separate private workspace outside
+  the public checkout. Git-ignored paths are not a storage boundary. Preserve a
+  private backup; never attach those records to public issues, PRs or releases.
 - Optional adapters and observers must stay within their documented access
   and authority boundaries. Review their specific guides before enabling them.
 

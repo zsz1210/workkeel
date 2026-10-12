@@ -13,7 +13,7 @@ behavior. Installing Workkeel or running `workkeel start` does not migrate it.
 | New repository with no task framework | Follow the [native quick start](workkeel.md). |
 | Existing Temple repository with active tasks | Continue its pinned legacy workflow and preserve its records. |
 | Existing Temple repository considering native Workkeel | Review task authority, identities, open work, file ownership, and backup needs before approving a bounded migration. |
-| Source checkout for framework development | Follow its [AGENTS.md](../../AGENTS.md) and [native setup guide](workkeel.md); initialize private local task state. |
+| Source checkout for framework development | Follow [AGENTS.md](../../AGENTS.md) and the [private development workspace guide](../operations/framework-development.md); never initialize maintainer task state in the public checkout. |
 
 Temple's Positions, Agent Identities, assignments, and Independent QA rules
 remain distinct in legacy projects. A native task uses its approved task

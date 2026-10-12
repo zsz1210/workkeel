@@ -1,5 +1,7 @@
 # Workkeel
 
+[![CI](https://github.com/zsz1210/workkeel/actions/workflows/ci.yml/badge.svg)](https://github.com/zsz1210/workkeel/actions/workflows/ci.yml)
+
 Workkeel 把程式開發任務核准的範圍、負責人、交接、審查與驗收，
 保存在儲存庫的本機紀錄。執行主機提供模型、工具與存取控制；
 Workkeel 本身不是沙箱。
@@ -7,6 +9,9 @@ Workkeel 本身不是沙箱。
 [English](README.md) · 繁體中文 · [日本語](README.ja.md)
 
 實驗性 Beta.1 · Node.js 24 以上 · [MIT](LICENSE)
+
+[快速入門](docs/getting-started/workkeel.md) · [文件](docs/README.md) ·
+[參與貢獻](CONTRIBUTING.md) · [安全政策](SECURITY.md)
 
 ## 開始使用
 
@@ -22,10 +27,18 @@ npx --no-install workkeel start .
 依照[原生快速入門](docs/getting-started/workkeel.md)審查本機政策、
 初始化任務狀態，並根據核准的簡報建立任務。
 
-若要查看原始碼，先執行 `npm ci --omit=optional --ignore-scripts`，
-再執行 `node bin/workkeel.mjs help`。原始碼可能與已發布的 Beta.1
-套件不同。[測試指南](docs/getting-started/testing.md)說明貢獻者的檢查；
-單一工作目錄通過測試，不等於版本已通過發布認證。
+若只要查看框架原始碼，不需要建立任務狀態：
+
+```sh
+git clone https://github.com/zsz1210/workkeel.git
+cd workkeel
+npm ci --omit=optional --ignore-scripts
+node bin/workkeel.mjs help
+```
+
+原始碼可能與已發布的 Beta.1 套件不同。CI 徽章只代表範圍有限的儲存庫檢查；
+完整候選版本與發布檢查請見[測試指南](docs/getting-started/testing.md)。
+要修改框架，請先建立[獨立私人開發工作區](docs/operations/framework-development.md)。
 
 ## 任務流程
 
@@ -42,11 +55,16 @@ npx --no-install workkeel start .
 
 ## 原始碼與私人狀態的界線
 
-全新複製的原始碼儲存庫不含維護者的任務歷史。開發框架時，
-應在本機初始化任務狀態。實際任務、核准、執行紀錄、審查證據、
-`.ai-org/` 和 `workkeel.lock` 不應進入公開 Git 歷史；
-需要保留的私人狀態應另行備份。詳見[分離決策](docs/adr/0083-public-source-private-state.md)
-與[貢獻指南](CONTRIBUTING.md)。
+這個儲存庫**只放框架內容**：原始碼、公開文件、通用範本、合成範例與可重現測試。
+實際開發任務、計畫、核准、對話、量測資料、執行紀錄及驗收證據，
+一律放在**公開 checkout 以外的獨立私人工作區**。
+即使路徑已被 Git 忽略，也不要在這裡初始化維護者的任務狀態。
+
+公開 Issue 與 PR 用合成案例說明產品問題和原始碼變更，不用來同步私人任務帳本。
+私人紀錄不得進入公開 commit、分支、tag、附件或 Release。
+詳見[開發指南](docs/operations/framework-development.md)、
+[發布邊界](docs/operations/publication-boundary.md)與
+[分離決策](docs/adr/0083-public-source-private-state.md)。
 
 新專案預設使用原生 Workkeel。既有 Temple 專案可保留原本鎖定的舊流程；
 變更前請閱讀[相容與遷移指南](docs/getting-started/migration-from-temple.md)。
