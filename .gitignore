@@ -1,0 +1,9 @@
+node_modules/
+.DS_Store
+coverage/
+*.log
+output/
+.ai-org/
+workkeel.lock
+.temple-tmp/
+.workkeel-private/
