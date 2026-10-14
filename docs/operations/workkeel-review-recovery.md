@@ -148,6 +148,7 @@ them differs afterwards, including a rewritten, rehashed or deleted result.
 | Reused thread or turn from any binding or recovery attempt | Rejected; nothing recorded or launched |
 | Blank, multi-line or malformed reported model or effort | Recorded as `interrupted` with `invalid-host-result` and unknown usage; retry remains possible |
 | Completed result whose model or effort differs from the pinned selection | Chain read, review and close rejected, even when rehashed |
+| Attempt selection, policy reference or dispatch identity rewritten together with its result | Chain read, review and close rejected, even when both are rehashed |
 | Result changed, rehashed or removed after the authored review | Close rejected |
 
 Records live under `.ai-org/review-recovery/<task>/<delivery claim>/` as
@@ -155,7 +156,12 @@ Records live under `.ai-org/review-recovery/<task>/<delivery claim>/` as
 rewritten. The store is Git-ignored. Original binding and attempt bytes are
 preserved and are rechecked whenever the chain is read. Envelope digests detect
 changed bytes only; every persisted field is also validated against its schema
-and the current delivery. `readReviewRecovery`, replay checks and record creation
+and the current delivery. An attempt's own fields never grant authority: the
+first attempt's dispatch identity must equal the one recorded in its pinned
+predecessor binding, later attempts must keep that same identity, and each
+attempt's policy reference, provider, model and effort must equal the validated
+approved review dispatch ticket. Another valid ticket cannot be substituted.
+`readReviewRecovery`, replay checks and record creation
 all run under the project mutation lock, so a reader never observes a record
 while it is still being published.
 

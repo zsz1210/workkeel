@@ -40,7 +40,10 @@ record publication run under it; everything the probes could have outlived is
 revalidated under the lock, which is held through attempt reservation and launch
 invocation but released before the model runs. Each attempt and its result are
 separate immutable records in a bounded chain of three, validated field by field
-in addition to their envelope digests. A result is recorded only while its
+in addition to their envelope digests. Chain reads re-derive authority instead of
+trusting a rewriteable attempt: its dispatch identity is anchored to the original
+predecessor binding, and its policy and selection must match the validated
+approved review ticket. A result is recorded only while its
 attempt is the chain head and the task is unchanged.
 
 Source freshness is workspace-wide across host bindings and recovery attempts.

@@ -93,6 +93,10 @@ async function readEnvelope(target, ref) {
 
 // Envelope digests prove bytes were not altered, not that they are meaningful:
 // every persisted field is checked against the schema and the current delivery.
+// Authority is never taken from the rewriteable attempt itself: the first
+// attempt's dispatch identity comes from its pinned predecessor binding, every
+// later attempt inherits that same identity, and each attempt's policy and
+// selection must equal the validated approved dispatch ticket.
 async function validateAttempt(target, value, n, item, previous) {
   strict(value, ATTEMPT_KEYS);
   check(value.schema_version === "workkeel.review-attempt/v1" && value.sequence === n && value.task_id === item.id &&
@@ -131,9 +135,19 @@ async function validateAttempt(target, value, n, item, previous) {
       p.dispatch_execution_id === previous.value.dispatch_execution_id, "predecessor evidence changed after recovery");
   } else {
     usage(p.usage, BINDING_USAGE_KEYS);
-    check(p.kind === "host-binding" && p.result_sha256 === null && STOPPED_BINDING.has(p.status) &&
-      (await readTaskFile(target, `.ai-org/host-usage/${p.id}/binding.json`)).digest === p.sha256, "predecessor evidence changed after recovery");
+    check(p.kind === "host-binding" && p.result_sha256 === null && STOPPED_BINDING.has(p.status), "predecessor evidence changed after recovery");
+    const { binding, file_sha256 } = await inspectHostBinding(target, p.id);
+    check(file_sha256 === p.sha256 && binding.task_id === item.id && binding.claim_id === item.delivery.claim_id &&
+      binding.contract_sha256 === item.contract_sha256 && binding.dispatch?.activity_kind === "review" &&
+      binding.dispatch.execution_id === p.dispatch_execution_id && binding.status === p.status &&
+      binding.source.thread_id === p.source.thread_id && binding.source.turn_id === p.source.turn_id &&
+      executionDigest(binding.usage) === executionDigest(p.usage), "predecessor evidence changed after recovery");
   }
+  const ticket = await readDispatchTicket(target, value.dispatch_execution_id);
+  check(ticket.task_id === item.id && ticket.claim_id === item.delivery.claim_id && ticket.contract_sha256 === value.contract_sha256 &&
+    ticket.node.activity_kind === "review" && ticket.policy_ref === value.policy_ref &&
+    executionDigest({ provider: ticket.selected.provider, model: ticket.selected.model, reasoning: ticket.selected.reasoning }) ===
+    executionDigest(value.selected), "attempt selection differs from the approved review dispatch");
 }
 function validateResult(value, attempt) {
   strict(value, RESULT_KEYS);

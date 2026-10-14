@@ -4,6 +4,7 @@ import fs from 'node:fs/promises';
 import {existsSync} from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
+import {createHash} from 'node:crypto';
 import {execFileSync} from 'node:child_process';
 import {sha256} from '../src/files.mjs';
 import {withProjectMutationLock} from '../src/project.mjs';
@@ -94,6 +95,19 @@ const rehashResult=async(f,change)=>{
   const file=`${f.root}/.ai-org/review-recovery/${f.id}/${f.claimId}/attempt-001-result.json`,envelope=JSON.parse(await fs.readFile(file,'utf8'));
   Object.assign(envelope.value,change);envelope.sha256=executionDigest(envelope.value);await fs.writeFile(file,JSON.stringify(envelope));
 };
+// Jointly rewrites an attempt and its result, recomputing both envelopes and the
+// result's attempt file digest, so only independent authority can expose it.
+const rehashAttemptAndResult=async(f,n,editAttempt,editResult)=>{
+  const dir=`${f.root}/.ai-org/review-recovery/${f.id}/${f.claimId}`,name=`attempt-${String(n).padStart(3,'0')}`;
+  const attempt=JSON.parse(await fs.readFile(`${dir}/${name}.json`,'utf8'));editAttempt(attempt.value);attempt.sha256=executionDigest(attempt.value);
+  const bytes=JSON.stringify(attempt);await fs.writeFile(`${dir}/${name}.json`,bytes);
+  const result=JSON.parse(await fs.readFile(`${dir}/${name}-result.json`,'utf8'));
+  result.value.attempt_sha256=createHash('sha256').update(bytes).digest('hex');editResult(result.value);result.sha256=executionDigest(result.value);
+  await fs.writeFile(`${dir}/${name}-result.json`,JSON.stringify(result));
+};
+const unauthorized=v=>{v.selected.model='unauthorized-model';v.selected.reasoning='unauthorized-effort';};
+const unauthorizedReport=v=>{v.runtime_model='unauthorized-model';v.reasoning='unauthorized-effort';};
+const authorityBytes=async f=>Promise.all([f.bindingFile,...(await fs.readdir(f.root+'/.ai-org/dispatch')).filter(n=>n.endsWith('.json')).map(n=>`${f.root}/.ai-org/dispatch/${n}`)].map(p=>fs.readFile(p)));
 
 test('recovery sources are fresh across the workspace: retained implementation bindings cannot supply a review',async t=>{
   const implementation={kind:'host-report',thread_id:'implementation-thread',turn_id:'implementation-turn'};
@@ -202,6 +216,58 @@ test('completed results must match the pinned model and effort at read, review a
   await rehashResult(f,{runtime_model:'unapproved-model'});
   await assert.rejects(mutateNativeTask(f.root,f.id,'close',close(f)),/differs from the approved selection|chain changed after the authored review/);
   assert.equal((await readNativeTask(f.root,f.id)).state,'release_gate');
+});
+
+test('jointly rehashed attempt selection and completed result cannot replace the approved dispatch at read, review and close',async t=>{
+  const f=await fixture(t),result=await recoverInterruptedReview(f.root,await f.request(),{host:reviewHost().host}),authority=await authorityBytes(f);
+  await rehashAttemptAndResult(f,1,unauthorized,unauthorizedReport);
+  await assert.rejects(readReviewRecovery(f.root,f.id),/differs from the approved review dispatch/);
+  await assert.rejects(mutateNativeTask(f.root,f.id,'review',review(f,{review_attempt_id:result.attempt_id})),/differs from the approved review dispatch/);
+  assert.equal((await readNativeTask(f.root,f.id)).state,'test');
+  // Policy reference and provider are equally bound to the ticket.
+  for(const edit of [v=>{v.policy_ref='docs/approval.md';},v=>{v.selected.provider='other-provider';}]) {
+    const g=await fixture(t);await recoverInterruptedReview(g.root,await g.request(),{host:reviewHost().host});
+    await rehashAttemptAndResult(g,1,edit,()=>{});
+    await assert.rejects(readReviewRecovery(g.root,g.id),/differs from the approved review dispatch/);
+  }
+  // After an authored review, the same joint rewrite blocks close.
+  const g=await fixture(t),done=await recoverInterruptedReview(g.root,await g.request(),{host:reviewHost().host});
+  await mutateNativeTask(g.root,g.id,'review',review(g,{review_attempt_id:done.attempt_id}));
+  await rehashAttemptAndResult(g,1,unauthorized,unauthorizedReport);
+  await assert.rejects(mutateNativeTask(g.root,g.id,'close',close(g)),/differs from the approved review dispatch|chain changed after the authored review/);
+  assert.equal((await readNativeTask(g.root,g.id)).state,'release_gate');
+  assert.deepEqual(await authorityBytes(f),authority);
+});
+
+test('attempts stay anchored to the original review dispatch; another valid ticket cannot be substituted',async t=>{
+  let substitutes;
+  const f=await fixture(t,{beforeHandoff:async({root,task,actor})=>{
+    // Two further valid review tickets for this same delivery claim: one with another model, one with the same.
+    const ticket=(operation_id,alias,models)=>prepareDispatchTicket(root,{operation_id,task_id:task.id,actor,claim_id:task.claim.id,contract_sha256:task.contract_sha256,
+      policy_ref:'docs/dispatch.json',route:{alias},node:{id:operation_id,activity_kind:'review',depends_on:[],read_paths:['src'],write_paths:[]},capabilities:{host:'fixture-host',models}});
+    substitutes=[await ticket('dispatch-small','small',[{provider:'local-provider',model:'small-model',reasoning:[null]}]),
+      await ticket('dispatch-careful','careful',[{provider:model.provider,model:model.model,reasoning:[model.reasoning]}])];
+  }});
+  const result=await recoverInterruptedReview(f.root,await f.request(),{host:reviewHost().host});
+  const dir=`${f.root}/.ai-org/review-recovery/${f.id}/${f.claimId}`,original=await Promise.all(['attempt-001.json','attempt-001-result.json'].map(n=>fs.readFile(`${dir}/${n}`)));
+  for(const substitute of substitutes) {
+    const selected=substitute.selected;
+    await rehashAttemptAndResult(f,1,v=>{v.dispatch_execution_id=substitute.execution_id;v.predecessor.dispatch_execution_id=substitute.execution_id;
+      v.selected={provider:selected.provider,model:selected.model,reasoning:selected.reasoning};},v=>{v.runtime_model=selected.model;v.reasoning=selected.reasoning;});
+    await assert.rejects(readReviewRecovery(f.root,f.id),/predecessor evidence changed/);
+    await assert.rejects(mutateNativeTask(f.root,f.id,'review',review(f,{review_attempt_id:result.attempt_id})),/predecessor evidence changed/);
+    await fs.writeFile(`${dir}/attempt-001.json`,original[0]);await fs.writeFile(`${dir}/attempt-001-result.json`,original[1]);
+  }
+  assert.equal((await readReviewRecovery(f.root,f.id)).attempts[0].status,'completed');
+
+  // A later attempt inherits the original dispatch; rewriting it alone, or with its selection, is rejected.
+  const g=await fixture(t),first=await recoverInterruptedReview(g.root,await g.request(),{host:reviewHost({result:{...completed,status:'interrupted'}}).host});
+  const second=await recoverInterruptedReview(g.root,await g.request({operation_id:'recover-2',predecessor:{kind:'review-attempt',id:first.attempt_id,sha256:first.attempt_sha256},
+    source:{thread_id:'retry-thread-2',turn_id:'retry-turn-2'}}),{host:reviewHost().host});
+  assert.equal(second.status,'completed');
+  await rehashAttemptAndResult(g,2,unauthorized,unauthorizedReport);
+  await assert.rejects(readReviewRecovery(g.root,g.id),/differs from the approved review dispatch/);
+  await assert.rejects(mutateNativeTask(g.root,g.id,'review',review(g,{review_attempt_id:second.attempt_id})),/differs from the approved review dispatch/);
 });
 
 test('an interrupted review resumes on the same task and exact candidate, then ordinary review and close accept it',async t=>{
