@@ -106,6 +106,8 @@ npx --no-install workkeel monitor /path/to/task-first-project
 [範囲を定めた目標の継続](docs/operations/workkeel-autonomy.md)と
 [バージョン別のプロジェクト Skill 学習](docs/extensions/workkeel-skill-lifecycle.md)も提供します。
 実行終了、独立レビュー、タスク受入れは別々に記録します。
+[目標全体の調整](docs/operations/workkeel-goals.md)は、必須リポジトリの独立レビューと
+上限付き修正を継続します。明示した継続的許可の範囲内で、証拠を持つ改善タスクを作成できます。
 
 ## 既定値、オプション、対応範囲
 

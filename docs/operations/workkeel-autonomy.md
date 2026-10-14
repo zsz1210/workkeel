@@ -104,8 +104,10 @@ explicit `directions`, `max_jobs`, `max_attempts` and `cooldown_ms`. An optional
 ```
 
 Directions identify intentionally approved topics, not permission to fix everything.
-All scopes and budgets must fit the actual task. Unknown cost ceilings do not count
-as bounded discovery. An explicitly enqueued job with `origin:"improvement"`, an
+All scopes and budgets must fit the actual task. Finite financial ceilings need an
+enforcing host; unknown cost cannot satisfy them. Explicit null means no financial
+ceiling, with operation/time bounds still enforced. An explicitly enqueued job with
+`origin:"improvement"`, an
 approved `direction` and `purpose:"discovery"` runs a pinned qualified workflow.
 The final completed runtime output must contain bounded JSON `proposals`, each
 with `title`, exact `evidence` pins, `scope` and `budget`. Native runtime records,
@@ -130,3 +132,71 @@ are excluded.
 See [desktop workspace](workkeel-workspace.md) for observation and controlled
 actions, and [ADR-0085](../adr/0085-native-workspace-bounded-autonomy-and-skill-learning.md)
 for the authority boundaries.
+
+## Opt-in continuous improvement
+
+Approve a [whole goal](workkeel-goals.md) with a sealed `admission` grant and a
+task-authority-pinned `workkeel.improvement-template/v1` file. The template contains
+`id`, `source_component_id`, `title_prefix`, `acceptance`, `include` and `exclude`.
+It identifies one approved component as the source of task/model/data/tool
+authority; it cannot grant an arbitrary repository.
+
+The standing grant contains exactly:
+
+```json
+{
+  "enabled":true,
+  "directions":["quality"],
+  "read_paths":["src","test"],
+  "write_paths":["src","test"],
+  "template_ref":"docs/improvement-template.json",
+  "source_refs":["src/service.mjs","test/service.test.mjs"],
+  "max_source_bytes":65536,
+  "max_rounds":2,
+  "cooldown_ms":3600000,
+  "max_goals":6,
+  "max_total_operations":120,
+  "max_total_runtime_ms":3600000,
+  "max_total_cost_usd":null,
+  "max_reworks":1,
+  "max_operations":20,
+  "max_attempts":2,
+  "max_runtime_ms":600000,
+  "max_cost_usd":null
+}
+```
+
+Explicit source references are bounded triggers; idle timers do not ask a model
+for work. The controller must authorize `.ai-org/autonomy` and `.ai-org/goals`
+metadata for derived goals; the source component must authorize the product
+scope. Another repository needs its own actors, approval and metadata scope.
+Sensitive/high-risk tasks are ineligible for automatic admission.
+
+First complete the source goal. Enable project autonomy with
+`admission:{enabled:true,goal_id:"approved-goal"}` and a bounded `discovery` policy
+that only narrows this grant. Add `goal_id` to common mutation requests and use
+the sealed original controller claim/hash returned by `goal show`; settings
+deliberately remain usable after that claim ends. The UI selects an approved goal
+without requiring typed claim identities. Saving settings does not start inference:
+start the background service from the workspace or run `autonomy serve` explicitly.
+
+Changed approved sources create a bounded read-only discovery goal. Its structured
+report and distinct review must be accepted before admission. Each proposal has
+stable `id`, `title`, `direction`, assessed `risk_tier`, `expected_benefit`, testable
+`acceptance`, exact `evidence` pins, `scope` and `budget`. Unknown/elevated risk stays
+for a human decision without silently lowering the task's risk.
+
+The controller reserves cumulative goals, operations, time and any enabled cost
+ceiling before creation. It freezes a receipt, narrower native tasks and a separate
+derived goal, then continues checks, distinct review, repair and acceptance without
+routine permission prompts. Partial intake recovers identical IDs/contracts;
+uncertain reservations are not refunded. Equivalent failed problems remain
+deduplicated after source changes. Completed improvements can trigger another
+bounded source review. Original acceptance remains historical; changed interfaces
+are never mislabeled as currently accepted.
+
+Off, unchanged sources, empty findings, exhausted budgets and cooldown make no
+inference calls. Turning improvement off stops new exploration/admission; each
+goal has controls for existing work. Neither mode publishes, deploys, installs
+dependencies or promotes a Skill globally. Skill learning retains its own
+comparison, independent review and activation rules.

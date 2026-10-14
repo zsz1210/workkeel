@@ -100,6 +100,8 @@ npx --no-install workkeel monitor /path/to/task-first-project
 另提供[有界目標續跑](docs/operations/workkeel-autonomy.md)與
 [版本化專案 Skill 學習](docs/extensions/workkeel-skill-lifecycle.md)。
 執行結束、獨立審查與任務驗收仍分別記錄。
+[整體目標協調](docs/operations/workkeel-goals.md)會持續完成所有必做 repo 任務的
+獨立審查與有界修正；明確啟用的持續授權可在原範圍內建立有證據的改善任務。
 
 ## 預設、選配與支援範圍
 

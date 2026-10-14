@@ -122,7 +122,7 @@ export async function startWorkspaceServer(stateDir,{port=0,readSnapshot=readWor
         try{return send(200,{url:(await observers.get(id)).url});}catch(error){observers.delete(id);throw error;}
       }
       const kind=route.pathname.slice('/api/'.length);
-      if(['policy','learning','autonomy','retention'].includes(kind)) {
+      if(['policy','learning','autonomy','retention','goals'].includes(kind)) {
         if(req.method==='GET') {
           const project=(await readWorkspace(stateDir)).projects.find(p=>p.id===route.searchParams.get('project'));
           if(!project)return send(404,{error:'Select a registered project'});
@@ -144,5 +144,5 @@ export async function startWorkspaceServer(stateDir,{port=0,readSnapshot=readWor
   await new Promise((resolve,reject)=>{server.once('error',reject);server.listen(port,'127.0.0.1',resolve);});
   origin=`http://127.0.0.1:${server.address().port}`;
   return {url:origin+'/#'+readToken+(writeToken?'/'+writeToken:''),read_url:origin+'/#'+readToken,origin,
-    async close(){if(closed)return;closed=true;await Promise.allSettled([...pending.values()].map(p=>p.promise));await Promise.allSettled([...observers.values()].map(async monitor=>(await monitor).close()));await new Promise((resolve,reject)=>{server.close(e=>e?reject(e):resolve());server.closeIdleConnections();});}};
+    async close(){if(closed)return;closed=true;await Promise.allSettled([...pending.values()].map(p=>p.promise));await Promise.allSettled(Object.values(hooks).filter(h=>typeof h?.close==='function').map(h=>h.close()));await Promise.allSettled([...observers.values()].map(async monitor=>(await monitor).close()));await new Promise((resolve,reject)=>{server.close(e=>e?reject(e):resolve());server.closeIdleConnections();});}};
 }

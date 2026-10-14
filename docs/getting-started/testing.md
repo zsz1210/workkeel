@@ -79,6 +79,25 @@ including unknown/partial data, changed snapshots, stale errors, read recovery,
 access-link handling, keyboard controls and escaped task text. It makes no model
 calls; its report distinguishes real journal states from injected UI projections.
 
+## Desktop workspace and whole goals
+
+For workspace changes, run the actual browser scenarios in the private checkout:
+
+```sh
+WORKKEEL_WORKSPACE_BROWSER=1 node --test test/workkeel-workspace.test.mjs
+```
+
+An optional `WORKKEEL_WORKSPACE_EVIDENCE_DIR` must point to a private screenshot
+directory. These scenarios cover multi-repository goals, scoped standing
+improvement, independent model dimensions, control confirmation, stale data,
+navigation, keyboard/zoom behavior and unavailable measurements. They use
+synthetic projects, never paid models or real maintainer task state.
+
+Whole-goal/improvement tests cover retained reviewer FAIL, bounded repair, exact
+integration sets, crash ownership, partial intake and authority/resource drift.
+Stock-host tests use offline JSON-RPC processes and actual macOS command-sandbox
+checks; they are not live provider qualifications.
+
 ## Continuous integration
 
 Ordinary GitHub Actions is intentionally a short remote consistency check, not Workkeel's complete test environment. Every pull request and push to `main` runs one Node.js 24 job with an eight-minute ceiling. The job uses a clean checkout and performs:

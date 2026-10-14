@@ -1,0 +1,252 @@
+import fs from 'node:fs/promises';
+import path from 'node:path';
+import {spawn} from 'node:child_process';
+import {performance} from 'node:perf_hooks';
+import {executionDigest,exactKeys,validateExecutionPolicy} from './workkeel-execution-policy.mjs';
+import {createTrustedGoalAdapter} from './workkeel-goals.mjs';
+import {createLocalCodexSubscriptionHost} from './workkeel-codex-host.mjs';
+import {createCodexRuntime,codexPermissionsForContract} from './workkeel-codex-runtime.mjs';
+import {createTrustedRoleHost} from './workkeel-role-preflight.mjs';
+import {readApprovedModelPolicy} from './workkeel-model-routing.mjs';
+import {resolveModelPolicy} from './workkeel-model-policy.mjs';
+import {readTaskProject,assertActor,safeDirectory,readNativeGit} from './workkeel-project.mjs';
+import {readNativeTask,mutateNativeTask,assertTaskExecutionContext} from './workkeel-tasks.mjs';
+import {readTaskFile} from './task-contract.mjs';
+import {durableAtomicCreate,durableAtomicWrite,formatJson} from './files.mjs';
+
+const within=(p,root)=>root==='.'||p===root||p.startsWith(root+'/');
+const fail=m=>{throw Error('Codex goal host: '+m);};
+const noCost={input_tokens:0,output_tokens:0,cost_usd:0};
+let systemGit;
+const gitConfig=['-c','core.fsmonitor=false','-c','core.hooksPath=/dev/null','-c','credential.helper=','-c','protocol.allow=never','-c','gc.auto=0','-c','maintenance.auto=false'];
+const environment=()=>({PATH:path.dirname(process.execPath)+':/usr/bin:/bin:/usr/sbin:/sbin',GIT_CONFIG_GLOBAL:'/dev/null',GIT_CONFIG_SYSTEM:'/dev/null',GIT_CONFIG_NOSYSTEM:'1',GIT_NO_LAZY_FETCH:'1',GIT_TERMINAL_PROMPT:'0',GIT_OPTIONAL_LOCKS:'0',OPENSSL_CONF:'/dev/null',LC_ALL:'C'});
+function duration(ctx){return ctx.manifest.limits.operation_timeout_ms??Math.max(1,Math.floor(ctx.manifest.limits.timeout_ms/ctx.manifest.limits.max_operations));}
+function slotRef(ctx){return '.ai-org/goals/'+ctx.goal+'/runtime/'+ctx.operation_id+'/slot.json';}
+async function readSlot(ctx){const file=await readTaskFile(ctx.target,slotRef(ctx)),envelope=JSON.parse(file.content);exactKeys(envelope,['value','sha256']);if(executionDigest(envelope.value)!==envelope.sha256)fail('runtime slot integrity');return envelope.value;}
+async function writeSlot(ctx,value){const dir=await safeDirectory(ctx.target,path.posix.dirname(slotRef(ctx)),{create:true});await durableAtomicWrite(path.join(dir,'slot.json'),formatJson({value,sha256:executionDigest(value)}));}
+function reportRef(ctx,kind){return '.ai-org/artifacts/'+ctx.component.task_id+'/goal-'+kind+'-'+ctx.operation_id+'.json';}
+async function report(ctx,kind,value){
+  const ref=reportRef(ctx,kind),content=formatJson(value);if(Buffer.byteLength(content)>131072)fail('bounded report exceeded');
+  const dir=await safeDirectory(ctx.component.root,path.posix.dirname(ref),{create:true});
+  try{await durableAtomicCreate(path.join(dir,path.posix.basename(ref)),content);}catch(e){if(e.code!=='EEXIST'||(await readTaskFile(ctx.component.root,ref)).content!==content)throw e;}
+  return {path:ref,sha256:(await readTaskFile(ctx.component.root,ref)).bytes_digest};
+}
+async function artifactRefs(ctx){
+  const root='.ai-org/artifacts/'+ctx.component.task_id;let dir;try{dir=await safeDirectory(ctx.component.root,root);}catch(e){if(e.code==='ENOENT')return [];throw e;}
+  const names=(await fs.readdir(dir)).filter(n=>/^goal-[A-Za-z0-9._-]+\.json$/.test(n)).sort();if(names.length>256)fail('artifact inventory exceeded');return names.map(name=>root+'/'+name);
+}
+function effective(ctx){
+  const contract=structuredClone(ctx.task.contract),phase=ctx.input.phase,read=ctx.component.purpose==='discovery'||['planning','review','verification'].includes(phase);
+  contract.actor=structuredClone(ctx.input.actor);if(read)contract.environment.write_paths=[];
+  contract.execution.runtime={kind:'adapter',adapter_id:'codex-app-server',required_features:['filesystem-sandbox','network-disabled','fixed-model','resume','cancel']};
+  contract.execution.model_connection={kind:'codex-subscription',model:ctx.input.model.model,effort:ctx.input.model.reasoning};
+  return {contract,access:read?'read':'write',selection:{connection:contract.execution.model_connection,runtime_selection:ctx.input.model},policy:{headroom:{mode:'off'},limits:{timeout_ms:duration(ctx),max_cost_usd:null}}};
+}
+async function processResult(command,args,{cwd,signal,timeout_ms,env=environment()}){
+  return new Promise((resolve,reject)=>{
+    if(signal?.aborted)return reject(Error('Operation cancelled before process'));
+    const child=spawn(command,args,{cwd,env,stdio:['ignore','pipe','pipe'],detached:process.platform!=='win32'});let stdout='',stderr='',bytes=0,finished=false;
+    const stop=()=>{if(finished)return;try{if(process.platform==='win32')child.kill('SIGKILL');else process.kill(-child.pid,'SIGKILL');}catch{}};
+    const timer=setTimeout(stop,timeout_ms),abort=()=>stop();signal?.addEventListener('abort',abort,{once:true});
+    const chunk=(which,data)=>{bytes+=data.length;if(bytes>1024*1024){stop();return;}if(which==='out')stdout+=data;else stderr+=data;};
+    child.stdout.on('data',d=>chunk('out',d));child.stderr.on('data',d=>chunk('err',d));
+    child.once('error',e=>{finished=true;clearTimeout(timer);signal?.removeEventListener('abort',abort);reject(e);});
+    child.once('close',(code,term)=>{finished=true;clearTimeout(timer);signal?.removeEventListener('abort',abort);resolve({exit_code:code,signal:term,stdout,stderr,output_complete:bytes<=1024*1024});});
+  });
+}
+/** Stock local checks use the actual macOS sandbox, not a metadata promise.
+ * Write access is limited to private scratch, or Git metadata for checkpointing. */
+async function stockCommand(ctx,{command,args,git_write=false}){
+  if(process.platform!=='darwin')fail('local command runner requires qualified macOS sandbox');
+  const parent=await readNativeTask(ctx.target,ctx.controller.task_id);
+  if(!parent.contract.environment.tools.includes(command))fail('coordinator tool was not approved');
+  if(command==='git'&&!systemGit){const lookup=await processResult('/usr/bin/xcrun',['--find','git'],{cwd:ctx.component.root,signal:ctx.signal,timeout_ms:duration(ctx)});const selected=lookup.stdout.trim();if(lookup.exit_code!==0||!path.isAbsolute(selected)||!selected.endsWith('/git'))fail('qualified system Git unavailable');systemGit=await fs.realpath(selected);}
+  const binary=command==='node'?process.execPath:command==='git'?systemGit:null;
+  if(!binary)fail('explicit command is unsupported by stock local runner');
+  const scratch=await safeDirectory(ctx.target,'.ai-org/goals/'+ctx.goal+'/scratch/'+ctx.operation_id,{create:true});
+  const components=ctx.component.id===ctx.manifest.integration.component_id?ctx.manifest.components:[ctx.component],readRoots=['/System','/usr','/bin','/sbin','/Library/Apple',path.dirname(process.execPath),path.dirname(path.dirname(binary))],denied=[];
+  if(command==='node')for(const ref of process.report?.getReport().sharedObjects??[])if(path.isAbsolute(ref)&&!ref.startsWith('/System/')&&!ref.startsWith('/usr/')){
+    const resolved=await fs.realpath(ref);readRoots.push(path.dirname(resolved));
+    // dyld checks the installed Homebrew opt alias before following the Cellar
+    // symlink. Grant that exact verified library-directory alias as well.
+    const match=/^(.*)\/Cellar\/([^/]+)\/[^/]+\/(.+)$/.exec(resolved);
+    if(match){const aliasRoot=match[1]+'/opt/'+match[2],alias=aliasRoot+'/'+match[3];try{if(await fs.realpath(alias)===resolved)readRoots.push(aliasRoot);}catch(e){if(e.code!=='ENOENT')throw e;}}
+  }
+  for(const component of components){const task=component.id===ctx.component.id?ctx.task:await readNativeTask(component.root,component.task_id),profile=await codexPermissionsForContract(component.root,task.contract,{productAccess:'read'});for(const [ref,access]of Object.entries(profile.filesystem)){if(!path.isAbsolute(ref))continue;if(access==='read')readRoots.push(ref);else if(access==='deny')denied.push(ref);}if(command==='git')readRoots.push(path.join(component.root,'.git'));}
+  const terms=readRoots.map(root=>'(subpath '+JSON.stringify(root)+')').join(' ');
+  const ancestors=new Set();for(const root of [...readRoots,scratch])for(let parent=path.dirname(root);;parent=path.dirname(parent)){ancestors.add(parent);if(parent==='/')break;}
+  const metadata=[...ancestors].map(root=>'(literal '+JSON.stringify(root)+')').join(' ');
+  const writes=['(subpath '+JSON.stringify(scratch)+')','(literal "/dev/null")'];
+  if(git_write){const git=path.join(ctx.component.root,'.git');if(!(await fs.lstat(git)).isDirectory())fail('stock checkpoints require a regular local .git directory');writes.push('(subpath '+JSON.stringify(git)+')');}
+  const profile='(version 1)(deny default)(allow process*)(allow sysctl-read)(allow file-read-metadata '+metadata+')(allow file-read* '+terms+' (literal "/")(literal "/dev/null")(literal "/dev/urandom"))(deny file-read* '+denied.map(ref=>'(subpath '+JSON.stringify(ref)+')').join(' ')+')(allow file-write* '+writes.join(' ')+')(deny network*)';
+  const env={...environment(),TMPDIR:scratch,TMP:scratch,TEMP:scratch};
+  return processResult('/usr/bin/sandbox-exec',['-p',profile,binary,...args],{cwd:ctx.component.root,signal:ctx.signal,timeout_ms:duration(ctx),env});
+}
+async function productChanges(ctx){
+  const root=ctx.component.root,task=ctx.task;
+  const tracked=(await readNativeGit(root,['diff','--no-renames','--name-only','-z','HEAD','--'])).split('\0').filter(Boolean);
+  const untracked=(await readNativeGit(root,['ls-files','--others','--exclude-standard','-z'])).split('\0').filter(Boolean);
+  const admin=p=>p==='.ai-org/work-items/'+task.id+'.json'||p.startsWith('.ai-org/artifacts/'+task.id+'/goal-');
+  const files=[...new Set([...tracked,...untracked])].filter(p=>!admin(p));
+  if(files.length>512)fail('checkpoint path bound exceeded');
+  const pins=[];
+  for(const ref of files){
+    if(!task.contract.environment.write_paths.some(root=>within(ref,root)))fail('candidate path exceeds component approval: '+ref);
+    try{const file=await readTaskFile(root,ref,{preserveBom:true});pins.push({path:ref,sha256:file.bytes_digest});}catch(e){if(e.code!=='ENOENT')throw e;pins.push({path:ref,sha256:null});}
+  }
+  return pins;
+}
+async function commit(ctx,runCommand,snapshot){
+  const message='Workkeel goal '+ctx.operation_id;
+  const previous=await runCommand(ctx,{command:'git',args:[...gitConfig,'log','-1','--format=%B']});
+  if(previous.exit_code!==0)fail('cannot inspect checkpoint identity: '+previous.stderr.slice(0,600));
+  if(previous.stdout.trim()===message){
+    for(const pin of snapshot){try{const file=await readTaskFile(ctx.component.root,pin.path,{preserveBom:true});if(file.bytes_digest!==pin.sha256)fail('checkpoint source changed');}catch(e){if(e.code!=='ENOENT'||pin.sha256!==null)throw e;}}
+    return (await readNativeGit(ctx.component.root,['rev-parse','HEAD'])).trim();
+  }
+  const current=await productChanges(ctx);if(executionDigest(current)!==executionDigest(snapshot))fail('implementation source changed before checkpoint');
+  if(current.length){
+    const add=await runCommand(ctx,{command:'git',args:[...gitConfig,'add','--',...current.map(p=>':(literal)'+p.path)],git_write:true});if(add.exit_code!==0)fail('exact file staging failed');
+    const staged=(await readNativeGit(ctx.component.root,['diff','--cached','--name-only','-z','--'])).split('\0').filter(Boolean);
+    if(staged.some(p=>!ctx.task.contract.environment.write_paths.some(root=>within(p,root))))fail('preexisting staged paths exceed approved scope');
+    const committed=await runCommand(ctx,{command:'git',args:[...gitConfig,'commit','-m',message],git_write:true});if(committed.exit_code!==0)fail('candidate checkpoint failed');
+  }
+  return (await readNativeGit(ctx.component.root,['rev-parse','HEAD'])).trim();
+}
+function roleContract(ctx,access){
+  const phase=ctx.input.phase,role=phase==='repair'?'repair':phase==='review'?'review':phase==='planning'?'planning':'implementation';
+  // Discovery implementation is intentionally a read-only planning capability.
+  const actualRole=access==='read'&&role==='implementation'?'planning':role;
+  return {schema_version:'workkeel.role-contract/v1',role:actualRole,product_access:access,tests:actualRole==='planning'?'none':'coordinator',edit_tools:access==='write'?['codex']:[],model:{provider:'openai',model:ctx.input.model.model,effort:ctx.input.model.reasoning},usage:{fields:['input_tokens','output_tokens']}};
+}
+/** Trusted stock host with fixed Codex protocol, role sandbox and unchanged
+ * reviewer-authored request relay. Optional factories are trusted embedding code. */
+export async function createCodexGoalAdapter({hostFactory=createLocalCodexSubscriptionHost,commandRunner=stockCommand}={}){
+  if(typeof hostFactory!=='function'||typeof commandRunner!=='function')fail('trusted host functions required');
+  const hosts=new Map(),runtimes=new Map();
+  async function hostFor(root){if(!hosts.has(root))hosts.set(root,await hostFactory(root));return hosts.get(root);}
+  async function capabilities(ctx){
+    const model=ctx.input.model;
+    if(commandRunner===stockCommand){if(process.platform!=='darwin')fail('qualified local command sandbox unavailable before model dispatch');const control=await readNativeTask(ctx.target,ctx.controller.task_id);for(const check of ctx.component.checks)if(!['node','git'].includes(check.command)||!control.contract.environment.tools.includes(check.command))fail('mandatory check tool not supported or approved');if(ctx.component.purpose!=='discovery'&&!control.contract.environment.tools.includes('git'))fail('checkpoint Git tool not approved');}
+    if(ctx.manifest.limits.max_cost_usd!==null)fail('stock subscription host cannot enforce finite financial caps');
+    if(model.provider!=='openai'||model.service!=='provider-default')fail('fixed provider or service unsupported; no fallback');
+    if(ctx.task.contract.execution.runtime.adapter_id!=='codex-app-server'||ctx.task.contract.environment.data.model_access!=='approved-connection')fail('component did not approve the actual Codex model connection');
+    const connection=ctx.task.contract.execution.model_connection;
+    if(ctx.input.phase!=='verification'){
+      if(connection.kind==='codex-subscription'){
+        if(connection.model!==model.model||connection.effort!==model.reasoning)fail('fixed native model connection differs from the approved goal role');
+      }else if(connection.kind==='policy'){
+        const file=await readTaskFile(ctx.component.root,connection.policy_ref);if(!ctx.task.authority_pins.some(p=>p.path===connection.policy_ref&&p.sha256===file.bytes_digest))fail('source model policy is not unchanged and authority-pinned');
+        const policy=validateExecutionPolicy(JSON.parse(file.content)),allowed=policy.models.find(m=>m.connection.kind==='codex-subscription'&&m.connection.model===model.model&&m.connection.effort===model.reasoning&&m.data_classes.includes(ctx.task.contract.environment.data.classification)&&(!m.routing||m.routing.provider===model.provider&&m.routing.reasoning_efforts.includes(model.reasoning)&&m.routing.service_tiers.includes(model.service)));
+        if(!allowed)fail('goal role model is outside the original component data/risk allowlist');
+        if(policy.model_policy){
+          const bridge=policy.model_policy,profile=await readApprovedModelPolicy(ctx.component.root,{policy_id:bridge.policy_id,version:bridge.version,sha256:bridge.sha256},{require_active:true});
+          const context=policy.model_contexts?.find(c=>c.node===ctx.input.phase),role=context?.role??bridge.context?.role;
+          const resolved=resolveModelPolicy(profile,{task:ctx.task.id,node:ctx.input.phase,activity:context?.activity??ctx.input.phase,...(role?{role}:{})}),catalog=profile.models.find(m=>m.provider===model.provider&&m.model===model.model);
+          if(!catalog||!catalog.data_classes.includes(ctx.task.contract.environment.data.classification)||!catalog.risk_tiers.includes(ctx.task.contract.verification.risk_tier)||catalog.quality<bridge.min_quality||!catalog.reasoning_efforts.includes(model.reasoning)||!catalog.service_tiers.includes(model.service))fail('goal role model violates original layered data/risk/quality requirements');
+          if(resolved.requested.model.mode==='fixed'&&resolved.requested.model.value!==catalog.id||resolved.requested.reasoning.mode==='fixed'&&resolved.requested.reasoning.value!==model.reasoning||resolved.requested.service.mode==='fixed'&&resolved.requested.service.value!==model.service)fail('goal role cannot bypass immutable fixed component policy');
+        }
+        if(policy.limits.max_cost_usd!==null&&(ctx.manifest.limits.max_cost_usd===null||ctx.manifest.limits.max_cost_usd>policy.limits.max_cost_usd))fail('goal financial limit exceeds original component policy');
+      }else fail('source component did not approve a selectable Codex model connection');
+    }
+    const project=await readTaskProject(ctx.component.root);assertActor(project.policy,ctx.input.actor);
+    const e=effective(ctx);await codexPermissionsForContract(ctx.component.root,e.contract,{productAccess:e.access});
+    const host=await hostFor(ctx.component.root);await host.assertCompatible({target:ctx.component.root,...e});
+    if(ctx.input.phase==='verification'&&commandRunner===stockCommand&&process.platform!=='darwin')fail('verification command sandbox unavailable');
+  }
+  async function verified(ctx){
+    const head=(await readNativeGit(ctx.component.root,['rev-parse','HEAD'])).trim();if(head!==ctx.input.candidate)fail('verification candidate changed');
+    const checks=[],logs=[];for(const check of ctx.component.checks){const started=performance.now(),value=await commandRunner(ctx,{command:check.command,args:check.args,git_write:false});checks.push({id:check.id,status:value.exit_code===0&&!value.signal&&value.output_complete!==false?'pass':'fail'});logs.push({id:check.id,command:check.command,args:check.args,...value,duration_ms:performance.now()-started});}
+    if((await readNativeGit(ctx.component.root,['rev-parse','HEAD'])).trim()!==head)fail('verification changed the committed candidate');
+    const pin=await report(ctx,'verification',{schema_version:'workkeel.goal-checks/v1',operation_id:ctx.operation_id,candidate_revision:head,checks,logs,model_called:false});
+    let integration_pin=null;
+    if(ctx.component.id===ctx.manifest.integration.component_id){integration_pin=await report(ctx,'integration',{schema_version:'workkeel.goal-integration/v1',manifest_sha256:ctx.manifest_sha256,required_components:ctx.input.required_components,components:ctx.input.accepted_components,candidate_set_sha256:executionDigest(ctx.input.accepted_components),integration_candidate:head,checks});}
+    return {status:'completed',operation_id:ctx.operation_id,actor:ctx.input.actor,thread_id:ctx.input.previous_threads.at(-1)??'local-verification-'+ctx.operation_id,runtime_selection:null,product_access:'read',candidate_revision:head,checks,evidence:await artifactRefs(ctx),integration_pin,report_pin:pin,usage:noCost,tool:'local-checks',model_called:false};
+  }
+  async function finalize(ctx,slot){
+    const result=slot.runtime_result,e=effective(ctx),base={status:'completed',operation_id:ctx.operation_id,actor:ctx.input.actor,thread_id:result.conversation_id,runtime_selection:result.runtime_selection,product_access:e.access,usage:result.usage,tool:'codex',model_called:true};
+    if(result.status!=='completed'||result.outcome!=='done')return {...base,status:'attention',reason:'Actual Codex role reports incomplete work'};
+    if(ctx.input.phase==='review'){
+      if(ctx.input.previous_threads.includes(result.conversation_id))fail('reviewer must use a distinct actual thread');
+      const authored=JSON.parse(result.output);exactKeys(authored,['native_request']);const request=authored.native_request;
+      exactKeys(request,['operation_id','expected_version','actor','revision','judgment','summary','evidence'],['review_attempt_id']);
+      if(executionDigest(request.actor)!==executionDigest(ctx.input.actor)||request.operation_id!==ctx.operation_id||request.expected_version!==ctx.input.task_version||request.revision!==ctx.input.candidate||!['pass','fail'].includes(request.judgment)||request.review_attempt_id!==undefined)fail('reviewer authored request differs from exact native gate');
+      const proofPath=reportRef(ctx,'review');if(!Array.isArray(request.evidence)||!request.evidence.includes(proofPath))fail('reviewer must explicitly name its authored proof');
+      const pin=await report(ctx,'review',{schema_version:'workkeel.goal-authored-review/v1',actor:ctx.input.actor,thread_id:result.conversation_id,operation_id:ctx.operation_id,runtime_selection:result.runtime_selection,product_access:'read',native_request:request,usage:result.usage,raw_result_sha256:executionDigest(result)});
+      // Import the exact bytes authored by this actual registered reviewer
+      // thread. The coordinator never selects a judgment or rewrites the request.
+      await mutateNativeTask(ctx.component.root,ctx.component.task_id,'review',request);
+      return {...base,authored_request_pin:pin};
+    }
+    const pin=await report(ctx,ctx.input.phase,{schema_version:'workkeel.goal-role-result/v1',operation_id:ctx.operation_id,actor:ctx.input.actor,thread_id:result.conversation_id,runtime_selection:result.runtime_selection,product_access:e.access,phase:ctx.input.phase,output:result.output,usage:result.usage});
+    if(ctx.input.phase==='planning')return {...base,report_pin:pin};
+    if(ctx.component.purpose==='discovery'){
+      const proposal_report=JSON.parse(result.output);exactKeys(proposal_report,['proposals']);if(!Array.isArray(proposal_report.proposals)||proposal_report.proposals.length>32)fail('bounded proposal report required');
+      const source_pins=[];for(const proposal of proposal_report.proposals){if(!Array.isArray(proposal.evidence)||!proposal.evidence.length||proposal.evidence.length>32)fail('proposal requires exact evidence');for(const source of proposal.evidence){exactKeys(source,['path','sha256']);if(!ctx.task.contract.environment.read_paths.some(root=>within(source.path,root)))fail('proposal source outside component read authority');const file=await readTaskFile(ctx.component.root,source.path);if(file.bytes_digest!==source.sha256)fail('proposal evidence differs from actual bytes');source_pins.push(source);}}
+      return {...base,candidate_revision:(await readNativeGit(ctx.component.root,['rev-parse','HEAD'])).trim(),proposal_report,source_pins,report_pin:pin};
+    }
+    return {...base,candidate_revision:await commit(ctx,commandRunner,slot.source_pins),report_pin:pin};
+  }
+  async function execute(ctx){
+    await capabilities(ctx);
+    if(ctx.input.phase==='verification')return verified(ctx);
+    const e=effective(ctx),host=await hostFor(ctx.component.root);
+    let slot={schema_version:'workkeel.goal-runtime-slot/v1',operation_id:ctx.operation_id,input_sha256:executionDigest(ctx.input),actor:ctx.input.actor,thread_id:null,turn_id:null,model:ctx.input.model,product_access:e.access,status:'intent',runtime_result:null,source_pins:[],final:null};
+    let writes=Promise.resolve();const persist=()=>{const snapshot=structuredClone(slot);writes=writes.then(()=>writeSlot(ctx,snapshot));return writes;};
+    try{const old=await readSlot(ctx);if(old.input_sha256!==slot.input_sha256)fail('runtime operation replay conflict');if(old.final)return old.final;if(old.runtime_result)return finalize(ctx,old);return {status:'unknown',reason:'Existing runtime intent requires exact host reconciliation'};}catch(error){if(error.code!=='ENOENT')throw error;}
+    await persist();
+    const decorated={...host,connect:options=>{
+      const rpc=host.connect({...options,onNotification:message=>{
+        if(message.method==='turn/started'&&message.params?.threadId===slot.thread_id){slot.turn_id=message.params.turn?.id??slot.turn_id;slot.status='turn-confirmed';void persist().catch(()=>{});}
+        options.onNotification(message);
+      }}),request=rpc.request.bind(rpc);
+      return {...rpc,request:async(method,params,timeout)=>{
+        const value=await request(method,params,timeout);
+        if(method==='thread/start'||method==='thread/resume'){slot.thread_id=value.thread?.id;slot.status='thread-confirmed';await persist();}
+        if(method==='turn/start'){slot.turn_id=value.turn?.id;slot.status='turn-confirmed';await persist();}
+        return value;
+      }};
+    }};
+    const role=roleContract(ctx,e.access),roleHost=createTrustedRoleHost({id:'qualified-codex-goal',probe:async()=>({host:'qualified-codex-goal',enforcement:{sandbox:'enforced',product_access:e.access,network:'disabled',test_scratch:'none'},tools:['codex'],models:[{provider:'openai',model:ctx.input.model.model,efforts:[ctx.input.model.reasoning]}],usage:{fields:['input_tokens','output_tokens'],unknown:'null'}})});
+    const runtime=createCodexRuntime(decorated,{coordinatorChecks:['git','tests'],role:{contract:role,host:roleHost}});
+    runtimes.set(ctx.operation_id,runtime);
+    const discoveryDirection=ctx.manifest.derived_from?JSON.parse((await readTaskFile(ctx.target,ctx.manifest.derived_from.admission_ref)).content).value.direction:ctx.manifest.admission?.directions?.[0]??'unknown';
+    const proof=reportRef(ctx,'review'),instruction=ctx.input.phase==='review'
+      ?'Independently review the complete exact candidate and mandatory checks. Author the entire native review request JSON {"native_request":{"operation_id":'+JSON.stringify(ctx.operation_id)+',"expected_version":'+ctx.input.task_version+',"actor":'+JSON.stringify(ctx.input.actor)+',"revision":'+JSON.stringify(ctx.input.candidate)+',"judgment":"pass or fail","summary":"your actual judgment","evidence":'+JSON.stringify([...new Set([...(ctx.input.verification?.evidence??[]),proof])])+'}}. Omit review_attempt_id because there is no review recovery attempt. You own judgment and summary. No source edits. Completion is this exact authored request, not task acceptance.'
+      :ctx.component.purpose==='discovery'&&ctx.input.phase==='implementation'
+        ?'Explore permitted source evidence within the approved standing goal and bounds. Return only JSON {"proposals":[{"id":"stable observed-problem slug","title":"bounded observed opportunity","direction":"the approved direction supplied below","risk_tier":"low, standard, high, critical or unknown","expected_benefit":"specific before/after outcome to test","acceptance":["testable criterion"],"evidence":[{"path":"exact local path","sha256":"exact bytes SHA256"}],"scope":{"read_paths":[],"write_paths":[]},"budget":{"max_attempts":1,"max_runtime_ms":1000,"max_cost_usd":null}}]}. Empty proposals are valid. Unknown risk remains unknown. Never invent permission or call a benefit improved before observing results. Proposals do not create or approve tasks. Read-only product access. Approved discovery direction: '+JSON.stringify(discoveryDirection)+'.'
+        :'Perform the approved '+ctx.input.phase+' for '+ctx.component.id+'. Read AGENTS.md and WORKKEEL.md and applicable Skills. Preserve allowed paths, exact task authority and existing behavior. Report work or attention honestly. The coordinator owns candidate Git/check/lifecycle operations; do not commit, run coordinator checks, or invent review/acceptance. Goal integration requires every mandatory component: '+JSON.stringify(ctx.input.required_components)+'. Prior exact accepted components: '+JSON.stringify(ctx.input.accepted_components)+'.';
+    const context={target:ctx.component.root,operation_id:ctx.operation_id,run_id:ctx.goal,contract:e.contract,policy:e.policy,selection:e.selection,input:{instruction,previous_results:{}},signal:ctx.signal};
+    const previous=ctx.input.phase==='review'||executionDigest(ctx.input.previous_model)!==executionDigest(ctx.input.model)?null:ctx.input.previous_threads.at(-1);
+    try{
+      const result=await (previous?runtime.resume({...context,conversation_id:previous}):runtime.start(context));
+      slot.runtime_result=result;slot.status='runtime-completed';
+      if(['implementation','repair'].includes(ctx.input.phase)&&ctx.component.purpose!=='discovery')slot.source_pins=await productChanges(ctx);
+      await persist();
+      const final=await finalize(ctx,slot);slot.final=final;slot.status='completed';await persist();return final;
+    }finally{try{await writes;}finally{runtimes.delete(ctx.operation_id);}}
+  }
+  async function reconcile(ctx){
+    let slot;try{slot=await readSlot(ctx);}catch(e){if(e.code==='ENOENT')return {status:'unknown',reason:'No runtime slot; no automatic inference replay'};throw e;}
+    if(slot.input_sha256!==executionDigest(ctx.input))fail('reconciliation input differs');
+    if(slot.final)return slot.final;
+    if(slot.runtime_result){await capabilities(ctx);const final=await finalize(ctx,slot);slot.final=final;slot.status='completed';await writeSlot(ctx,slot);return final;}
+    return {status:'unknown',reason:'Actual turn result unavailable; reconcile exact host thread before continuation',thread_id:slot.thread_id,turn_id:slot.turn_id};
+  }
+  async function cancel(ctx){
+    const active=runtimes.get(ctx.operation_id);if(active){await active.cancel({operation_id:ctx.operation_id});return {status:'cancelled',reason:'Actual owned Codex runtime settled after interruption'};}
+    const slot=await readSlot(ctx);if(slot.final||slot.runtime_result)return {status:'cancelled',reason:'Recorded actual runtime is already settled'};
+    if(!slot.thread_id||!slot.turn_id)return {status:'unknown',reason:'Actual dispatched thread/turn identity not confirmed; stop requires host reconciliation'};
+    const host=await hostFor(ctx.component.root),rpc=host.connect({onNotification:()=>{},onRequest:()=>{throw Error('Approval forbidden during stop');},onError:()=>{}});
+    try{
+      await rpc.request('initialize',{clientInfo:{name:'workkeel-goal-stop',version:'1'},capabilities:{experimentalApi:true}});rpc.notify('initialized');
+      await rpc.request('turn/interrupt',{threadId:slot.thread_id,turnId:slot.turn_id});
+      await rpc.request('thread/backgroundTerminals/clean',{threadId:slot.thread_id});
+      const data=await rpc.request('thread/backgroundTerminals/list',{threadId:slot.thread_id}),thread=await rpc.request('thread/read',{threadId:slot.thread_id,includeTurns:true});
+      const turn=thread.thread?.turns?.find(t=>t.id===slot.turn_id);
+      if(!Array.isArray(data.data)||data.data.length||data.nextCursor||!turn||!['completed','failed','interrupted'].includes(turn.status))return {status:'unknown',reason:'Exact remote runtime quiescence not confirmed'};
+      slot.status='cancelled';await writeSlot(ctx,slot);return {status:'cancelled',reason:'Exact thread terminal state and empty background terminals confirmed'};
+    }finally{await rpc.close();}
+  }
+  return createTrustedGoalAdapter({id:'codex-native-goal',assertCapabilities:capabilities,execute,reconcile,cancel});
+}

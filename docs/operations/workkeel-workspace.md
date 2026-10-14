@@ -73,6 +73,19 @@ remain distinct. Integration inspection uses exact component candidate revisions
 and corresponding native acceptance. Individual component completion does not
 accept the composed feature. Missing records or changed versions remain incomplete.
 
+For execution use an approved [whole-goal manifest](workkeel-goals.md), whose
+mandatory repository/task set is immutable. The goal's integration component
+depends on every other component. Workspace goal views show that complete set,
+repository registration gaps, exact candidates and integration acceptance; a
+caller-selected inspection subset is not a whole-goal acceptance decision.
+
+The control host can register an already authority-pinned goal, start its service,
+and pause, resume or cancel it through `goals.create`, `goals.start`, `goals.pause`,
+`goals.resume` and `goals.cancel` allowlisted actions. These commands require the
+actual original operator and current resource/registry versions. `goals.recover`
+reconciles the exact unresolved operation; it is not a retry of unknown effects.
+Opening a view or saving a policy never starts a model.
+
 ## Goal execution and learning
 
 Use native `autonomy` controls for approved work. Improvement discovery is off by
@@ -81,6 +94,14 @@ task. Turning discovery off stops new improvement proposals; previously approved
 work remains governed by its task. Pausing execution and cancelling a task are
 separate operations, with host confirmation required before reporting a running
 operation as stopped.
+
+Automatic task creation additionally requires the source goal's sealed standing
+admission grant. Settings only narrow its scope/resources, and select its real
+registered goal rather than typing claim identities. `autonomy.start-service`
+starts the approved event controller. The service indicator distinguishes a
+service running in this host from an unconfirmed separate process; recorded task
+activity is not process-liveness proof. Source discovery, proposed work and accepted
+derived goals remain separately traceable, with unknown cost/token fields preserved.
 
 The background runner uses the qualified workflow engine and stable run identity.
 It cannot grant scope, bypass independent review or infer acceptance from a finished

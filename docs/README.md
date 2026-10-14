@@ -19,6 +19,7 @@ Workkeel in your own project is a separate use case.
 | Compare, activate and revalidate a project Skill version | [Versioned Skill learning](extensions/workkeel-skill-lifecycle.md) |
 | Observe tasks, read their documents, and compare recorded time and tokens | [Local observer workspace](operations/workkeel-observer.md) |
 | Manage several projects and repositories from the desktop | [Desktop workspace and controlled settings](operations/workkeel-workspace.md) |
+| Deliver all mandatory repositories with distinct review and bounded repair | [Whole-goal coordination](operations/workkeel-goals.md), [opt-in improvement](operations/workkeel-autonomy.md) |
 | Explore optional workflow adapters and model routing | [Workflow and routing guide](operations/workkeel-workflows.md), [native dispatch](operations/workkeel-native-dispatch.md) |
 | Connect Codex/Claude instructions, check Skill use, plan Headroom | [Project context](extensions/workkeel-context.md) |
 | Inspect measurements and qualification limits | [Measurement definitions](operations/workkeel-measurements.md), [testing policy](getting-started/testing.md) |

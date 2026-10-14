@@ -46,6 +46,9 @@ workkeel skill-lifecycle candidate|evaluate|review|approve|policy|activate|suspe
 workkeel autonomy show [target]
 workkeel autonomy policy|enqueue|pause|resume|cancel|event|discover|resume-job [target] --request request.json
 workkeel autonomy tick|serve [target]
+workkeel goal list [target]
+workkeel goal show|tick|serve [target] --id goal-id
+workkeel goal create|pause|resume|cancel|recover [target] --request request.json
 workkeel retention inventory|preview|archive|verify|usage [target] --request request.json
 workkeel workspace create|register|remove|integration [private state directory] --request request.json
 workkeel workspace show|serve [private state directory]
@@ -59,7 +62,7 @@ permissions. Workflow run explicitly launches the qualified Codex subscription h
 `;
 function parse(args) {
   const rest = [...args]; const command = rest.shift() ?? "help";
-  const action = ["task", "usage", "dispatch", "intake", "migration", "runtime", "instructions", "workflow", "headroom", "skills", "context", "learning", "workspace", "model-policy", "skill-lifecycle", "autonomy", "retention"].includes(command) ? rest.shift() : null;
+  const action = ["task", "usage", "dispatch", "intake", "migration", "runtime", "instructions", "workflow", "headroom", "skills", "context", "learning", "workspace", "model-policy", "skill-lifecycle", "autonomy", "retention", "goal"].includes(command) ? rest.shift() : null;
   const target = rest[0] && !rest[0].startsWith("--") ? rest.shift() : ".";
   const options = {};
   while (rest.length) {
@@ -138,6 +141,17 @@ export async function workkeelMain(args) {
     const learning=await import('./workkeel-learning-lifecycle.mjs');
     if(action==='list'){allow(options,[]);output=await learning.listNativeSkillLifecycle(target);}
     else {allow(options,['--request']);output=await learning.mutateNativeSkillLifecycle(target,action,(await readTaskContractInput(target,required(options,'--request'))).document);}
+  } else if(command==='goal') {
+    const goals=await import('./workkeel-goals.mjs');
+    if(action==='list'){allow(options,[]);output=await goals.listNativeGoals(target);}
+    else if(['show','tick','serve'].includes(action)){
+      allow(options,['--id']);const id=required(options,'--id');
+      if(action==='show')output=await goals.readNativeGoal(target,id);
+      else if(action==='tick')output=await goals.runNativeGoalStep(target,id);
+      else {const controller=new AbortController(),service=await goals.serveNativeGoal(target,id,{signal:controller.signal,onError:e=>console.error(JSON.stringify({error:e.message}))});const stop=()=>{controller.abort();service.close();};process.once('SIGINT',stop);process.once('SIGTERM',stop);console.log(JSON.stringify({schema_version:'workkeel.goal-service/v1',goal_id:id,state:'listening',foreground:true,inference:'sealed-approved-operations-only'}));return 0;}
+    }else{allow(options,['--request']);const request=(await readTaskContractInput(target,required(options,'--request'))).document;
+      if(action==='create')output=await goals.createNativeGoal(target,request);
+      else {const {goal_id,...control}=request;output=await goals.controlNativeGoal(target,goal_id,action,control);}}
   } else if(command==='autonomy') {
     const autonomy=await import('./workkeel-autonomy.mjs');
     if(action==='show'){allow(options,[]);output=await autonomy.readAutonomy(target);}

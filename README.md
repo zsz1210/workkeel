@@ -128,6 +128,9 @@ these additions; a source change does not establish a new npm publication.
 The source also includes [bounded goal continuation](docs/operations/workkeel-autonomy.md)
 and [versioned project Skill learning](docs/extensions/workkeel-skill-lifecycle.md).
 Execution completion, independent review and task acceptance remain separate.
+For all mandatory repository tasks, [whole-goal coordination](docs/operations/workkeel-goals.md)
+continues distinct review and bounded repair; opt-in standing grants can admit
+evidenced improvements within the original approved scope.
 
 ## Defaults, options and support
 

@@ -16,6 +16,11 @@ repository migration does not republish old tags, archives or npm versions.
 - Adds durable approved-work continuation, explicit recovery and confirmed host
   cancellation. Improvement discovery is opt-in, scoped and bounded; proposals
   cannot invent task authority or acceptance.
+- Adds sealed whole-goal manifests with mandatory repository components, exact
+  integration proof, distinct reviewer-authored native decisions and bounded
+  FAIL-to-repair-to-fresh-acceptance continuation. Opt-in standing grants admit
+  source-pinned improvements with durable cumulative reservations and event-based
+  read-only discovery; partial intake keeps exact identities.
 - Adds comparative, independently reviewed, versioned project Skill activation,
   scoped retrieval, explicit use/outcomes, suspension, rollback and revalidation.
   Source drift removes current eligibility while retaining original evidence.
