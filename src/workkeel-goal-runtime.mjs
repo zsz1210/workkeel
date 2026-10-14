@@ -125,7 +125,7 @@ export async function createCodexGoalAdapter({hostFactory=createLocalCodexSubscr
   if(typeof hostFactory!=='function'||typeof commandRunner!=='function')fail('trusted host functions required');
   const hosts=new Map(),runtimes=new Map();
   async function hostFor(root){if(!hosts.has(root))hosts.set(root,await hostFactory(root));return hosts.get(root);}
-  async function capabilities(ctx){
+  async function componentCapabilities(ctx){
     const model=ctx.input.model;
     if(commandRunner===stockCommand){if(process.platform!=='darwin')fail('qualified local command sandbox unavailable before model dispatch');const control=await readNativeTask(ctx.target,ctx.controller.task_id);for(const check of ctx.component.checks)if(!['node','git'].includes(check.command)||!control.contract.environment.tools.includes(check.command))fail('mandatory check tool not supported or approved');if(ctx.component.purpose!=='discovery'&&!control.contract.environment.tools.includes('git'))fail('checkpoint Git tool not approved');}
     if(ctx.manifest.limits.max_cost_usd!==null)fail('stock subscription host cannot enforce finite financial caps');
@@ -151,9 +151,9 @@ export async function createCodexGoalAdapter({hostFactory=createLocalCodexSubscr
     }
     const project=await readTaskProject(ctx.component.root);assertActor(project.policy,ctx.input.actor);
     const e=effective(ctx);await codexPermissionsForContract(ctx.component.root,e.contract,{productAccess:e.access});
-    const host=await hostFor(ctx.component.root);await host.assertCompatible({target:ctx.component.root,...e});
     if(ctx.input.phase==='verification'&&commandRunner===stockCommand&&process.platform!=='darwin')fail('verification command sandbox unavailable');
   }
+  async function capabilities(ctx){await componentCapabilities(ctx);const host=await hostFor(ctx.component.root);await host.assertCompatible({target:ctx.component.root,...effective(ctx)});}
   async function verified(ctx){
     const head=(await readNativeGit(ctx.component.root,['rev-parse','HEAD'])).trim();if(head!==ctx.input.candidate)fail('verification candidate changed');
     const checks=[],logs=[];for(const check of ctx.component.checks){const started=performance.now(),value=await commandRunner(ctx,{command:check.command,args:check.args,git_write:false});checks.push({id:check.id,status:value.exit_code===0&&!value.signal&&value.output_complete!==false?'pass':'fail'});logs.push({id:check.id,command:check.command,args:check.args,...value,duration_ms:performance.now()-started});}
@@ -188,12 +188,24 @@ export async function createCodexGoalAdapter({hostFactory=createLocalCodexSubscr
     return {...base,candidate_revision:await commit(ctx,commandRunner,slot.source_pins),report_pin:pin};
   }
   async function execute(ctx){
+    let modelRequested=false,effectsMayExist=false,slot;
+    try{
     await capabilities(ctx);
-    if(ctx.input.phase==='verification')return verified(ctx);
+    if(typeof ctx.beforeEffects!=='function')fail('native goal dispatch guard required');
+    await ctx.beforeEffects();
+    if(ctx.input.phase==='verification'){effectsMayExist=true;return await verified(ctx);}
     const e=effective(ctx),host=await hostFor(ctx.component.root);
-    let slot={schema_version:'workkeel.goal-runtime-slot/v1',operation_id:ctx.operation_id,input_sha256:executionDigest(ctx.input),actor:ctx.input.actor,thread_id:null,turn_id:null,model:ctx.input.model,product_access:e.access,status:'intent',runtime_result:null,source_pins:[],final:null};
+    slot={schema_version:'workkeel.goal-runtime-slot/v1',operation_id:ctx.operation_id,input_sha256:executionDigest(ctx.input),actor:ctx.input.actor,thread_id:null,turn_id:null,model:ctx.input.model,product_access:e.access,status:'intent',model_requested:false,pre_model_stops:[],runtime_result:null,source_pins:[],final:null};
     let writes=Promise.resolve();const persist=()=>{const snapshot=structuredClone(slot);writes=writes.then(()=>writeSlot(ctx,snapshot));return writes;};
-    try{const old=await readSlot(ctx);if(old.input_sha256!==slot.input_sha256)fail('runtime operation replay conflict');if(old.final)return old.final;if(old.runtime_result)return finalize(ctx,old);return {status:'unknown',reason:'Existing runtime intent requires exact host reconciliation'};}catch(error){if(error.code!=='ENOENT')throw error;}
+    try{
+      const old=await readSlot(ctx);if(old.input_sha256!==slot.input_sha256)fail('runtime operation replay conflict');
+      if(old.status==='not-started'&&old.model_requested===false){
+        if(!Array.isArray(old.pre_model_stops)||old.pre_model_stops.length>=32){const error=Error('Pre-model stop history limit; retained evidence cannot be pruned');error.retentionBlocked=true;throw error;}
+        slot.pre_model_stops=structuredClone(old.pre_model_stops);
+      }else{
+        effectsMayExist=true;if(old.final)return old.final;if(old.runtime_result)return await finalize(ctx,old);return {status:'unknown',reason:'Existing runtime intent requires exact host reconciliation'};
+      }
+    }catch(error){if(error.code!=='ENOENT')throw error;}
     await persist();
     const decorated={...host,connect:options=>{
       const rpc=host.connect({...options,onNotification:message=>{
@@ -201,6 +213,7 @@ export async function createCodexGoalAdapter({hostFactory=createLocalCodexSubscr
         options.onNotification(message);
       }}),request=rpc.request.bind(rpc);
       return {...rpc,request:async(method,params,timeout)=>{
+        if(method==='turn/start'){modelRequested=true;effectsMayExist=true;slot.model_requested=true;}
         const value=await request(method,params,timeout);
         if(method==='thread/start'||method==='thread/resume'){slot.thread_id=value.thread?.id;slot.status='thread-confirmed';await persist();}
         if(method==='turn/start'){slot.turn_id=value.turn?.id;slot.status='turn-confirmed';await persist();}
@@ -208,7 +221,9 @@ export async function createCodexGoalAdapter({hostFactory=createLocalCodexSubscr
       }};
     }};
     const role=roleContract(ctx,e.access),roleHost=createTrustedRoleHost({id:'qualified-codex-goal',probe:async()=>({host:'qualified-codex-goal',enforcement:{sandbox:'enforced',product_access:e.access,network:'disabled',test_scratch:'none'},tools:['codex'],models:[{provider:'openai',model:ctx.input.model.model,efforts:[ctx.input.model.reasoning]}],usage:{fields:['input_tokens','output_tokens'],unknown:'null'}})});
-    const runtime=createCodexRuntime(decorated,{coordinatorChecks:['git','tests'],role:{contract:role,host:roleHost}});
+    const runtime=createCodexRuntime(decorated,{coordinatorChecks:['git','tests'],role:{contract:role,host:roleHost},beforeModelDispatch:async()=>{
+      await componentCapabilities(ctx);await ctx.beforeEffects();ctx.signal?.throwIfAborted();
+    }});
     runtimes.set(ctx.operation_id,runtime);
     const discoveryDirection=ctx.manifest.derived_from?JSON.parse((await readTaskFile(ctx.target,ctx.manifest.derived_from.admission_ref)).content).value.direction:ctx.manifest.admission?.directions?.[0]??'unknown';
     const proof=reportRef(ctx,'review'),instruction=ctx.input.phase==='review'
@@ -225,6 +240,15 @@ export async function createCodexGoalAdapter({hostFactory=createLocalCodexSubscr
       await persist();
       const final=await finalize(ctx,slot);slot.final=final;slot.status='completed';await persist();return final;
     }finally{try{await writes;}finally{runtimes.delete(ctx.operation_id);}}
+    }catch(error){
+      const reason=error.message.slice(0,1000),safe=!effectsMayExist&&!error.runtimeUnsettled&&!error.retentionBlocked;
+      if(safe&&slot){
+        slot.status='not-started';slot.model_requested=false;
+        slot.pre_model_stops.push({reason,thread_id:slot.thread_id,at:new Date().toISOString(),quiescence:'no-model-request-and-owned-runtime-settled'});
+        await writeSlot(ctx,slot);
+      }
+      return {status:'unknown',reason,model_called:modelRequested?true:effectsMayExist&&ctx.input.phase!=='verification'?null:false,...(safe?{dispatch_started:false}:{}),tool:'codex'};
+    }
   }
   async function reconcile(ctx){
     let slot;try{slot=await readSlot(ctx);}catch(e){if(e.code==='ENOENT')return {status:'unknown',reason:'No runtime slot; no automatic inference replay'};throw e;}

@@ -47,7 +47,7 @@ async function fixture(t,{count=1,maxReworks=2,purpose='execution',release=false
 import {createCodexGoalAdapter} from '../src/workkeel-goal-runtime.mjs';
 import {createCodexProcessHost} from '../src/workkeel-codex-runtime.mjs';
 // Actual child-process JSON-RPC; agents/model/permissions are offline fixtures.
-function protocolHost({events=[],neverComplete=false,reroute=false,efforts=['low'],models=['gpt-6-luna']}={}){
+function protocolHost({events=[],neverComplete=false,reroute=false,efforts=['low'],models=['gpt-6-luna'],onQualify=async()=>{},onResponse=async()=>{}}={}){
   const source=`import readline from 'node:readline';import fs from 'node:fs';import crypto from 'node:crypto';
   const send=x=>process.stdout.write(JSON.stringify(x)+'\\n'),reply=(id,result)=>send({id,result});let thread,cwd;
   readline.createInterface({input:process.stdin}).on('line',line=>{
@@ -85,8 +85,11 @@ function protocolHost({events=[],neverComplete=false,reroute=false,efforts=['low
     }
     if(m.method==='turn/interrupt'){send({method:'fixture/interrupt',params:m.params});reply(m.id,{});send({method:'turn/completed',params:{threadId:m.params.threadId,turn:{id:m.params.turnId,status:'interrupted'}}});}
   });`;
-  const host=createCodexProcessHost({command:process.execPath,args:['--input-type=module','-e',source,'--'],env:{PATH:process.env.PATH},assertCompatible:async()=>{}});
-  const connect=host.connect;host.connect=options=>connect({...options,onNotification:message=>{if(message.method.startsWith('fixture/'))events.push(message);else options.onNotification(message);}});
+  const host=createCodexProcessHost({command:process.execPath,args:['--input-type=module','-e',source,'--'],env:{PATH:process.env.PATH},assertCompatible:onQualify});
+  const connect=host.connect;host.connect=options=>{
+    const rpc=connect({...options,onNotification:message=>{if(message.method.startsWith('fixture/'))events.push(message);else options.onNotification(message);}}),request=rpc.request.bind(rpc);
+    return {...rpc,request:async(method,params,timeout)=>{const value=await request(method,params,timeout);await onResponse(method,params,value);return value;}};
+  };
   return host;
 }
 async function fixtureCommand(ctx,{command,args}){
@@ -94,6 +97,25 @@ async function fixtureCommand(ctx,{command,args}){
   return new Promise(resolve=>execFile(command==='node'?process.execPath:'git',args,{cwd:ctx.component.root,timeout:5000,maxBuffer:1024*1024,env:{...process.env,GIT_CONFIG_GLOBAL:'/dev/null',GIT_CONFIG_SYSTEM:'/dev/null'}},(error,stdout,stderr)=>resolve({exit_code:error?.code??0,signal:error?.signal??null,stdout,stderr,output_complete:true})));
 }
 async function stockAdapter(options={}){return createCodexGoalAdapter({hostFactory:async()=>protocolHost(options),commandRunner:fixtureCommand});}
+
+for(const boundary of ['adapter-qualification','runtime-qualification','initialize','model/list','thread/start','thread/backgroundTerminals/list'])test('actual stock host blocks stale authority at '+boundary+' and resumes only a proven unstarted operation',async t=>{
+  const f=await fixture(t),events=[],original=await fs.readFile(f.target+'/docs/goal.json');let qualifications=0,injected=false;
+  const inject=async()=>{if(!injected){injected=true;await fs.appendFile(f.target+'/docs/goal.json',' ');}};
+  const host=protocolHost({events,onQualify:async()=>{qualifications++;if(boundary==='adapter-qualification'&&qualifications===2||boundary==='runtime-qualification'&&qualifications===3)await inject();},onResponse:async method=>{if(method===boundary)await inject();}});
+  const adapter=await createCodexGoalAdapter({hostFactory:async()=>host,commandRunner:fixtureCommand});
+  await runNativeGoalStep(f.target,f.manifest.id,{adapter});
+  const blocked=await runNativeGoalStep(f.target,f.manifest.id,{adapter});
+  assert.equal(injected,true);assert.equal(events.filter(e=>e.method==='fixture/turn').length,0);assert.equal(blocked.model_called,false);
+  assert.equal(blocked.operation.status,'intent');assert.equal(blocked.operation.first_result.dispatch_started,false);
+  const before=await readNativeGoal(f.target,f.manifest.id);await fs.writeFile(f.target+'/docs/goal.json',original);
+  const resumed=await runNativeGoalStep(f.target,f.manifest.id,{adapter});assert.equal(resumed.operation.id,blocked.operation.id);assert.equal(resumed.operation.status,'completed');
+  assert.equal(events.filter(e=>e.method==='fixture/turn').length,1);const after=await readNativeGoal(f.target,f.manifest.id);
+  assert.equal(after.operations.length,before.operations.length);assert.equal(after.reserved_ms,before.reserved_ms);assert.equal(after.components[0].phase,'implementation');assert.equal(after.last_error,null);
+  if(boundary!=='adapter-qualification'){
+    const slot=JSON.parse((await readTaskFile(f.target,'.ai-org/goals/goal-one/runtime/'+resumed.operation.id+'/slot.json')).content).value;
+    assert.equal(slot.pre_model_stops.length,1);assert.equal(slot.pre_model_stops[0].quiescence,'no-model-request-and-owned-runtime-settled');
+  }
+});
 async function finish(f,adapter,max=60){for(let n=0;n<max;n++){const view=await readNativeGoal(f.target,f.manifest.id);if(view.accepted)return view;const result=await runNativeGoalStep(f.target,f.manifest.id,{adapter});if(result.idle&&result.idle!=='whole-goal-accepted')throw Error(JSON.stringify({result,components:(await readNativeGoal(f.target,f.manifest.id)).components}));if(result.operation?.status==='unknown')throw Error(JSON.stringify(result.operation.result));}throw Error('Stock goal did not accept');}
 test('stock protocol drives same-thread implementation, independent FAIL, repair and exact native PASS',async t=>{
   const f=await fixture(t),events=[],adapter=await stockAdapter({events}),accepted=await finish(f,adapter);

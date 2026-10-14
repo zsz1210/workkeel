@@ -64,7 +64,8 @@ export async function codexPermissionsForContract(target, contract, { productAcc
 /** Codex owns the coding loop. This adapter only connects its documented protocol. */
 export function createCodexRuntime(host, options = {}) {
   if (!host || typeof host.connect !== "function" || typeof host.assertCompatible !== "function") throw new Error("A trusted Codex host is required");
-  exactKeys(options, [], ["coordinatorChecks", "role"]);
+  exactKeys(options, [], ["coordinatorChecks", "role", "beforeModelDispatch"]);
+  if(options.beforeModelDispatch!==undefined&&typeof options.beforeModelDispatch!=="function")throw Error("Model dispatch guard must be trusted application code");
   const coordinatorChecks = options.coordinatorChecks ?? [];
   if (!Array.isArray(coordinatorChecks) || new Set(coordinatorChecks).size !== coordinatorChecks.length ||
       coordinatorChecks.some(check => !["git", "tests"].includes(check))) throw new Error("Unsupported coordinator check ownership");
@@ -122,6 +123,8 @@ export function createCodexRuntime(host, options = {}) {
     // Fails before a process is opened; no inference happens on a failed probe.
     const preflight = role ? await rolePreflight(context) : null;
     if (context.signal?.aborted) throw new Error("Codex operation was cancelled before dispatch");
+    await options.beforeModelDispatch?.(context);
+    context.signal?.throwIfAborted();
     let resolveTurn, rejectTurn, firstFatal = null, settle;
     const completed = new Promise((resolve, reject) => { resolveTurn = resolve; rejectTurn = error => { firstFatal ??= error; reject(error); }; });
     // Install a rejection handler before initialization to avoid an unhandled
@@ -235,6 +238,8 @@ export function createCodexRuntime(host, options = {}) {
       const existingTerminals = await request("thread/backgroundTerminals/list", { threadId: current.threadId });
       if (!Array.isArray(existingTerminals.data) || existingTerminals.data.length || existingTerminals.nextCursor) throw new Error("Codex has unexpected background terminals; recovery requires inspection");
       // Initialization can outlive the approval. Recheck before any model work.
+      await options.beforeModelDispatch?.(context);
+      context.signal?.throwIfAborted();
       const authorizationCheck = authorizationSnapshot(context.contract);
       current.turnRequested = true;
       const turn = await request("turn/start", { threadId: current.threadId, cwd, approvalPolicy: "never",

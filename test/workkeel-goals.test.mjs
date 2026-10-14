@@ -208,3 +208,21 @@ for(const interruption of ['abort','authority'])test('persisted but unstarted in
   assert.equal(after.components[0].phase,'implementation');
   assert.equal(after.operations.at(-1).first_result.dispatch_started,false,'retain the original no-effects boundary result after resumption');
 });
+
+test('explicit recovery and successful planning clear the recovered aggregate error',async t=>{
+  const f=await fixture(t),bad=createTrustedGoalAdapter({id:'blocked-then-recover',assertCapabilities:async()=>{throw Error('Fixed planning model unavailable');},execute:async()=>({status:'unknown'}),reconcile:async()=>({status:'unknown'}),cancel:async()=>({status:'cancelled'})});
+  await runNativeGoalStep(f.target,f.manifest.id,{adapter:bad});await runNativeGoalStep(f.target,f.manifest.id,{adapter:bad});await runNativeGoalStep(f.target,f.manifest.id,{adapter:bad});
+  const blocked=await readNativeGoal(f.target,f.manifest.id);assert.match(blocked.last_error,/Fixed planning model unavailable/);
+  await controlNativeGoal(f.target,f.manifest.id,'recover',{actor:builder,operation_id:'recover-restored-model',expected_version:blocked.version});
+  assert.equal((await readNativeGoal(f.target,f.manifest.id)).last_error,null);
+  const step=await runNativeGoalStep(f.target,f.manifest.id,{adapter:fixtureAdapter({firstFail:false})});assert.equal(step.operation.status,'completed');
+  const recovered=await readNativeGoal(f.target,f.manifest.id);assert.equal(recovered.components[0].phase,'implementation');assert.equal(recovered.components[0].last_error,null);assert.equal(recovered.last_error,null);
+});
+
+test('successful exact reconciliation retains another component recovery reason',async t=>{
+  const f=await fixture(t,{count:3}),base=fixtureAdapter({firstFail:false});
+  const adapter=createTrustedGoalAdapter({...base,id:'preserve-other-error',assertCapabilities:async ctx=>{if(ctx.component.id==='component-1')throw Error('Other model unavailable');},execute:async ctx=>{const result=await base.execute(ctx);return ctx.component.id==='component-0'&&ctx.input.phase==='planning'?{status:'unknown',reason:'Lost planning response'}:result;}});
+  await runNativeGoalStep(f.target,f.manifest.id,{adapter});await runNativeGoalStep(f.target,f.manifest.id,{adapter});await runNativeGoalStep(f.target,f.manifest.id,{adapter});await runNativeGoalStep(f.target,f.manifest.id,{adapter});
+  const result=await runNativeGoalStep(f.target,f.manifest.id,{adapter});assert.equal(result.operation.status,'completed');
+  const view=await readNativeGoal(f.target,f.manifest.id);assert.equal(view.components[0].last_error,null);assert.match(view.components[1].last_error,/Other model unavailable/);assert.match(view.last_error,/Other model unavailable/);assert.doesNotMatch(view.last_error,/Lost planning response/);
+});

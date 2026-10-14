@@ -88,6 +88,14 @@ resume with the same operation identity and reserved budget after revalidation.
 Its original no-effects result remains retained. This does not make an uncertain
 started operation safe to execute again.
 
+The stock Codex path carries that check through its qualification and initialization
+waits to the actual `turn/start` boundary. A trusted application-only runtime guard
+rechecks current goal control, ownership, source/model policy and task authority;
+task JSON cannot supply a callback or grant authority. A stop before any model
+request resumes only when owned runtime cleanup is confirmed. Its prior thread and
+no-model stop proof are retained; uncertain cleanup remains reconciliation work.
+The bounded per-operation stop history holds at most 32 entries and is never pruned.
+
 Requests for `goal pause|resume|cancel|recover` contain `goal_id`, original approved
 operator `actor`, stable `operation_id` and current `expected_version`. Pause and
 cancel remain usable after execution authority drifts or expires. Resume/recovery
@@ -99,6 +107,10 @@ overview identifies the affected goal as needing recovery. Open that goal, inspe
 the recorded reason, restore the required capability or authority, then reconcile
 and recover. Automatic dependency waits and deliberately paused goals do not
 create recovery decisions.
+
+Confirmed recovery clears the resolved aggregate error. Successful component work
+updates the aggregate from remaining component problems, so another repository's
+unresolved problem remains visible.
 
 ## Qualified stock host
 

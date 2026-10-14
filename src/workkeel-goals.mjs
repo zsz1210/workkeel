@@ -180,7 +180,7 @@ export async function controlNativeGoal(target,goalId,action,r){
     if(['resume','recover'].includes(action))await standing(target,s,m);
     if(action==='pause'&&s.status!=='done')s.status='paused';
     if(action==='cancel'&&s.status!=='done')s.status='cancel-requested';
-    if(['resume','recover'].includes(action)&&!['done','cancelled'].includes(s.status)){s.status='running';for(const c of s.components)c.last_error=null;}
+    if(['resume','recover'].includes(action)&&!['done','cancelled'].includes(s.status)){s.status='running';for(const c of s.components)c.last_error=null;s.last_error=null;}
     if(s.receipts.length>=1000)fail('receipt bound');s.receipts.push({operation_id:r.operation_id,sha256:hash});await save(target,s);return {goal:await readNativeGoal(target,goalId),replayed:false};
   });
 }
@@ -288,7 +288,7 @@ export async function runNativeGoalStep(target,goalId,{adapter,signal}={}){
     // Only an intent explicitly retained before any effects may be executed
     // again. Unknown started work continues to reconcile its exact operation.
     if(op.kind==='runtime'&&reservation.mode==='execute'&&op.result?.dispatch_started===false)await adapter.assertCapabilities(context);
-    await withProjectMutationLock(target,async()=>{
+    context.beforeEffects=()=>withProjectMutationLock(target,async()=>{
       const current=await stateAt(target,goalId),stored=current.operations.find(o=>o.id===op.id);
       if(!stored||stored.input_sha256!==op.input_sha256||reservation.mode!=='cancel'&&stored.owner?.token!==op.owner?.token)fail('pre-dispatch operation identity or owner changed');
       const stopping=reservation.mode==='cancel'||op.input.phase==='cancel';
@@ -304,6 +304,7 @@ export async function runNativeGoalStep(target,goalId,{adapter,signal}={}){
       await standing(target,current,m,{stop:stopping});
       if(controller.signal.aborted)fail('operation aborted before dispatch');
     });
+    await context.beforeEffects();
     if(controller.signal.aborted)fail('operation aborted before dispatch');
     effects_started=true;
     if(reservation.mode==='cancel')result=await adapter.cancel(context);
@@ -312,7 +313,7 @@ export async function runNativeGoalStep(target,goalId,{adapter,signal}={}){
     else result=await adapter.execute(context);
   }catch(e){result={status:'unknown',reason:e.message.slice(0,1000)};}
   finally{if(timer)clearTimeout(timer);signal?.removeEventListener('abort',abort);}
-  if(!effects_started)return withProjectMutationLock(target,async()=>{
+  if(!effects_started||reservation.mode==='execute'&&op.kind==='runtime'&&result?.dispatch_started===false&&result.model_called===false)return withProjectMutationLock(target,async()=>{
     const current=await stateAt(target,goalId),stored=current.operations.find(o=>o.id===op.id);
     if(reservation.mode!=='cancel'&&stored?.owner?.token===op.owner?.token&&stored.input_sha256===op.input_sha256){
       stored.owner=null;
@@ -338,7 +339,7 @@ export async function runNativeGoalStep(target,goalId,{adapter,signal}={}){
     if(!result||!['completed','unknown','cancelled','attention'].includes(result.status))result={status:'unknown',reason:'Invalid host result'};
     if(Buffer.byteLength(formatJson(result))>131072)result={status:'unknown',reason:'Oversized host result; retained source required'};
     stored.first_result??=structuredClone(result);stored.result=result;stored.owner=null;stored.status=result.status==='completed'?'completed':'unknown';
-    if(result.status!=='completed'){p.last_error=result.reason??'Uncertain runtime effects require exact reconciliation';current.last_error=p.last_error;if(result.status==='cancelled'&&current.status==='cancel-requested')stored.status='completed';await save(target,current);return {operation:stored,status:current.status,accepted:false,model_called:op.kind==='runtime'&&reservation.mode==='execute'};}
+    if(result.status!=='completed'){p.last_error=result.reason??'Uncertain runtime effects require exact reconciliation';current.last_error=p.last_error;if(result.status==='cancelled'&&current.status==='cancel-requested')stored.status='completed';await save(target,current);return {operation:stored,status:current.status,accepted:false,model_called:op.kind==='runtime'&&reservation.mode==='execute'&&result.model_called!==false};}
     p.last_error=null;
     if(op.kind==='native'){
       if(op.input.phase==='rework'){p.failures.push({kind:'review',operation_sha256:executionDigest(stored),revision:p.candidate});p.cycle++;p.phase='repair';p.candidate=null;p.verification=null;p.review_proof=null;}
@@ -369,7 +370,9 @@ export async function runNativeGoalStep(target,goalId,{adapter,signal}={}){
       if(m.limits.max_cost_usd!==null&&(!current.cost_complete||current.known_cost_usd>m.limits.max_cost_usd))fail('enforced goal cost evidence unavailable or exceeded');
     }catch(e){stored.status='unknown';stored.result={status:'unknown',reason:e.message.slice(0,1000)};p.last_error=stored.result.reason;await save(target,current);return {operation:stored,status:'blocked',accepted:false};}
     }
-    if(!p.last_error||p.last_error==='Verification rework budget exhausted'&&p.cycle<m.limits.max_reworks)p.last_error=null;await save(target,current);return {operation:stored,status:current.status,accepted:false,model_called:op.kind==='runtime'&&reservation.mode==='execute'&&result.model_called!==false};
+    if(!p.last_error||p.last_error==='Verification rework budget exhausted'&&p.cycle<m.limits.max_reworks)p.last_error=null;
+    current.last_error=current.components.filter(c=>c.last_error).map(c=>c.id+': '+c.last_error).join('; ')||null;
+    await save(target,current);return {operation:stored,status:current.status,accepted:false,model_called:op.kind==='runtime'&&reservation.mode==='execute'&&result.model_called!==false};
   });
 }
 export async function serveNativeGoal(target,goalId,{adapter,signal,onError=()=>{},onStep=()=>{},reconcile_ms=30000}={}){
