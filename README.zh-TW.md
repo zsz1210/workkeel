@@ -94,6 +94,13 @@ npx --no-install workkeel monitor /path/to/task-first-project
 
 [觀察網站使用方式與資料限制](docs/operations/workkeel-observer.md)
 
+經審查的原始碼另提供[桌面工作空間](docs/operations/workkeel-workspace.md)，
+集中查看明確登記的專案與 repo，並提供任務詳情與受控政策設定。
+各專案保留自己的任務權威。新增功能使用原始碼 CLI；原始碼更新不代表 npm 已發布新版。
+另提供[有界目標續跑](docs/operations/workkeel-autonomy.md)與
+[版本化專案 Skill 學習](docs/extensions/workkeel-skill-lifecycle.md)。
+執行結束、獨立審查與任務驗收仍分別記錄。
+
 ## 預設、選配與支援範圍
 
 ### 重用經驗

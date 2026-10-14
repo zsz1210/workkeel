@@ -39,6 +39,16 @@ workkeel headroom view|read [target] --request tool-view-request.json
 workkeel skills audit [target] --request skill-use.json
 workkeel learning list [target]
 workkeel learning capture|review|use|search|impact [target] --request learning-request.json
+workkeel model-policy show [target] --id policy-id
+workkeel model-policy draft|approve|preview [target] --request policy-request.json
+workkeel skill-lifecycle list [target]
+workkeel skill-lifecycle candidate|evaluate|review|approve|policy|activate|suspend|rollback|revalidate|use|retrospective [target] --request request.json
+workkeel autonomy show [target]
+workkeel autonomy policy|enqueue|pause|resume|cancel|event|discover|resume-job [target] --request request.json
+workkeel autonomy tick|serve [target]
+workkeel retention inventory|preview|archive|verify|usage [target] --request request.json
+workkeel workspace create|register|remove|integration [private state directory] --request request.json
+workkeel workspace show|serve [private state directory]
 workkeel legacy <original Temple arguments>
 
 All task commands return JSON. Lifecycle mutation requests contain operation_id,
@@ -49,7 +59,7 @@ permissions. Workflow run explicitly launches the qualified Codex subscription h
 `;
 function parse(args) {
   const rest = [...args]; const command = rest.shift() ?? "help";
-  const action = ["task", "usage", "dispatch", "intake", "migration", "runtime", "instructions", "workflow", "headroom", "skills", "context", "learning"].includes(command) ? rest.shift() : null;
+  const action = ["task", "usage", "dispatch", "intake", "migration", "runtime", "instructions", "workflow", "headroom", "skills", "context", "learning", "workspace", "model-policy", "skill-lifecycle", "autonomy", "retention"].includes(command) ? rest.shift() : null;
   const target = rest[0] && !rest[0].startsWith("--") ? rest.shift() : ".";
   const options = {};
   while (rest.length) {
@@ -81,6 +91,24 @@ export async function workkeelMain(args) {
     else if (action === "preview") output = await previewLegacyMigration(target, policy, { retentionRef: options["--retain-open"] ?? null });
     else if (action === "apply") output = await initializeTaskProject(target, policy, { migrationFingerprint: required(options, "--fingerprint"), retentionRef: options["--retain-open"] ?? null });
     else throw new Error("Migration requires preview or apply");
+  } else if(command==='workspace') {
+    const workspace=await import('./workkeel-workspace.mjs');
+    if(action==='show'){allow(options,[]);output=await workspace.readWorkspaceSnapshot(target);}
+    else if(action==='serve') {
+      allow(options,['--request']);const config=options['--request']?(await readTaskContractInput(target,options['--request'])).document:{};
+      const {startWorkspaceServer}=await import('./workkeel-workspace-server.mjs');
+      const {createWorkspaceHooks}=await import('./workkeel-workspace-hooks.mjs');
+      const server=await startWorkspaceServer(target,{control:config.control??null,hooks:createWorkspaceHooks({host_models:config.host_models??[]})});
+      console.log(JSON.stringify({schema_version:'workkeel.workspace-server/v1',url:server.url,read_url:server.read_url,model_called:false},null,2));
+      const stop=()=>void server.close();process.once('SIGINT',stop);process.once('SIGTERM',stop);return 0;
+    } else {
+      allow(options,['--request']);const request=(await readTaskContractInput(target,required(options,'--request'))).document;
+      if(action==='create')output=await workspace.createWorkspace(target,request);
+      else if(action==='register')output=await workspace.registerWorkspaceProject(target,request.project,{expectedVersion:request.expected_version});
+      else if(action==='remove')output=await workspace.removeWorkspaceProject(target,request.id,{expectedVersion:request.expected_version});
+      else if(action==='integration')output=await workspace.inspectWorkspaceIntegration(await workspace.readWorkspaceSnapshot(target),request);
+      else throw Error('Unknown workspace action');
+    }
   } else if (!await existsEntry(target, "workkeel.lock")) {
     // No migration by inference. Keep the complete original CLI for old projects.
     if (!await existsEntry(target, "temple.lock")) throw new Error("Initialize the project before using task commands");
@@ -90,6 +118,36 @@ export async function workkeelMain(args) {
     output = command === "doctor" ? await diagnoseTaskProject(target) : {
       schema_version: "workkeel.status/v1", tasks: await listTaskItems(target), authority: "observation-only", mutation_status: "no-write"
     };
+  } else if(command==='retention') {
+    allow(options,['--request']);const retention=await import('./workkeel-retention.mjs');const request=(await readTaskContractInput(target,required(options,'--request'))).document;
+    if(action==='inventory')output=await retention.inventoryRetention(target,request);
+    else if(action==='preview')output=await retention.previewRetention(target,request);
+    else if(action==='archive')output=await retention.applyRetentionArchive(target,request);
+    else if(action==='verify')output=await retention.verifyRetentionArchive(target,request);
+    else if(action==='usage')output=retention.summarizeRetentionUsage(request.samples);
+    else throw Error('Unknown retention action');
+  } else if(command==='model-policy') {
+    const policy=await import('./workkeel-model-policy.mjs');
+    if(action==='show'){allow(options,['--id']);output=await policy.readModelPolicy(target,required(options,'--id'));}
+    else {allow(options,['--request']);const request=(await readTaskContractInput(target,required(options,'--request'))).document;
+      if(action==='draft')output=await policy.saveModelPolicyDraft(target,request);
+      else if(action==='approve')output=await policy.approveModelPolicy(target,request);
+      else if(action==='preview')output=policy.selectModelPolicy(request.policy,request.context);
+      else throw Error('Unknown model policy action');}
+  } else if(command==='skill-lifecycle') {
+    const learning=await import('./workkeel-learning-lifecycle.mjs');
+    if(action==='list'){allow(options,[]);output=await learning.listNativeSkillLifecycle(target);}
+    else {allow(options,['--request']);output=await learning.mutateNativeSkillLifecycle(target,action,(await readTaskContractInput(target,required(options,'--request'))).document);}
+  } else if(command==='autonomy') {
+    const autonomy=await import('./workkeel-autonomy.mjs');
+    if(action==='show'){allow(options,[]);output=await autonomy.readAutonomy(target);}
+    else if(['tick','serve'].includes(action)){
+      allow(options,[]);const {createAutonomyWorkflowAdapter}=await import('./workkeel-autonomy-workflow.mjs');const adapter=createAutonomyWorkflowAdapter(target);
+      if(action==='tick')output=await autonomy.runAutonomyStep(target,{adapter});
+      else {const controller=new AbortController();const service=await autonomy.serveAutonomy(target,{adapter,signal:controller.signal,onError:e=>console.error(JSON.stringify({error:e.message}))});const stop=()=>{controller.abort();service.close();};process.once('SIGINT',stop);process.once('SIGTERM',stop);console.log(JSON.stringify({schema_version:'workkeel.autonomy-service/v1',state:'listening',inference:'only-on-approved-work',foreground:true}));return 0;}
+    } else {allow(options,['--request']);const request=(await readTaskContractInput(target,required(options,'--request'))).document;
+      if(action==='cancel'){const {createAutonomyWorkflowAdapter}=await import('./workkeel-autonomy-workflow.mjs');output=await autonomy.cancelAutonomyJob(target,request,{adapter:createAutonomyWorkflowAdapter(target)});}
+      else output=await autonomy.mutateAutonomy(target,action,request);}
   } else if (command === 'learning') {
     const learning=await import('./workkeel-learning.mjs');
     if(action==='list'){allow(options,[]);output=await learning.listNativeLearning(target);}

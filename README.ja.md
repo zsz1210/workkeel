@@ -98,6 +98,15 @@ npx --no-install workkeel monitor /path/to/task-first-project
 
 [観測サイトの使い方とデータの制約](docs/operations/workkeel-observer.md)
 
+レビュー済みソースには、登録した複数のプロジェクトとリポジトリを確認し、
+タスクの詳細と許可されたポリシー設定を扱う
+[デスクトップワークスペース](docs/operations/workkeel-workspace.md)もあります。
+タスクの権限は各プロジェクトに残ります。追加機能にはソース CLI を使用します。
+ソースの更新は npm の新しい公開を意味しません。
+[範囲を定めた目標の継続](docs/operations/workkeel-autonomy.md)と
+[バージョン別のプロジェクト Skill 学習](docs/extensions/workkeel-skill-lifecycle.md)も提供します。
+実行終了、独立レビュー、タスク受入れは別々に記録します。
+
 ## 既定値、オプション、対応範囲
 
 ### 経験の再利用

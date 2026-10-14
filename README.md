@@ -121,6 +121,14 @@ active intervals and is not model compute time or an efficiency ranking.
 
 [Observer guide and data limits](docs/operations/workkeel-observer.md)
 
+The reviewed source also provides a [desktop workspace](docs/operations/workkeel-workspace.md)
+for explicitly registered projects and repositories, with task details and controlled
+policy editing. Each project retains its own task authority. Use the source CLI for
+these additions; a source change does not establish a new npm publication.
+The source also includes [bounded goal continuation](docs/operations/workkeel-autonomy.md)
+and [versioned project Skill learning](docs/extensions/workkeel-skill-lifecycle.md).
+Execution completion, independent review and task acceptance remain separate.
+
 ## Defaults, options and support
 
 ### Reuse a lesson

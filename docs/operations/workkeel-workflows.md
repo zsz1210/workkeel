@@ -197,6 +197,48 @@ identity. Approval cannot extend the original scope. `approved:false` records a
 terminal rejection. A wrong token is rejected without consuming the pending
 interrupt. Remove stale `approvals` when no interrupt is pending.
 
+## Layered model settings in new runs
+
+An execution policy can opt into an exact approved `model_policy` bridge with
+`policy_id`, `version`, `sha256` and `min_quality`. Each eligible model entry must
+also declare `routing:{provider,model,reasoning_efforts,service_tiers}`. This
+metadata constrains settings; it does not rewrite the entry's approved connection.
+For a Codex subscription connection, provider is `openai`, model must match the
+connection and the reasoning list contains that connection's exact effort.
+
+Optional approved `model_contexts:[{node,activity,role}]` identifies an activity and
+role for a runtime node. `role` is optional. Without this mapping, the node ID is
+used as the activity selector; the engine does not guess which activity the prose
+describes. Planning, implementation, verification, review and repair are activity
+labels, not five mandatory Agents or a replacement lifecycle.
+
+Layered `workflow plan` and `run` requests require `capabilities` in the native
+dispatch shape, including service support. Optional `model_policy` request pins
+must match the approved bridge exactly. A trusted adapter must implement
+`assertModelSelection(context)` and return the exact selected
+`{provider,model,reasoning,service}` before dispatch. It receives the same tuple in
+`context.selection.runtime_selection` and must acknowledge it in its result.
+Missing or mismatched acknowledgements preserve an unresolved operation, never a
+passing result. Layered fallbacks are rejected; fixed settings cannot silently
+move to another tuple.
+
+The stock Codex adapter supports layered subscription connections in the explicitly
+confirmed `provider-default` service mode. It sends the default service setting on
+thread start/resume and for each turn, checks the returned mode, and reports the
+actual returned model and reasoning. Accelerated tiers require an adapter qualified
+to select and acknowledge them; the stock adapter blocks those routes. Financial
+caps still require a host capable of enforcing them.
+
+An existing run retains its historical policy pin, capability fingerprint, model
+snapshot and operation identity after newer settings are approved. A fresh run
+requires the active exact approved version. Requested settings, runtime
+acknowledgements and provider observations remain separate; none accepts a task.
+Confirmed-interruption continuation carries the original model policy and
+capabilities into the inspected successor plan. Explicit replacements, when
+supplied, must pass the same approved bridge and host checks and are included in
+the plan digest. A successor is a new run: inactive or changed authority blocks
+it rather than silently dropping the settings or replaying the old operation.
+
 ## Graph behavior and limits
 
 Conditional edges use a runtime result's explicit `outcome`. An embedded adapter

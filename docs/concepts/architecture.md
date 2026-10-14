@@ -33,6 +33,32 @@ subscription and explicitly selected models. See the
 
 ![Workkeel task records and optional graph execution connect to a host-enforced coding runtime; recovery state and acceptance evidence remain separate.](../assets/workkeel-architecture.svg)
 
+The native [desktop workspace](../operations/workkeel-workspace.md) observes
+registered projects without relocating their task authority. Its controlled
+settings feed exact approved pins into new dispatches. A bounded continuation
+runner resumes eligible approved work; improvement discovery creates evidenced
+proposals rather than new permission. Versioned Skill reuse stays project-local.
+
+```mermaid
+flowchart LR
+  UI[Desktop workspace] -->|observe| A[Project A task records]
+  UI -->|observe| B[Project B task records]
+  UI -->|authorized intent| C[Version and authority checks]
+  C --> J[Durable approved jobs]
+  J --> P[Pinned model and workflow policy]
+  P --> H[Enforcing runtime host]
+  H --> E[Exact result and usage evidence]
+  E --> R[Different Agent review]
+  R --> T[Authorized task acceptance]
+  E --> L[Scoped learning comparison and review]
+  L --> S[Approved project Skill version]
+  S -->|bounded relevant retrieval| P
+```
+
+These are source capabilities. The workspace makes no idle inference calls,
+dispatch completion does not accept a task, and a Skill cannot grant authority.
+See [ADR-0085](../adr/0085-native-workspace-bounded-autonomy-and-skill-learning.md).
+
 | Boundary | Authoritative source | Enforcement |
 | --- | --- | --- |
 | Task approval and acceptance | Immutable task contract; canonical task operations | Claim, scope, dependency, evidence and distinct-review guards |

@@ -3,6 +3,9 @@
 Native projects can preserve a narrowly scoped lesson, explicitly review it, and
 record its later use without creating a legacy Work Item or Position. This feature
 does not run models, infer use from files, change task acceptance, or activate Skills.
+For separately authorized comparison and project-local activation, see the
+[versioned Skill lifecycle](workkeel-skill-lifecycle.md). Its journal remains
+separate from native Lesson and Practice records.
 
 ## Storage and authority
 

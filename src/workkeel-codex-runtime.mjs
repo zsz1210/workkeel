@@ -80,6 +80,12 @@ export function createCodexRuntime(host, options = {}) {
   }
   const productAccess = role?.contract.product_access ?? "write";
   const active = new Map();
+  function assertModelSelection(context) {
+    const tuple=context.selection.runtime_selection,connection=context.selection.connection;
+    exactKeys(tuple,['provider','model','reasoning','service']);
+    if(connection.kind!=='codex-subscription'||tuple.provider!=='openai'||tuple.model!==connection.model||tuple.reasoning!==connection.effort||tuple.service!=='provider-default')throw Error('Codex routing requires the exact approved subscription connection and supported default service mode');
+    return structuredClone(tuple);
+  }
   async function assertCompatible(context) {
     const { contract, policy } = context;
     if (contract.execution.runtime.adapter_id !== "codex-app-server") throw new Error("Contract does not select the Codex adapter");
@@ -110,6 +116,7 @@ export function createCodexRuntime(host, options = {}) {
   async function dispatch(context, resume) {
     authorizationSnapshot(context.contract);
     await assertCompatible(context);
+    if(context.selection.runtime_selection)assertModelSelection(context);
     if (context.signal?.aborted) throw new Error("Codex operation was cancelled before dispatch");
     if (active.has(context.operation_id)) throw new Error("Duplicate active runtime operation");
     // Fails before a process is opened; no inference happens on a failed probe.
@@ -208,6 +215,7 @@ export function createCodexRuntime(host, options = {}) {
       const started = await request(resume ? "thread/resume" : "thread/start", {
         ...parameters, ...(resume ? { threadId: context.conversation_id } : { allowProviderModelFallback: false }), cwd,
         approvalPolicy: "never", permissions,
+        ...(context.selection.runtime_selection?{serviceTier:'default'}:{}),
         developerInstructions: "Follow the full task contract and execution_context check_rule/result_rule. The coordinator owns claims, handoff, review and closure. Read applicable WORKKEEL.md, AGENTS.md, nested instructions, named/matching Skills and required references fully, even if discovery is disabled; match Skills without reading the whole catalog and batch independent reads. Use the actual UTC clock for expiry; authorization_check is a point-in-time observation, not authority. Missing material, expiry or scope conflicts require attention. Report the requested result, changed files, actual checks, Skill use and unverified outcomes. Never expand permissions, change models or start background/detached jobs.",
         config: { ...parameters.config, web_search: "disabled", allow_login_shell: false,
           permissions: { [permissions]: profile }, default_permissions: permissions }
@@ -223,6 +231,7 @@ export function createCodexRuntime(host, options = {}) {
           !Array.isArray(started.runtimeWorkspaceRoots) || started.runtimeWorkspaceRoots.some(root => root !== cwd) ||
           !resume && (!Array.isArray(started.thread.turns) || started.thread.turns.length)) throw new Error("Codex thread identity, permissions or selected connection differs from the request");
       runtimeModel = started.model ?? null; observe();
+      if(context.selection.runtime_selection&&started.serviceTier!=='default')throw Error('Codex did not confirm the requested default service mode');
       const existingTerminals = await request("thread/backgroundTerminals/list", { threadId: current.threadId });
       if (!Array.isArray(existingTerminals.data) || existingTerminals.data.length || existingTerminals.nextCursor) throw new Error("Codex has unexpected background terminals; recovery requires inspection");
       // Initialization can outlive the approval. Recheck before any model work.
@@ -239,7 +248,8 @@ export function createCodexRuntime(host, options = {}) {
               check_rule: "Coordinator checks run after dispatch; evidence is separate. Do not run or probe them. Assignment grants no permission or acceptance." } : {}),
             result_rule: "done: work performed; attention: incomplete/blocked. Neither grants acceptance or lifecycle authority." } }) }],
         ...(parameters.model ? { model: parameters.model } : {}),
-        ...(context.selection.connection.effort ? { effort: context.selection.connection.effort } : {}) });
+        ...(context.selection.connection.effort ? { effort: context.selection.connection.effort } : {}),
+        ...(context.selection.runtime_selection?{serviceTierForTurn:'default'}:{}) });
       if (typeof turn.turn?.id !== "string" || current.turnId && current.turnId !== turn.turn.id) throw new Error("Codex did not return the matching turn ID");
       current.turnId = turn.turn.id;
       for (const message of buffered.splice(0)) notification(message);
@@ -255,7 +265,8 @@ export function createCodexRuntime(host, options = {}) {
         output = result.output; outcome = result.outcome;
       }
       return validateRuntimeResult({ status: terminal.status === "completed" && outcome === "attention" ? "failed" : terminal.status,
-        conversation_id: current.threadId, output, outcome, runtime_model: started.model, observed_model: null, usage });
+        conversation_id: current.threadId, output, outcome, runtime_model: started.model, observed_model: null, usage,
+        ...(context.selection.runtime_selection?{runtime_selection:{provider:started.modelProvider,model:started.model,reasoning:started.reasoningEffort,service:'provider-default'}}:{}) });
     } finally {
       clearTimeout(timer); context.signal?.removeEventListener("abort", aborted);
       let cleanupError;
@@ -278,5 +289,5 @@ export function createCodexRuntime(host, options = {}) {
       if (cleanupError) { cleanupError.runtimeUnsettled = true; throw cleanupError; }
     }
   }
-  return { id: "codex-app-server", assertCompatible, start: context => dispatch(context, false), resume: context => dispatch(context, true), cancel };
+  return { id: "codex-app-server", assertCompatible, assertModelSelection, start: context => dispatch(context, false), resume: context => dispatch(context, true), cancel };
 }

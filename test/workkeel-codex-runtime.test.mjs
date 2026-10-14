@@ -18,7 +18,7 @@ async function context(t) {
     selection: { connection: { kind: "gateway", provider: "litellm", base_url: "http://localhost:4000/v1", model: "fixture-fixed", selection: "fixed", credential_env: "FIXTURE_KEY" } },
     input: { instruction: "Offline protocol fixture", previous_results: {} } };
 }
-function fixtureHost({ reroute = false, earlyReroute = false, approval = false, neverComplete = false, account = "chatgpt", available = true, permissionMismatch = false, effortMismatch = false, earlyApproval = false, dirtyTerminals = false, wrongCwd = false, attention = false, delayedStart = false, hideStarted = false, onStart = () => {}, onTurn = () => {}, onStarted = () => {}, onInterrupt = () => {} } = {}) {
+function fixtureHost({ reroute = false, earlyReroute = false, approval = false, neverComplete = false, account = "chatgpt", available = true, permissionMismatch = false, effortMismatch = false, serviceMismatch = false, earlyApproval = false, dirtyTerminals = false, wrongCwd = false, attention = false, delayedStart = false, hideStarted = false, onStart = () => {}, onTurn = () => {}, onStarted = () => {}, onInterrupt = () => {} } = {}) {
   const source = `import readline from 'node:readline';
     const send = x => process.stdout.write(JSON.stringify(x)+'\\n');
     const reply = (id,result) => send({id,result});
@@ -33,7 +33,7 @@ function fixtureHost({ reroute = false, earlyReroute = false, approval = false, 
         if(m.params.config.web_search!=='disabled'||m.params.approvalPolicy!=='never') process.exit(2);
         const profile=m.params.config.permissions[m.params.permissions];
         if(profile.filesystem[':root']!=='deny'||profile.network.enabled!==false) process.exit(3);
-        reply(m.id,{thread:{id:'thread-one',turns:[]},cwd:${wrongCwd ? "'/wrong'" : "m.params.cwd"},approvalPolicy:'never',instructionSources:[],runtimeWorkspaceRoots:[m.params.cwd],model:m.params.model,modelProvider:m.params.modelProvider,reasoningEffort:${effortMismatch ? "'high'" : "m.params.config.model_reasoning_effort"},activePermissionProfile:{id:${permissionMismatch ? "'different-profile'" : "m.params.permissions"}}});
+        reply(m.id,{thread:{id:'thread-one',turns:[]},cwd:${wrongCwd ? "'/wrong'" : "m.params.cwd"},approvalPolicy:'never',instructionSources:[],runtimeWorkspaceRoots:[m.params.cwd],model:m.params.model,modelProvider:m.params.modelProvider,reasoningEffort:${effortMismatch ? "'high'" : "m.params.config.model_reasoning_effort"},serviceTier:${serviceMismatch?"'priority'":"m.params.serviceTier"},activePermissionProfile:{id:${permissionMismatch ? "'different-profile'" : "m.params.permissions"}}});
       }
       if(m.method==='thread/backgroundTerminals/clean') reply(m.id,{});
       if(m.method==='thread/backgroundTerminals/list') reply(m.id,{data:${dirtyTerminals ? "[{id:'still-running'}]" : "[]"},nextCursor:null});
@@ -82,6 +82,28 @@ test("Codex start/resume uses a real local JSON-RPC process, pinned model and re
   for (const name of ["workkeel.lock", "workkeelw.mjs", "TEMPLE.md", "temple.lock", "templew.mjs", "approval.md"]) {
     assert.equal(rootWrites.filesystem[path.join(await fs.realpath(c.target), name)], "read", name);
   }
+});
+
+test('layered subscription routing sends and confirms the exact default service mode on start and resume',async t=>{
+  const c=await context(t);c.selection.connection={kind:'codex-subscription',model:'gpt-6-luna',effort:'low'};
+  c.selection.runtime_selection={provider:'openai',model:'gpt-6-luna',reasoning:'low',service:'provider-default'};
+  const turns=[],runtime=createCodexRuntime(fixtureHost({onTurn:params=>turns.push(params)}));
+  assert.deepEqual(runtime.assertModelSelection(c),c.selection.runtime_selection);
+  const result=await runtime.start(c);assert.deepEqual(result.runtime_selection,c.selection.runtime_selection);
+  assert.equal(turns[0].serviceTierForTurn,'default');assert.equal(turns[0].effort,'low');
+  const resumed=await runtime.resume({...c,conversation_id:'thread-one'});assert.deepEqual(resumed.runtime_selection,c.selection.runtime_selection);
+  assert.equal(turns[1].serviceTierForTurn,'default');
+});
+
+test('unsupported fixed service or connection tuple blocks before process dispatch and host mode drift blocks before inference',async t=>{
+  const c=await context(t);c.selection.connection={kind:'codex-subscription',model:'gpt-6-luna',effort:'low'};
+  c.selection.runtime_selection={provider:'openai',model:'gpt-6-luna',reasoning:'low',service:'priority'};
+  let connections=0;const runtime=createCodexRuntime({assertCompatible:async()=>{},connect:()=>{connections++;throw Error('Unexpected dispatch');}});
+  await assert.rejects(runtime.start(c),/supported default service/);assert.equal(connections,0);
+  c.selection.runtime_selection.service='provider-default';c.selection.runtime_selection.reasoning='high';
+  await assert.rejects(runtime.start(c),/exact approved/);assert.equal(connections,0);
+  c.selection.runtime_selection.reasoning='low';let turns=0;
+  await assert.rejects(createCodexRuntime(fixtureHost({serviceMismatch:true,onTurn:()=>turns++})).start(c),/confirm.*default service/);assert.equal(turns,0);
 });
 test("unqualified hosts and unsupported conditions fail before connecting", async t => {
   assert.throws(() => createCodexProcessHost({}), /qualified host/);

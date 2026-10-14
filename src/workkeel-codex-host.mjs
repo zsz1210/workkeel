@@ -5,6 +5,7 @@ import path from "node:path";
 import { createJsonRpcProcess } from "./codex-app-server-provider.mjs";
 import { createCodexRuntime, codexPermissionProfileArgs } from "./workkeel-codex-runtime.mjs";
 import { safeDirectory } from "./workkeel-project.mjs";
+import {listNativeSkillLifecycle} from './workkeel-learning-lifecycle.mjs';
 
 const exec = promisify(execFile);
 export const QUALIFIED_CODEX_VERSION = "codex-cli 0.155.0-alpha.9.2";
@@ -79,11 +80,18 @@ async function readableProjectSkill(target, file) {
   }
 }
 
+const versionedSkill=(target,file)=>file.startsWith(path.join(target,'.agents/skills/workkeel-local')+path.sep);
+async function activeVersionedSkills(target,skills){
+  if(!skills.some(skill=>versionedSkill(target,skill.path)))return new Set();
+  const view=await listNativeSkillLifecycle(target);
+  return new Set(view.active.map(skill=>path.join(target,skill.entrypoint.path)));
+}
 export async function codexSkillPolicy(rpc, target) {
   const disabledPaths = [], enabledPaths = [];
-  for (const skill of await skillCatalogue(rpc, target)) {
+  const skills=await skillCatalogue(rpc,target),activeVersions=await activeVersionedSkills(target,skills);
+  for (const skill of skills) {
     // Replacing the config array must retain existing disabled project Skills.
-    if (!skill.enabled || !await readableProjectSkill(target, skill.path)) disabledPaths.push(skill.path);
+    if (!skill.enabled || !await readableProjectSkill(target, skill.path) || versionedSkill(target,skill.path)&&!activeVersions.has(skill.path)) disabledPaths.push(skill.path);
     else enabledPaths.push(skill.path);
   }
   return { disabledPaths, enabledPaths };
@@ -91,12 +99,13 @@ export async function codexSkillPolicy(rpc, target) {
 
 export async function assertCodexSkills(rpc, target, { disabledPaths, enabledPaths }) {
   const disabledSet = new Set(disabledPaths), skills = await skillCatalogue(rpc, target);
+  const activeVersions=await activeVersionedSkills(target,skills);
   const activePaths = new Set(skills.filter(skill => skill.enabled).map(skill => skill.path));
   if (enabledPaths.some(file => !activePaths.has(file))) {
     throw new Error("Codex Skill catalogue lost an enabled project Skill; resolve host routing before dispatch");
   }
   for (const skill of skills) {
-    if (skill.enabled && (disabledSet.has(skill.path) || !await readableProjectSkill(target, skill.path))) {
+    if (skill.enabled && (disabledSet.has(skill.path) || !await readableProjectSkill(target, skill.path) || versionedSkill(target,skill.path)&&!activeVersions.has(skill.path))) {
       throw new Error("Codex Skill catalogue contains an enabled out-of-scope or disabled Skill; resolve host routing before dispatch");
     }
   }

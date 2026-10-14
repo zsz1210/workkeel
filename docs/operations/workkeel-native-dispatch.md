@@ -25,6 +25,47 @@ Names above are placeholders. Use models approved and actually supported by the
 host. There is no framework default vendor, paid API requirement or universal
 reasoning scale. Host capabilities and permitted data classes must match.
 
+### Layered settings for new operations
+
+The desktop policy editor independently configures model, reasoning and service
+as inherited, automatic or fixed. It can narrow the model catalog already approved
+for the task. A saved draft needs exact-version approval; neither save nor approval
+starts an operation. See [desktop settings](workkeel-workspace.md).
+
+To authorize runtime adoption, a new pinned dispatch policy may include:
+
+```json
+{"model_policy":{"policy_id":"project-routing","version":1,"sha256":"exact-approved-policy-digest","min_quality":0}}
+```
+
+This is an additional field on the existing dispatch policy, not a complete policy
+file. Each approved model entry can additionally declare `reasoning_efforts` and
+`service_tiers`. Those explicit lists constrain the selected tuple; absence does
+not authorize overriding scalar reasoning or inventing service support. Approve
+the policy bytes through a new native task contract before dispatch. Existing
+immutable contracts and tickets cannot adopt changed policy files.
+
+New `dispatch prepare` requests optionally include `model_policy` with the exact
+`policy_id`, `version`, `sha256` and optional `context:{role}`. The pinned bridge
+also applies when the request omits this field. Task, node and activity context
+comes from the actual task and dispatch node. Model allowlist, data classification,
+risk, approved quality floor and actual host support are hard constraints. High
+risk retains the conservative alias constraint. Cost/quota preferences cannot lower
+those constraints. Same-layer conflicts and unavailable fixed values fail explicitly.
+
+Layered capabilities include each model's `service_tiers` as well as its reasoning
+list. The resulting immutable ticket contains `model_snapshot`, the policy pin and
+the exact capability fingerprint. Requested, selected and reported values remain
+distinct. New operations require the active exact approved policy version; already
+prepared tickets retain their historical approved version after later activation.
+
+For a layered ticket, `dispatch bind` also requires `capabilities` and an attributed
+`runtime_selection:{provider,model,reasoning,service}` matching that exact tuple.
+Direct `usage bind` must supply the same proof in `routing_ack`; it cannot bypass
+the routing guard. A capability declaration alone is not execution proof, and local
+acknowledgements are not provider-authenticated records. The host must genuinely
+select and enforce the declared settings before reporting them.
+
 ## Dispatch sequence
 
 1. Claim the task. Split work into nodes with `id`, `activity_kind`, `depends_on`,

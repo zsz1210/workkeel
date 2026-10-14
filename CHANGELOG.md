@@ -5,6 +5,25 @@ line. Historical release entries describe their own versions, not current-main
 qualification. Actual development tasks and validation records stay private;
 repository migration does not republish old tags, archives or npm versions.
 
+## Unreleased source
+
+- Adds a desktop workspace for registered projects and repositories, controlled
+  model settings, exact-version integration checks and detailed recorded execution.
+- Resolves independently inherited/automatic/fixed model, reasoning and service
+  dimensions within pinned task authority and verified host capabilities. New
+  dispatch/workflow operations retain immutable policy snapshots; unsupported
+  fixed settings block explicitly.
+- Adds durable approved-work continuation, explicit recovery and confirmed host
+  cancellation. Improvement discovery is opt-in, scoped and bounded; proposals
+  cannot invent task authority or acceptance.
+- Adds comparative, independently reviewed, versioned project Skill activation,
+  scoped retrieval, explicit use/outcomes, suspension, rollback and revalidation.
+  Source drift removes current eligibility while retaining original evidence.
+- Adds capacity previews and verified archives preserving all originals and source
+  identity. Unknown measurements remain unknown; archive copies release zero bytes.
+
+These source additions do not imply a new npm publication or deployment.
+
 ## 0.1.0-beta.1
 
 Workkeel Beta.1 experimental prerelease for internal and early adopter evaluation.

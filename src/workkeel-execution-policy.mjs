@@ -1,5 +1,6 @@
 import { formatJson, sha256 } from "./files.mjs";
 import { codexModelConnectionParams } from "./workkeel-runtime.mjs";
+import { validateModelPolicyPin, validateRoutingTuple, validateWorkflowRoutingAuthority } from './workkeel-model-routing.mjs';
 
 export const executionDigest = value => sha256(formatJson(value));
 export const EXECUTION_ID = /^[a-z][a-z0-9-]{0,63}$/;
@@ -15,12 +16,23 @@ function identifier(value) {
   if (typeof value !== "string" || !EXECUTION_ID.test(value) || ["constructor", "prototype"].includes(value)) throw new Error("Invalid execution identifier");
 }
 export function validateExecutionPolicy(policy) {
-  exactKeys(policy, ["schema_version", "models", "default_model", "rules", "limits", "headroom"], ["fallbacks"]);
+  exactKeys(policy, ["schema_version", "models", "default_model", "rules", "limits", "headroom"], ["fallbacks", "model_policy", "model_contexts"]);
+  if (policy.model_policy !== undefined) validateModelPolicyPin(policy.model_policy, {bridge: true});
+  if (policy.model_contexts !== undefined) {
+    if (!Array.isArray(policy.model_contexts) || policy.model_contexts.length > 100) throw Error('Invalid workflow model contexts');
+    const nodes = new Set();
+    for (const context of policy.model_contexts) {
+      exactKeys(context, ['node', 'activity'], ['role']); identifier(context.node); identifier(context.activity);
+      if (context.role !== undefined) identifier(context.role);
+      if (nodes.has(context.node)) throw Error('Duplicate workflow model context'); nodes.add(context.node);
+    }
+  }
   if (policy.schema_version !== "workkeel.execution-policy/v1") throw new Error("Unsupported execution policy");
   if (!Array.isArray(policy.models) || !policy.models.length || policy.models.length > 32) throw new Error("An approved model list is required");
   const ids = new Set();
   for (const model of policy.models) {
-    exactKeys(model, ["id", "connection", "data_classes"]); identifier(model.id);
+    exactKeys(model, ["id", "connection", "data_classes"], ['routing']); identifier(model.id);
+    if (model.routing !== undefined) validateWorkflowRoutingAuthority(model);
     if (ids.has(model.id)) throw new Error("Duplicate approved model"); ids.add(model.id);
     codexModelConnectionParams(model.connection);
     if (Buffer.byteLength(formatJson(model.connection)) > 4096) throw new Error("Model connection exceeds the bounded configuration size");
@@ -87,7 +99,8 @@ export function validateRuntimeAdapter(adapter) {
   return adapter;
 }
 export function validateRuntimeResult(result) {
-  exactKeys(result, ["status", "conversation_id", "output", "outcome", "observed_model", "usage"], ["runtime_model"]);
+  exactKeys(result, ["status", "conversation_id", "output", "outcome", "observed_model", "usage"], ["runtime_model", "runtime_selection"]);
+  if (result.runtime_selection !== undefined && result.runtime_selection !== null) validateRoutingTuple(result.runtime_selection);
   if (!["completed", "failed", "interrupted", "not-started"].includes(result.status) ||
       result.conversation_id !== null && (typeof result.conversation_id !== "string" || result.conversation_id.length > 200) ||
       typeof result.output !== "string" || Buffer.byteLength(result.output) > 65536 ||
@@ -97,6 +110,6 @@ export function validateRuntimeResult(result) {
   exactKeys(result.usage, ["input_tokens", "output_tokens", "cost_usd"]);
   for (const [key, value] of Object.entries(result.usage)) if (value !== null &&
       (!Number.isFinite(value) || value < 0 || key !== "cost_usd" && !Number.isSafeInteger(value))) throw new Error("Invalid runtime usage; unavailable values must be null");
-  if (result.status === "not-started" && (result.conversation_id !== null || result.observed_model !== null || Object.values(result.usage).some(value => value !== 0))) throw new Error("Not-started requires confirmed zero model dispatch and no conversation");
+  if (result.status === "not-started" && (result.conversation_id !== null || result.observed_model !== null || result.runtime_selection != null || Object.values(result.usage).some(value => value !== 0))) throw new Error("Not-started requires confirmed zero model dispatch and no conversation");
   return result;
 }

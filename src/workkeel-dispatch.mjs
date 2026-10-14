@@ -7,6 +7,7 @@ import {safeDirectory, existsEntry} from './workkeel-project.mjs';
 import {withProjectMutationLock} from './project.mjs';
 import {durableAtomicCreate, formatJson} from './files.mjs';
 import {readTaskFile, readTaskContractInput} from './task-contract.mjs';
+import {validateModelPolicyPin, validateRoutingDimensions, resolveDispatchModelRouting, assertRoutingAcknowledgement, recordRoutingBinding} from './workkeel-model-routing.mjs';
 
 const ROOT='.ai-org/dispatch';
 const ID=/^[A-Za-z0-9][A-Za-z0-9._-]{0,95}$/;
@@ -24,12 +25,14 @@ function paths(values) {if(!Array.isArray(values)||values.length>128||new Set(va
 
 /** Project-owned aliases, without provider-specific connection or credential handling. */
 export function validateDispatchPolicy(policy) {
-  exactKeys(policy,['schema_version','models','default_alias','conservative_alias','parallelism']);
+  exactKeys(policy,['schema_version','models','default_alias','conservative_alias','parallelism'],['model_policy']);
+  if(policy.model_policy!==undefined)validateModelPolicyPin(policy.model_policy,{bridge:true});
   if(policy.schema_version!=='workkeel.dispatch-policy/v1'||!Array.isArray(policy.models)||!policy.models.length||policy.models.length>32)fail('invalid policy');
   boundedInteger(policy.parallelism,1,16,'dispatch parallelism');
   const aliases=new Set();
   for(const model of policy.models) {
-    exactKeys(model,['alias','provider','model','reasoning','data_classes']);id(model.alias);label(model.provider);label(model.model);
+    exactKeys(model,['alias','provider','model','reasoning','data_classes'],['reasoning_efforts','service_tiers']);id(model.alias);label(model.provider);label(model.model);
+    validateRoutingDimensions(model);
     if(model.reasoning!==null)label(model.reasoning);
     if(aliases.has(model.alias))fail('duplicate model alias');aliases.add(model.alias);
     if(!Array.isArray(model.data_classes)||!model.data_classes.length||new Set(model.data_classes).size!==model.data_classes.length||model.data_classes.some(x=>!['public','internal'].includes(x)))fail('invalid data classes');
@@ -61,15 +64,21 @@ export function selectDispatchModel(policy,route={}) {
   return {...structuredClone(policy.models.find(m=>m.alias===alias)),selection_reason:reason,classifier:advisory,policy_sha256:executionDigest(policy)};
 }
 
-export function assertDispatchCapability(selection,capabilities) {
+export function validateDispatchCapabilities(capabilities) {
   exactKeys(capabilities,['host','models']);label(capabilities.host);
   if(!Array.isArray(capabilities.models)||!capabilities.models.length||capabilities.models.length>128)fail('invalid host capabilities');
   for(const model of capabilities.models) {
-    exactKeys(model,['provider','model','reasoning']);label(model.provider);label(model.model);
+    exactKeys(model,['provider','model','reasoning'],['service_tiers']);label(model.provider);label(model.model);
+    validateRoutingDimensions(model);
     if(!Array.isArray(model.reasoning)||!model.reasoning.length||model.reasoning.length>16)fail('invalid reasoning capabilities');
     for(const effort of model.reasoning)if(effort!==null)label(effort);
   }
-  if(!capabilities.models.some(m=>m.provider===selection.provider&&m.model===selection.model&&m.reasoning.includes(selection.reasoning)))fail('host capability mismatch; explicit model and reasoning support required');
+  return capabilities.host;
+}
+export function assertDispatchCapability(selection,capabilities) {
+  validateDispatchCapabilities(capabilities);
+  if(!capabilities.models.some(m=>m.provider===selection.provider&&m.model===selection.model&&m.reasoning.includes(selection.reasoning)&&
+    (selection.service===undefined||m.service_tiers?.includes(selection.service))))fail('host capability mismatch; explicit model, reasoning and selected service support required');
   return capabilities.host;
 }
 
@@ -118,7 +127,8 @@ async function safeScope(target,ref) {
 
 /** Record a dispatch intent under the existing task claim. This does not launch a host or grant authority. */
 export async function prepareDispatchTicket(targetInput,request) {
-  exactKeys(request,['task_id','actor','claim_id','contract_sha256','policy_ref','node','capabilities','operation_id'],['route','display_label']);
+  exactKeys(request,['task_id','actor','claim_id','contract_sha256','policy_ref','node','capabilities','operation_id'],['route','display_label','model_policy']);
+  request=structuredClone(request);
   const target=await fs.realpath(targetInput);nodeShape(request.node);
   id(request.operation_id);
   if(request.display_label!==undefined)label(request.display_label);
@@ -127,7 +137,23 @@ export async function prepareDispatchTicket(targetInput,request) {
   return withProjectMutationLock(target,async()=>{
     const task=await assertTaskExecutionContext(target,request.task_id,request),env=task.contract.environment;
     const policyInput=await pinnedPolicy(target,task,request.policy_ref);
-    const selected=selectDispatchModel(policyInput.document,request.route);
+    const operationKey=executionDigest({task_id:task.id,operation_id:request.operation_id});
+    const entries=await existsEntry(target,ROOT)?await inventory(target):[];
+    const existing=entries.find(name=>name.endsWith(`-${operationKey}.json`));
+    if(existing) {
+      const prior=await readDispatchTicket(target,existing.slice(0,36));
+      if(prior.request_sha256!==executionDigest(request))fail('operation replay conflict');
+      return prior;
+    }
+    const legacy=selectDispatchModel(policyInput.document,request.route);
+    let selected=legacy,routing=null;
+    if(request.model_policy!==undefined&&!policyInput.document.model_policy)fail('model policy request lacks an approved policy bridge');
+    if(policyInput.document.model_policy) {
+      // Validate host capabilities before filtering their exact approved dimension lists.
+      validateDispatchCapabilities(request.capabilities);
+      routing=await resolveDispatchModelRouting(target,task,policyInput.document,request);
+      selected={...routing.model,selection_reason:'layered-model-policy',classifier:legacy.classifier,policy_sha256:executionDigest(policyInput.document)};
+    }
     const host=assertDispatchCapability(selected,request.capabilities);
     if(task.contract.execution.runtime.kind!=='host-owned'||env.data.model_access!=='approved-connection'||!task.contract.authorization.operations.includes('execute'))fail('approved host execution required');
     if(!selected.data_classes.includes(env.data.classification))fail('model data boundary');
@@ -138,14 +164,6 @@ export async function prepareDispatchTicket(targetInput,request) {
     const dir=await safeDirectory(target,ROOT,{create:true});
     if(!await existsEntry(target,`${ROOT}/.gitignore`))await durableAtomicCreate(path.join(dir,'.gitignore'),'*\n');
     if((await readTaskFile(target,`${ROOT}/.gitignore`)).content!=='*\n')fail('ignore policy changed');
-    const entries=await inventory(target);
-    const operationKey=executionDigest({task_id:task.id,operation_id:request.operation_id});
-    const existing=entries.find(name=>name.endsWith(`-${operationKey}.json`));
-    if(existing) {
-      const prior=await readDispatchTicket(target,existing.slice(0,36));
-      if(prior.request_sha256!==executionDigest(request))fail('operation replay conflict');
-      return prior;
-    }
     if(entries.length>=1024)fail('ticket inventory bound');
     // Preserve the exact claim body before a later cancellation can remove its
     // identity. The canonical event body hash anchors this proof; never rebuild it.
@@ -163,7 +181,8 @@ export async function prepareDispatchTicket(targetInput,request) {
       actor:structuredClone(request.actor),claim_id:task.claim.id,created_at:new Date().toISOString(),
       cwd:env.cwd,node:structuredClone(request.node),route:structuredClone(request.route??{}),selected,requested_host:host,host_binding_id:null,
       policy_ref:request.policy_ref,policy_file_sha256:policyInput.digest,policy_parallelism:policyInput.document.parallelism,
-      status:'prepared',usage:{input_tokens:null,output_tokens:null,execution_duration_ms:null},authority:'task-claim-only'};
+      status:'prepared',usage:{input_tokens:null,output_tokens:null,execution_duration_ms:null},authority:'task-claim-only',
+      ...(routing?{model_policy:routing.pin,model_snapshot:routing.snapshot,capabilities:structuredClone(request.capabilities),capability_sha256:executionDigest(request.capabilities)}:{})};
     await durableAtomicCreate(path.join(dir,`${ticket.execution_id}-${operationKey}.json`),formatJson({value:ticket,sha256:executionDigest(ticket)}));
     return ticket;
   });
@@ -177,7 +196,7 @@ export async function readDispatchTicket(target,executionId) {
   exactKeys(envelope,['value','sha256']);
   if(envelope.value?.schema_version!=='workkeel.dispatch-ticket/v1'||envelope.value.execution_id!==executionId||executionDigest(envelope.value)!==envelope.sha256)fail('ticket integrity');
   const ticket=envelope.value;
-  exactKeys(ticket,['schema_version','execution_id','display_label','operation_id','request_sha256','task_id','task_version','task_hash','contract_sha256','actor','claim_id','created_at','cwd','node','route','selected','requested_host','host_binding_id','policy_ref','policy_file_sha256','policy_parallelism','status','usage','authority']);
+  exactKeys(ticket,['schema_version','execution_id','display_label','operation_id','request_sha256','task_id','task_version','task_hash','contract_sha256','actor','claim_id','created_at','cwd','node','route','selected','requested_host','host_binding_id','policy_ref','policy_file_sha256','policy_parallelism','status','usage','authority'],['model_policy','model_snapshot','capabilities','capability_sha256']);
   id(ticket.operation_id);label(ticket.requested_host);if(ticket.display_label!==null)label(ticket.display_label);
   if(!/^[a-f0-9]{64}$/.test(ticket.request_sha256)||ticket.status!=='prepared'||ticket.host_binding_id!==null||ticket.authority!=='task-claim-only'||
     executionDigest(ticket.usage)!==executionDigest({input_tokens:null,output_tokens:null,execution_duration_ms:null})||!Number.isFinite(Date.parse(ticket.created_at)))fail('invalid ticket metadata');
@@ -206,7 +225,17 @@ export async function readDispatchTicket(target,executionId) {
   const policyInput=await pinnedPolicy(target,task,ticket.policy_ref);
   if(policyInput.digest!==ticket.policy_file_sha256||executionDigest(policyInput.document)!==ticket.selected.policy_sha256||
     policyInput.document.parallelism!==ticket.policy_parallelism)fail('policy binding changed');
-  if(executionDigest(selectDispatchModel(policyInput.document,ticket.route))!==executionDigest(ticket.selected))fail('selected model changed');
+  const legacy=selectDispatchModel(policyInput.document,ticket.route);
+  if(ticket.model_policy!==undefined) {
+    if(!ticket.model_snapshot||!ticket.capabilities||ticket.capability_sha256!==executionDigest(ticket.capabilities))fail('layered selection capability pin changed');
+    if(assertDispatchCapability(ticket.selected,ticket.capabilities)!==ticket.requested_host)fail('prepared host identity changed');
+    const routing=await resolveDispatchModelRouting(target,task,policyInput.document,{model_policy:ticket.model_policy,capabilities:ticket.capabilities,node:ticket.node,route:ticket.route},{historical:true});
+    const selected={...routing.model,selection_reason:'layered-model-policy',classifier:legacy.classifier,policy_sha256:executionDigest(policyInput.document)};
+    if(executionDigest(routing.snapshot)!==executionDigest(ticket.model_snapshot)||executionDigest(selected)!==executionDigest(ticket.selected))fail('immutable layered selected model or snapshot changed');
+  } else {
+    if(['model_snapshot','capabilities','capability_sha256'].some(k=>Object.hasOwn(ticket,k))||policyInput.document.model_policy)fail('layered selection pin missing');
+    if(executionDigest(legacy)!==executionDigest(ticket.selected))fail('selected model changed');
+  }
   if(ticket.cwd!==task.contract.environment.cwd)fail('task working directory changed');
   for(const kind of ['read_paths','write_paths'])if(ticket.node[kind].some(ref=>!task.contract.environment[kind].some(root=>under(ref,root))))fail('scope exceeds task contract');
   const operationKey=executionDigest({task_id:task.id,operation_id:ticket.operation_id});
@@ -235,10 +264,15 @@ async function pinnedPolicy(target,task,ref) {
 
 /** The existing host collector owns exact source binding and usage, never this ticket. */
 export async function bindDispatchTicket(target,request) {
-  exactKeys(request,['execution_id','source'],['capture_turn_from_start','approval_ref','sample_kind']);
+  exactKeys(request,['execution_id','source'],['capture_turn_from_start','approval_ref','sample_kind','capabilities','runtime_selection']);
+  request=structuredClone(request);
   const ticket=await readDispatchTicket(target,request.execution_id);
+  if(ticket.model_policy!==undefined)assertRoutingAcknowledgement(ticket,{capabilities:request.capabilities,runtime_selection:request.runtime_selection});
+  else if(request.capabilities!==undefined||request.runtime_selection!==undefined)fail('runtime routing proof requires a layered dispatch ticket');
   const {bindHostUsage}=await import('./workkeel-host-usage.mjs');
-  return bindHostUsage(target,{binding_id:ticket.execution_id,dispatch_id:ticket.execution_id,
+  const bound=await bindHostUsage(target,{binding_id:ticket.execution_id,dispatch_id:ticket.execution_id,
     task_id:ticket.task_id,actor:ticket.actor,claim_id:ticket.claim_id,contract_sha256:ticket.contract_sha256,
-    source:request.source,...Object.fromEntries(['capture_turn_from_start','approval_ref','sample_kind'].filter(k=>request[k]!==undefined).map(k=>[k,request[k]]))});
+    source:request.source,...Object.fromEntries(['capture_turn_from_start','approval_ref','sample_kind'].filter(k=>request[k]!==undefined).map(k=>[k,request[k]])),
+    ...(ticket.model_policy!==undefined?{routing_ack:{capabilities:request.capabilities,runtime_selection:request.runtime_selection}}:{})});
+  return ticket.model_policy!==undefined?{...bound,model_policy_binding:await recordRoutingBinding(target,ticket,request)}:bound;
 }

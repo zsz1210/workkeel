@@ -193,8 +193,9 @@ function measurement(b) {
     timing_source:b.execution_duration_ms!==null?'reporter-declared execution intervals':null,
     reported_turn_duration_ms:b.turn_duration_ms??null,
     reported_turn_duration_basis:b.turn_duration_ms!==null?'host-reported turn duration including tools; not active or model compute time':null};
-  op.activity_kind=b.activity_kind??null;
+  op.activity_kind=b.activity_kind??null;op.actor=structuredClone(b.actor);
   if(b.dispatch){Object.assign(op,{execution_id:b.dispatch.execution_id,display_label:b.dispatch.display_label,selection_reason:b.dispatch.selection_reason,requested_model:b.dispatch.model,requested_reasoning:b.dispatch.reasoning?{name:'effort',value:b.dispatch.reasoning}:null,activity_kind:b.dispatch.activity_kind});}
+  if(b.dispatch?.model_snapshot){const selected=b.dispatch.model_snapshot.selected;Object.assign(op,{model_snapshot:b.dispatch.model_snapshot,selected_model:selected.model,selected_reasoning:selected.reasoning,selected_service:selected.service,reported_service:null,service_report_source:'unreported'});}
   op.selection_match=!b.dispatch||!b.model?'unknown':b.dispatch.model!==b.model?'mismatch':b.dispatch.reasoning===null?'match':b.reasoning===null?'unknown':b.dispatch.reasoning===b.reasoning?'match':'mismatch';
   const usage=Object.fromEntries(['input_tokens','output_tokens','cost_usd'].map(k=>[k,{total:null,known_subtotal:op.usage[k]??null,
     observed_operations:op.usage[k]!==null?1:0,complete_operations:final&&op.usage[k]!==null?1:0,total_operations:observed?1:0,complete:false}]));
@@ -243,7 +244,7 @@ async function checkTask(target,b) {
   if(b.dispatch){const {readDispatchTicket}=await import('./workkeel-dispatch.mjs');const ticket=await readDispatchTicket(target,b.dispatch.execution_id);if(ticket.task_id!==b.task_id||ticket.claim_id!==b.claim_id||!sameActor(ticket.actor,b.actor)||executionDigest(dispatchFields(ticket))!==executionDigest(b.dispatch))fail('host-dispatch-binding');}
   return {task,stopAt:stop?.at??null};
 }
-function dispatchFields(ticket){return {execution_id:ticket.execution_id,display_label:ticket.display_label,model:ticket.selected.model,reasoning:ticket.selected.reasoning,selection_reason:ticket.selected.selection_reason,activity_kind:ticket.node.activity_kind,created_at:ticket.created_at};}
+function dispatchFields(ticket){return {execution_id:ticket.execution_id,display_label:ticket.display_label,model:ticket.selected.model,reasoning:ticket.selected.reasoning,selection_reason:ticket.selected.selection_reason,activity_kind:ticket.node.activity_kind,created_at:ticket.created_at,...(ticket.model_snapshot?{model_snapshot:ticket.model_snapshot}:{})};}
 async function assertReportContext(target,b,actor){
   const project=await readTaskProject(target);assertActor(project.policy,actor);
   const {task,stopAt}=await checkTask(target,b);if(stopAt)fail('host-binding-closed');
@@ -368,7 +369,7 @@ async function scan(b,{initial=false}={}) {
 }
 
 async function bindingRequest(target,request) {
-  object(request,['binding_id','task_id','contract_sha256','claim_id','actor','source','capture_turn_from_start','approval_ref','sample_kind','dispatch_id']);
+  object(request,['binding_id','task_id','contract_sha256','claim_id','actor','source','capture_turn_from_start','approval_ref','sample_kind','dispatch_id','routing_ack']);
   const bindingId=id(request.binding_id);id(request.task_id);
   if(!/^[a-f0-9]{64}$/.test(request.contract_sha256??''))fail('host-contract-required');
   object(request.source,['kind','path','thread_id','turn_id','start_offset']);id(request.source.thread_id);id(request.source.turn_id);
@@ -381,6 +382,11 @@ async function bindingRequest(target,request) {
     const {readDispatchTicket}=await import('./workkeel-dispatch.mjs');ticket=await readDispatchTicket(target,id(request.dispatch_id));
     if(bindingId!==ticket.execution_id||ticket.task_id!==task.id||ticket.claim_id!==request.claim_id||ticket.contract_sha256!==request.contract_sha256||!sameActor(ticket.actor,request.actor)||ticket.host_binding_id&&ticket.host_binding_id!==bindingId)fail('host-dispatch-binding');
   }
+  if(ticket?.model_policy){
+    const {assertRoutingAcknowledgement}=await import('./workkeel-model-routing.mjs');
+    if(!request.routing_ack)fail('host-routing-acknowledgement-required');
+    object(request.routing_ack,['capabilities','runtime_selection']);assertRoutingAcknowledgement(ticket,request.routing_ack);
+  }else if(request.routing_ack!==undefined)fail('host-routing-acknowledgement-without-policy');
   if(task.contract.execution.runtime.kind!=='host-owned')fail('host-runtime-required');
   if(request.capture_turn_from_start&&(request.source.kind!=='codex-rollout'||request.approval_ref!==task.contract.authorization.approval_ref))fail('host-full-turn-approval-required');
   const sample=request.sample_kind??'real-task';if(!['real-task','fixture','paired-experiment','unspecified'].includes(sample))fail('invalid-host-sample-kind');
