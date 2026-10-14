@@ -9,6 +9,7 @@ import {assertTaskExecutionContext, readNativeTask} from './workkeel-tasks.mjs';
 import {executionDigest} from './workkeel-execution-policy.mjs';
 import {observeSource, observeFileRead} from './workkeel-read-metrics.mjs';
 import {readTaskFile} from './task-contract.mjs';
+import {withProjectMutationLock} from './project.mjs';
 
 const ROOT='.ai-org/host-usage', SCHEMA='workkeel.host-usage/v1';
 const ID=/^[A-Za-z0-9][A-Za-z0-9._-]{0,95}$/;
@@ -407,6 +408,11 @@ async function bindingInventory(target,request,{bindingId,task,ticket}) {
       if(['active','paused','error'].includes(other.status)&&other.source.thread_id===request.source.thread_id)fail('host-thread-already-bound',{binding_id:entry});
       if(other.source.thread_id===request.source.thread_id&&other.source.turn_id===request.source.turn_id)fail('host-turn-already-bound',{binding_id:entry});
     }
+    // Review recovery attempts reserve fresh sources in a separate store; both
+    // stores form one workspace source inventory, checked in either direction.
+    const {retainedReviewRecoverySources}=await import('./workkeel-review-recovery.mjs');
+    for(const used of await retainedReviewRecoverySources(target))
+      if(used.thread_id===request.source.thread_id||used.turn_id===request.source.turn_id)fail('host-source-used-by-review-recovery');
     if(openBindings>=LIMITS.openBindings)fail('host-open-inventory-bound');
     if(ticket){
       const overlaps=(a,b)=>a==='.'||b==='.'||a===b||a.startsWith(b+'/')||b.startsWith(a+'/');
@@ -432,7 +438,8 @@ export async function checkHostBindingReadiness(targetInput,request) {
 export async function bindHostUsage(targetInput,request) {
   const target=await fs.realpath(targetInput);
   await bindingRequest(target,request);
-  return lock(target,async()=>{
+  // The shared project lock serializes source reservation with review recovery.
+  return withProjectMutationLock(target,()=>lock(target,async()=>{
     // Recheck current task/ticket authority and inventory after acquiring the lock.
     const context=await bindingRequest(target,request),{bindingId,task,ticket,sample}=context;
     await bindingInventory(target,request,context);
@@ -454,7 +461,7 @@ export async function bindHostUsage(targetInput,request) {
     // A claim may have changed while waiting for the host lock or source scan.
     await assertTaskExecutionContext(target,request.task_id,request);
     await save(target,b);return measurement(b);
-  });
+  }));
 }
 
 export async function collectHostUsage(targetInput,bindingId) {
@@ -575,6 +582,12 @@ export async function inspectHostBinding(targetInput,bindingId) {
 export async function openTaskHostBindings(targetInput,taskId) {
   const target=await fs.realpath(targetInput);if(!await existsEntry(target,ROOT))return [];
   const out=[];for(const entry of await names(target)){const b=await load(target,entry);if(b.task_id===taskId&&!b.collection_closed)out.push(entry);}
+  return out;
+}
+/** Source IDs of every retained binding in the workspace, open or closed. */
+export async function retainedHostSources(targetInput) {
+  const target=await fs.realpath(targetInput);if(!await existsEntry(target,ROOT))return [];
+  const out=[];for(const entry of await names(target)){const b=await load(target,entry);out.push({binding_id:entry,thread_id:b.source.thread_id,turn_id:b.source.turn_id});}
   return out;
 }
 

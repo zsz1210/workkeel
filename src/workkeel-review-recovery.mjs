@@ -8,7 +8,7 @@ import { readTaskFile } from "./task-contract.mjs";
 import { safeDirectory, existsEntry } from "./workkeel-project.mjs";
 import { exactKeys, executionDigest } from "./workkeel-execution-policy.mjs";
 import { assertReviewRecoveryContext, readNativeTask } from "./workkeel-tasks.mjs";
-import { inspectHostBinding, openTaskHostBindings } from "./workkeel-host-usage.mjs";
+import { inspectHostBinding, openTaskHostBindings, retainedHostSources } from "./workkeel-host-usage.mjs";
 import { readDispatchTicket } from "./workkeel-dispatch.mjs";
 import { assertTrustedRoleHost, runRolePreflight } from "./workkeel-role-preflight.mjs";
 
@@ -71,6 +71,15 @@ function validateRequest(request) {
   for (const key of ["provider", "model"]) if (typeof request.model[key] !== "string" || !request.model[key]) fail("explicit model is required");
   if (request.model.reasoning !== null && typeof request.model.reasoning !== "string") fail("invalid reasoning");
   strict(request.source, ["thread_id", "turn_id"]); id(request.source.thread_id, "source thread"); id(request.source.turn_id, "source turn");
+}
+const deepFreeze = value => { if (value && typeof value === "object") { Object.values(value).forEach(deepFreeze); Object.freeze(value); } return value; };
+// A private, validated, immutable copy: callers may keep mutating their object
+// across awaited probes without changing the meaning bound to its digest.
+function snapshotRequest(input) {
+  let request;
+  try { request = structuredClone(input); } catch { fail("request must be plain data"); }
+  validateRequest(request);
+  return deepFreeze(request);
 }
 
 async function readEnvelope(target, ref) {
@@ -141,6 +150,11 @@ function validateResult(value, attempt) {
     check(["completed", "failed", "interrupted"].includes(value.status) && LAUNCH_ERRORS.has(value.error) && value.duration_basis === LAUNCHED_BASIS &&
       (value.error === null || value.status !== "completed") && (!["launch-unconfirmed", "invalid-host-result"].includes(value.error) ||
       value.status === "interrupted"), "invalid attempt result status");
+    // Semantic binding, independent of envelope digests: an unflagged result
+    // reports exactly the pinned model and effort; a mismatch is flagged.
+    const selected = attempt.value.selected, matches = value.runtime_model === selected.model && value.reasoning === selected.reasoning;
+    check(["launch-unconfirmed", "invalid-host-result"].includes(value.error) ? value.runtime_model === null && value.reasoning === null && value.output === null :
+      value.error === "model-mismatch" ? !matches : matches, "attempt result model or effort differs from the approved selection");
   }
 }
 
@@ -168,6 +182,31 @@ export async function readReviewRecoveryChain(target, item) {
   if (names.length !== attempts.length + attempts.filter(a => a.result).length) fail("unexpected file in recovery chain");
   const sha256 = attempts.length ? executionDigest(attempts.map(a => [a.sha256, a.result?.sha256 ?? null])) : null;
   return { attempts, head: attempts.at(-1) ?? null, sha256 };
+}
+
+/**
+ * Source IDs reserved by every retained recovery attempt in the workspace,
+ * across tasks and deliveries. Integrity-checked reads only; callers hold the
+ * project mutation lock so the inventory cannot change while they reserve.
+ */
+export async function retainedReviewRecoverySources(target) {
+  if (!await existsEntry(target, ROOT)) return [];
+  const temporary = name => /^\.temple-durable-[A-Za-z0-9-]+$/.test(name), out = [];
+  for (const task of await fs.readdir(await safeDirectory(target, ROOT))) {
+    if (task === ".gitignore" || temporary(task)) continue;
+    id(task, "recovery store entry");
+    for (const claim of await fs.readdir(await safeDirectory(target, `${ROOT}/${task}`))) {
+      if (temporary(claim)) continue;
+      id(claim, "recovery store entry");
+      for (const name of await fs.readdir(await safeDirectory(target, `${ROOT}/${task}/${claim}`))) {
+        if (!/^attempt-\d{3}\.json$/.test(name)) continue;
+        const { value } = await readEnvelope(target, `${ROOT}/${task}/${claim}/${name}`);
+        source(value?.source, "attempt source");
+        out.push({ task_id: task, thread_id: value.source.thread_id, turn_id: value.source.turn_id });
+      }
+    }
+  }
+  return out;
 }
 
 /** Observation for composing the next explicit request. Grants nothing. */
@@ -215,6 +254,9 @@ async function prepare(target, request) {
       source: structuredClone(head.value.source), dispatch_execution_id: head.value.dispatch_execution_id };
     sources = [chain.attempts[0].value.predecessor.source, ...chain.attempts.map(a => a.value.source)];
   }
+  // Freshness is workspace-wide: no retained binding (implementation, review or
+  // another task's) and no recovery attempt of any chain may supply this source.
+  sources.push(...await retainedHostSources(target), ...await retainedReviewRecoverySources(target));
   if (sources.some(source => source.thread_id === request.source.thread_id || source.turn_id === request.source.turn_id)) fail("a fresh source thread and turn are required");
   if ((await openTaskHostBindings(target, item.id)).length) fail("another usage collection for this task is still open");
   const ticket = await readDispatchTicket(target, predecessor.dispatch_execution_id);
@@ -252,11 +294,14 @@ async function replay(target, request, requestSha) {
 function launchResult(raw, failed, selected) {
   const interrupted = error => ({ status: "interrupted", error, usage: { ...UNKNOWN_USAGE }, runtime_model: null, reasoning: null, output: null });
   if (failed) return interrupted("launch-unconfirmed");
+  // Model and effort labels must be non-blank, single-line and bounded; malformed
+  // reports become an interrupted observation instead of a persisted value.
+  const reported = v => v === null || typeof v === "string" && v.trim().length > 0 && v.length <= 200 && !/[\u0000-\u001f\u007f]/.test(v);
   try {
     strict(raw, ["status", "usage", "runtime_model", "reasoning", "output"]); strict(raw.usage, ["input_tokens", "output_tokens"]);
     if (!["completed", "failed", "interrupted"].includes(raw.status) || typeof raw.output !== "string" || Buffer.byteLength(raw.output) > 65536 ||
         Object.values(raw.usage).some(v => v !== null && (!Number.isSafeInteger(v) || v < 0)) ||
-        [raw.runtime_model, raw.reasoning].some(v => v !== null && (typeof v !== "string" || v.length > 200))) fail("invalid host result");
+        ![raw.runtime_model, raw.reasoning].every(reported)) fail("invalid host result");
   } catch { return interrupted("invalid-host-result"); }
   const mismatch = raw.runtime_model !== selected.model || raw.reasoning !== selected.reasoning;
   return { status: raw.status === "completed" && mismatch ? "failed" : raw.status, error: mismatch ? "model-mismatch" : null,
@@ -268,9 +313,20 @@ async function confirmStopped(host, item, predecessor) {
   catch { fail("predecessor runtime state is unknown"); }
   if (!observed || typeof observed !== "object" || Object.keys(observed).join() !== "state" || observed.state !== "stopped") fail(`predecessor runtime is ${observed?.state === "active" ? "active" : "unknown"}; it must be confirmed stopped`);
 }
-async function writeResult(target, item, attempt, value) {
-  const result = { schema_version: "workkeel.review-attempt-result/v1", attempt_id: attempt.value.attempt_id, attempt_sha256: attempt.sha256,
+function resultRecord(attempt, value) {
+  return { schema_version: "workkeel.review-attempt-result/v1", attempt_id: attempt.value.attempt_id, attempt_sha256: attempt.sha256,
     ...value, recorded_at: new Date().toISOString(), acceptance: "not-performed" };
+}
+// A launched observation the persisted validator would reject is preserved as
+// an interrupted, invalid host result, so the immutable chain stays readable.
+function normalizedOutcome(attempt, outcome, timing) {
+  try { validateResult(resultRecord(attempt, { ...outcome, ...timing }), attempt); return { ...outcome, ...timing }; }
+  catch { return { status: "interrupted", error: "invalid-host-result", usage: { ...UNKNOWN_USAGE }, runtime_model: null, reasoning: null, output: null, ...timing }; }
+}
+async function writeResult(target, item, attempt, value) {
+  const result = resultRecord(attempt, value);
+  // The persisted validator runs before exclusive creation, never after it.
+  validateResult(result, attempt);
   const dir = await safeDirectory(target, chainRef(item));
   await durableAtomicCreate(path.join(dir, resultName(attempt.value.sequence)), formatJson({ value: result, sha256: executionDigest(result) }));
   return readReviewRecoveryChain(target, item);
@@ -283,8 +339,8 @@ async function writeResult(target, item, attempt, value) {
  * outside it; everything they could have outlived is rechecked under the lock,
  * which is held through launch invocation but never while the model runs.
  */
-export async function recoverInterruptedReview(targetInput, request, { host } = {}) {
-  validateRequest(request);
+export async function recoverInterruptedReview(targetInput, input, { host } = {}) {
+  const request = snapshotRequest(input);
   assertTrustedRoleHost(host, ["runtimeState", "launch"]);
   const target = await fs.realpath(targetInput), requestSha = executionDigest(request);
   const initial = await withProjectMutationLock(target, async () => {
@@ -356,8 +412,7 @@ export async function recoverInterruptedReview(targetInput, request, { host } = 
     if (chain.head?.sha256 !== attempt.sha256 || chain.head.result) fail("attempt is no longer current; the late result was not recorded");
     if (current.state !== "test" || current.review || current.version !== attempt.value.task_version ||
         executionDigest(current) !== attempt.value.task_record_sha256) fail("task changed during the attempt; the late result was not recorded");
-    const after = await writeResult(target, current, attempt, { ...outcome, duration_ms,
-      duration_basis: "monotonic launch interval measured by the recovery API" });
+    const after = await writeResult(target, current, attempt, normalizedOutcome(attempt, outcome, { duration_ms, duration_basis: LAUNCHED_BASIS }));
     return response(after.head, after.head.result, { replayed: false, chainSha256: after.sha256 });
   });
 }

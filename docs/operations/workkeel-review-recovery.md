@@ -103,6 +103,13 @@ const result = await recoverInterruptedReview("/work/example-project", request, 
 - `launch` starts the fresh reviewer with product read-only access and returns
   `status`, `usage`, `runtime_model`, `reasoning` and `output`.
 
+The request is copied and validated before the first await; later changes to the
+caller's object do not affect the reservation, the launch or the replay digest.
+The source thread and turn must be fresh across the whole workspace: no retained
+host binding of any task and no recovery attempt of any chain may share either
+ID, and ordinary host binding rejects sources reserved by recovery attempts.
+Both checks run under the shared project mutation lock.
+
 Later retries name the chain head: `{ "kind": "review-attempt", "id": ..., "sha256": ... }`
 with the current `expected_chain_sha256` from `readReviewRecovery`. A chain holds
 at most three attempts.
@@ -131,6 +138,9 @@ them differs afterwards, including a rewritten, rehashed or deleted result.
 | Result after supersession or cancellation | Not recorded; attempt stays `unrecorded` |
 | Fourth attempt | Rejected; preserve evidence and obtain a new decision |
 | Attempt or result with unknown fields, invalid status or negative measurements | Chain read rejected, even with a matching envelope digest |
+| Reused thread or turn from any binding or recovery attempt | Rejected; nothing recorded or launched |
+| Blank, multi-line or malformed reported model or effort | Recorded as `interrupted` with `invalid-host-result` and unknown usage; retry remains possible |
+| Completed result whose model or effort differs from the pinned selection | Chain read, review and close rejected, even when rehashed |
 | Result changed, rehashed or removed after the authored review | Close rejected |
 
 Records live under `.ai-org/review-recovery/<task>/<delivery claim>/` as
