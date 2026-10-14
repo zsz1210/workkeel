@@ -38,6 +38,7 @@ for (const file of (await walkFiles(root)).filter(
     !candidate.startsWith(".git/") &&
     !candidate.startsWith("node_modules/") &&
     !candidate.startsWith(".ai-org/") &&
+    !candidate.startsWith(".workkeel-private/") &&
     !candidate.startsWith("output/") &&
     !candidate.startsWith(".codex/")
 )) {
@@ -247,7 +248,7 @@ for (const definition of packDefinitions) {
 
 for (const file of (await walkFiles(root)).filter(
   (candidate) => !candidate.startsWith(".git/") && !candidate.startsWith("node_modules/") &&
-    !candidate.startsWith(".ai-org/") && !candidate.startsWith("output/") && !candidate.startsWith(".codex/")
+    !candidate.startsWith(".ai-org/") && !candidate.startsWith(".workkeel-private/") && !candidate.startsWith("output/") && !candidate.startsWith(".codex/")
 )) {
   if (!file.endsWith(".json")) continue;
   try {

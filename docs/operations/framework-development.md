@@ -73,6 +73,13 @@ output. Product tests create isolated synthetic temporary fixtures. Review sourc
 diffs, explicitly stage public files and update `public-files.json` only for new
 files whose purpose and contents have been reviewed.
 
+Framework content checks exclude the root `.workkeel-private/` evidence directory,
+as they exclude native `.ai-org/` records and generated output. Retained failures
+and multilingual review observations are not public documentation or JSON fixtures.
+Native Doctor still checks canonical state and pinned evidence. Publication and
+`check:source-checkout` remain separate boundaries and reject private records in
+public source; this exclusion grants no permission to commit or transfer them.
+
 Commit only framework files. Run the required [testing gate](../getting-started/testing.md)
 on the exact candidate and get a different Agent's review. Run the history scanner
 in the private workspace too: ignored state is not committed state.
