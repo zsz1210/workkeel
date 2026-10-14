@@ -69,6 +69,12 @@ only after the native journal and runner state establish quiescence. A submitted
 request is not a stopped process. Canonical task cancellation remains a separate
 authorized lifecycle action.
 
+Cancellation names the job's exact original task, actor, claim and contract, even
+after that claim ends. The actor must still be registered. Approval expiry or
+changed source bytes block new execution, but do not block stopping an existing
+run. Cancellation and passive reconciliation use its frozen recipe; neither grants
+permission to resume, rebind or dispatch another operation.
+
 An uncertain dispatch is never automatically replayed. Preserve the run ID and
 operation journal, obtain host evidence, and use explicit workflow lock recovery
 when required. `resume-job` adds `job_id` and `recovery_ref`; the latter contains
@@ -113,8 +119,11 @@ markers as proposals. It is not equivalent to AI architecture exploration.
 Both paths deduplicate events and enforce rounds, cooldown, source-byte and proposal
 bounds. Proposals await task authority. An approved improvement task can enqueue
 `purpose:"execution"` with `proposal_id` after its source, scope and workflow
-resource limits are checked. No task approval is invented from discovery. Turning
-discovery off stops new exploration; already approved execution remains governed by
+resource limits are checked. No task approval is invented from discovery.
+The task's read and write roots must both fit the proposal. Its retry limit is the
+smaller of the frozen proposal budget and current policy; later policy enlargement
+does not enlarge that proposal. Turning discovery off stops new exploration;
+already approved execution remains governed by
 its task. Automatic publication, dependency installation and cross-project promotion
 are excluded.
 

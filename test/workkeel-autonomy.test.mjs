@@ -13,7 +13,7 @@ import {createAutonomyWorkflowAdapter} from '../src/workkeel-autonomy-workflow.m
 import {readWorkflowRun} from '../src/workkeel-workflows.mjs';
 import {sha256} from '../src/files.mjs';
 
-async function fixture(t,{workflow=false,definition=null,budget=null}={}){
+async function fixture(t,{workflow=false,definition=null,budget=null,read_paths=['docs'],expires_at=null}={}){
   const root=await fs.realpath(await fs.mkdtemp(path.join(os.tmpdir(),'workkeel-autonomy-')));t.after(()=>fs.rm(root,{recursive:true,force:true}));
   const git=(...a)=>execFileSync('git',['-C',root,...a],{encoding:'utf8'}).trim();
   git('init','-q');git('config','user.name','Fixture');git('config','user.email','fixture@example.invalid');
@@ -26,7 +26,7 @@ async function fixture(t,{workflow=false,definition=null,budget=null}={}){
   git('add','docs');git('commit','-qm','Synthetic baseline');
   const actor={agent_id:'builder',principal_id:'owner'};
   await initializeTaskProject(root,{schema_version:'workkeel.task-policy/v1',principals:['owner'],agents:[actor,{agent_id:'reviewer',principal_id:'owner'}],approvers:['owner'],review_separation:'distinct-agent'});
-  const brief={schema_version:'workkeel.task-brief/v1',id:'WK-test',goal:'Synthetic bounded execution',actor,acceptance:['Approved goal accepted independently'],environment:{cwd:'.',read_paths:['docs'],write_paths:['.ai-org/autonomy'],tools:['node'],resources:[],network:{mode:'none',hosts:[]},external_actions:[],data:{classification:'internal',model_access:'none',policy_refs:['docs/approval.md','docs/run.json','docs/run2.json','docs/workflow.json','docs/policy.json']}},authorization:{approved_by:'owner',approval_ref:'docs/approval.md',operations:['read','write','execute'],expires_at:null},...(workflow?{execution:{runtime:{kind:'adapter',adapter_id:'fixture',required_features:[]},model_connection:{kind:'policy',policy_ref:'docs/policy.json'}}}:{})};
+  const brief={schema_version:'workkeel.task-brief/v1',id:'WK-test',goal:'Synthetic bounded execution',actor,acceptance:['Approved goal accepted independently'],environment:{cwd:'.',read_paths,write_paths:['.ai-org/autonomy'],tools:['node'],resources:[],network:{mode:'none',hosts:[]},external_actions:[],data:{classification:'internal',model_access:'none',policy_refs:['docs/approval.md','docs/run.json','docs/run2.json','docs/workflow.json','docs/policy.json']}},authorization:{approved_by:'owner',approval_ref:'docs/approval.md',operations:['read','write','execute'],expires_at},...(workflow?{execution:{runtime:{kind:'adapter',adapter_id:'fixture',required_features:[]},model_connection:{kind:'policy',policy_ref:'docs/policy.json'}}}:{})};
   const p=await previewTaskIntake(root,brief);await applyTaskIntake(root,brief,p.fingerprint);await mutateNativeTask(root,'WK-test','claim',{operation_id:'claim',expected_version:1,actor,base_revision:git('rev-parse','HEAD')});
   const task=await readNativeTask(root,'WK-test');let n=0;
   const request=async extra=>({task_id:task.id,actor,claim_id:task.claim.id,contract_sha256:task.contract_sha256,operation_id:'operation-'+(++n),expected_version:(await readAutonomy(root)).version,...extra});
@@ -34,6 +34,55 @@ async function fixture(t,{workflow=false,definition=null,budget=null}={}){
   return {root,task,request,enqueue};
 }
 const observer=start=>({idempotent:true,start,reconcile:async()=>({status:'unknown'})});
+async function proposal(f,max_attempts=1){
+  const policy={enabled:true,directions:['docs'],max_jobs:3,max_attempts,cooldown_ms:0,discovery:{enabled:true,read_paths:['docs'],write_paths:['.ai-org/autonomy'],max_proposals:3,max_source_bytes:2048,max_rounds:2,cooldown_ms:0,max_runtime_ms:1000,max_cost_usd:0}};
+  await mutateAutonomy(f.root,'policy',await f.request({policy}));
+  const found=await discoverAutonomyImprovements(f.root,await f.request({event_id:'sample-source',direction:'docs',source_refs:['docs/improvements.md'],max_results:1}));
+  return {policy,proposal_id:found.proposal_ids[0]};
+}
+for(const drift of ['proposal','recipe','approval'])test('stopping and observing a dispatched job survives '+drift+' drift without new inference',async t=>{
+  const f=await fixture(t,{budget:0}),p=await proposal(f);
+  await f.enqueue('first',{origin:'improvement',direction:'docs',proposal_id:p.proposal_id});let starts=0,cancels=0,reconciles=0;
+  const adapter={idempotent:true,start:async()=>{starts++;return {status:'running'};},reconcile:async r=>{reconciles++;assert.equal(r.request.run.run_id,'sample');return {status:'running'};},cancel:async r=>{cancels++;assert.equal(r.request.run.run_id,'sample');return {status:'cancelled'};}};
+  await runAutonomyStep(f.root,{adapter});
+  await fs.writeFile(f.root+'/docs/'+({proposal:'improvements.md',recipe:'run.json',approval:'approval.md'}[drift]),'Changed after dispatch');
+  await runAutonomyStep(f.root,{adapter,clock:()=>Date.now()+31000});assert.equal(reconciles,1);
+  const recovery=await f.request({job_id:'first',recovery_ref:'docs/recovery.json'});
+  if(drift==='proposal'){await mutateAutonomy(f.root,'resume-job',recovery);await runAutonomyStep(f.root,{adapter});assert.match((await readAutonomy(f.root)).jobs[0].error,/proposal evidence changed/);}
+  else await assert.rejects(mutateAutonomy(f.root,'resume-job',recovery),/Referenced|unresolved|changed/);
+  const result=await cancelAutonomyJob(f.root,await f.request({job_id:'first'}),{adapter});
+  assert.equal(result.cancellation,'host-confirmed');assert.equal(result.job.status,'cancelled');assert.equal(starts,1);assert.equal(cancels,1);
+});
+test('cancellation survives real approval expiry but cannot grant fresh work',async t=>{
+  const expires_at=new Date(Date.now()+3000).toISOString(),f=await fixture(t,{expires_at});await f.enqueue();let starts=0,cancels=0;
+  const adapter={idempotent:true,start:async()=>{starts++;return {status:'running'};},reconcile:async()=>({status:'unknown'}),cancel:async()=>{cancels++;return {status:'cancelled'};}};
+  await runAutonomyStep(f.root,{adapter});await new Promise(r=>setTimeout(r,Math.max(0,Date.parse(expires_at)-Date.now())+25));
+  await assert.rejects(f.enqueue('second'),/authorization.expired/);
+  const result=await cancelAutonomyJob(f.root,await f.request({job_id:'first'}),{adapter});assert.equal(result.cancellation,'host-confirmed');assert.equal(cancels,1);assert.equal(starts,1);
+});
+test('only exact frozen job authority can cancel, including after its original claim ended',async t=>{
+  const f=await fixture(t);await f.enqueue();let cancels=0;const adapter={...observer(async()=>({status:'running'})),cancel:async()=>{cancels++;return {status:'cancelled'};}};await runAutonomyStep(f.root,{adapter});
+  for(const extra of [{actor:{agent_id:'reviewer',principal_id:'owner'}},{actor:{agent_id:'unknown',principal_id:'owner'}},{claim_id:'wrong-claim'},{task_id:'WK-other'},{contract_sha256:'0'.repeat(64)}])await assert.rejects(cancelAutonomyJob(f.root,{...await f.request({job_id:'first'}),...extra},{adapter}),/original job authority|registered/);
+  assert.equal((await readAutonomy(f.root)).jobs[0].cancel_requested,false);assert.equal(cancels,0);
+  await mutateNativeTask(f.root,f.task.id,'release',{operation_id:'release',expected_version:2,actor:f.task.claim.actor,claim_id:f.task.claim.id,summary:'End the original claim without starting more work'});
+  const result=await cancelAutonomyJob(f.root,await f.request({job_id:'first'}),{adapter});assert.equal(result.cancellation,'host-confirmed');assert.equal(cancels,1);
+});
+test('native paused graph cancellation uses its frozen recipe after both recipe and approval drift',async t=>{
+  const definition={schema_version:'workkeel.workflow/v1',nodes:[{id:'confirm',kind:'approval',input:'Wait'},{id:'work',kind:'runtime',input:'Bounded work'}],edges:[{from:'start',to:'confirm'},{from:'confirm',to:'work'},{from:'work',to:'end'}]},f=await fixture(t,{workflow:true,definition});await f.enqueue();
+  const adapter=createAutonomyWorkflowAdapter(f.root,{runtimeFactory:async()=>({id:'fixture',assertCompatible:async()=>{},start:async()=>{throw Error('No model dispatch authorized');},resume:async()=>{throw Error('No resume authorized');},cancel:async()=>{}})});
+  await runAutonomyStep(f.root,{adapter});assert.equal((await readWorkflowRun(f.root,'sample')).status.state,'awaiting-approval');await fs.writeFile(f.root+'/docs/run.json','{}');await fs.writeFile(f.root+'/docs/approval.md','Changed');
+  const result=await cancelAutonomyJob(f.root,await f.request({job_id:'first'}),{adapter});assert.equal(result.cancellation,'host-confirmed');assert.equal((await readNativeTask(f.root,f.task.id)).state,'build');
+});
+test('a proposal keeps its original attempt ceiling when later policy permits more retries',async t=>{
+  const f=await fixture(t,{budget:0}),p=await proposal(f,1);
+  await mutateAutonomy(f.root,'policy',await f.request({policy:{...p.policy,max_attempts:3}}));await f.enqueue('first',{origin:'improvement',direction:'docs',proposal_id:p.proposal_id});
+  let starts=0;const adapter=observer(async()=>{starts++;return {status:'failed'};});await runAutonomyStep(f.root,{adapter});await runAutonomyStep(f.root,{adapter});
+  const j=(await readAutonomy(f.root)).jobs[0];assert.equal(j.limits.max_attempts,1);assert.equal(j.status,'failed');assert.equal(starts,1);
+});
+test('a broader approved task cannot widen a captured proposal read scope',async t=>{
+  const f=await fixture(t,{budget:0,read_paths:['.']}),p=await proposal(f);
+  await assert.rejects(f.enqueue('first',{origin:'improvement',direction:'docs',proposal_id:p.proposal_id}),/exceeds proposal scope/);assert.equal((await readAutonomy(f.root)).jobs.length,0);
+});
 async function waitFor(check,timeout=4000){const end=Date.now()+timeout;while(Date.now()<end){if(await check())return;await new Promise(r=>setTimeout(r,15));}throw Error('Synthetic condition timed out');}
 test('off and idle make no host calls; optimistic versions and retries are stable',async t=>{
   const f=await fixture(t);let calls=0;const adapter={idempotent:true,start:async()=>{calls++;return {status:'completed'};},reconcile:async()=>{calls++;return {status:'running'};}};

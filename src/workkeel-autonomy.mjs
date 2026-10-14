@@ -3,7 +3,7 @@ import os from 'node:os';
 import {randomUUID} from 'node:crypto';
 import {exactKeys,executionDigest} from './workkeel-execution-policy.mjs';
 import {assertTaskExecutionContext,readNativeTask} from './workkeel-tasks.mjs';
-import {assertApprover,readTaskProject,safeDirectory} from './workkeel-project.mjs';
+import {assertActor,assertApprover,readTaskProject,safeDirectory} from './workkeel-project.mjs';
 import {readTaskFile} from './task-contract.mjs';
 import {withProjectMutationLock} from './project.mjs';
 import {durableAtomicWrite,durableAtomicCreate,formatJson} from './files.mjs';
@@ -73,6 +73,18 @@ async function save(target,s){validate(s);const dir=await safeDirectory(target,R
   s.version++;const content=formatJson({state:s,sha256:digest(s)});if(Buffer.byteLength(content)>1024*1024)throw Error('Autonomy state exceeds 1 MiB');await durableAtomicWrite(path.join(dir,'state.json'),content);return structuredClone(s);
 }
 async function authorize(target,r){const t=await assertTaskExecutionContext(target,r.task_id,r);if(!t.contract.authorization.operations.includes('write')||!t.contract.environment.write_paths.some(p=>under(ROOT,p)))throw Error('Autonomy outside write authority');return t;}
+// Stopping a recorded operation grants no new execution. Its original owner can
+// stop it after approval/source drift, expiry or release of the original claim.
+async function authorizeStop(target,r,s){
+  assertActor((await readTaskProject(target)).policy,r.actor);
+  const j=s.jobs.find(j=>j.id===r.job_id);if(!j)throw Error('Unknown job');
+  const frozen={task_id:r.task_id,actor:r.actor,claim_id:r.claim_id,contract_sha256:r.contract_sha256};
+  if(!j.authority||digest(j.authority)!==digest(frozen))throw Error('Cancellation requires exact original job authority');
+  const task=await readNativeTask(target,j.task_id);
+  if(task.id!==r.task_id||task.contract_sha256!==r.contract_sha256)throw Error('Cancellation task contract differs from frozen job');
+  if(!task.contract.authorization.operations.includes('write')||!task.contract.environment.write_paths.some(p=>under(ROOT,p)))throw Error('Autonomy outside write authority');
+  return task;
+}
 function authority(task){return {task_id:task.id,actor:task.claim.actor,claim_id:task.claim.id,contract_sha256:task.contract_sha256};}
 async function readable(target,ref,task,options={}){if(!task.contract.environment.read_paths.some(p=>under(ref,p)))throw Error('Source outside task read authority');return readTaskFile(target,ref,options);}
 async function discoveryAuthority(target,task,q,d){
@@ -129,7 +141,7 @@ export async function mutateAutonomy(target,action,r){
   const fields={policy:['policy'],enqueue:['job'],pause:[],resume:[],cancel:['job_id'],event:['event_id'],'resume-job':['job_id','recovery_ref'],discover:['event_id','direction','source_refs','max_results']};
   if(!fields[action])throw Error('Unknown autonomy action');exactKeys(r,[...common,...fields[action]]);ident(r.operation_id);integer(r.expected_version,0,Number.MAX_SAFE_INTEGER);
   return withProjectMutationLock(target,async()=>{
-    const task=await authorize(target,r),s=await readAutonomy(target),hash=digest({action,r});
+    const s=await readAutonomy(target),task=action==='cancel'?await authorizeStop(target,r,s):await authorize(target,r),hash=digest({action,r});
     const prior=s.receipts.find(x=>x.id===r.operation_id&&(x.task_id??r.task_id)===r.task_id);if(prior){if(prior.sha256!==hash)throw Error('Autonomy operation conflict');return {state:s,replayed:true};}
     if(s.version!==r.expected_version)throw Error('Autonomy version conflict');if(s.receipts.length>=1000)throw Error('Autonomy receipt limit');
     let proposal_ids=[];
@@ -160,15 +172,17 @@ export async function mutateAutonomy(target,action,r){
         if(s.discovery_runs.at(-1)&&Date.now()-Date.parse(s.discovery_runs.at(-1).at)<d.cooldown_ms)throw Error('Discovery cooldown');
         s.discovery_runs.push({event_id:j.id,fingerprint:input.bytes_digest,at:now(),proposal_ids:[],job_id:j.id});
       }
+      let max_attempts=s.policy.max_attempts;
       if(j.proposal_id){
         const p=s.proposals.find(p=>p.id===j.proposal_id);if(j.origin!=='improvement'||!p||p.direction!==j.direction)throw Error('Unknown or mismatched improvement proposal');
         for(const pin of p.evidence)if((await readable(target,pin.path,task)).bytes_digest!==pin.sha256)throw Error('Proposal evidence changed');
-        if(task.contract.environment.write_paths.some(root=>!p.scope.write_paths.some(p=>under(root,p))))throw Error('Approved improvement task exceeds proposal scope');
+        if(task.contract.environment.read_paths.some(root=>!p.scope.read_paths.some(p=>under(root,p)))||task.contract.environment.write_paths.some(root=>!p.scope.write_paths.some(p=>under(root,p))))throw Error('Approved improvement task exceeds proposal scope');
+        max_attempts=Math.min(max_attempts,p.budget.max_attempts);
         if(!q.run?.policy_ref)throw Error('Improvement execution requires an explicit bounded workflow policy');
         const limits=JSON.parse((await readable(target,q.run.policy_ref,task)).content).limits;
         if(!limits||!Number.isSafeInteger(limits.timeout_ms)||limits.timeout_ms>p.budget.max_runtime_ms||!Number.isFinite(limits.max_cost_usd)||limits.max_cost_usd<0||limits.max_cost_usd>p.budget.max_cost_usd)throw Error('Improvement execution exceeds proposal resource budget');
       }
-      s.jobs.push({...structuredClone(j),request_sha256:input.bytes_digest,request_snapshot:structuredClone(q),status:'queued',attempts:0,execution_id:null,updated_at:now(),error:null,retry_at:null,authority:authority(task),owner:null,resume_ref:null,resume_sha256:null,resume_requested:false,cancel_requested:false,limits:{max_attempts:s.policy.max_attempts,cooldown_ms:s.policy.cooldown_ms},operation_key,proposal_id:j.proposal_id??null,purpose:j.purpose??'execution',discovery_policy:j.purpose==='discovery'?structuredClone(s.policy.discovery):null,runtime_receipt:null,discovery_error:null});
+      s.jobs.push({...structuredClone(j),request_sha256:input.bytes_digest,request_snapshot:structuredClone(q),status:'queued',attempts:0,execution_id:null,updated_at:now(),error:null,retry_at:null,authority:authority(task),owner:null,resume_ref:null,resume_sha256:null,resume_requested:false,cancel_requested:false,limits:{max_attempts,cooldown_ms:s.policy.cooldown_ms},operation_key,proposal_id:j.proposal_id??null,purpose:j.purpose??'execution',discovery_policy:j.purpose==='discovery'?structuredClone(s.policy.discovery):null,runtime_receipt:null,discovery_error:null});
     }
     s.receipts.push({id:r.operation_id,sha256:hash,task_id:r.task_id});const state=await save(target,s);
     if(action==='cancel')localControllers.get(path.resolve(target)+':'+r.job_id)?.abort();
@@ -213,11 +227,15 @@ export async function runAutonomyStep(target,{adapter,clock=Date.now,signal,reco
           try{await authorize(target,current);}catch{j.status='recovery-required';j.error='Current execution authority unavailable';j.retry_at=new Date(clock()+reconcile_ms).toISOString();dirty=true;continue;}j.authority??=current;
         }
       }
-      let input;try{input=await readTaskFile(target,j.request_ref);if(input.bytes_digest!==j.request_sha256)throw Error('changed');}catch{
-        if(mode==='cancel'&&j.request_snapshot)input={content:JSON.stringify(j.request_snapshot)};
-        else {j.status='recovery-required';j.error='Pinned workflow request changed or unavailable';j.retry_at=new Date(clock()+reconcile_ms).toISOString();dirty=true;continue;}
+      let input;try{
+        if(['cancel','reconcile'].includes(mode)&&j.request_snapshot){
+          if(!j.authority||j.authority.task_id!==task.id||j.authority.contract_sha256!==task.contract_sha256)throw Error('Frozen task changed');
+          input={content:JSON.stringify(j.request_snapshot)};
+        }else{input=await readTaskFile(target,j.request_ref);if(input.bytes_digest!==j.request_sha256)throw Error('changed');}
+      }catch{
+        j.status='recovery-required';j.error='Pinned workflow request changed or unavailable';j.retry_at=new Date(clock()+reconcile_ms).toISOString();dirty=true;continue;
       }
-      if(j.proposal_id){const p=s.proposals.find(p=>p.id===j.proposal_id);let stale=!p;for(const pin of p?.evidence??[])try{if((await readTaskFile(target,pin.path)).bytes_digest!==pin.sha256)stale=true;}catch{stale=true;}if(stale){j.status='recovery-required';j.error='Improvement proposal evidence changed';j.retry_at=new Date(clock()+reconcile_ms).toISOString();dirty=true;continue;}}
+      if(j.proposal_id&&['start','resume'].includes(mode)){const p=s.proposals.find(p=>p.id===j.proposal_id);let stale=!p;for(const pin of p?.evidence??[])try{if((await readTaskFile(target,pin.path)).bytes_digest!==pin.sha256)stale=true;}catch{stale=true;}if(stale){j.status='recovery-required';j.error='Improvement proposal evidence changed';j.retry_at=new Date(clock()+reconcile_ms).toISOString();dirty=true;continue;}}
       if(mode==='start'){
         if(j.attempts>=j.limits.max_attempts){j.status='failed';dirty=true;continue;}
         j.attempts++;j.execution_id??=randomUUID();j.status='running';
