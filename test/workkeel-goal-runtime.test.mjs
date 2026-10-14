@@ -116,6 +116,24 @@ for(const boundary of ['adapter-qualification','runtime-qualification','initiali
     assert.equal(slot.pre_model_stops.length,1);assert.equal(slot.pre_model_stops[0].quiescence,'no-model-request-and-owned-runtime-settled');
   }
 });
+for(const boundary of ['runtime-qualification','thread/start'])test('frozen cancellation settles proven unstarted stock work at '+boundary,async t=>{
+  const f=await fixture(t),events=[];let qualifications=0,injected=false;
+  const inject=async()=>{if(!injected){injected=true;await fs.appendFile(f.target+'/docs/goal.json',' ');}};
+  const host=protocolHost({events,onQualify:async()=>{if(++qualifications===3&&boundary==='runtime-qualification')await inject();},onResponse:async method=>{if(method===boundary)await inject();}});
+  const adapter=await createCodexGoalAdapter({hostFactory:async()=>host,commandRunner:fixtureCommand});
+  await runNativeGoalStep(f.target,f.manifest.id,{adapter});
+  const blocked=await runNativeGoalStep(f.target,f.manifest.id,{adapter}),before=await readNativeGoal(f.target,f.manifest.id);
+  assert.equal(injected,true);assert.equal(blocked.model_called,false);assert.equal(blocked.operation.status,'intent');
+  const ref='.ai-org/goals/goal-one/runtime/'+blocked.operation.id+'/slot.json',prior=JSON.parse((await readTaskFile(f.target,ref)).content).value;
+  assert.equal(prior.status,'not-started');assert.equal(prior.model_requested,false);assert.equal(prior.turn_id,null);
+  await controlNativeGoal(f.target,f.manifest.id,'cancel',{actor:builder,operation_id:'stop-proven-unstarted-'+boundary.replaceAll('/','-'),expected_version:before.version});
+  for(let n=0;n<4;n++){if((await readNativeGoal(f.target,f.manifest.id)).status==='cancelled')break;await runNativeGoalStep(f.target,f.manifest.id,{adapter});}
+  const after=await readNativeGoal(f.target,f.manifest.id),slot=JSON.parse((await readTaskFile(f.target,ref)).content).value;
+  assert.equal(after.status,'cancelled');assert.equal((await readNativeTask(f.target,'WK-component-0')).state,'cancelled');
+  assert.equal(slot.status,'cancelled');assert.deepEqual(slot.pre_model_stops,prior.pre_model_stops);
+  const operation=after.operations.find(o=>o.id===blocked.operation.id);assert.equal(operation.status,'completed');assert.deepEqual(operation.first_result,before.operations.find(o=>o.id===blocked.operation.id).first_result);
+  assert.equal(events.filter(e=>e.method==='fixture/turn').length,0);assert.equal(events.filter(e=>e.method==='fixture/interrupt').length,0);
+});
 async function finish(f,adapter,max=60){for(let n=0;n<max;n++){const view=await readNativeGoal(f.target,f.manifest.id);if(view.accepted)return view;const result=await runNativeGoalStep(f.target,f.manifest.id,{adapter});if(result.idle&&result.idle!=='whole-goal-accepted')throw Error(JSON.stringify({result,components:(await readNativeGoal(f.target,f.manifest.id)).components}));if(result.operation?.status==='unknown')throw Error(JSON.stringify(result.operation.result));}throw Error('Stock goal did not accept');}
 test('stock protocol drives same-thread implementation, independent FAIL, repair and exact native PASS',async t=>{
   const f=await fixture(t),events=[],adapter=await stockAdapter({events}),accepted=await finish(f,adapter);

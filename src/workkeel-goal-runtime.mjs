@@ -259,7 +259,16 @@ export async function createCodexGoalAdapter({hostFactory=createLocalCodexSubscr
   }
   async function cancel(ctx){
     const active=runtimes.get(ctx.operation_id);if(active){await active.cancel({operation_id:ctx.operation_id});return {status:'cancelled',reason:'Actual owned Codex runtime settled after interruption'};}
-    const slot=await readSlot(ctx);if(slot.final||slot.runtime_result)return {status:'cancelled',reason:'Recorded actual runtime is already settled'};
+    const slot=await readSlot(ctx);if(slot.input_sha256!==executionDigest(ctx.input))fail('cancellation input differs');
+    if(slot.final||slot.runtime_result)return {status:'cancelled',reason:'Recorded actual runtime is already settled'};
+    const stop=Array.isArray(slot.pre_model_stops)?slot.pre_model_stops.at(-1):null;
+    if(['not-started','cancelled'].includes(slot.status)&&slot.model_requested===false&&slot.turn_id===null&&stop?.quiescence==='no-model-request-and-owned-runtime-settled'&&stop.thread_id===slot.thread_id){
+      // This proof is written only after the owned runtime has settled without
+      // requesting a model. There is no turn to interrupt; preserve that proof
+      // and settle the exact slot so frozen whole-goal cancellation can proceed.
+      if(slot.status!=='cancelled'){slot.status='cancelled';await writeSlot(ctx,slot);}
+      return {status:'cancelled',reason:'Exact unstarted operation and settled owned runtime confirmed',model_called:false};
+    }
     if(!slot.thread_id||!slot.turn_id)return {status:'unknown',reason:'Actual dispatched thread/turn identity not confirmed; stop requires host reconciliation'};
     const host=await hostFor(ctx.component.root),rpc=host.connect({onNotification:()=>{},onRequest:()=>{throw Error('Approval forbidden during stop');},onError:()=>{}});
     try{
