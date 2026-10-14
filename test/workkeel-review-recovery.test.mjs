@@ -6,6 +6,7 @@ import path from 'node:path';
 import os from 'node:os';
 import {execFileSync} from 'node:child_process';
 import {sha256} from '../src/files.mjs';
+import {withProjectMutationLock} from '../src/project.mjs';
 import {executionDigest} from '../src/workkeel-execution-policy.mjs';
 import {initializeTaskProject} from '../src/workkeel-project.mjs';
 import {previewTaskIntake,applyTaskIntake} from '../src/workkeel-intake.mjs';
@@ -132,6 +133,26 @@ test('a concurrent binding and recovery reserving one source have exactly one wi
   assert.equal(view.attempts.length,recovered?1:0);assert.equal(calls.launch,recovered?1:0);
   assert.equal(existsSync(f.root+'/.ai-org/host-usage/other-race-turn'),!recovered);
   assert.match(outcomes[recovered?1:0].reason.message,recovered?/host-source-used-by-review-recovery/:/fresh source/);
+});
+
+test('ordinary binding inside an already-held project lock completes without waiting for that lock',async t=>{
+  const f=await fixture(t),other=await secondTask(f),started=Date.now();
+  // Execution capture binds while holding the project lock; binding must not reacquire it.
+  const bound=await withProjectMutationLock(f.root,()=>bindHostUsage(f.root,other({thread_id:'nested-thread',turn_id:'nested-turn'})));
+  assert.equal(bound.collection_closed,false);assert.ok(Date.now()-started<1500,`bind took ${Date.now()-started}ms`);
+  const {host,calls}=reviewHost();
+  await assert.rejects(recoverInterruptedReview(f.root,await f.request({source:{thread_id:'nested-thread',turn_id:'nested-turn'}}),{host}),/fresh source/);
+  assert.equal(calls.launch,0);
+});
+
+test('a source bound while recovery awaits its probes is rejected at reservation',async t=>{
+  const f=await fixture(t),other=await secondTask(f),source={thread_id:'probe-race-thread',turn_id:'probe-race-turn'};let launched=0;
+  const host=createTrustedRoleHost({id:'fixture-review-host',probe:async()=>probe(),
+    runtimeState:async()=>{await bindHostUsage(f.root,other(source));return {state:'stopped'};},
+    launch:async()=>{launched++;return structuredClone(completed);}});
+  await assert.rejects(recoverInterruptedReview(f.root,await f.request({source}),{host}),/fresh source/);
+  assert.equal(launched,0);assert.equal((await readReviewRecovery(f.root,f.id)).attempts.length,0);
+  assert.ok(existsSync(f.root+'/.ai-org/host-usage/other-probe-race-turn'));
 });
 
 test('the approved request is snapshotted before the first await; caller mutation changes nothing',async t=>{

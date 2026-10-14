@@ -43,6 +43,13 @@ separate immutable records in a bounded chain of three, validated field by field
 in addition to their envelope digests. A result is recorded only while its
 attempt is the chain head and the task is unchanged.
 
+Source freshness is workspace-wide across host bindings and recovery attempts.
+That shared inventory is guarded by the existing host-usage writer lock rather
+than the project lock, because callers such as execution capture bind while
+already holding the project lock and that lock is not reentrant. Recovery takes
+the writer lock inside its project-locked reservation, so the lock order is
+always project then host, and ordinary binding keeps its original locking.
+
 Ordinary `task review` must name the current completed attempt when a chain exists,
 and records the attempt, completed result and chain digests. `task close` refuses
 any difference, including a deleted result. Tasks without a chain keep the

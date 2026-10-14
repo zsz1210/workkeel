@@ -8,7 +8,7 @@ import { readTaskFile } from "./task-contract.mjs";
 import { safeDirectory, existsEntry } from "./workkeel-project.mjs";
 import { exactKeys, executionDigest } from "./workkeel-execution-policy.mjs";
 import { assertReviewRecoveryContext, readNativeTask } from "./workkeel-tasks.mjs";
-import { inspectHostBinding, openTaskHostBindings, retainedHostSources } from "./workkeel-host-usage.mjs";
+import { inspectHostBinding, openTaskHostBindings, retainedHostSources, withHostSourceReservation } from "./workkeel-host-usage.mjs";
 import { readDispatchTicket } from "./workkeel-dispatch.mjs";
 import { assertTrustedRoleHost, runRolePreflight } from "./workkeel-role-preflight.mjs";
 
@@ -187,7 +187,7 @@ export async function readReviewRecoveryChain(target, item) {
 /**
  * Source IDs reserved by every retained recovery attempt in the workspace,
  * across tasks and deliveries. Integrity-checked reads only; callers hold the
- * project mutation lock so the inventory cannot change while they reserve.
+ * host writer lock so the inventory cannot change while they reserve.
  */
 export async function retainedReviewRecoverySources(target) {
   if (!await existsEntry(target, ROOT)) return [];
@@ -353,31 +353,37 @@ export async function recoverInterruptedReview(targetInput, input, { host } = {}
   const reserved = await withProjectMutationLock(target, async () => {
     const again = await replay(target, request, requestSha);
     if (again) return { replayed: again };
-    // Revalidate after the awaited probes: expiry, cancellation, pin or evidence
-    // drift and a concurrent retry each win over this request.
-    const { item, chain, predecessor, selected } = await prepare(target, request);
-    if (executionDigest(item) !== executionDigest(probed.item) || predecessor.id !== probed.predecessor.id ||
-        predecessor.sha256 !== probed.predecessor.sha256) fail("task or predecessor changed during host probes");
-    const sequence = chain.attempts.length + 1;
-    const value = { schema_version: "workkeel.review-attempt/v1", attempt_id: `review-attempt-${randomUUID()}`, sequence,
-      operation_id: request.operation_id, request_sha256: requestSha, task_id: item.id, task_version: item.version,
-      task_record_sha256: executionDigest(item), contract_sha256: item.contract_sha256, policy_sha256: item.policy_sha256,
-      delivery_claim_id: item.delivery.claim_id, revision: item.delivery.revision, delivery_evidence: structuredClone(item.delivery.evidence),
-      implementer: structuredClone(item.delivery.implementer), approved_by: structuredClone(request.actor), reviewer: structuredClone(request.reviewer),
-      approval_ref: item.contract.authorization.approval_ref, authorization_expires_at: item.contract.authorization.expires_at,
-      predecessor, predecessor_runtime: "confirmed-stopped", previous_attempt_sha256: chain.head?.sha256 ?? null,
-      dispatch_execution_id: predecessor.dispatch_execution_id, policy_ref: request.policy_ref, selected,
-      source: structuredClone(request.source), preflight: { host_id: receipt.host_id, probed_host: receipt.probed_host,
-        probe_sha256: receipt.probe_sha256, checked_at: receipt.checked_at, product_access: "read", tests: "role" },
-      created_at: new Date().toISOString(), authority: "review-only", implementation_authority: false, acceptance: "not-performed" };
-    const root = await safeDirectory(target, ROOT, { create: true });
-    if (!await existsEntry(target, `${ROOT}/.gitignore`)) await durableAtomicCreate(path.join(root, ".gitignore"), "*\n");
-    if ((await readTaskFile(target, `${ROOT}/.gitignore`)).content !== "*\n") fail("store ignore policy changed");
-    const dir = await safeDirectory(target, chainRef(item), { create: true });
-    // Exclusive creation: a racing writer of the same sequence cannot replace it.
-    await durableAtomicCreate(path.join(dir, attemptName(sequence)), formatJson({ value, sha256: executionDigest(value) }));
-    const created = (await readReviewRecoveryChain(target, item)).head;
-    if (created?.value.attempt_id !== value.attempt_id) fail("attempt reservation was not retained");
+    // Both source stores share the host writer lock (order: project, then
+    // host), so the source check and exclusive attempt creation are atomic
+    // against ordinary binding too. It is released before launch.
+    const { item, selected, created } = await withHostSourceReservation(target, async () => {
+      // Revalidate after the awaited probes: expiry, cancellation, pin or evidence
+      // drift and a concurrent retry each win over this request.
+      const { item, chain, predecessor, selected } = await prepare(target, request);
+      if (executionDigest(item) !== executionDigest(probed.item) || predecessor.id !== probed.predecessor.id ||
+          predecessor.sha256 !== probed.predecessor.sha256) fail("task or predecessor changed during host probes");
+      const sequence = chain.attempts.length + 1;
+      const value = { schema_version: "workkeel.review-attempt/v1", attempt_id: `review-attempt-${randomUUID()}`, sequence,
+        operation_id: request.operation_id, request_sha256: requestSha, task_id: item.id, task_version: item.version,
+        task_record_sha256: executionDigest(item), contract_sha256: item.contract_sha256, policy_sha256: item.policy_sha256,
+        delivery_claim_id: item.delivery.claim_id, revision: item.delivery.revision, delivery_evidence: structuredClone(item.delivery.evidence),
+        implementer: structuredClone(item.delivery.implementer), approved_by: structuredClone(request.actor), reviewer: structuredClone(request.reviewer),
+        approval_ref: item.contract.authorization.approval_ref, authorization_expires_at: item.contract.authorization.expires_at,
+        predecessor, predecessor_runtime: "confirmed-stopped", previous_attempt_sha256: chain.head?.sha256 ?? null,
+        dispatch_execution_id: predecessor.dispatch_execution_id, policy_ref: request.policy_ref, selected,
+        source: structuredClone(request.source), preflight: { host_id: receipt.host_id, probed_host: receipt.probed_host,
+          probe_sha256: receipt.probe_sha256, checked_at: receipt.checked_at, product_access: "read", tests: "role" },
+        created_at: new Date().toISOString(), authority: "review-only", implementation_authority: false, acceptance: "not-performed" };
+      const root = await safeDirectory(target, ROOT, { create: true });
+      if (!await existsEntry(target, `${ROOT}/.gitignore`)) await durableAtomicCreate(path.join(root, ".gitignore"), "*\n");
+      if ((await readTaskFile(target, `${ROOT}/.gitignore`)).content !== "*\n") fail("store ignore policy changed");
+      const dir = await safeDirectory(target, chainRef(item), { create: true });
+      // Exclusive creation: a racing writer of the same sequence cannot replace it.
+      await durableAtomicCreate(path.join(dir, attemptName(sequence)), formatJson({ value, sha256: executionDigest(value) }));
+      const created = (await readReviewRecoveryChain(target, item)).head;
+      if (created?.value.attempt_id !== value.attempt_id) fail("attempt reservation was not retained");
+      return { item, selected, created };
+    });
     // Final launch boundary, the last await before invocation. Task mutations
     // need this lock, but pinned files and the clock can still move; an
     // unlaunched attempt records that it was not launched.

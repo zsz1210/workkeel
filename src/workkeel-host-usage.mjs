@@ -9,7 +9,6 @@ import {assertTaskExecutionContext, readNativeTask} from './workkeel-tasks.mjs';
 import {executionDigest} from './workkeel-execution-policy.mjs';
 import {observeSource, observeFileRead} from './workkeel-read-metrics.mjs';
 import {readTaskFile} from './task-contract.mjs';
-import {withProjectMutationLock} from './project.mjs';
 
 const ROOT='.ai-org/host-usage', SCHEMA='workkeel.host-usage/v1';
 const ID=/^[A-Za-z0-9][A-Za-z0-9._-]{0,95}$/;
@@ -409,7 +408,8 @@ async function bindingInventory(target,request,{bindingId,task,ticket}) {
       if(other.source.thread_id===request.source.thread_id&&other.source.turn_id===request.source.turn_id)fail('host-turn-already-bound',{binding_id:entry});
     }
     // Review recovery attempts reserve fresh sources in a separate store; both
-    // stores form one workspace source inventory, checked in either direction.
+    // stores form one workspace source inventory, checked in either direction
+    // under this host writer lock, which recovery also holds while reserving.
     const {retainedReviewRecoverySources}=await import('./workkeel-review-recovery.mjs');
     for(const used of await retainedReviewRecoverySources(target))
       if(used.thread_id===request.source.thread_id||used.turn_id===request.source.turn_id)fail('host-source-used-by-review-recovery');
@@ -438,8 +438,9 @@ export async function checkHostBindingReadiness(targetInput,request) {
 export async function bindHostUsage(targetInput,request) {
   const target=await fs.realpath(targetInput);
   await bindingRequest(target,request);
-  // The shared project lock serializes source reservation with review recovery.
-  return withProjectMutationLock(target,()=>lock(target,async()=>{
+  // The host writer lock serializes source reservation with review recovery.
+  // Callers such as execution capture may already hold the project lock.
+  return lock(target,async()=>{
     // Recheck current task/ticket authority and inventory after acquiring the lock.
     const context=await bindingRequest(target,request),{bindingId,task,ticket,sample}=context;
     await bindingInventory(target,request,context);
@@ -461,7 +462,16 @@ export async function bindHostUsage(targetInput,request) {
     // A claim may have changed while waiting for the host lock or source scan.
     await assertTaskExecutionContext(target,request.task_id,request);
     await save(target,b);return measurement(b);
-  }));
+  });
+}
+
+/**
+ * Runs fn under the host writer lock that guards the workspace source
+ * inventory. Lock order is project then host; fn must not take the project lock.
+ */
+export async function withHostSourceReservation(targetInput,fn) {
+  const target=await fs.realpath(targetInput);
+  return lock(target,fn);
 }
 
 export async function collectHostUsage(targetInput,bindingId) {

@@ -108,7 +108,14 @@ caller's object do not affect the reservation, the launch or the replay digest.
 The source thread and turn must be fresh across the whole workspace: no retained
 host binding of any task and no recovery attempt of any chain may share either
 ID, and ordinary host binding rejects sources reserved by recovery attempts.
-Both checks run under the shared project mutation lock.
+Both stores form one source inventory guarded by the host-usage writer lock.
+Ordinary binding checks and records its source under that lock alone, so a
+caller that already holds the project mutation lock, such as execution capture,
+can still bind. Recovery takes the same writer lock inside its project-locked
+reservation phase (order: project, then host), rechecks both stores and creates
+the attempt, then releases it before launch. Concurrent claims on one source
+therefore have exactly one winner. Neither lock is held while the model runs.
+Pre-probe checks and binding readiness are observations, not reservations.
 
 Later retries name the chain head: `{ "kind": "review-attempt", "id": ..., "sha256": ... }`
 with the current `expected_chain_sha256` from `readReviewRecovery`. A chain holds
