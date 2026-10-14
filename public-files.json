@@ -538,6 +538,7 @@
     "test/delivery-report-text.test.mjs",
     "test/delivery-scope-entry.test.mjs",
     "test/doc-links.test.mjs",
+    "test/durable-atomic-boundaries.test.mjs",
     "test/evidence-git.test.mjs",
     "test/evidence-observer.test.mjs",
     "test/evidence-view.test.mjs",
