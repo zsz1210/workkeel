@@ -122,6 +122,30 @@ test('human attention groups shared reasons without manufacturing approval for a
   assert.equal(issues.length,1);assert.equal(issues[0].affected_count,2);assert.deepEqual(issues[0].tasks,['p:b','p:c']);
 });
 
+test('stalled goal recovery is actionable while automatic dependency waits and pauses stay quiet',()=>{
+  const registry={projects:[{id:'api',read_status:'available',task_root:'/synthetic/api',repositories:[{id:'service',path:'/synthetic/api',scope:'.'}]}]},raw=syntheticGoal('/synthetic/api');
+  raw.mandatory_components=[raw.mandatory_components[0]];raw.mandatory_components[0].state='build';raw.mandatory_components[0].accepted=false;raw.mandatory_components[0].progress={phase:'planning',last_error:'Fixed planning model unavailable'};
+  let goal=projectWorkspaceGoals([raw],registry,'api')[0];assert.equal(goal.requires_recovery,true);assert.equal(goal.reason,'Fixed planning model unavailable');
+  const other={...goal,id:'second',reference_id:'second',key:'api:second'},issues=projectWorkspaceAttention([],registry.projects,[goal,other]);
+  assert.equal(issues.length,1);assert.equal(issues[0].kind,'goal-blocked');assert.equal(issues[0].affected_goals,2);assert.equal(issues[0].goals[0].id,goal.reference_id);
+  raw.state='paused';raw.status='paused';goal=projectWorkspaceGoals([raw],registry,'api')[0];assert.equal(projectWorkspaceAttention([],registry.projects,[goal]).length,0);
+  raw.status='running';raw.mandatory_components[0].progress.last_error=null;goal=projectWorkspaceGoals([raw],registry,'api')[0];assert.equal(goal.requires_recovery,false);assert.equal(projectWorkspaceAttention([],registry.projects,[goal]).length,0);
+});
+
+test('actual browser directs a stalled goal to recovery instead of the calm overview', {skip:process.env.WORKKEEL_WORKSPACE_BROWSER!=='1'},async t=>{
+  const {chromium}=await import('playwright-core'),{state,repo}=await setup(t);let blocked=true;
+  const raw=syntheticGoal(repo);raw.mandatory_components=[{...raw.mandatory_components[0],project_id:'alpha',state:'build',accepted:false}];
+  const service=await startWorkspaceServer(state,{readSnapshot:dir=>{raw.mandatory_components[0].progress={phase:'planning',last_error:blocked?'Fixed planning model unavailable':null};return readWorkspaceSnapshot(dir,{goalReader:async()=>[raw]});}});t.after(()=>service.close());
+  const browser=await chromium.launch({channel:'chrome',headless:true});t.after(()=>browser.close());const page=await browser.newPage({viewport:{width:1440,height:900}});
+  await page.goto(service.url);await page.getByRole('heading',{name:'Delivery needs recovery',exact:true}).waitFor();
+  assert.equal(await page.getByText('Nothing needs your decision right now.',{exact:true}).count(),0);
+  await page.getByText('Delivery blocked · recovery required',{exact:true}).waitFor();await page.getByRole('link',{name:/^View goal/}).click();
+  await page.getByRole('heading',{name:'Synthetic three-repository delivery',exact:true}).waitFor();await page.getByText('Fixed planning model unavailable',{exact:true}).waitFor();
+  await page.getByRole('button',{name:'繁體中文',exact:true}).click();await page.getByRole('link',{name:'總覽',exact:true}).click();await page.getByRole('heading',{name:'交付需要恢復',exact:true}).waitFor();
+  if(process.env.WORKKEEL_WORKSPACE_EVIDENCE_DIR){await fs.mkdir(process.env.WORKKEEL_WORKSPACE_EVIDENCE_DIR,{recursive:true});await page.screenshot({path:path.join(process.env.WORKKEEL_WORKSPACE_EVIDENCE_DIR,'workspace-blocked-goal-synthetic-1440.png'),fullPage:true});}
+  blocked=false;await page.getByRole('button',{name:'重新整理',exact:true}).click();await page.getByText('已啟用交付',{exact:true}).waitFor();assert.equal(await page.getByRole('heading',{name:'交付需要恢復',exact:true}).count(),0,'resolving this goal removes only its decision; unrelated task decisions remain');
+});
+
 test('project autonomy distinguishes off, idle and recorded execution; corruption stays unknown',async t=>{
   const base={policy:{enabled:false},paused:false,jobs:[],discovery_runs:[],proposals:[]};
   assert.equal(workspaceAutonomySummary(base).state,'off');

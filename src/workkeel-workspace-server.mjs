@@ -111,7 +111,7 @@ export async function startWorkspaceServer(stateDir,{port=0,readSnapshot=readWor
             for(const task of oldTasks)if(!snapshot.tasks.some(t=>t.key===task.key))snapshot.tasks.push({...task,read_status:'stale',last_confirmed_at:previous.last_confirmed_at});
           }
         }
-        snapshot.attention=projectWorkspaceAttention(snapshot.tasks,snapshot.projects);lastSnapshot=structuredClone(snapshot);
+        snapshot.attention=projectWorkspaceAttention(snapshot.tasks,snapshot.projects,snapshot.goals??[]);lastSnapshot=structuredClone(snapshot);
         return send(200,{...snapshot,capabilities:{control:!!writeToken,actions:control?.actions??[],hooks:Object.keys(hooks).filter(k=>typeof hooks[k]?.read==='function')}});
       }
       if(req.method==='GET'&&route.pathname==='/api/observer') {

@@ -164,3 +164,47 @@ test('service does not spin on its own uncertain result writes or invoke inferen
   const adapter=createTrustedGoalAdapter({id:'bounded-watcher-fixture',assertCapabilities:async()=>{},execute:async()=>{calls++;return {status:'unknown',reason:'Synthetic unknown; never infer on poll'};},reconcile:async()=>{reconciliations++;return {status:'unknown',reason:'Still unknown'};},cancel:async()=>({status:'cancelled'})});
   let ready;const observed=new Promise(r=>ready=r),service=await serveNativeGoal(f.target,f.manifest.id,{adapter,reconcile_ms:1000,onError:e=>errors.push(e),onStep:result=>{if(result.operation?.kind==='runtime')ready();}});t.after(()=>service.close());let timer;await Promise.race([observed,new Promise((_,reject)=>timer=setTimeout(()=>reject(Error('Service did not dispatch')),4000))]);clearTimeout(timer);await new Promise(r=>setTimeout(r,250));service.close();assert.equal(calls,1);assert.ok(reconciliations<=1);assert.deepEqual(errors.map(e=>e.message),[]);
 });
+
+test('abort during capability qualification never dispatches or reserves model work',async t=>{
+  const f=await fixture(t),controller=new AbortController();let calls=0;
+  const adapter=createTrustedGoalAdapter({id:'abort-during-qualification',assertCapabilities:async()=>controller.abort(),execute:async()=>{calls++;return {status:'unknown'};},reconcile:async()=>({status:'unknown'}),cancel:async()=>({status:'cancelled'})});
+  await runNativeGoalStep(f.target,f.manifest.id,{adapter});
+  const step=await runNativeGoalStep(f.target,f.manifest.id,{adapter,signal:controller.signal});
+  assert.equal(step.idle,'aborted');assert.equal(step.model_called,false);assert.equal(calls,0);
+  assert.equal((await readNativeGoal(f.target,f.manifest.id)).operations.filter(o=>o.kind==='runtime').length,0);
+});
+
+test('standing manifest drift during qualification blocks new dispatch without a model intent',async t=>{
+  const f=await fixture(t);let calls=0;
+  const adapter=createTrustedGoalAdapter({id:'authority-during-qualification',assertCapabilities:async()=>fs.appendFile(f.target+'/docs/goal.json',' '),execute:async()=>{calls++;return {status:'unknown'};},reconcile:async()=>({status:'unknown'}),cancel:async()=>({status:'cancelled'})});
+  await runNativeGoalStep(f.target,f.manifest.id,{adapter});
+  await assert.rejects(runNativeGoalStep(f.target,f.manifest.id,{adapter}),/goal manifest or approval bytes changed|authority source changed/);
+  assert.equal(calls,0);assert.equal((await readNativeGoal(f.target,f.manifest.id)).operations.filter(o=>o.kind==='runtime').length,0);
+});
+
+for(const interruption of ['abort','authority'])test('persisted but unstarted intent safely resumes after '+interruption+' at the dispatch boundary',async t=>{
+  const f=await fixture(t),controller=new AbortController();let calls=0;
+  const adapter=fixtureAdapter({firstFail:false,onExecute:()=>calls++});
+  await runNativeGoalStep(f.target,f.manifest.id,{adapter});
+  const manifestPath=f.target+'/docs/goal.json',original=await fs.readFile(manifestPath),rename=fs.rename;let injected=false;
+  fs.rename=async(from,to)=>{
+    const value=await rename(from,to);
+    if(!injected&&to===f.target+'/.ai-org/goals/goal-one/state.json'){
+      const state=JSON.parse(await fs.readFile(to,'utf8')).value;
+      if(state.operations.at(-1)?.kind==='runtime'){
+        injected=true;if(interruption==='abort')controller.abort();else await fs.appendFile(manifestPath,' ');
+      }
+    }
+    return value;
+  };
+  let step;try{step=await runNativeGoalStep(f.target,f.manifest.id,{adapter,signal:controller.signal});}finally{fs.rename=rename;}
+  assert.equal(injected,true);assert.equal(calls,0);assert.equal(step.model_called,false);
+  assert.equal(step.operation.status,'intent');assert.equal(step.operation.result.dispatch_started,false);assert.equal(step.operation.timing,undefined);
+  const before=await readNativeGoal(f.target,f.manifest.id),intent=before.operations.at(-1);
+  if(interruption==='authority')await fs.writeFile(manifestPath,original);
+  const resumed=await runNativeGoalStep(f.target,f.manifest.id,{adapter});
+  assert.equal(calls,1);assert.equal(resumed.operation.id,intent.id);assert.equal(resumed.operation.status,'completed');
+  const after=await readNativeGoal(f.target,f.manifest.id);assert.equal(after.operations.length,before.operations.length);assert.equal(after.reserved_ms,before.reserved_ms);
+  assert.equal(after.components[0].phase,'implementation');
+  assert.equal(after.operations.at(-1).first_result.dispatch_started,false,'retain the original no-effects boundary result after resumption');
+});

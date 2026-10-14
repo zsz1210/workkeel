@@ -194,8 +194,9 @@ function nativeInput(s,m,c,t,phase,p){
   if(phase==='rework')return {action:'rework',request:{...base,actor:m.roles.approver,summary:'Repair the retained independent FAIL without expanding scope'}};
   if(phase==='close')return {action:'close',request:{...base,actor:m.roles.approver,revision:t.delivery.revision,summary:'Exact independently reviewed goal component accepted',rollback:c.rollback,evidence:[...new Set([...t.delivery.evidence,...t.review.evidence].map(pin=>pin.path))]}};
 }
-async function reserve(target,goalId,adapter){
+async function reserve(target,goalId,adapter,signal){
   return withProjectMutationLock(target,async()=>{
+    if(signal?.aborted)return {idle:'aborted',model_called:false};
     const s=await stateAt(target,goalId);if(['paused','done','cancelled'].includes(s.status))return {idle:s.status};const m=await manifestAt(target,s,{frozen:s.status==='cancel-requested'});await standing(target,s,m,{stop:s.status==='cancel-requested'});
     const active=s.operations.filter(o=>['running','unknown','intent'].includes(o.status));
     if(s.status==='cancel-requested'){
@@ -211,7 +212,7 @@ async function reserve(target,goalId,adapter){
     }
     // Pure native intents are safe to replay only with their exact request. A
     // model intent has unknown effects after a stopped process and is observed.
-    const recoverable=active.find(op=>!live(op.owner));if(recoverable?.kind==='native')return recover(recoverable,'execute');
+    const recoverable=active.find(op=>!live(op.owner));if(recoverable?.kind==='native'||recoverable?.status==='intent')return recover(recoverable,'execute');
     if(m.control.release_parent){const controller=await readNativeTask(target,s.controller.task_id);if(controller.state==='build'&&controller.claim?.id===s.controller.claim_id){if(active.some(o=>live(o.owner)))return {idle:'awaiting-controller-quiescence'};return add({kind:'native',phase:'release-controller',component_id:m.integration.component_id,root:target,task_id:controller.id,action:'release',request:{operation_id:operationId(s,'controller','release',controller.version),expected_version:controller.version,actor:s.controller.actor,claim_id:s.controller.claim_id,summary:'Sealed standing goal continues under its immutable approved authority'}});}}
     const facts=new Map();for(const c of m.components)try{const fact=await acceptedFact(s,c);if(fact)facts.set(c.id,fact);}catch{}
     if(facts.size===m.components.length){
@@ -251,6 +252,9 @@ async function reserve(target,goalId,adapter){
         const previous=s.operations.filter(o=>o.input.component_id===c.id&&o.input.phase!=='review'&&o.status==='completed'&&o.result?.runtime_selection).at(-1);
         const input={kind:'runtime',phase,component_id:c.id,root:c.root,task_id:c.task_id,cycle:p.cycle,task_version:t.version,task_sha256:executionDigest(t),task_snapshot:structuredClone(t),contract_sha256:t.contract_sha256,claim_id:t.claim?.id??t.delivery?.claim_id,actor:phase==='review'?m.roles.reviewer:m.roles.implementer,model:m.models[phase],candidate:p.candidate,verification:p.verification,previous_threads:p.threads,previous_model:previous?.result.runtime_selection??null,required_components:m.components.map(x=>x.id),accepted_components:[...facts.values()].filter(f=>f.id!==c.id).sort((a,b)=>a.id.localeCompare(b.id))};
         try{await adapter.assertCapabilities({target,controller:s.controller,manifest:m,component:c,task:t,input});}catch(e){p.last_error='Host capability unavailable: '+e.message.slice(0,500);await save(target,s);return {idle:'host-capability-unavailable',component_id:c.id,model_called:false};}
+        if(signal?.aborted)return {idle:'aborted',model_called:false};
+        await standing(target,s,m);
+        if(executionDigest(await componentTask(s,c))!==input.task_sha256)fail('component changed during capability qualification');
         return add(input);
       }
     }
@@ -258,6 +262,7 @@ async function reserve(target,goalId,adapter){
     s.last_error=s.components.filter(c=>c.last_error).map(c=>c.id+': '+c.last_error).join('; ')||null;if(s.last_error)await save(target,s);return {idle:s.last_error?'components-blocked':'waiting-for-dependencies',model_called:false};
     async function recover(op,mode){op.owner={pid:process.pid,host:os.hostname(),token:randomUUID()};op.status='running';await save(target,s);return {s,m,operation:structuredClone(op),mode};}
     async function add(input){
+      if(signal?.aborted)return {idle:'aborted',model_called:false};
       if(s.operations.length>=m.limits.max_operations)fail('goal operation budget exhausted');
       const operation_id=operationId(s,input.component_id,input.phase,executionDigest(input)),duration=input.kind==='runtime'?(m.limits.operation_timeout_ms??Math.max(1,Math.floor(m.limits.timeout_ms/m.limits.max_operations))):0;
       if(s.reserved_ms+duration>m.limits.timeout_ms)fail('cumulative goal runtime budget exhausted');
@@ -271,19 +276,57 @@ export async function runNativeGoalStep(target,goalId,{adapter,signal}={}){
   if(!adapter){const {createCodexGoalAdapter}=await import('./workkeel-goal-runtime.mjs');adapter=await createCodexGoalAdapter();}
   if(!trustedAdapters.has(adapter))fail('qualified trusted goal adapter required');
   if(signal?.aborted)return {idle:'aborted',model_called:false};
-  const reservation=await reserve(target,goalId,adapter);if(reservation.idle)return reservation;
+  const reservation=await reserve(target,goalId,adapter,signal);if(reservation.idle)return reservation;
   const {operation:op,m,s}=reservation,component=m.components.find(c=>c.id===op.input.component_id);
   const started_at=new Date().toISOString(),started_clock=performance.now();
   let result;const controller=new AbortController(),abort=()=>controller.abort();signal?.addEventListener('abort',abort,{once:true});let timer;
+  if(signal?.aborted)abort();
   if(op.reserved_ms)timer=setTimeout(abort,op.reserved_ms);
+  let effects_started=false;
   try{
     const context={target,goal:s.id,controller:s.controller,manifest:m,manifest_sha256:s.manifest_sha256,component,operation_id:op.id,input:structuredClone(op.input),task:reservation.mode==='cancel'?op.input.task_snapshot:op.kind==='native'?await readNativeTask(op.input.root,op.input.task_id):await componentTask(s,component),signal:controller.signal};
+    // Only an intent explicitly retained before any effects may be executed
+    // again. Unknown started work continues to reconcile its exact operation.
+    if(op.kind==='runtime'&&reservation.mode==='execute'&&op.result?.dispatch_started===false)await adapter.assertCapabilities(context);
+    await withProjectMutationLock(target,async()=>{
+      const current=await stateAt(target,goalId),stored=current.operations.find(o=>o.id===op.id);
+      if(!stored||stored.input_sha256!==op.input_sha256||reservation.mode!=='cancel'&&stored.owner?.token!==op.owner?.token)fail('pre-dispatch operation identity or owner changed');
+      const stopping=reservation.mode==='cancel'||op.input.phase==='cancel';
+      if(stopping?current.status!=='cancel-requested':!['running','blocked','recovery-required'].includes(current.status))fail('goal control changed before dispatch');
+      const root=op.input.root,identity=await rootIdentity(root),approved=current.roots.find(r=>r.root===root);
+      if(!approved&&root!==target||approved&&(identity.ino!==approved.ino||identity.dev!==approved.dev))fail('pre-dispatch repository identity changed');
+      if(!stopping&&op.kind==='runtime'){
+        const task=await componentTask(current,component);
+        // Reconciliation deliberately permits the exact operation's native
+        // review to have committed before its host response was lost.
+        if(reservation.mode==='execute'&&executionDigest(task)!==op.input.task_sha256)fail('component changed before dispatch');
+      }
+      await standing(target,current,m,{stop:stopping});
+      if(controller.signal.aborted)fail('operation aborted before dispatch');
+    });
+    if(controller.signal.aborted)fail('operation aborted before dispatch');
+    effects_started=true;
     if(reservation.mode==='cancel')result=await adapter.cancel(context);
     else if(reservation.mode==='reconcile')result=await adapter.reconcile(context);
     else if(op.kind==='native')result={status:'completed',native:await mutateNativeTask(op.input.root,op.input.task_id,op.input.action,op.input.request)};
     else result=await adapter.execute(context);
   }catch(e){result={status:'unknown',reason:e.message.slice(0,1000)};}
   finally{if(timer)clearTimeout(timer);signal?.removeEventListener('abort',abort);}
+  if(!effects_started)return withProjectMutationLock(target,async()=>{
+    const current=await stateAt(target,goalId),stored=current.operations.find(o=>o.id===op.id);
+    if(reservation.mode!=='cancel'&&stored?.owner?.token===op.owner?.token&&stored.input_sha256===op.input_sha256){
+      stored.owner=null;
+      if(reservation.mode==='execute'){
+        stored.status='intent';stored.result={status:'attention',reason:result.reason,dispatch_started:false,model_called:false};
+        stored.first_result??=structuredClone(stored.result);
+      }else stored.status='unknown';
+      if(!controller.signal.aborted&&!['paused','cancel-requested','cancelled'].includes(current.status)){
+        current.components.find(c=>c.id===component.id).last_error=result.reason;current.last_error=result.reason;
+      }
+      await save(target,current);
+    }
+    return {idle:controller.signal.aborted?'aborted':'pre-dispatch-blocked',reason:result.reason,operation:stored,status:current.status,accepted:false,model_called:false};
+  });
   const timing={started_at,ended_at:new Date().toISOString(),duration_ms:Math.max(0,Math.round(performance.now()-started_clock)),basis:'goal-adapter-observed-wall-time',mode:reservation.mode};
   return withProjectMutationLock(target,async()=>{
     const current=await stateAt(target,goalId),stored=current.operations.find(o=>o.id===op.id),p=current.components.find(p=>p.id===component.id);

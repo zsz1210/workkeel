@@ -81,11 +81,24 @@ decision. Acceptance, merge, publication and deployment remain separate outcomes
 An uncertain host result is reconciled by exact operation identity, never blindly
 dispatched again after a crash or lease timeout.
 
+Qualification waits do not extend authority: the original standing goal and
+component authority are checked again before effects start, and an already-aborted
+stop signal prevents dispatch. A persisted intent known not to have started can
+resume with the same operation identity and reserved budget after revalidation.
+Its original no-effects result remains retained. This does not make an uncertain
+started operation safe to execute again.
+
 Requests for `goal pause|resume|cancel|recover` contain `goal_id`, original approved
 operator `actor`, stable `operation_id` and current `expected_version`. Pause and
 cancel remain usable after execution authority drifts or expires. Resume/recovery
 revalidate authority. Confirmed cancellation requires actual operation and native
 task quiescence; unknown effects require reconciliation.
+
+If a fixed model or another required capability is unavailable, the workspace
+overview identifies the affected goal as needing recovery. Open that goal, inspect
+the recorded reason, restore the required capability or authority, then reconcile
+and recover. Automatic dependency waits and deliberately paused goals do not
+create recovery decisions.
 
 ## Qualified stock host
 
