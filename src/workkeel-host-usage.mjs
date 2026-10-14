@@ -564,6 +564,20 @@ export async function closeHostUsage(targetInput,request) {
 }
 const safeError=error=>typeof error?.code==='string'&&/^host-[a-z-]+$/.test(error.code)?error.code:'host-source-unavailable';
 
+/** Validated read of one retained binding and its exact bytes. Never a new grant. */
+export async function inspectHostBinding(targetInput,bindingId) {
+  const target=await fs.realpath(targetInput),b=await load(target,bindingId);await checkTask(target,b);
+  const file=await readTaskFile(target,`${ROOT}/${bindingId}/binding.json`);
+  if(executionDigest(JSON.parse(file.content).value)!==executionDigest(b))fail('host-record-changed');
+  return {binding:b,file_sha256:file.digest};
+}
+/** Binding IDs for a task whose collection is still open. */
+export async function openTaskHostBindings(targetInput,taskId) {
+  const target=await fs.realpath(targetInput);if(!await existsEntry(target,ROOT))return [];
+  const out=[];for(const entry of await names(target)){const b=await load(target,entry);if(b.task_id===taskId&&!b.collection_closed)out.push(entry);}
+  return out;
+}
+
 /** Reads sanitized projections only for output; never opens bound host sources. */
 export async function readHostMeasurements(target) {
   const byTask=new Map(),errors=[];let indexReads=0;

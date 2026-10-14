@@ -299,11 +299,36 @@ async function assertDelivery(target, item, action, request) {
   await assertPins(target, item.delivery.evidence);
   await dependencies(target, item);
 }
+function assertSeparation(item, actor) {
+  const implementer = item.delivery.implementer;
+  if (actor.agent_id === implementer.agent_id || item.contract.verification.separation === "distinct-principal" &&
+      actor.principal_id === implementer.principal_id) throw new Error("Reviewer identity does not meet separation policy");
+}
+
+/** Read-only recheck for an approved review retry. It grants no claim, review or acceptance. */
+export async function assertReviewRecoveryContext(target, id, { approver, reviewer, revision, expected_version }) {
+  const project = await readTaskProject(target);
+  const item = await readNativeTask(target, id);
+  assertApprover(project.policy, approver); assertActor(project.policy, reviewer);
+  if (item.version !== expected_version) throw new Error("Stale expected version; inspect current task before retrying");
+  if (TERMINAL.has(item.state) || item.state === "release_gate") throw new Error("Accepted or terminal tasks cannot resume review");
+  if (item.review) throw new Error(item.review.judgment === "fail" ? "An authored failing review uses ordinary rework" : "Task already has an authored review");
+  if (item.state !== "test" || !item.delivery) throw new Error("Review recovery requires a delivered candidate awaiting review");
+  if (revision !== item.delivery.revision) throw new Error("Review recovery must use the exact delivered candidate");
+  assertSeparation(item, reviewer);
+  await context(target, item, project);
+  await assertDelivery(target, item, "review", null);
+  return item;
+}
+async function currentAttempt(target, item) {
+  const { readReviewRecoveryChain } = await import("./workkeel-review-recovery.mjs");
+  return (await readReviewRecoveryChain(target, item)).head;
+}
 
 const FIELDS = {
   claim: ["base_revision"], release: ["claim_id", "summary"],
   handoff: ["claim_id", "revision", "summary", "evidence", "unresolved"],
-  review: ["revision", "judgment", "summary", "evidence"],
+  review: ["revision", "judgment", "summary", "evidence", "review_attempt_id"],
   rework: ["summary"], close: ["revision", "summary", "rollback", "evidence"], cancel: ["summary", "evidence"]
 };
 export async function mutateNativeTask(targetInput, id, action, request) {
@@ -349,13 +374,18 @@ export async function mutateNativeTask(targetInput, id, action, request) {
     } else if (action === "review") {
       if (item.state !== "test" || item.review) throw new Error("Task is not awaiting a review");
       if (!["pass", "fail"].includes(request.judgment)) throw new Error("Review requires pass or fail");
-      const implementer = item.delivery.implementer;
-      if (request.actor.agent_id === implementer.agent_id || item.contract.verification.separation === "distinct-principal" &&
-          request.actor.principal_id === implementer.principal_id) throw new Error("Reviewer identity does not meet separation policy");
+      assertSeparation(item, request.actor);
       if (request.revision !== item.delivery.revision) throw new Error("Review must match the exact delivered candidate");
+      // After a recovery, only the current completed attempt's reviewer can author
+      // the verdict; a predecessor's late result is never accepted.
+      const attempt = await currentAttempt(target, item);
+      if (attempt ? request.review_attempt_id !== attempt.value.attempt_id : request.review_attempt_id !== undefined) throw new Error("Review must name the current review recovery attempt, if any");
+      if (attempt && (attempt.result?.value.status !== "completed" || !sameActor(attempt.value.reviewer, request.actor) ||
+          attempt.value.revision !== request.revision)) throw new Error("Review recovery attempt is not completed by this reviewer for this candidate");
       await assertDelivery(target, item, action, request); assertText(request.summary);
       item.review = { actor: request.actor, revision: request.revision, judgment: request.judgment,
-        summary: request.summary, evidence: await evidence(target, request.evidence) };
+        summary: request.summary, evidence: await evidence(target, request.evidence),
+        ...(attempt ? { attempt_id: attempt.value.attempt_id, attempt_sha256: attempt.sha256 } : {}) };
       if (request.judgment === "pass") item.state = "release_gate";
     } else if (action === "rework") {
       assertApprover(project.policy, request.actor); assertText(request.summary);
@@ -365,6 +395,8 @@ export async function mutateNativeTask(targetInput, id, action, request) {
     } else if (action === "close") {
       assertApprover(project.policy, request.actor);
       if (item.state !== "release_gate" || item.review?.judgment !== "pass" || request.revision !== item.delivery.revision) throw new Error("Close requires the independently accepted exact candidate");
+      const attempt = await currentAttempt(target, item);
+      if ((attempt?.value.attempt_id ?? null) !== (item.review.attempt_id ?? null) || attempt && attempt.sha256 !== item.review.attempt_sha256) throw new Error("Review recovery chain changed after the authored review");
       await assertDelivery(target, item, action, request); await assertPins(target, item.review.evidence);
       assertText(request.summary); assertText(request.rollback);
       item.closeout = { actor: request.actor, revision: request.revision, summary: request.summary,
