@@ -22,7 +22,19 @@ const REVISION = /^(?:[a-f0-9]{40}|[a-f0-9]{64})$/;
 export const MAX_REVIEW_RECOVERY_ATTEMPTS = 3;
 const STOPPED_BINDING = new Set(["interrupted", "stopped", "cancelled", "error"]);
 const UNKNOWN_USAGE = Object.freeze({ input_tokens: null, output_tokens: null });
+const USAGE_KEYS = ["input_tokens", "output_tokens"];
+const BINDING_USAGE_KEYS = ["input_tokens", "cached_input_tokens", "cache_write_input_tokens", "output_tokens", "reasoning_output_tokens", "total_tokens"];
+const ATTEMPT_KEYS = ["schema_version", "attempt_id", "sequence", "operation_id", "request_sha256", "task_id", "task_version",
+  "task_record_sha256", "contract_sha256", "policy_sha256", "delivery_claim_id", "revision", "delivery_evidence", "implementer",
+  "approved_by", "reviewer", "approval_ref", "authorization_expires_at", "predecessor", "predecessor_runtime", "previous_attempt_sha256",
+  "dispatch_execution_id", "policy_ref", "selected", "source", "preflight", "created_at", "authority", "implementation_authority", "acceptance"];
+const RESULT_KEYS = ["schema_version", "attempt_id", "attempt_sha256", "status", "error", "usage", "runtime_model", "reasoning", "output",
+  "duration_ms", "duration_basis", "recorded_at", "acceptance"];
+const LAUNCHED_BASIS = "monotonic launch interval measured by the recovery API";
+const LAUNCH_ERRORS = new Set([null, "launch-unconfirmed", "invalid-host-result", "model-mismatch"]);
+const UNLAUNCHED_ERRORS = new Set(["authority-changed-before-launch", "authorization-expired-before-launch"]);
 const fail = message => { throw new Error(`Review recovery: ${message}`); };
+const check = (condition, message) => { if (!condition) fail(message); };
 const sameActor = (a, b) => a?.agent_id === b?.agent_id && a?.principal_id === b?.principal_id;
 const unexpired = expires => expires === null || Date.parse(expires) > Date.now();
 const attemptName = n => `attempt-${String(n).padStart(3, "0")}.json`;
@@ -33,6 +45,13 @@ function strict(value, required, optional = []) {
 }
 function id(value, name) { if (typeof value !== "string" || !ID.test(value)) fail(`invalid ${name}`); }
 function actor(value, name) { strict(value, ["agent_id", "principal_id"]); id(value.agent_id, name); id(value.principal_id, name); }
+function source(value, name) { strict(value, ["thread_id", "turn_id"]); id(value.thread_id, name); id(value.turn_id, name); }
+const time = value => typeof value === "string" && value.length <= 40 && Number.isFinite(Date.parse(value));
+const label = (value, max = 200) => value === null || typeof value === "string" && value.length > 0 && value.length <= max;
+function usage(value, keys) {
+  strict(value, keys);
+  check(keys.every(key => value[key] === null || Number.isSafeInteger(value[key]) && value[key] >= 0), "invalid usage measurement");
+}
 
 function validateRequest(request) {
   strict(request, ["schema_version", "operation_id", "task_id", "expected_version", "expected_chain_sha256", "revision",
@@ -63,7 +82,73 @@ async function readEnvelope(target, ref) {
   return { value: envelope.value, sha256: file.digest };
 }
 
-/** Validated chain for the current delivery; empty when none was recorded. Read-only. */
+// Envelope digests prove bytes were not altered, not that they are meaningful:
+// every persisted field is checked against the schema and the current delivery.
+async function validateAttempt(target, value, n, item, previous) {
+  strict(value, ATTEMPT_KEYS);
+  check(value.schema_version === "workkeel.review-attempt/v1" && value.sequence === n && value.task_id === item.id &&
+    value.delivery_claim_id === item.delivery.claim_id && value.revision === item.delivery.revision &&
+    value.contract_sha256 === item.contract_sha256 && value.policy_sha256 === item.policy_sha256 &&
+    value.previous_attempt_sha256 === (previous?.sha256 ?? null), "attempt does not belong to this delivery chain");
+  id(value.attempt_id, "attempt ID"); id(value.operation_id, "operation ID"); id(value.dispatch_execution_id, "dispatch execution");
+  check(SHA.test(value.request_sha256 ?? "") && SHA.test(value.task_record_sha256 ?? "") && Number.isSafeInteger(value.task_version) &&
+    value.task_version >= 1, "invalid attempt pins");
+  actor(value.implementer, "implementer"); actor(value.approved_by, "approving actor"); actor(value.reviewer, "reviewer");
+  check(sameActor(value.implementer, item.delivery.implementer) && executionDigest(value.delivery_evidence) === executionDigest(item.delivery.evidence) &&
+    value.approval_ref === item.contract.authorization.approval_ref && value.authorization_expires_at === item.contract.authorization.expires_at,
+  "attempt does not belong to this delivery chain");
+  check(!sameActor(value.reviewer, value.implementer) && !sameActor(value.reviewer, value.approved_by), "attempt reviewer is not independent");
+  check(typeof value.policy_ref === "string" && value.policy_ref.length > 0 && value.policy_ref.length <= 1024, "invalid policy reference");
+  strict(value.selected, ["provider", "model", "reasoning"]);
+  check(label(value.selected.provider) && value.selected.provider !== null && label(value.selected.model) && value.selected.model !== null &&
+    label(value.selected.reasoning), "invalid attempt model");
+  source(value.source, "attempt source");
+  strict(value.preflight, ["host_id", "probed_host", "probe_sha256", "checked_at", "product_access", "tests"]);
+  check(typeof value.preflight.host_id === "string" && label(value.preflight.host_id) && typeof value.preflight.probed_host === "string" &&
+    label(value.preflight.probed_host) && SHA.test(value.preflight.probe_sha256 ?? "") && time(value.preflight.checked_at) &&
+    value.preflight.product_access === "read" && value.preflight.tests === "role", "invalid attempt preflight");
+  check(time(value.created_at) && value.predecessor_runtime === "confirmed-stopped" && value.authority === "review-only" &&
+    value.implementation_authority === false && value.acceptance === "not-performed", "invalid attempt authority");
+  const p = value.predecessor;
+  strict(p, ["kind", "id", "sha256", "result_sha256", "status", "usage", "source", "dispatch_execution_id"]);
+  id(p.id, "predecessor ID"); source(p.source, "predecessor source");
+  check(SHA.test(p.sha256 ?? "") && p.dispatch_execution_id === value.dispatch_execution_id, "invalid predecessor");
+  if (previous) {
+    usage(p.usage, USAGE_KEYS);
+    const prior = previous.result?.value ?? null;
+    check(p.kind === "review-attempt" && p.id === previous.value.attempt_id && p.sha256 === previous.sha256 &&
+      p.result_sha256 === (previous.result?.sha256 ?? null) && p.status === (prior?.status ?? "unrecorded") && p.status !== "completed" &&
+      executionDigest(p.usage) === executionDigest(prior?.usage ?? UNKNOWN_USAGE) && executionDigest(p.source) === executionDigest(previous.value.source) &&
+      p.dispatch_execution_id === previous.value.dispatch_execution_id, "predecessor evidence changed after recovery");
+  } else {
+    usage(p.usage, BINDING_USAGE_KEYS);
+    check(p.kind === "host-binding" && p.result_sha256 === null && STOPPED_BINDING.has(p.status) &&
+      (await readTaskFile(target, `.ai-org/host-usage/${p.id}/binding.json`)).digest === p.sha256, "predecessor evidence changed after recovery");
+  }
+}
+function validateResult(value, attempt) {
+  strict(value, RESULT_KEYS);
+  check(value.schema_version === "workkeel.review-attempt-result/v1" && value.attempt_id === attempt.value.attempt_id &&
+    value.attempt_sha256 === attempt.sha256, "attempt result does not match its attempt");
+  usage(value.usage, USAGE_KEYS);
+  check(Number.isSafeInteger(value.duration_ms) && value.duration_ms >= 0, "invalid attempt duration");
+  check(label(value.runtime_model) && label(value.reasoning) && (value.output === null || typeof value.output === "string" &&
+    Buffer.byteLength(value.output) <= 65536) && time(value.recorded_at) && value.acceptance === "not-performed", "invalid attempt result");
+  if (value.status === "not-launched") {
+    check(UNLAUNCHED_ERRORS.has(value.error) && value.usage.input_tokens === 0 && value.usage.output_tokens === 0 && value.duration_ms === 0 &&
+      value.duration_basis === "not launched" && value.runtime_model === null && value.reasoning === null && value.output === null, "invalid attempt result");
+  } else {
+    check(["completed", "failed", "interrupted"].includes(value.status) && LAUNCH_ERRORS.has(value.error) && value.duration_basis === LAUNCHED_BASIS &&
+      (value.error === null || value.status !== "completed") && (!["launch-unconfirmed", "invalid-host-result"].includes(value.error) ||
+      value.status === "interrupted"), "invalid attempt result status");
+  }
+}
+
+/**
+ * Validated chain for the current delivery; empty when none was recorded.
+ * Read-only. Callers hold the project mutation lock, which serializes these
+ * reads with record publication (a durable create briefly hard-links the record).
+ */
 export async function readReviewRecoveryChain(target, item) {
   if (!item.delivery || !await existsEntry(target, `${ROOT}/${item.id}/${item.delivery.claim_id}`)) return { attempts: [], head: null, sha256: null };
   const ref = chainRef(item), dir = await safeDirectory(target, ref);
@@ -71,19 +156,12 @@ export async function readReviewRecoveryChain(target, item) {
   const attempts = [];
   for (let n = 1; names.includes(attemptName(n)); n++) {
     if (n > MAX_REVIEW_RECOVERY_ATTEMPTS) fail("chain exceeds the attempt bound");
-    const attempt = await readEnvelope(target, `${ref}/${attemptName(n)}`), value = attempt.value, previous = attempts.at(-1) ?? null;
-    if (value?.schema_version !== "workkeel.review-attempt/v1" || value.sequence !== n || value.task_id !== item.id ||
-        value.delivery_claim_id !== item.delivery.claim_id || value.revision !== item.delivery.revision ||
-        value.contract_sha256 !== item.contract_sha256 || value.previous_attempt_sha256 !== (previous?.sha256 ?? null)) fail("attempt does not belong to this delivery chain");
-    const p = value.predecessor;
-    if (previous ? p?.kind !== "review-attempt" || p.id !== previous.value.attempt_id || p.sha256 !== previous.sha256 ||
-        p.result_sha256 !== (previous.result?.sha256 ?? null) : p?.kind !== "host-binding" || !ID.test(p.id ?? "") ||
-        (await readTaskFile(target, `.ai-org/host-usage/${p.id}/binding.json`)).digest !== p.sha256) fail("predecessor evidence changed after recovery");
+    const attempt = await readEnvelope(target, `${ref}/${attemptName(n)}`), previous = attempts.at(-1) ?? null;
+    await validateAttempt(target, attempt.value, n, item, previous);
     let result = null;
     if (names.includes(resultName(n))) {
       result = await readEnvelope(target, `${ref}/${resultName(n)}`);
-      if (result.value?.schema_version !== "workkeel.review-attempt-result/v1" || result.value.attempt_id !== value.attempt_id ||
-          result.value.attempt_sha256 !== attempt.sha256) fail("attempt result does not match its attempt");
+      validateResult(result.value, attempt);
     }
     attempts.push({ ...attempt, result });
   }
@@ -95,7 +173,11 @@ export async function readReviewRecoveryChain(target, item) {
 /** Observation for composing the next explicit request. Grants nothing. */
 export async function readReviewRecovery(targetInput, taskId) {
   id(taskId, "task ID");
-  const target = await fs.realpath(targetInput), item = await readNativeTask(target, taskId), chain = await readReviewRecoveryChain(target, item);
+  const target = await fs.realpath(targetInput);
+  const { item, chain } = await withProjectMutationLock(target, async () => {
+    const item = await readNativeTask(target, taskId);
+    return { item, chain: await readReviewRecoveryChain(target, item) };
+  });
   return { schema_version: "workkeel.review-recovery/v1", authority: "observation-only", mutation_status: "no-write", execution_authorized: false,
     task_id: item.id, task_version: item.version, state: item.state, candidate_revision: item.delivery?.revision ?? null, chain_sha256: chain.sha256,
     attempts: chain.attempts.map(a => ({ attempt_id: a.value.attempt_id, sequence: a.value.sequence, sha256: a.sha256, reviewer: a.value.reviewer,
@@ -103,7 +185,8 @@ export async function readReviewRecovery(targetInput, taskId) {
       duration_ms: a.result?.value.duration_ms ?? null })), acceptance: "not-performed" };
 }
 
-async function prepare(target, request, host, { preflight }) {
+// Runs under the project lock; host probes happen afterwards, outside it.
+async function prepare(target, request) {
   const item = await assertReviewRecoveryContext(target, request.task_id, { approver: request.actor, reviewer: request.reviewer,
     revision: request.revision, expected_version: request.expected_version });
   if (sameActor(request.reviewer, request.actor)) fail("the approving actor cannot also be the reviewer");
@@ -141,10 +224,12 @@ async function prepare(target, request, host, { preflight }) {
   if (executionDigest(selected) !== executionDigest(request.model)) fail("model differs from the approved review selection; fallback is not permitted");
   if (!ticket.selected.data_classes.includes(item.contract.environment.data.classification) ||
       item.contract.environment.data.model_access !== "approved-connection") fail("model data scope is not approved");
-  const receipt = preflight ? await runRolePreflight({ host, context: { approved_tools: item.contract.environment.tools },
+  return { item, chain, predecessor, ticket, selected };
+}
+function preflightReview(host, { item, selected }) {
+  return runRolePreflight({ host, context: { approved_tools: item.contract.environment.tools },
     role: { schema_version: "workkeel.role-contract/v1", role: "review", product_access: "read", tests: "role", edit_tools: [],
-      model: { provider: selected.provider, model: selected.model, effort: selected.reasoning }, usage: { fields: ["input_tokens", "output_tokens"] } } }) : null;
-  return { item, chain, predecessor, ticket, selected, receipt };
+      model: { provider: selected.provider, model: selected.model, effort: selected.reasoning }, usage: { fields: [...USAGE_KEYS] } } });
 }
 
 function response(attempt, result, { replayed, chainSha256 }) {
@@ -194,24 +279,27 @@ async function writeResult(target, item, attempt, value) {
 /**
  * Explicit, approved retry of an interrupted independent review. Trusted host
  * code must prove the predecessor stopped and enforce read-only product access.
- * Host probes are awaited outside the project lock; everything they could have
- * outlived is rechecked under the lock, which is held through launch invocation
- * but never while the model runs.
+ * Replay and chain reads happen under the project lock; host probes are awaited
+ * outside it; everything they could have outlived is rechecked under the lock,
+ * which is held through launch invocation but never while the model runs.
  */
 export async function recoverInterruptedReview(targetInput, request, { host } = {}) {
   validateRequest(request);
   assertTrustedRoleHost(host, ["runtimeState", "launch"]);
   const target = await fs.realpath(targetInput), requestSha = executionDigest(request);
-  const prior = await replay(target, request, requestSha);
-  if (prior) return prior;
-  const probed = await prepare(target, request, host, { preflight: true }), receipt = probed.receipt;
+  const initial = await withProjectMutationLock(target, async () => {
+    const prior = await replay(target, request, requestSha);
+    return prior ? { replayed: prior } : { probed: await prepare(target, request) };
+  });
+  if (initial.replayed) return initial.replayed;
+  const probed = initial.probed, receipt = await preflightReview(host, probed);
   await confirmStopped(host, probed.item, probed.predecessor);
   const reserved = await withProjectMutationLock(target, async () => {
     const again = await replay(target, request, requestSha);
     if (again) return { replayed: again };
     // Revalidate after the awaited probes: expiry, cancellation, pin or evidence
     // drift and a concurrent retry each win over this request.
-    const { item, chain, predecessor, selected } = await prepare(target, request, host, { preflight: false });
+    const { item, chain, predecessor, selected } = await prepare(target, request);
     if (executionDigest(item) !== executionDigest(probed.item) || predecessor.id !== probed.predecessor.id ||
         predecessor.sha256 !== probed.predecessor.sha256) fail("task or predecessor changed during host probes");
     const sequence = chain.attempts.length + 1;

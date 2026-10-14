@@ -320,9 +320,9 @@ export async function assertReviewRecoveryContext(target, id, { approver, review
   await assertDelivery(target, item, "review", null);
   return item;
 }
-async function currentAttempt(target, item) {
+async function recoveryChain(target, item) {
   const { readReviewRecoveryChain } = await import("./workkeel-review-recovery.mjs");
-  return (await readReviewRecoveryChain(target, item)).head;
+  return readReviewRecoveryChain(target, item);
 }
 
 const FIELDS = {
@@ -378,14 +378,16 @@ export async function mutateNativeTask(targetInput, id, action, request) {
       if (request.revision !== item.delivery.revision) throw new Error("Review must match the exact delivered candidate");
       // After a recovery, only the current completed attempt's reviewer can author
       // the verdict; a predecessor's late result is never accepted.
-      const attempt = await currentAttempt(target, item);
+      const chain = await recoveryChain(target, item), attempt = chain.head;
       if (attempt ? request.review_attempt_id !== attempt.value.attempt_id : request.review_attempt_id !== undefined) throw new Error("Review must name the current review recovery attempt, if any");
       if (attempt && (attempt.result?.value.status !== "completed" || !sameActor(attempt.value.reviewer, request.actor) ||
           attempt.value.revision !== request.revision)) throw new Error("Review recovery attempt is not completed by this reviewer for this candidate");
       await assertDelivery(target, item, action, request); assertText(request.summary);
       item.review = { actor: request.actor, revision: request.revision, judgment: request.judgment,
         summary: request.summary, evidence: await evidence(target, request.evidence),
-        ...(attempt ? { attempt_id: attempt.value.attempt_id, attempt_sha256: attempt.sha256 } : {}) };
+        // The reviewed attempt, its completed result and the whole chain are immutable evidence.
+        ...(attempt ? { attempt_id: attempt.value.attempt_id, attempt_sha256: attempt.sha256,
+          attempt_result_sha256: attempt.result.sha256, recovery_chain_sha256: chain.sha256 } : {}) };
       if (request.judgment === "pass") item.state = "release_gate";
     } else if (action === "rework") {
       assertApprover(project.policy, request.actor); assertText(request.summary);
@@ -395,8 +397,10 @@ export async function mutateNativeTask(targetInput, id, action, request) {
     } else if (action === "close") {
       assertApprover(project.policy, request.actor);
       if (item.state !== "release_gate" || item.review?.judgment !== "pass" || request.revision !== item.delivery.revision) throw new Error("Close requires the independently accepted exact candidate");
-      const attempt = await currentAttempt(target, item);
-      if ((attempt?.value.attempt_id ?? null) !== (item.review.attempt_id ?? null) || attempt && attempt.sha256 !== item.review.attempt_sha256) throw new Error("Review recovery chain changed after the authored review");
+      const chain = await recoveryChain(target, item), attempt = chain.head, reviewed = item.review;
+      if ((attempt?.value.attempt_id ?? null) !== (reviewed.attempt_id ?? null) || attempt && (attempt.sha256 !== reviewed.attempt_sha256 ||
+          attempt.result?.value.status !== "completed" || attempt.result.sha256 !== reviewed.attempt_result_sha256 ||
+          chain.sha256 !== reviewed.recovery_chain_sha256)) throw new Error("Review recovery chain changed after the authored review");
       await assertDelivery(target, item, action, request); await assertPins(target, item.review.evidence);
       assertText(request.summary); assertText(request.rollback);
       item.closeout = { actor: request.actor, revision: request.revision, summary: request.summary,

@@ -6,6 +6,7 @@ import path from 'node:path';
 import os from 'node:os';
 import {execFileSync} from 'node:child_process';
 import {sha256} from '../src/files.mjs';
+import {executionDigest} from '../src/workkeel-execution-policy.mjs';
 import {initializeTaskProject} from '../src/workkeel-project.mjs';
 import {previewTaskIntake,applyTaskIntake} from '../src/workkeel-intake.mjs';
 import {readNativeTask,mutateNativeTask} from '../src/workkeel-tasks.mjs';
@@ -73,6 +74,7 @@ async function fixture(t,{expiresAt=null,closeBinding=true}={}) {
   return {root,git,actor,reviewer,other,task,ticket,claimId,revision,report,bindingFile,request,id:brief.id};
 }
 const review=(f,overrides={})=>({operation_id:'review',expected_version:3,actor:f.reviewer,revision:f.revision,judgment:'pass',summary:'Independent synthetic review',evidence:['docs/check.md'],...overrides});
+const close=f=>({operation_id:'close',expected_version:4,actor:f.actor,revision:f.revision,summary:'Accepted',rollback:'Revert the synthetic commit',evidence:['docs/check.md']});
 
 test('an interrupted review resumes on the same task and exact candidate, then ordinary review and close accept it',async t=>{
   const f=await fixture(t),bindingBytes=await fs.readFile(f.bindingFile),{host,calls}=reviewHost();
@@ -242,6 +244,70 @@ test('the attempt chain is bounded and rejects unexpected or altered records',as
   await assert.rejects(mutateNativeTask(f.root,f.id,'review',review(f,{review_attempt_id:head.attempt_id})),/attempt bound/);
   await fs.rm(dir+'/attempt-004.json');await fs.writeFile(dir+'/notes.txt','unexpected');
   await assert.rejects(readReviewRecovery(f.root,f.id),/unexpected file/);
+});
+
+test('chain readers and identical replays wait for durable record publication',async t=>{
+  const f=await fixture(t),{host,calls}=reviewHost(),request=await f.request();
+  const target=`${f.root}/.ai-org/review-recovery/${f.id}/${f.claimId}/attempt-001.json`,realLink=fs.link,realOpen=fs.open;
+  let publish,finalize,paused=false,openedWhilePublishing=false;
+  const published=new Promise(resolve=>{publish=resolve;}),canFinalize=new Promise(resolve=>{finalize=resolve;});
+  // Pause after the record is hard-linked but before its temporary link is removed,
+  // the window in which an unsynchronized reader saw the shared inode ctime change.
+  fs.link=async(from,to)=>{const linked=await realLink(from,to);if(to===target){paused=true;publish();await canFinalize;paused=false;}return linked;};
+  fs.open=async(...args)=>{if(paused&&args[0]===target)openedWhilePublishing=true;return realOpen(...args);};
+  const restore=()=>{fs.link=realLink;fs.open=realOpen;finalize();};t.after(restore);
+  const recovery=recoverInterruptedReview(f.root,request,{host});
+  await published;
+  const reader=readReviewRecovery(f.root,f.id),replayed=recoverInterruptedReview(f.root,request,{host});
+  let settled=false;Promise.allSettled([reader,replayed]).then(()=>{settled=true;});
+  await new Promise(resolve=>setTimeout(resolve,200));
+  assert.equal(settled,false);assert.equal(openedWhilePublishing,false);
+  finalize();
+  const [view,first,second]=await Promise.all([reader,recovery,replayed]);restore();
+  assert.equal(openedWhilePublishing,false);
+  assert.equal(view.attempts.length,1);assert.equal(view.attempts[0].attempt_id,first.attempt_id);assert.ok(['unrecorded','completed'].includes(view.attempts[0].status));
+  assert.equal(second.replayed,true);assert.equal(second.attempt_id,first.attempt_id);assert.equal(calls.launch,1);
+});
+
+test('close rejects drift, rehashing or deletion of the reviewed attempt result',async t=>{
+  for(const change of ['append','rehash','delete']) {
+    const f=await fixture(t),result=await recoverInterruptedReview(f.root,await f.request(),{host:reviewHost().host});
+    await mutateNativeTask(f.root,f.id,'review',review(f,{review_attempt_id:result.attempt_id}));
+    const reviewed=(await readNativeTask(f.root,f.id)).review,view=await readReviewRecovery(f.root,f.id);
+    assert.equal(reviewed.recovery_chain_sha256,view.chain_sha256);assert.match(reviewed.attempt_result_sha256,/^[a-f0-9]{64}$/);
+    const file=`${f.root}/.ai-org/review-recovery/${f.id}/${f.claimId}/attempt-001-result.json`;
+    if(change==='append')await fs.appendFile(file,' ');
+    else if(change==='delete')await fs.unlink(file);
+    else {const envelope=JSON.parse(await fs.readFile(file,'utf8'));envelope.value.output='Rewritten notes';envelope.sha256=executionDigest(envelope.value);await fs.writeFile(file,JSON.stringify(envelope));}
+    await assert.rejects(mutateNativeTask(f.root,f.id,'close',close(f)),/chain changed after the authored review/);
+    assert.equal((await readNativeTask(f.root,f.id)).state,'release_gate');
+  }
+});
+
+test('persisted attempts and results are fully validated beyond their envelope digests',async t=>{
+  const f=await fixture(t);await recoverInterruptedReview(f.root,await f.request(),{host:reviewHost().host});
+  const dir=`${f.root}/.ai-org/review-recovery/${f.id}/${f.claimId}`;
+  const rewrite=async(name,edit)=>{const file=`${dir}/${name}`,bytes=await fs.readFile(file),envelope=JSON.parse(bytes);
+    edit(envelope.value);envelope.sha256=executionDigest(envelope.value);await fs.writeFile(file,JSON.stringify(envelope));return ()=>fs.writeFile(file,bytes);};
+  const cases=[
+    ['attempt-001-result.json',v=>{v.unknown_field='unrecognized';},/missing or unknown fields/],
+    ['attempt-001-result.json',v=>{v.usage.input_tokens=-1;},/invalid usage/],
+    ['attempt-001-result.json',v=>{v.usage={input_tokens:7};},/missing or unknown fields/],
+    ['attempt-001-result.json',v=>{v.duration_ms=-1;},/invalid attempt duration/],
+    ['attempt-001-result.json',v=>{v.status='accepted';},/invalid attempt result status/],
+    ['attempt-001-result.json',v=>{v.error='model-mismatch';},/invalid attempt result status/],
+    ['attempt-001-result.json',v=>{v.acceptance='performed';},/invalid attempt result/],
+    ['attempt-001.json',v=>{v.unknown_field='unrecognized';},/missing or unknown fields/],
+    ['attempt-001.json',v=>{v.predecessor.usage.input_tokens=-5;},/invalid usage/],
+    ['attempt-001.json',v=>{v.predecessor.status='completed';},/predecessor evidence changed/],
+    ['attempt-001.json',v=>{v.preflight.product_access='write';},/invalid attempt preflight/],
+    ['attempt-001.json',v=>{v.reviewer={...f.actor};},/not independent/],
+    ['attempt-001.json',v=>{v.implementation_authority=true;},/invalid attempt authority/],
+    ['attempt-001.json',v=>{delete v.selected.reasoning;},/missing or unknown fields/],
+    ['attempt-001.json',v=>{v.delivery_evidence=[];},/does not belong to this delivery chain/]
+  ];
+  for(const [name,edit,pattern] of cases) {const restore=await rewrite(name,edit);await assert.rejects(readReviewRecovery(f.root,f.id),pattern);await restore();}
+  assert.equal((await readReviewRecovery(f.root,f.id)).attempts[0].status,'completed');
 });
 
 test('tasks without a recovery chain keep the ordinary review and close path',async t=>{

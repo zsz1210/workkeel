@@ -35,15 +35,18 @@ closed and stopped predecessor collection or chain head, a fresh source, the
 approved review ticket's policy, model and data scope, unexpired authority and
 unchanged pins, evidence and candidate.
 
-Host probes run outside the project mutation lock. Everything they could have
-outlived is revalidated under the lock, which is held through attempt reservation
-and launch invocation but released before the model runs. Each attempt and its
-result are separate immutable records in a bounded chain of three. A result is
-recorded only while its attempt is the chain head and the task is unchanged.
+Host probes run outside the project mutation lock. Replay checks, chain reads and
+record publication run under it; everything the probes could have outlived is
+revalidated under the lock, which is held through attempt reservation and launch
+invocation but released before the model runs. Each attempt and its result are
+separate immutable records in a bounded chain of three, validated field by field
+in addition to their envelope digests. A result is recorded only while its
+attempt is the chain head and the task is unchanged.
 
 Ordinary `task review` must name the current completed attempt when a chain exists,
-and `task close` refuses a chain that changed after that review. Tasks without a
-chain keep the existing review and close behavior.
+and records the attempt, completed result and chain digests. `task close` refuses
+any difference, including a deleted result. Tasks without a chain keep the
+existing review and close behavior.
 
 ## Consequences
 

@@ -110,8 +110,9 @@ at most three attempts.
 The result reports `completed`, `failed`, `interrupted` or `not-launched`, and
 always `acceptance: "not-performed"`. After `completed`, the named reviewer
 records ordinary `task review` with `review_attempt_id`. The review is rejected
-for any other attempt, reviewer or revision, and close is rejected if the chain
-changes after it.
+for any other attempt, reviewer or revision. The review stores the attempt digest,
+the completed result digest and the chain digest; close is rejected if any of
+them differs afterwards, including a rewritten, rehashed or deleted result.
 
 ## Failure behavior
 
@@ -129,11 +130,17 @@ changes after it.
 | Same operation ID with other input, racing retries | One winner; others rejected |
 | Result after supersession or cancellation | Not recorded; attempt stays `unrecorded` |
 | Fourth attempt | Rejected; preserve evidence and obtain a new decision |
+| Attempt or result with unknown fields, invalid status or negative measurements | Chain read rejected, even with a matching envelope digest |
+| Result changed, rehashed or removed after the authored review | Close rejected |
 
 Records live under `.ai-org/review-recovery/<task>/<delivery claim>/` as
 `attempt-NNN.json` and `attempt-NNN-result.json`, created exclusively and never
 rewritten. The store is Git-ignored. Original binding and attempt bytes are
-preserved and are rechecked whenever the chain is read.
+preserved and are rechecked whenever the chain is read. Envelope digests detect
+changed bytes only; every persisted field is also validated against its schema
+and the current delivery. `readReviewRecovery`, replay checks and record creation
+all run under the project mutation lock, so a reader never observes a record
+while it is still being published.
 
 ## Trust limitations
 
