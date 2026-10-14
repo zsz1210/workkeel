@@ -5,6 +5,7 @@ import { createJsonRpcProcess } from "./codex-app-server-provider.mjs";
 import path from "node:path";
 import crypto from "node:crypto";
 import { readTaskFile } from "./task-contract.mjs";
+import { validateRoleContract, assertTrustedRoleHost, runRolePreflight } from "./workkeel-role-preflight.mjs";
 
 // A point-in-time observation, never a replacement grant or task-store update.
 function authorizationSnapshot(contract, now = new Date()) {
@@ -30,7 +31,8 @@ export function createCodexProcessHost({ command = "codex", args = ["app-server"
   return { assertCompatible, connect: ({ target, permissionProfile, ...callbacks }) => createJsonRpcProcess(command, [...args, ...codexPermissionProfileArgs(permissionProfile)], { cwd: target, env, ...callbacks }) };
 }
 
-export async function codexPermissionsForContract(target, contract) {
+export async function codexPermissionsForContract(target, contract, { productAccess = "write" } = {}) {
+  if (!["read", "write"].includes(productAccess)) throw new Error("Unknown product access");
   const environment = contract.environment;
   const root = await safeDirectory(target, ".");
   const protectedPaths = [".git", ".codex", ".agents", ".ai-org", "AGENTS.md", "CLAUDE.md", "WORKKEEL.md",
@@ -45,7 +47,8 @@ export async function codexPermissionsForContract(target, contract) {
   for (const ref of environment.write_paths) {
     const resolved = await safeDirectory(target, ref);
     if (protectedPaths.some(parent => under(resolved, parent))) throw new Error("Codex write roots cannot target protected task authority");
-    filesystem[resolved] = "write";
+    // A read-only role keeps its approved scope visible but never writable.
+    filesystem[resolved] = productAccess;
   }
   // Model tools cannot rewrite their authority, instruction entrypoints or the
   // runner's journal, even when the task permits ordinary project-root writes.
@@ -61,11 +64,21 @@ export async function codexPermissionsForContract(target, contract) {
 /** Codex owns the coding loop. This adapter only connects its documented protocol. */
 export function createCodexRuntime(host, options = {}) {
   if (!host || typeof host.connect !== "function" || typeof host.assertCompatible !== "function") throw new Error("A trusted Codex host is required");
-  exactKeys(options, [], ["coordinatorChecks"]);
+  exactKeys(options, [], ["coordinatorChecks", "role"]);
   const coordinatorChecks = options.coordinatorChecks ?? [];
   if (!Array.isArray(coordinatorChecks) || new Set(coordinatorChecks).size !== coordinatorChecks.length ||
       coordinatorChecks.some(check => !["git", "tests"].includes(check))) throw new Error("Unsupported coordinator check ownership");
   const assignedChecks = Object.freeze([...coordinatorChecks]);
+  // Opt-in role contract. Without it, existing callers keep their behavior.
+  let role = null;
+  if (options.role !== undefined) {
+    exactKeys(options.role, ["contract", "host"]);
+    validateRoleContract(options.role.contract); assertTrustedRoleHost(options.role.host);
+    const tests = options.role.contract.tests, coordinatorTests = assignedChecks.includes("tests");
+    if (tests === "role" && coordinatorTests || tests === "coordinator" && !coordinatorTests) throw new Error("Role test ownership contradicts coordinator check ownership");
+    role = Object.freeze({ contract: structuredClone(options.role.contract), host: options.role.host });
+  }
+  const productAccess = role?.contract.product_access ?? "write";
   const active = new Map();
   async function assertCompatible(context) {
     const { contract, policy } = context;
@@ -75,11 +88,18 @@ export function createCodexRuntime(host, options = {}) {
     if (policy.headroom.mode !== "off") throw new Error("Codex native tool output cannot be intercepted by this adapter; use Headroom through a host-owned tool integration");
     if (policy.limits.max_cost_usd !== null) throw new Error("Codex adapter cannot enforce a financial cap; use a qualified hard-budget host adapter");
     context.signal?.throwIfAborted();
-    await codexPermissionsForContract(context.target, contract);
+    await codexPermissionsForContract(context.target, contract, { productAccess });
     // This is trusted application code, not a boolean declared in a task file.
     // It must verify supported tools, network/data policy, runtime version and
     // effective MCP/plugins/hooks/environment controls before opening a process.
     await host.assertCompatible(context);
+  }
+  async function rolePreflight(context) {
+    const connection = context.selection.connection, declared = role.contract.model;
+    const provider = connection.kind === "codex-subscription" ? "openai" : connection.kind === "gateway" ? connection.provider : null;
+    if (provider !== declared.provider || connection.model !== declared.model || (connection.effort ?? null) !== declared.effort) throw new Error("Selected connection differs from the role model and effort");
+    return runRolePreflight({ role: role.contract, host: role.host,
+      context: { approved_tools: context.contract.environment.tools, coordinator_checks: [...assignedChecks] } });
   }
   async function cancel({ operation_id }) {
     const current = active.get(operation_id);
@@ -92,6 +112,9 @@ export function createCodexRuntime(host, options = {}) {
     await assertCompatible(context);
     if (context.signal?.aborted) throw new Error("Codex operation was cancelled before dispatch");
     if (active.has(context.operation_id)) throw new Error("Duplicate active runtime operation");
+    // Fails before a process is opened; no inference happens on a failed probe.
+    const preflight = role ? await rolePreflight(context) : null;
+    if (context.signal?.aborted) throw new Error("Codex operation was cancelled before dispatch");
     let resolveTurn, rejectTurn, firstFatal = null, settle;
     const completed = new Promise((resolve, reject) => { resolveTurn = resolve; rejectTurn = error => { firstFatal ??= error; reject(error); }; });
     // Install a rejection handler before initialization to avoid an unhandled
@@ -146,7 +169,7 @@ export function createCodexRuntime(host, options = {}) {
       if (message.method === "turn/completed" && p.turn?.id === current.turnId) { current.terminalConfirmed = true; resolveTurn(p.turn); }
     }
     const permissions = `workkeel-${crypto.randomUUID()}`;
-    const profile = await codexPermissionsForContract(context.target, context.contract);
+    const profile = await codexPermissionsForContract(context.target, context.contract, { productAccess });
     const rpc = await host.connect({ target: context.target, permissionProfile: { id: permissions, profile },
       onNotification: notification,
       onRequest(message) {
@@ -211,6 +234,7 @@ export function createCodexRuntime(host, options = {}) {
         input: [{ type: "text", text: JSON.stringify({ task: context.contract, work: context.input,
           execution_context: { started_at_utc: authorizationCheck.checked_at_utc, lifecycle_owner: "workkeel-coordinator",
             authorization_check: authorizationCheck,
+            ...(preflight ? { role: { role: preflight.role, product_access: preflight.product_access, tests: preflight.tests } } : {}),
             ...(assignedChecks.length ? { coordinator_checks: assignedChecks,
               check_rule: "Coordinator checks run after dispatch; evidence is separate. Do not run or probe them. Assignment grants no permission or acceptance." } : {}),
             result_rule: "done: work performed; attention: incomplete/blocked. Neither grants acceptance or lifecycle authority." } }) }],

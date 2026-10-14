@@ -407,6 +407,12 @@ async function bindingInventory(target,request,{bindingId,task,ticket}) {
       if(['active','paused','error'].includes(other.status)&&other.source.thread_id===request.source.thread_id)fail('host-thread-already-bound',{binding_id:entry});
       if(other.source.thread_id===request.source.thread_id&&other.source.turn_id===request.source.turn_id)fail('host-turn-already-bound',{binding_id:entry});
     }
+    // Review recovery attempts reserve fresh sources in a separate store; both
+    // stores form one workspace source inventory, checked in either direction
+    // under this host writer lock, which recovery also holds while reserving.
+    const {retainedReviewRecoverySources}=await import('./workkeel-review-recovery.mjs');
+    for(const used of await retainedReviewRecoverySources(target))
+      if(used.thread_id===request.source.thread_id||used.turn_id===request.source.turn_id)fail('host-source-used-by-review-recovery');
     if(openBindings>=LIMITS.openBindings)fail('host-open-inventory-bound');
     if(ticket){
       const overlaps=(a,b)=>a==='.'||b==='.'||a===b||a.startsWith(b+'/')||b.startsWith(a+'/');
@@ -432,6 +438,8 @@ export async function checkHostBindingReadiness(targetInput,request) {
 export async function bindHostUsage(targetInput,request) {
   const target=await fs.realpath(targetInput);
   await bindingRequest(target,request);
+  // The host writer lock serializes source reservation with review recovery.
+  // Callers such as execution capture may already hold the project lock.
   return lock(target,async()=>{
     // Recheck current task/ticket authority and inventory after acquiring the lock.
     const context=await bindingRequest(target,request),{bindingId,task,ticket,sample}=context;
@@ -455,6 +463,15 @@ export async function bindHostUsage(targetInput,request) {
     await assertTaskExecutionContext(target,request.task_id,request);
     await save(target,b);return measurement(b);
   });
+}
+
+/**
+ * Runs fn under the host writer lock that guards the workspace source
+ * inventory. Lock order is project then host; fn must not take the project lock.
+ */
+export async function withHostSourceReservation(targetInput,fn) {
+  const target=await fs.realpath(targetInput);
+  return lock(target,fn);
 }
 
 export async function collectHostUsage(targetInput,bindingId) {
@@ -563,6 +580,26 @@ export async function closeHostUsage(targetInput,request) {
   });
 }
 const safeError=error=>typeof error?.code==='string'&&/^host-[a-z-]+$/.test(error.code)?error.code:'host-source-unavailable';
+
+/** Validated read of one retained binding and its exact bytes. Never a new grant. */
+export async function inspectHostBinding(targetInput,bindingId) {
+  const target=await fs.realpath(targetInput),b=await load(target,bindingId);await checkTask(target,b);
+  const file=await readTaskFile(target,`${ROOT}/${bindingId}/binding.json`);
+  if(executionDigest(JSON.parse(file.content).value)!==executionDigest(b))fail('host-record-changed');
+  return {binding:b,file_sha256:file.digest};
+}
+/** Binding IDs for a task whose collection is still open. */
+export async function openTaskHostBindings(targetInput,taskId) {
+  const target=await fs.realpath(targetInput);if(!await existsEntry(target,ROOT))return [];
+  const out=[];for(const entry of await names(target)){const b=await load(target,entry);if(b.task_id===taskId&&!b.collection_closed)out.push(entry);}
+  return out;
+}
+/** Source IDs of every retained binding in the workspace, open or closed. */
+export async function retainedHostSources(targetInput) {
+  const target=await fs.realpath(targetInput);if(!await existsEntry(target,ROOT))return [];
+  const out=[];for(const entry of await names(target)){const b=await load(target,entry);out.push({binding_id:entry,thread_id:b.source.thread_id,turn_id:b.source.turn_id});}
+  return out;
+}
 
 /** Reads sanitized projections only for output; never opens bound host sources. */
 export async function readHostMeasurements(target) {

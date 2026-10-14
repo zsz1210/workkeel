@@ -515,6 +515,11 @@ verify product changes; the native review command still checks drift, evidence,
 dependencies, current approval and identity. Finish that review's usage report
 before the authorized coordinator records local acceptance.
 
+If that review is interrupted before a verdict, do not cancel or recreate the
+task. Close its usage collection as stopped and follow
+[interrupted review recovery](workkeel-review-recovery.md), which also describes
+the opt-in role preflight for dispatched roles.
+
 For future real product work, record the same fields and review/repair outcomes.
 Do not invent an unrelated product task or model benchmark to fill the dashboard.
 Compare only compatible recorded scopes; publishing, user waiting and unmeasured
