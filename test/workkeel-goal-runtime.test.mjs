@@ -175,6 +175,24 @@ test('stock macOS sandbox runs actual bounded Git checkpoints and readonly Node 
   assert.equal(accepted.accepted,true);assert.ok(accepted.operations.filter(o=>o.input.phase==='verification').every(o=>o.result.model_called===false));
 });
 
+test('stock host rejects missing local checkpoint identity before starting a model', {skip:process.platform!=='darwin'},async t=>{
+  const f=await fixture(t),events=[],adapter=await createCodexGoalAdapter({hostFactory:async()=>protocolHost({events})});
+  git(f.target,'config','--unset','user.email');git(f.target,'config','--unset','user.name');
+  await runNativeGoalStep(f.target,f.manifest.id,{adapter});
+  const blocked=await runNativeGoalStep(f.target,f.manifest.id,{adapter});
+  assert.equal(blocked.idle,'host-capability-unavailable');
+  const state=await readNativeGoal(f.target,f.manifest.id);
+  assert.match(state.mandatory_components[0].progress.last_error,/repository-local Git author and committer identity/);
+  assert.equal(events.length,0,'no qualification or inference starts for a checkout unable to commit');
+  assert.equal(git(f.target,'diff','--name-only'),'');
+  git(f.target,'config','user.name','Synthetic');git(f.target,'config','user.email','fixture@example.invalid');
+  await controlNativeGoal(f.target,f.manifest.id,'recover',{actor:builder,operation_id:'recover-local-identity',expected_version:state.version});
+  const resumed=await runNativeGoalStep(f.target,f.manifest.id,{adapter});
+  assert.equal(resumed.operation.result.status,'completed');
+  assert.ok(events.some(event=>event.method==='fixture/turn'));
+  await assert.rejects(fs.access(path.join(f.target,'.ai-org/goals/undefined')),{code:'ENOENT'});
+});
+
 test('actual readonly command sandbox denies check writes to approved product source', {skip:process.platform!=='darwin'},async t=>{
   const f=await fixture(t,{checks:[{id:'deny-source-write',command:'node',args:['-e',"require('node:fs').writeFileSync('src/forbidden.txt','unauthorized')"]}]}),adapter=await createCodexGoalAdapter({hostFactory:async()=>protocolHost()});let verification;
   for(let n=0;n<6;n++){const step=await runNativeGoalStep(f.target,f.manifest.id,{adapter});if(step.operation?.input.phase==='verification'){verification=step.operation.result;break;}}

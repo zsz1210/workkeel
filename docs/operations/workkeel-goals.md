@@ -127,6 +127,12 @@ model allowlist before component intake. Every goal role must remain inside its
 original data/risk allowlist; the goal cannot broaden it. Unsupported hosts block
 before inference.
 
+Configure repository-local Git author and committer identity before execution.
+The restricted checkpoint host does not inherit global Git identity; it checks
+that the checkout can identify its author and committer before model work.
+Missing identity blocks dispatch with a setup explanation, without consuming an
+implementation turn.
+
 Stock checkpoint/check execution currently requires the qualified macOS command
 sandbox and approved Node/Git tools. It stages only approved source paths, disables
 hooks/network helpers and protects private runtime state. There is no unsandboxed

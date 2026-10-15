@@ -197,6 +197,14 @@ export async function createCodexGoalAdapter({hostFactory=createLocalCodexSubscr
   async function hostFor(root){if(!hosts.has(root))hosts.set(root,await hostFactory(root));return hosts.get(root);}
   async function componentCapabilities(ctx){
     const model=ctx.input.model;
+    // Check the restricted Git environment before a model turn whose changes
+    // could not be checkpointed. Global identity is intentionally absent.
+    if(commandRunner===stockCommand&&process.platform==='darwin'&&ctx.component.purpose!=='discovery'&&['planning','implementation','repair'].includes(ctx.input.phase)){
+      for(const identity of ['GIT_AUTHOR_IDENT','GIT_COMMITTER_IDENT']){
+        const checked=await stockCommand({...ctx,goal:ctx.manifest.id,operation_id:ctx.operation_id??'capability-preflight'},{command:'git',args:[...gitConfig,'var',identity],check_id:'identity'});
+        if(checked.exit_code!==0)fail('repository-local Git author and committer identity are required before model work; configure user.name and user.email in this checkout');
+      }
+    }
     if(commandRunner===stockCommand){if(process.platform!=='darwin')fail('qualified local command sandbox unavailable before model dispatch');const control=await readNativeTask(ctx.target,ctx.controller.task_id);for(const check of ctx.component.checks){if(!['node','git','browser'].includes(check.command)||!control.contract.environment.tools.includes(check.command))fail('mandatory check tool not supported or approved');if(check.command==='browser')await browserPrerequisites(ctx,check.args);}if(ctx.component.purpose!=='discovery'&&!control.contract.environment.tools.includes('git'))fail('checkpoint Git tool not approved');}
     if(ctx.manifest.limits.max_cost_usd!==null)fail('stock subscription host cannot enforce finite financial caps');
     if(model.provider!=='openai'||model.service!=='provider-default')fail('fixed provider or service unsupported; no fallback');
