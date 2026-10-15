@@ -50,6 +50,11 @@ export async function runImprovementCycle(target,{adapter,signal}={}){
     catch(e){if(exhausted(e))return idle('standing-budget-or-cooldown',{reason:e.message});manual++;}
   }
   if(!policy.discovery?.enabled)return idle('discovery-disabled',{manual_proposals:manual});
+  const discoveries=entries.filter(e=>e.kind==='discovery');
+  const roundLimit=Math.min(policy.discovery.max_rounds,grant.max_rounds);
+  // An exhausted allowance cannot react to a future source event. Report it
+  // after pending work/proposals settle, even when the source is unchanged.
+  if(discoveries.length>=roundLimit)return idle('discovery-round-budget',{manual_proposals:manual,rounds_used:discoveries.length,rounds_limit:roundLimit});
   const template=JSON.parse((await readTaskFile(target,grant.template_ref)).content),component=source.manifest.components.find(c=>c.id===template.source_component_id);
   const refs=grant.source_refs.filter(p=>policy.discovery.read_paths.some(r=>under(p,r)));
   let bytes=0;const pins=[];for(const ref of refs){const file=await readTaskFile(component.root,ref);bytes+=Buffer.byteLength(file.content);if(bytes>policy.discovery.max_source_bytes)return idle('discovery-source-capacity');pins.push({path:ref,sha256:file.bytes_digest});}
@@ -58,8 +63,6 @@ export async function runImprovementCycle(target,{adapter,signal}={}){
     const fingerprint=executionDigest({direction,source_refs:pins});
     if(entries.some(e=>e.kind==='discovery'&&e.problem_sha256===fingerprint))continue;
     if(entries.length+state.jobs.length>=policy.max_jobs)return idle('project-job-budget');
-    const discoveries=entries.filter(e=>e.kind==='discovery');
-    if(discoveries.length>=policy.discovery.max_rounds)return idle('discovery-round-budget');
     if(discoveries.at(-1)&&Date.now()-Date.parse(discoveries.at(-1).updated_at)<policy.discovery.cooldown_ms)return idle('discovery-cooldown');
     try{const result=await admitGoalImprovement(target,{goal_id:source.id,actor:source.manifest.roles.approver,operation_id:'event-'+fingerprint.slice(0,32),expected_version:(await readGoalAdmissions(target)).version},{trigger:{direction,source_refs:refs,read_paths:policy.discovery.read_paths,max_runtime_ms:policy.discovery.max_runtime_ms,max_cost_usd:policy.discovery.max_cost_usd}});return {...result,progressed:!result.replayed,model_called:false};}
     catch(e){if(exhausted(e))return idle('standing-budget-or-cooldown',{reason:e.message});throw e;}

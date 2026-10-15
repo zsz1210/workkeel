@@ -18,7 +18,7 @@ import {inventoryRetention} from '../src/workkeel-retention.mjs';
 const actor={agent_id:'builder',principal_id:'owner'},reviewer={agent_id:'reviewer',principal_id:'owner'};
 const git=(root,...args)=>execFileSync('git',['-C',root,...args],{encoding:'utf8',stdio:['ignore','pipe','pipe']}).trim();
 const tuple={provider:'openai',model:'synthetic-only',reasoning:'high',service:'provider-default'};
-async function fixture(t,{risk='standard',maxGoals=8,empty=false}={}){
+async function fixture(t,{risk='standard',maxGoals=8,empty=false,maxRounds=2}={}){
   const root=await fs.realpath(await fs.mkdtemp(path.join(os.tmpdir(),'workkeel-improvement-')));t.after(()=>fs.rm(root,{recursive:true,force:true}));
   await fs.mkdir(root+'/src');await fs.mkdir(root+'/docs');git(root,'init','-q');git(root,'config','user.name','Synthetic');git(root,'config','user.email','fixture@example.invalid');
   await fs.writeFile(root+'/.gitignore','.ai-org/\n');await fs.writeFile(root+'/docs/approval.md','Synthetic explicit bounded source/goal/improvement approval.');await fs.writeFile(root+'/src/value.mjs','export const value="baseline";\n');
@@ -27,7 +27,7 @@ async function fixture(t,{risk='standard',maxGoals=8,empty=false}={}){
   git(root,'add','.');git(root,'commit','-qm','Synthetic baseline');
   const contract={schema_version:'workkeel.task-contract/v1',id:'WK-source',goal:'Synthetic source',actor,state:'intake',scope:{include:['src'],exclude:['Publication']},dependencies:[],acceptance:{criteria:['Verified source'],evidence:[]},verification:{risk_tier:'standard',separation:'distinct-agent',implementer:null,reviewer:null,candidate_revision:null},handoff:null,environment:{cwd:'.',read_paths:['.'],write_paths:['src'],tools:['node','git'],resources:[],network:{mode:'none',hosts:[]},external_actions:[],data:{classification:'internal',model_access:'none',policy_refs:['docs/approval.md','docs/template.json']}},authorization:{approved_by:'owner',approval_ref:'docs/approval.md',operations:['read','write','execute'],expires_at:null},execution:{runtime:{kind:'host-owned',adapter_id:null,required_features:[]},model_connection:{kind:'native'}},skills:[],legacy:null};
   await createNativeTask(root,contract,{operation_id:'intake-source',expected_version:0,actor});const sourceTask=await readNativeTask(root,contract.id);
-  const grant={enabled:true,directions:['quality'],read_paths:['.'],write_paths:['src'],template_ref:'docs/template.json',source_refs:['src/value.mjs'],max_source_bytes:65536,max_rounds:2,cooldown_ms:0,max_goals:maxGoals,max_total_operations:320,max_total_runtime_ms:400000,max_total_cost_usd:null,max_reworks:1,max_operations:40,max_attempts:2,max_runtime_ms:50000,max_cost_usd:null};
+  const grant={enabled:true,directions:['quality'],read_paths:['.'],write_paths:['src'],template_ref:'docs/template.json',source_refs:['src/value.mjs'],max_source_bytes:65536,max_rounds:maxRounds,cooldown_ms:0,max_goals:maxGoals,max_total_operations:320,max_total_runtime_ms:400000,max_total_cost_usd:null,max_reworks:1,max_operations:40,max_attempts:2,max_runtime_ms:50000,max_cost_usd:null};
   const manifest={schema_version:'workkeel.goal/v1',id:'source-goal',title:'Synthetic accepted source',approval_ref:'docs/approval.md',approved_by:actor,expires_at:null,components:[{id:'source',project_id:'project',repo_id:'repo',root,task_id:contract.id,contract_sha256:sourceTask.contract_sha256,depends_on:[],checks:[{id:'syntax',command:'node',args:['--check','src/value.mjs']}],rollback:'Governed revert to baseline',interface_refs:['src/value.mjs']}],integration:{component_id:'source',criteria:['Verified source']},roles:{implementer:actor,reviewer,approver:actor},models:Object.fromEntries(['planning','implementation','verification','repair','review'].map(p=>[p,tuple])),limits:{max_operations:40,max_reworks:1,timeout_ms:50000,max_cost_usd:null},control:{release_parent:true},admission:grant};
   await fs.writeFile(root+'/docs/goal.json',JSON.stringify(manifest)+'\n');git(root,'add','.');git(root,'commit','-qm','Approve exact synthetic standing goal');
   const controller={...structuredClone(contract),id:'WK-controller',environment:{...contract.environment,write_paths:['.'],data:{...contract.environment.data,policy_refs:[...contract.environment.data.policy_refs,'docs/goal.json']}}};
@@ -50,7 +50,7 @@ async function fixture(t,{risk='standard',maxGoals=8,empty=false}={}){
   }});
   for(let n=0;n<30&&!(await readNativeGoal(root,manifest.id)).accepted;n++)await runNativeGoalStep(root,manifest.id,{adapter});assert.equal((await readNativeGoal(root,manifest.id)).accepted,true);
   delete request.manifest_ref;
-  const policy={enabled:true,directions:['quality'],max_jobs:20,max_attempts:2,cooldown_ms:0,admission:{enabled:true,goal_id:manifest.id},discovery:{enabled:true,read_paths:['.'],write_paths:['src'],max_proposals:10,max_source_bytes:65536,max_rounds:2,cooldown_ms:0,max_runtime_ms:50000,max_cost_usd:null}};
+  const policy={enabled:true,directions:['quality'],max_jobs:20,max_attempts:2,cooldown_ms:0,admission:{enabled:true,goal_id:manifest.id},discovery:{enabled:true,read_paths:['.'],write_paths:['src'],max_proposals:10,max_source_bytes:65536,max_rounds:maxRounds,cooldown_ms:0,max_runtime_ms:50000,max_cost_usd:null}};
   await mutateAutonomy(root,'policy',{...request,goal_id:manifest.id,operation_id:'enable-standing',expected_version:0,policy});calls.length=0;return {root,manifest,request,policy,adapter,calls};
 }
 
@@ -74,6 +74,21 @@ test('off and unchanged empty discovery are idle without model turns; supported 
 
 test('high-risk suggestions remain proposals and cumulative standing goal budget prevents extra inference',async t=>{
   const f=await fixture(t,{risk:'high',maxGoals:1});let result;for(let n=0;n<30;n++){result=await runImprovementCycle(f.root,{adapter:f.adapter});if(result.idle==='unchanged-approved-sources')break;}assert.equal(result.manual_proposals,1);assert.equal((await readGoalAdmissions(f.root)).entries.length,1);const before=f.calls.length;await fs.appendFile(f.root+'/src/value.mjs','// changed\n');assert.equal((await runImprovementCycle(f.root,{adapter:f.adapter})).idle,'standing-budget-or-cooldown');assert.equal(f.calls.length,before);
+});
+
+test('exhausted discovery is explicit on unchanged sources without blocking admitted improvements',async t=>{
+  for(const empty of [true,false]){
+    const f=await fixture(t,{empty,maxRounds:1});let result;
+    for(let n=0;n<90;n++){result=await runImprovementCycle(f.root,{adapter:f.adapter});if(result.idle==='discovery-round-budget')break;}
+    assert.equal(result.idle,'discovery-round-budget');assert.equal(result.rounds_used,1);assert.equal(result.rounds_limit,1);
+    const journal=await readGoalAdmissions(f.root),execution=journal.entries.find(e=>e.kind==='execution');
+    if(!empty){assert.ok(execution);assert.equal((await readNativeGoal(f.root,execution.intent.manifest.id)).accepted,true);}
+    const before=f.calls.length,reservations=JSON.stringify(journal.entries.map(e=>e.reservation));
+    assert.equal((await runImprovementCycle(f.root,{adapter:f.adapter})).idle,'discovery-round-budget');
+    await fs.appendFile(f.root+'/src/value.mjs','// new event cannot renew an exhausted allowance\n');
+    assert.equal((await runImprovementCycle(f.root,{adapter:f.adapter})).idle,'discovery-round-budget');assert.equal(f.calls.length,before);
+    assert.equal(JSON.stringify((await readGoalAdmissions(f.root)).entries.map(e=>e.reservation)),reservations);
+  }
 });
 
 test('event driver progresses native derived goals without a human continue and stops cleanly',async t=>{

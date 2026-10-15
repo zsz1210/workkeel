@@ -195,6 +195,11 @@ deduplicated after source changes. Completed improvements can trigger another
 bounded source review. Original acceptance remains historical; changed interfaces
 are never mislabeled as currently accepted.
 
+After pending work and eligible proposals settle, an exhausted discovery round
+allowance is reported even if approved sources are unchanged. It remains exhausted
+after a new source event; the service does not renew its own grant. The workspace
+shows the limit and retained results so a new authorized round is an explicit choice.
+
 Off, unchanged sources, empty findings, exhausted budgets and cooldown make no
 inference calls. Turning improvement off stops new exploration/admission; each
 goal has controls for existing work. Neither mode publishes, deploys, installs
