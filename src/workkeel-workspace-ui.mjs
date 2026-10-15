@@ -354,10 +354,13 @@ function admittedGoalLink(entry){const matches=(snapshot.goals||[]).filter(goal=
 function autonomyView(projectId){
  const data=hookData,goal=selectedImprovementGoal(),policy=data.policy||data.limits||{},service=data.service;
  const configured=!!goal?.authority_current&&goal?.grant?.enabled===true,enabled=data.enabled===true,serviceActive=service?.state==='running-in-this-host';
- const jobs=data.jobs||[],admissions=data.admissions||[],proposals=data.proposals||[],failed=service?.errors?.length||jobs.some(job=>job.status==='recovery-required');
+ const jobs=data.jobs||[],admissions=data.admissions||[],proposals=data.proposals||[],idle=serviceActive?service?.last_step?.idle:null;
+ const admitted=admissions.map(entry=>(snapshot.goals||[]).find(item=>item.id===entry.goal_id&&item.root===entry.root));
+ const failed=service?.errors?.length||jobs.some(job=>job.status==='recovery-required')||idle==='derived-goal-needs-attention'||admitted.some(item=>item&&!item.historically_accepted&&(item.requires_recovery||['blocked','recovery-required'].includes(item.state)));
  const readOnly=!writeToken||!snapshot.capabilities?.actions.some(action=>action.startsWith('autonomy.'));
- const recorded=jobs.some(job=>job.status==='running'),awaiting=jobs.some(job=>job.status==='awaiting-acceptance');
- const state=failed?'blocked':recorded?'recorded':awaiting?'review':data.paused?'paused':!configured?'unconfigured':!enabled?'off':!policy.admission?.enabled?'admission-off':serviceActive?'waiting':'ready';
+ const recorded=jobs.some(job=>job.status==='running')||admitted.some(item=>item&&['running','recovery-required','blocked'].includes(item.state)),awaiting=jobs.some(job=>job.status==='awaiting-acceptance');
+ const limited=['discovery-round-budget','project-job-budget','standing-budget-or-cooldown'].includes(idle);
+ const state=failed?'blocked':data.paused?'paused':!configured?'unconfigured':!enabled?'off':!policy.admission?.enabled?'admission-off':recorded?'recorded':awaiting?'review':idle==='source-goal-awaiting-acceptance'?'baseline-review':limited?'limited':serviceActive?'waiting':'ready';
  const copy={
   blocked:[t('Improvement needs attention','改善工作需要處理'),t('A service or execution problem was recorded. Existing work is retained; inspect its details before resuming.','已記錄服務或執行問題，既有工作會保留。請查看問題內容後再恢復。')],
   paused:[t('New execution is paused','已暫停新的執行'),t('Existing work remains visible below. Resume when you want the service to continue.','既有工作仍保留在下方，恢復後才會接續安排執行。')],
@@ -367,6 +370,8 @@ function autonomyView(projectId){
   ready:[t('Ready to start the service','可以啟動改善服務'),t('A goal and enabled policy are connected. Starting checks the host before listening for eligible work.','已連接目標並啟用政策。啟動時會核對執行環境，再等待符合條件的工作。')],
   recorded:[t('Improvement work was dispatched','已派出改善工作'),t('Open the work below for its latest confirmed phase and result.','請開啟下方工作查看最後確認的階段與結果。')],
   review:[t('A result is waiting for acceptance','成果等待驗收'),t('Execution has finished; review and acceptance determine whether the improvement is complete.','執行已結束，仍需依審查與驗收結果確認改善完成。')],
+  'baseline-review':[t('The starting goal still needs acceptance','改善基準仍待驗收'),t('Automatic discovery will begin after this goal is accepted. Open its result to see what remains.','基準目標驗收後才會自動探索，請開啟目標查看尚未完成的部分。')],
+  limited:[t('This improvement cycle has stopped at its limit','本輪改善已依限制停止'),t('No new model work is being started. Review the recorded results and scope or cooldown before allowing another cycle.','目前不會啟動新的模型工作。請先查看成果，並確認範圍、預算或冷卻時間，再決定是否開啟下一輪。')],
   waiting:[t('Listening for the next improvement','等待新的改善契機'),t('The service waits for eligible evidence. Waiting itself does not call a model.','服務正在等待符合條件的證據，待命本身不會呼叫模型。')]
  }[state];
  const action=state==='ready'&&may('autonomy.start-service')?'<button class="primary" data-control="autonomy.start-service">'+t('Start improvement service','啟動改善服務')+'</button>':data.paused&&may('autonomy.resume')?'<button data-control="autonomy.resume">'+t('Resume new execution','恢復新的執行')+'</button>':serviceActive&&may('autonomy.pause')?'<button data-control="autonomy.pause">'+t('Pause new execution','暫停新的執行')+'</button>':'';
