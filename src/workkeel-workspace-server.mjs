@@ -45,6 +45,8 @@ export async function startWorkspaceServer(stateDir,{port=0,readSnapshot=readWor
   const readToken=randomBytes(32).toString('hex'),writeToken=control?randomBytes(32).toString('hex'):null,nonce=randomBytes(24).toString('base64');
   const page=renderWorkspacePage(nonce),observers=new Map(),pending=new Map();let origin,closed=false,lastSnapshot=null;
   const visualAssets=new Map(await Promise.all(['mjs','css'].map(async extension=>['/execution-visuals.'+extension,await fs.readFile(new URL('./workkeel-execution-visuals.'+extension,import.meta.url),'utf8')])));
+  for (const [route,file] of [['/model-rules-ui.mjs','workkeel-model-rules-ui.mjs'],['/workkeel-model-policy-resolution.mjs','workkeel-model-policy-resolution.mjs'],['/workspace-scene.mjs','workkeel-workspace-scene.mjs'],['/workkeel-execution-visuals.mjs','workkeel-execution-visuals.mjs'],['/workspace-product.css','workkeel-workspace-product.css']])
+    visualAssets.set(route,await fs.readFile(new URL('./'+file,import.meta.url),'utf8'));
   const commandDir=path.join(stateDir,'commands');
   async function executeCommand(kind,command) {
     if(!command || !/^[A-Za-z0-9][A-Za-z0-9._-]{0,95}$/.test(command.idempotencyKey??'') || !Number.isSafeInteger(command.expectedVersion) || command.expectedVersion<0 || typeof command.action!=='string' || !command.payload || typeof command.payload!=='object' || Array.isArray(command.payload))throw Error('Invalid command');

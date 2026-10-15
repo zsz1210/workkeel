@@ -20,6 +20,22 @@ const context = p => ({authority: {allowed_models: p.models.map(m => m.id), data
   host_models: p.models.map(m => ({provider: m.provider, model: m.model, reasoning_efforts: [...m.reasoning_efforts], service_tiers: [...m.service_tiers]}))});
 const rule = (id, layer, match, settings) => ({id, layer, match, settings});
 
+test('a task activity exception is isolated and stays below an exact node override', () => {
+  const p=policy();p.rules=[rule('build','activity','implementation',{model:fixed('one')}),
+    rule('task','task','WK-one',{reasoning:fixed('high')}),
+    {...rule('exception','activity','implementation',{model:fixed('two')}),task:'WK-one'},
+    rule('node','node','exact',{model:fixed('one')})];
+  const select=selectors=>selectModelPolicy(p,{...context(p),...selectors}).selected;
+  assert.equal(select({activity:'implementation',task:'WK-one'}).id,'two');
+  assert.equal(select({activity:'verification',task:'WK-one'}).id,'one');
+  assert.equal(select({activity:'implementation',task:'WK-two'}).id,'one');
+  assert.equal(select({activity:'implementation',task:'WK-one',node:'exact'}).id,'one');
+  p.rules.push({...p.rules[2],id:'conflict',settings:{model:fixed('one')}});
+  assert.throws(()=>select({activity:'implementation',task:'WK-one'}),/Conflicting/);
+  p.rules.pop();p.rules[2].layer='role';assert.throws(()=>validateModelPolicy(p),/Only activity/);
+  p.rules[2].layer='activity';p.rules[2].task='';assert.throws(()=>validateModelPolicy(p),/task scope/);
+});
+
 test('dimensions inherit independently through project/activity/task/node without mutating input', () => {
   const p = policy();
   p.rules.push(rule('dev', 'role', 'developer', {model: fixed('two'), reasoning: inherit()}),

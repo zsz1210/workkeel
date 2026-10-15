@@ -155,7 +155,7 @@ See [native learning](../extensions/workkeel-learning.md),
 
 ## Capacity and measurement identity
 
-Settings includes a separate Storage tab. Inventory runs only when that tab is
+Records & storage is a separate sidebar destination. Inventory runs only when it is
 opened; the overview does not recursively scan measurement storage. The default
 hook inventories `.ai-org/host-usage` with explicit file and byte bounds. It shows
 source bytes and the archive upper bound before an authorized archive command.
@@ -173,3 +173,47 @@ earlier cumulative observations. Reported cost and policy estimates remain disti
 Absent tokens, cost or elapsed time remains unknown, including when part of a
 reported operation is measured. Conversation use outside those sources is not a
 task total.
+
+## Desktop navigation and model rules
+
+The sidebar's project selector searches names and identifiers and pages results
+20 at a time. The workspace groups projects; a project groups its registered
+repositories, goals and tasks. Selecting a project keeps subsequent task, model
+rule, improvement, learning and storage views in that project. All projects returns
+to the workspace scope. Overview project updates show at most eight projects;
+the complete project and task directories provide search and pagination.
+
+Model rules starts with five activity summaries, rather than a permanently open
+configuration form. Adjust opens a focused editor; Escape and Cancel discard the
+edit without a request. Model, reasoning and service mode independently offer
+Inherit, Auto and Fixed. Values come from the host's approved catalog; provider
+effort names are not converted into an invented common scale. Compatibility checks
+also examine inherited task settings when a project default changes. Host policy
+selection remains authoritative and may reject choices the UI cannot qualify.
+
+Project defaults are the policy root. The workspace itself is a navigation scope,
+not a shared authorization or global model-policy layer. Task exception limits an
+activity rule to a task in the project's canonical task root. It does not rewrite
+that task's immutable contract or an already pinned dispatch policy. Other registered
+repository roots retain their own authority. Advanced rules keeps existing role,
+task-wide and exact-node overrides available.
+
+An activity rule may have an optional `task` identifier. Unscoped activity and role
+rules retain their existing precedence; task-wide overrides follow them, then
+task-scoped activity overrides, then exact-node overrides. A `task` qualifier on
+any other rule layer is rejected. Conflicting assignments in one layer remain
+errors, even when a later layer could overwrite them. The browser and host use
+the same pure dimension resolver; resolution alone never authorizes execution.
+
+Save draft persists a new immutable policy version. The page labels the displayed
+draft separately from the approved version. Approve this exact draft sends its
+version and SHA-256 under the host's current task authority. Running tasks retain
+their pinned policy; new adoption requires the existing approved policy bridge.
+The editor's preview shows requested, selected and reported values separately;
+it does not run a model or fill missing runtime reports from configured values.
+
+Dark is the initial appearance; light and system remain available. Task and goal
+execution views use a compact activity rail and emphasize the latest evidenced
+activity, identity, model and measurements. Rows in project and goal lists contain
+no decorative miniature flow diagrams. Evidence, executor timelines and complete
+dependency diagrams remain available within task and goal detail.

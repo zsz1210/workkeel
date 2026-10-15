@@ -5,6 +5,7 @@ import {withProjectMutationLock} from './project.mjs';
 import {assertApprover, readTaskProject, safeDirectory} from './workkeel-project.mjs';
 import {assertTaskExecutionContext} from './workkeel-tasks.mjs';
 import {readTaskContractInput, readTaskFile} from './task-contract.mjs';
+import {resolvePolicySettings} from './workkeel-model-policy-resolution.mjs';
 
 const DIMENSIONS = ['model', 'reasoning', 'service'];
 const RISKS = ['low', 'standard', 'high'];
@@ -68,7 +69,8 @@ export function validateModelPolicy(policy) {
   if (!Array.isArray(policy.rules) || policy.rules.length > 256) throw Error('Invalid model policy rules');
   const rules = new Set();
   for (const rule of policy.rules) {
-    keys(rule, ['id', 'layer', 'match', 'settings']); text(rule.id); text(rule.match); settings(rule.settings);
+    keys(rule, ['id', 'layer', 'match', 'settings'], ['task']); text(rule.id); text(rule.match); settings(rule.settings);
+    if (Object.hasOwn(rule, 'task')) { text(rule.task, 'task scope'); if (rule.layer !== 'activity') throw Error('Only activity rules may narrow to a task'); }
     if (rules.has(rule.id) || !['activity', 'role', 'task', 'node'].includes(rule.layer)) throw Error('Invalid or duplicate model policy rule');
     rules.add(rule.id);
   }
@@ -82,23 +84,7 @@ export function validateModelPolicy(policy) {
 export function resolveModelPolicy(policy, context = {}) {
   validateModelPolicy(policy); keys(context, [], ['activity', 'role', 'task', 'node']);
   for (const value of Object.values(context)) text(value);
-  const requested = {}, sources = {};
-  const layers = [[{id: 'project', settings: policy.project}],
-    policy.rules.filter(r => ['activity', 'role'].includes(r.layer) && r.match === context[r.layer]),
-    policy.rules.filter(r => r.layer === 'task' && r.match === context.task),
-    policy.rules.filter(r => r.layer === 'node' && r.match === context.node)];
-  for (const layer of layers) {
-    for (const name of DIMENSIONS) {
-      const assignments = layer.filter(r => r.settings[name] && r.settings[name].mode !== 'inherit');
-      if (!assignments.length) continue;
-      const signatures = new Set(assignments.map(r => digest(r.settings[name])));
-      if (signatures.size !== 1) throw Error(`Conflicting ${name} assignments in the same model policy layer`);
-      requested[name] = structuredClone(assignments[0].settings[name]);
-      sources[name] = assignments.map(r => r.layer ? `${r.layer}:${r.id}` : r.id).sort().join(',');
-    }
-  }
-  for (const name of DIMENSIONS) if (!requested[name]) throw Error(`Inherited ${name} has no concrete ancestor setting`);
-  return {requested, sources};
+  return resolvePolicySettings(policy, context);
 }
 function freeze(value) {
   if (value && typeof value === 'object') { Object.values(value).forEach(freeze); Object.freeze(value); }

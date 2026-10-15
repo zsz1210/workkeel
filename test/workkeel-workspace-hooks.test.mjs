@@ -10,6 +10,9 @@ import {mutateNativeTask,readNativeTask} from '../src/workkeel-tasks.mjs';
 import {createWorkspaceHooks} from '../src/workkeel-workspace-hooks.mjs';
 import {prepareTaskMaterial} from '../src/workkeel-material.mjs';
 import {mutateAutonomy,readAutonomy} from '../src/workkeel-autonomy.mjs';
+import {createWorkspace,registerWorkspaceProject} from '../src/workkeel-workspace.mjs';
+import {startWorkspaceServer} from '../src/workkeel-workspace-server.mjs';
+import {readModelPolicy} from '../src/workkeel-model-policy.mjs';
 
 async function fixture(t){
   const root=await fs.realpath(await fs.mkdtemp(path.join(os.tmpdir(),'workspace-hooks-')));t.after(()=>fs.rm(root,{recursive:true,force:true}));
@@ -32,6 +35,47 @@ test('actual claimed task connects dimension editor to versioned drafts and exac
   assert.equal(preview.selected.reasoning,'high');assert.equal(preview.reported.model,null);
   const approved=await f.hooks.policy.execute({...context,action:'policy.approve',expectedVersion:1,payload:{policy_id:saved.id,policy_version:1,policy_sha256:saved.entries[0].sha256}});
   assert.equal(approved.active_version,1);assert.deepEqual((await readNativeTask(f.root,f.task.id)).contract,f.task.contract);
+});
+
+test('desktop editor persists exact task activity drafts through the native hooks and a server restart', {skip:process.env.WORKKEEL_WORKSPACE_BROWSER!=='1'},async t=>{
+  const {chromium}=await import('playwright-core'),f=await fixture(t);
+  const state=await fs.realpath(await fs.mkdtemp(path.join(os.tmpdir(),'desktop-workspace-')));t.after(()=>fs.rm(state,{recursive:true,force:true}));await createWorkspace(state,{id:'desktop',name:'Synthetic desktop test'});
+  await registerWorkspaceProject(state,{id:'native',name:'Synthetic product project',task_root:f.root,repositories:[{id:'core',path:f.root}]},{expectedVersion:1});
+  const options={control:{actor:f.actor,actions:['policy.draft','policy.preview','policy.approve']},hooks:f.hooks};
+  let server=await startWorkspaceServer(state,options);t.after(()=>server.close());
+  const browser=await chromium.launch({channel:'chrome',headless:true});t.after(()=>browser.close());
+  const page=await browser.newPage({viewport:{width:1440,height:1000},reducedMotion:'reduce'});page.setDefaultTimeout(8000);
+  const errors=[];page.on('pageerror',error=>errors.push(error.message));
+  await page.goto(server.url);await page.waitForFunction(()=>document.getElementById('connection')?.textContent.startsWith('Connected locally'));await page.goto(server.origin+'/?view=settings&project=native');
+  await page.getByRole('button',{name:'Adjust Implementation',exact:true}).click();
+  await page.locator('[name=model-mode]').selectOption('fixed');await page.locator('[name=model-value]').fill('careful');
+  await page.keyboard.press('Escape');assert.equal(await page.locator('dialog').count(),0);assert.equal((await readModelPolicy(f.root,'project-routing')).version,0);
+  assert.equal(await page.getByRole('button',{name:'Adjust Implementation',exact:true}).evaluate(el=>el===document.activeElement),true);
+  await page.getByRole('button',{name:'Task exception',exact:true}).click();await page.getByRole('searchbox',{name:'Search tasks',exact:true}).fill('WK-settings');await page.locator('[data-rule-action="task:WK-settings"]').click();
+  await page.getByRole('button',{name:'Adjust Implementation',exact:true}).click();await page.locator('[name=model-mode]').selectOption('fixed');await page.locator('[name=model-value]').fill('careful');
+  await page.locator('[name=reasoning-mode]').selectOption('auto');
+  await page.getByRole('button',{name:'Preview choices',exact:true}).click();await page.locator('#rule-selection-preview .model-observation-row').first().filter({hasText:'fixture-model'}).waitFor();
+  assert.match(await page.locator('#rule-selection-preview').innerText(),/Not reported/);
+  const evidence=process.env.WORKKEEL_WORKSPACE_EVIDENCE_DIR;
+  if(evidence){await fs.mkdir(evidence,{recursive:true});await page.screenshot({path:path.join(evidence,'native-policy-drawer-1440.png')});}
+  await page.getByRole('button',{name:'Save draft',exact:true}).click();await page.locator('.mr-version').filter({hasText:'draft v1'}).waitFor();
+  const saved=await readModelPolicy(f.root,'project-routing');assert.equal(saved.active_version,null);assert.equal(saved.entries[0].policy.rules[0].task,'WK-settings');assert.equal(saved.entries[0].policy.rules[0].match,'implementation');
+  await page.reload();await page.locator('.mr-context h2').filter({hasText:'Configure synthetic project settings'}).waitFor();
+  await page.getByRole('button',{name:'Approve this exact draft',exact:true}).click();await page.locator('.mr-version').filter({hasText:'approved v1'}).waitFor();
+  assert.equal((await readModelPolicy(f.root,'project-routing')).active_version,1);assert.deepEqual((await readNativeTask(f.root,'WK-settings')).contract,f.task.contract);
+  await server.close();server=await startWorkspaceServer(state,options);await page.goto(server.url);await page.waitForFunction(()=>document.getElementById('connection')?.textContent.startsWith('Connected locally'));await page.goto(server.origin+'/?view=settings&project=native');await page.locator('.mr-version').filter({hasText:'approved v1'}).waitFor();
+  for(const viewport of [{width:1280,height:800},{width:1440,height:1000},{width:1920,height:1080}]){await page.setViewportSize(viewport);assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);}
+  await page.setViewportSize({width:1440,height:1000});await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));if(evidence)await page.screenshot({path:path.join(evidence,'native-policy-page-1440.png')});
+  await page.getByRole('button',{name:'Project defaults',exact:true}).click();await page.locator('[name=model-mode]').selectOption('fixed');await page.locator('[name=model-value]').fill('not-approved');
+  assert.equal(await page.getByRole('button',{name:'Save draft',exact:true}).isDisabled(),true);assert.equal((await readModelPolicy(f.root,'project-routing')).version,2);
+  await page.getByRole('button',{name:'Cancel',exact:true}).click();
+  await page.getByRole('button',{name:'Adjust Verification',exact:true}).click();
+  const concurrent=structuredClone((await readModelPolicy(f.root,'project-routing')).entries[0].policy);concurrent.version=2;
+  await f.hooks.policy.execute({project:f.project,actor:f.actor,action:'policy.draft',expectedVersion:2,payload:{policy:concurrent}});
+  await page.getByRole('button',{name:'Save draft',exact:true}).click();await page.locator('#rule-editor-error').filter({hasText:'not confirmed'}).waitFor();
+  assert.equal((await readModelPolicy(f.root,'project-routing')).version,3,'stale browser draft cannot overwrite a newer revision');
+  assert.equal(await page.getByRole('button',{name:'Save draft',exact:true}).isDisabled(),true);
+  await page.getByRole('button',{name:'Cancel',exact:true}).click();assert.deepEqual(errors,[]);
 });
 test('browser intent cannot impersonate the owner or expand the pinned model allowlist',async t=>{
   const f=await fixture(t),context={project:f.project,actor:f.actor};const view=await f.hooks.policy.read(context);
