@@ -139,7 +139,7 @@ export function workspaceWorkSummary(tasks, rows=[]) {
   }
   events.sort((a,b)=>Date.parse(b.at)-Date.parse(a.at)||a.id.localeCompare(b.id));
   const accepted=current.filter(task=>task.quality?.locally_accepted===true);
-  const delivered=current.filter(task=>task.delivery).sort((a,b)=>Date.parse(b.updated_at)-Date.parse(a.updated_at));
+  const delivered=current.filter(task=>task.delivery&&task.task_state!=='cancelled').sort((a,b)=>Date.parse(b.updated_at)-Date.parse(a.updated_at));
   return {total:tasks.length,current:current.length,unavailable:tasks.length-current.length,
     active:current.filter(task=>!['done','cancelled'].includes(task.task_state)).length,
     accepted:accepted.length,awaiting_acceptance:delivered.filter(task=>!task.quality?.locally_accepted&&task.task_state!=='cancelled').length,

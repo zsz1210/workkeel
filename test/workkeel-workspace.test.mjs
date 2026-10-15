@@ -18,6 +18,23 @@ test('observatory keeps actual outcomes and lifecycle visible without telemetry,
   assert.equal(result.accepted,1);assert.equal(result.unavailable,1);assert.equal(result.recorded_operations,0);assert.equal(result.activity.length,1);assert.equal(result.outcomes[0].summary,'Search now preserves filters');assert.equal(result.outcomes[0].review,'Independently checked');
   const row={key:'op-one',task_key:task.key,task_title:task.title,project_id:'alpha',read_status:'available',last_observed_at:'2026-01-01T12:00:00Z',activity_kind:'review',state:'completed',reported:{model:null},requested:{model:'selected-only'},tokens:42,tokens_complete:false,reported_ms:null};
   const withUsage=workspaceWorkSummary([task],[row]);assert.equal(withUsage.reported_tokens,1);assert.equal(withUsage.measured_tokens,0);assert.equal(withUsage.activity[1].model,null);assert.equal(withUsage.activity[1].requested_model,'selected-only');
+  const cancelled={...task,id:'WK-cancelled',key:'alpha:WK-cancelled',task_state:'cancelled',quality:{locally_accepted:false},updated_at:'2026-01-03T00:00:00Z',timeline:[{action:'cancel',at:'2026-01-03T00:00:00Z'}]};
+  const history=workspaceWorkSummary([cancelled,task]);assert.deepEqual(history.outcomes.map(result=>result.task_id),[task.id]);assert.equal(history.activity[0].action,'cancel');
+});
+
+test('project overview prioritizes current goals and accepted results over cancelled history', {skip:process.env.WORKKEEL_WORKSPACE_BROWSER!=='1'},async t=>{
+  const {chromium}=await import('playwright-core'),{state}=await setup(t,{extended:true});let recovery=false;
+  const service=await startWorkspaceServer(state,{readSnapshot:async directory=>{
+    const snapshot=await readWorkspaceSnapshot(directory),base={project_id:'alpha',read_status:'available',mandatory_components:[],operations:[]};
+    snapshot.goals=[{...base,id:'cancelled',title:'Cancelled predecessor',state:'cancelled',created_at:'2026-01-04T00:00:00Z'},{...base,id:'accepted-old',title:'Accepted source',state:'done',accepted:true,acceptance:'accepted',created_at:'2026-01-02T00:00:00Z'},{...base,id:'accepted-new',title:'Accepted discovery',state:'done',accepted:true,acceptance:'accepted',created_at:'2026-01-03T00:00:00Z'}];
+    if(recovery)snapshot.goals.push({...base,id:'recovery',title:'Recovery first',state:'blocked',requires_recovery:true,created_at:'2026-01-01T00:00:00Z'});
+    return snapshot;
+  }});t.after(()=>service.close());
+  const browser=await chromium.launch({channel:'chrome',headless:true});t.after(()=>browser.close());const page=await browser.newPage();page.setDefaultTimeout(8000);
+  await page.goto(service.url);await page.goto(service.origin+'/?view=project&project=alpha');await page.locator('.project-goal').first().waitFor();
+  assert.deepEqual(await page.locator('.project-goal-heading h3').allTextContents(),['Accepted discovery','Accepted source']);assert.equal(await page.locator('.work-facts').getByText('open tasks',{exact:true}).isVisible(),true);
+  recovery=true;await page.reload();await page.getByRole('heading',{name:'Recovery first',exact:true}).waitFor();assert.deepEqual(await page.locator('.project-goal-heading h3').allTextContents(),['Recovery first','Accepted discovery']);
+  await page.getByRole('link',{name:/All goals/}).click();await page.getByRole('link',{name:'Cancelled predecessor',exact:true}).waitFor();
 });
 
 test('observatory browser shows real lifecycle results, learning records and autonomy readiness without empty goals', {skip:process.env.WORKKEEL_WORKSPACE_BROWSER!=='1'},async t=>{
@@ -55,13 +72,14 @@ test('observatory browser refreshes service-only changes, keeps dirty settings a
 test('native improvement goals and stop limits are visible instead of an idle service claim', {skip:process.env.WORKKEEL_WORKSPACE_BROWSER!=='1'},async t=>{
   const {chromium}=await import('playwright-core'),{state,repo}=await setup(t);let phase='running';
   const service=await startWorkspaceServer(state,{readSnapshot:async directory=>{
-    const snapshot=await readWorkspaceSnapshot(directory);if(phase!=='intake-recovery')snapshot.goals.push({id:'derived',root:repo,state:phase==='running'?'running':phase==='recovery'?'recovery-required':'done',reason:phase==='recovery'?'Exact host failure needs reconciliation':null,project_id:'alpha',title:'Synthetic admitted inspection'});return snapshot;
+    const snapshot=await readWorkspaceSnapshot(directory);if(!['intake-recovery','unavailable'].includes(phase))snapshot.goals.push({id:'derived',root:repo,state:phase==='running'?'running':phase==='recovery'?'recovery-required':'done',accepted:phase==='accepted',historically_accepted:phase==='stale-accepted',reason:phase==='recovery'?'Exact host failure needs reconciliation':null,project_id:'alpha',title:'Synthetic admitted inspection'});return snapshot;
   },hooks:{autonomy:{read:async()=>({version:0,enabled:true,policy:{enabled:true,directions:['quality'],max_jobs:3,max_attempts:1,cooldown_ms:1000,admission:{enabled:true,goal_id:'approved'}},available_goals:[{id:'approved',title:'Approved scope',authority_current:true,grant:{enabled:true,directions:['quality'],max_goals:3,max_attempts:1,read_paths:['src'],write_paths:['src']}}],service:{state:'running-in-this-host',errors:[],last_step:{idle:phase==='running'?null:phase}},jobs:[],admissions:[{goal_id:'derived',root:repo,status:phase==='intake-recovery'?'recovery-required':'created',error:phase==='intake-recovery'?'An active task holds overlapping write roots':null,kind:'discovery'}],proposals:[]})}}});t.after(()=>service.close());
   const browser=await chromium.launch({channel:'chrome',headless:true});t.after(()=>browser.close());const page=await browser.newPage();page.setDefaultTimeout(8000);
   await page.goto(service.url);await page.goto(service.origin+'/?view=autonomy&project=alpha');await page.locator('[data-autonomy-state=recorded]').waitFor();
   assert.equal(await page.getByText('Listening for the next improvement',{exact:true}).count(),0);
-  for(const [idle,state]of [['intake-recovery','blocked'],['recovery','blocked'],['discovery-round-budget','limited'],['source-goal-awaiting-acceptance','baseline-review'],['derived-goal-needs-attention','blocked'],['unchanged-approved-sources','waiting']]){
+  for(const [idle,state]of [['accepted','waiting'],['stale-accepted','waiting'],['unavailable','waiting'],['intake-recovery','blocked'],['recovery','blocked'],['discovery-round-budget','limited'],['source-goal-awaiting-acceptance','baseline-review'],['derived-goal-needs-attention','blocked'],['unchanged-approved-sources','waiting']]){
     phase=idle;await page.reload();await page.locator('[data-autonomy-state='+state+']').waitFor();
+    if(['accepted','stale-accepted','unavailable'].includes(idle))assert.equal(await page.locator('.delivery-row').getByText({accepted:'Goal accepted','stale-accepted':'Previously accepted',unavailable:'Work admitted; details unavailable'}[idle],{exact:true}).isVisible(),true);
     if(idle==='intake-recovery')assert.equal(await page.locator('[data-autonomy-attention]').getByText('An active task holds overlapping write roots',{exact:true}).isVisible(),true);
     if(idle==='recovery'){const attention=page.locator('[data-autonomy-attention]');assert.equal(await attention.getByText('Exact host failure needs reconciliation',{exact:true}).isVisible(),true);assert.equal(await attention.getByRole('link',{name:'Synthetic admitted inspection'}).getAttribute('href'),'?view=goal&project=alpha&task=derived');}
     if(idle==='derived-goal-needs-attention')assert.equal(await page.locator('[data-autonomy-attention]').getByText(/goal details are unavailable/).isVisible(),true);
