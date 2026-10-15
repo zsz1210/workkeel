@@ -122,7 +122,15 @@ async function stockCommand(ctx,{command,args,git_write=false,check_id='check'})
     const match=/^(.*)\/Cellar\/([^/]+)\/[^/]+\/(.+)$/.exec(resolved);
     if(match){const aliasRoot=match[1]+'/opt/'+match[2],alias=aliasRoot+'/'+match[3];try{if(await fs.realpath(alias)===resolved)readRoots.push(aliasRoot);}catch(e){if(e.code!=='ENOENT')throw e;}}
   }
-  for(const component of components){const task=component.id===ctx.component.id?ctx.task:await readNativeTask(component.root,component.task_id),profile=await codexPermissionsForContract(component.root,task.contract,{productAccess:'read'});for(const [ref,access]of Object.entries(profile.filesystem)){if(!path.isAbsolute(ref))continue;if(access==='read')readRoots.push(ref);else if(access==='deny')denied.push(ref);}if(command==='git')readRoots.push(path.join(component.root,'.git'));}
+  for(const component of components){
+    const task=component.id===ctx.component.id?ctx.task:await readNativeTask(component.root,component.task_id),contract=structuredClone(task.contract);
+    // Checks are read-only, including discovery tasks whose coordinator-owned
+    // output lives under task artifacts. Never request those write grants.
+    contract.environment.write_paths=[];
+    const profile=await codexPermissionsForContract(component.root,contract,{productAccess:'read'});
+    for(const [ref,access]of Object.entries(profile.filesystem)){if(!path.isAbsolute(ref))continue;if(access==='read')readRoots.push(ref);else if(access==='deny')denied.push(ref);}
+    if(command==='git')readRoots.push(path.join(component.root,'.git'));
+  }
   if(browser)readRoots.push('/Applications/Google Chrome.app',scratch,'/Library/Preferences');
   const terms=readRoots.map(root=>'(subpath '+JSON.stringify(root)+')').join(' ');
   const ancestors=new Set();for(const root of [...readRoots,scratch])for(let parent=path.dirname(root);;parent=path.dirname(parent)){ancestors.add(parent);if(parent==='/')break;}

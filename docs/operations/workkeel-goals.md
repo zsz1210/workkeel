@@ -184,6 +184,11 @@ preview in-process: its OS sandbox denies child processes, including detached
 ones. Product writes and connections to other ports are denied. Scratch belongs
 under `process.env.TMPDIR`; save screenshots in `WORKKEEL_CHECK_OUTPUT`.
 
+Node and browser checks use a read-only projection of each component contract.
+They do not inherit its write paths, including coordinator-owned discovery
+artifacts. This leaves the approved contract unchanged and keeps product and
+task metadata writes unavailable to the check process.
+
 Keep one to sixteen named PNG files, at most 1 MiB each and 8 MiB total. Supported
 screenshots are non-interlaced eight-bit RGB/RGBA, at most 16 million pixels and
 10,000 pixels in either dimension. Invalid or missing screenshots fail the check.
