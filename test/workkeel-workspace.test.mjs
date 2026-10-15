@@ -321,6 +321,35 @@ test('actual browser edits contextual model rules and separately previews and ap
   await page.keyboard.press('Tab');assert.notEqual(await page.evaluate(()=>document.activeElement.tagName),'BODY');assert.deepEqual(errors,[]);
 });
 
+test('exact activity rules remain editable when dimensions are split across project and task rules', {skip:process.env.WORKKEEL_WORKSPACE_BROWSER!=='1'},async t=>{
+  const {chromium}=await import('playwright-core'),{state}=await setup(t);
+  const auto={mode:'auto'},fixed=value=>({mode:'fixed',value});let version=0;
+  let policy={schema_version:'workkeel.model-policy/v1',id:'split-rules',version:1,project:{model:auto,reasoning:auto,service:auto},
+    models:['a','b'].map(id=>({id,provider:'synthetic',model:'synthetic-'+id,reasoning_efforts:['high'],service_tiers:['standard']})),rules:[
+      {id:'project-model',layer:'activity',match:'implementation',settings:{model:fixed('a')}},
+      {id:'project-effort',layer:'activity',match:'implementation',settings:{reasoning:fixed('high')}},
+      {id:'task-model',layer:'activity',match:'implementation',task:'WK-other',settings:{model:fixed('a')}},
+      {id:'task-effort',layer:'activity',match:'implementation',task:'WK-other',settings:{reasoning:fixed('high')}}]};
+  const original=structuredClone(policy);
+  const service=await startWorkspaceServer(state,{control:{actor:{agent_id:'synthetic-operator',principal_id:'synthetic-owner'},actions:['policy.draft']},hooks:{policy:{
+    read:async()=>({version,policy_document:policy,entries:[],active_version:null}),execute:async request=>{assert.equal(request.action,'policy.draft');assert.equal(request.expectedVersion,version);policy=request.payload.policy;version++;return {draft_saved:true};}
+  }}});t.after(()=>service.close());
+  const browser=await chromium.launch({channel:'chrome',headless:true});t.after(()=>browser.close());const page=await browser.newPage();
+  await page.goto(service.url);await page.getByRole('link',{name:'Model rules',exact:true}).click();await page.getByRole('button',{name:'Switch project',exact:true}).click();await page.locator('[data-project-select=alpha]').click();
+  await page.getByRole('button',{name:'Adjust Implementation',exact:true}).click();await page.locator('#rule-editor-error').filter({hasText:'Multiple rules'}).waitFor();await page.getByRole('button',{name:'Cancel',exact:true}).click();
+  for(const id of ['project-model','task-model']){
+    await page.getByText('Advanced rules & exact versions',{exact:true}).click();
+    assert.equal(await page.locator('.mr-advanced-row').count(),4);
+    await page.locator('[data-rule-action="rule:'+id+'"]').click();
+    assert.equal(await page.locator('#policy-match').getAttribute('readonly'),'');
+    assert.equal((await page.locator('.mr-dialog-head').innerText()).includes('WK-other'),id==='task-model');
+    await page.locator('[name=model-value]').fill('b');await page.getByRole('button',{name:'Save draft',exact:true}).click();await page.locator('#model-rule-dialog').waitFor({state:'detached'});
+  }
+  assert.equal(version,2);assert.equal(policy.rules.length,4);
+  assert.deepEqual(policy.rules[1],original.rules[1]);assert.deepEqual(policy.rules[3],original.rules[3]);
+  assert.equal(policy.rules[0].settings.model.value,'b');assert.equal(policy.rules[2].settings.model.value,'b');assert.equal(policy.rules[2].task,'WK-other');
+});
+
 test('actual browser reviews exact storage plan, archives without deletion, and registers an explicitly selected project', {skip:process.env.WORKKEEL_WORKSPACE_BROWSER!=='1'},async t=>{
   const {chromium}=await import('playwright-core');const {state,repo}=await setup(t);let reads=0,archives=0;
   const service=await startWorkspaceServer(state,{control:{actor:{agent_id:'synthetic',principal_id:'owner'},actions:['retention.archive','workspace.register']},hooks:{retention:{read:async()=>{reads++;return {version:0,stored_scope:'host-measurements-only',protected_evidence:{available:true,bytes:8192,files:4,roots:['.ai-org/goals','.ai-org/artifacts'],scope:'configured-canonical-evidence-roots',release_bytes:0},stored_bytes:4096,archive_bytes:1024,release_bytes:0,roots:['.ai-org/host-usage'],preview:{sha256:'b'.repeat(64)},actions:[{action:'retention.archive',label:'Create a verified archive',payload:{preview_sha256:'b'.repeat(64)}}]};},execute:async request=>{archives++;assert.equal(request.payload.preview_sha256,'b'.repeat(64));return {released_bytes:0};}}}});t.after(()=>service.close());
