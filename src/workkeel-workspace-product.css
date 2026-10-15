@@ -1,4 +1,8 @@
 /* Desktop product surface. Local assets only; motion is intentionally quiet. */
+.search[hidden]{display:none}.work-toolbar{margin-bottom:18px}.work-toolbar>button{margin-left:auto}.task-id{font-size:11px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;overflow-wrap:anywhere}
+.task-list{container-type:inline-size}.task-row>div{min-width:0}
+@container(max-width:600px){.task-list .task-row{grid-template-columns:minmax(0,1fr) auto;gap:10px 16px}.task-list .task-updated{grid-column:1/-1}}
+@container(max-width:420px){.task-list .task-row{grid-template-columns:minmax(0,1fr);padding:18px}.task-list .task-row>*{grid-column:1}}
 .page-heading>div{min-width:0}.page-heading>a,.page-heading>button{flex-shrink:0;white-space:nowrap}
 .mr-list{container-type:inline-size}
 #model-rule-dialog{height:auto;max-height:100%;max-width:100%}

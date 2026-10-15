@@ -6,6 +6,15 @@ not another writable copy of task acceptance. Its overview prioritizes required
 decisions, project progress and recent deliveries. Task details provide execution,
 dependencies and evidence when needed.
 
+The task list puts tasks first and shows registered delivery goals below them.
+Search matches task titles and identifiers; status filters show the matching and
+total task counts. Search, filters and pages stay in the local URL, so reload and
+browser Back restore the list. Returning from a task restores its link's keyboard
+focus. Selecting another project starts a fresh list, and an unknown project URL
+shows a recovery message instead of another project's tasks. Search is shown only
+on the list views it filters. Task rows show their identifiers and update times;
+dates from earlier years include the year.
+
 The default task and goal view starts with the current situation and next action.
 A compact five-activity diagram shows planning, implementation, verification,
 independent review and repair. A completed review execution can still have a

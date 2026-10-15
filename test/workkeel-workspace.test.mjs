@@ -41,9 +41,9 @@ test('desktop project selector stays bounded with 200 long names and restores ke
   assert.equal(await page.locator('.project-row').count(),8,'overview is bounded, full project directory remains available');
   await page.getByRole('button',{name:'Switch project',exact:true}).click();assert.equal(await page.locator('#project-results .picker-item').count(),20);
   await page.getByRole('button',{name:'Next projects',exact:true}).click();assert.match(await page.locator('#project-results .picker-item').first().innerText(),/Synthetic 20/);
-  await page.getByRole('searchbox',{name:'Search projects',exact:true}).fill('synthetic-199');assert.equal(await page.locator('#project-results .picker-item').count(),1);
+  await page.locator('.project-dialog').getByRole('searchbox',{name:'Search projects',exact:true}).fill('synthetic-199');assert.equal(await page.locator('#project-results .picker-item').count(),1);
   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
-  await page.getByRole('searchbox',{name:'Search projects',exact:true}).fill('');await page.evaluate(()=>document.documentElement.style.zoom='2');
+  await page.locator('.project-dialog').getByRole('searchbox',{name:'Search projects',exact:true}).fill('');await page.evaluate(()=>document.documentElement.style.zoom='2');
   for(const selector of ['#close-project-picker','#project-search','[data-picker-page="1"]'])assert.equal(await page.locator(selector).evaluate(el=>{const b=el.getBoundingClientRect();return b.top>=0&&b.bottom<=innerHeight&&b.left>=0&&b.right<=innerWidth;}),true,'project picker search, close and paging stay visible at 200%');
   await page.getByRole('button',{name:'Next projects',exact:true}).click();assert.match(await page.locator('#project-results .picker-item').first().innerText(),/Synthetic 20/);
   await page.keyboard.press('Escape');await page.locator('dialog').waitFor({state:'detached'});assert.equal(await page.locator('#project-switch').evaluate(el=>el===document.activeElement),true);
@@ -55,6 +55,38 @@ test('desktop project selector stays bounded with 200 long names and restores ke
 });
 
 async function captureDesktop(page,name){const directory=process.env.WORKKEEL_WORKSPACE_EVIDENCE_DIR;if(!directory)return;await fs.mkdir(directory,{recursive:true});await page.evaluate(()=>scrollTo(0,0));await page.screenshot({path:path.join(directory,name),fullPage:false});}
+
+test('desktop task discovery keeps URL context, scope and focus through navigation and refresh', {skip:process.env.WORKKEEL_WORKSPACE_BROWSER!=='1'},async t=>{
+  const {chromium}=await import('playwright-core'),{state}=await setup(t);let revision=0;
+  const service=await startWorkspaceServer(state,{readSnapshot:async directory=>{
+    const value=await readWorkspaceSnapshot(directory),base=value.tasks[0];
+    return {...value,name:'Synthetic workspace '+revision,goals:[],tasks:Array.from({length:75},(_,i)=>({...base,id:'WK-find-'+i,key:'alpha:WK-find-'+i,title:'Searchable task '+i,task_state:i<70?'build':'done',updated_at:'2020-01-02T03:04:00Z'}))};
+  }});t.after(()=>service.close());const browser=await chromium.launch({channel:'chrome',headless:true});t.after(()=>browser.close());
+  const page=await browser.newPage({viewport:{width:1440,height:900}});page.setDefaultTimeout(8000);const errors=[];page.on('pageerror',e=>errors.push(e.message));
+  await page.addInitScript(()=>{const real=setInterval;window.setInterval=(fn,ms,...args)=>real(fn,ms===15000?300:ms,...args);localStorage.setItem('workkeel-workspace-theme','dark');});
+  await page.goto(service.url);await page.getByRole('heading',{name:'Your workspace',exact:true}).waitFor();
+  await page.goto(service.origin+'/?view=work&project=alpha');await page.locator('.task-row').first().waitFor();
+  assert.equal(await page.getByRole('heading',{name:'Delivery goals',exact:true}).count(),0,'absent goals do not crowd the task list');
+  assert.match(await page.locator('.task-updated').first().innerText(),/Updated.*2020/);
+  await page.locator('#search').fill('Searchable');await page.locator('#task-filter').selectOption('active');await page.getByRole('button',{name:'Next',exact:true}).click();
+  assert.match(await page.locator('.task-row a').first().innerText(),/task 30/);assert.equal(await page.locator('.task-row a').first().evaluate(el=>el===document.activeElement),true);
+  const listURL=page.url();assert.equal(new URL(listURL).searchParams.get('page'),'1');
+  await page.locator('.task-row a').first().click();assert.equal(await page.locator('#search').isVisible(),false);
+  await page.goBack();await page.locator('#task-filter').waitFor();assert.equal(page.url(),listURL);assert.equal(await page.locator('#search').inputValue(),'Searchable');assert.equal(await page.locator('#task-filter').inputValue(),'active');assert.match(await page.locator('.task-row a').first().innerText(),/task 30/);
+  await page.waitForFunction(()=>document.querySelector('.task-row a')===document.activeElement);
+  await page.reload();await page.locator('.task-row').first().waitFor();assert.match(await page.locator('.task-row a').first().innerText(),/task 30/);
+  await page.locator('.task-row a').nth(2).focus();revision++;await page.waitForFunction(()=>document.getElementById('workspace-name').textContent.endsWith('1'));assert.equal(await page.locator('.task-row a').nth(2).evaluate(el=>el===document.activeElement),true,'background updates retain the focused task link');
+  await page.locator('#search').fill('no-match');assert.match(await page.locator('.work-toolbar').innerText(),/0 \/ 75/);await page.getByRole('button',{name:'Clear search & filters',exact:true}).click();assert.equal(await page.locator('#search').inputValue(),'');assert.equal(await page.locator('#task-filter').inputValue(),'all');assert.equal(await page.locator('#search').evaluate(el=>el===document.activeElement),true);
+  await page.locator('#search').fill('WK-find-74');assert.equal(await page.locator('.task-row').count(),1);assert.match(await page.locator('.task-id').innerText(),/WK-find-74/);
+  await captureDesktop(page,'desktop-task-search-dark.png');
+  for(const view of ['work','project','settings','overview']){await page.goto(service.origin+'/?view='+view+'&project=missing');await page.getByRole('heading',{name:'Project not found',exact:true}).waitFor();assert.equal(await page.locator('.task-row').count(),0);assert.match(await page.locator('#project-switch').innerText(),/Unknown project/);}
+  await page.getByRole('link',{name:/Browse projects/}).click();await page.locator('.project-row').waitFor();assert.equal(await page.locator('#search').inputValue(),'');
+  await page.goto(service.origin+'/?view=work&project=alpha&q=Searchable&filter=active&page=1');await page.locator('.task-row').first().waitFor();
+  await page.setViewportSize({width:1280,height:800});await page.evaluate(()=>document.documentElement.style.zoom='2');
+  assert.equal(await page.locator('.task-row>div').first().evaluate(el=>el.getBoundingClientRect().width>=200),true,'task content stays readable at 200%, not a narrow vertical strip');
+  assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);await page.locator('#clear-task-filters').scrollIntoViewIfNeeded();assert.equal(await page.locator('#clear-task-filters').evaluate(el=>{const r=el.getBoundingClientRect();return r.left>=0&&r.right<=innerWidth;}),true);await page.locator('#clear-task-filters').click();assert.equal(await page.locator('#task-filter').inputValue(),'all');
+  assert.deepEqual(errors,[]);
+});
 
 async function setup(t,{extended=false}={}) {
   const state=await fs.realpath(await fs.mkdtemp(path.join(os.tmpdir(),'workkeel-workspace-state-')));
