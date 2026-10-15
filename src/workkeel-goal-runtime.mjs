@@ -2,6 +2,9 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import {spawn} from 'node:child_process';
 import {performance} from 'node:perf_hooks';
+import net from 'node:net';
+import {createHash} from 'node:crypto';
+import {constants} from 'node:fs';
 import {executionDigest,exactKeys,validateExecutionPolicy} from './workkeel-execution-policy.mjs';
 import {createTrustedGoalAdapter} from './workkeel-goals.mjs';
 import {createLocalCodexSubscriptionHost} from './workkeel-codex-host.mjs';
@@ -18,6 +21,7 @@ const within=(p,root)=>root==='.'||p===root||p.startsWith(root+'/');
 const fail=m=>{throw Error('Codex goal host: '+m);};
 const noCost={input_tokens:0,output_tokens:0,cost_usd:0};
 let systemGit;
+const chrome='/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
 const gitConfig=['-c','core.fsmonitor=false','-c','core.hooksPath=/dev/null','-c','credential.helper=','-c','protocol.allow=never','-c','gc.auto=0','-c','maintenance.auto=false'];
 const environment=()=>({PATH:path.dirname(process.execPath)+':/usr/bin:/bin:/usr/sbin:/sbin',GIT_CONFIG_GLOBAL:'/dev/null',GIT_CONFIG_SYSTEM:'/dev/null',GIT_CONFIG_NOSYSTEM:'1',GIT_NO_LAZY_FETCH:'1',GIT_TERMINAL_PROMPT:'0',GIT_OPTIONAL_LOCKS:'0',OPENSSL_CONF:'/dev/null',LC_ALL:'C'});
 function duration(ctx){return ctx.manifest.limits.operation_timeout_ms??Math.max(1,Math.floor(ctx.manifest.limits.timeout_ms/ctx.manifest.limits.max_operations));}
@@ -35,9 +39,30 @@ async function artifactRefs(ctx){
   const root='.ai-org/artifacts/'+ctx.component.task_id;let dir;try{dir=await safeDirectory(ctx.component.root,root);}catch(e){if(e.code==='ENOENT')return [];throw e;}
   const names=(await fs.readdir(dir)).filter(n=>/^goal-[A-Za-z0-9._-]+\.json$/.test(n)).sort();if(names.length>256)fail('artifact inventory exceeded');return names.map(name=>root+'/'+name);
 }
+async function visualEvidence(ctx){
+  const pins=[];
+  for(const ref of ctx.input.verification?.evidence??[]){
+    const value=JSON.parse((await readTaskFile(ctx.component.root,ref)).content);
+    if(value.schema_version!=='workkeel.goal-checks/v1'||value.candidate_revision!==ctx.input.candidate)continue;
+    for(const log of value.logs??[])for(const pin of log.visual_evidence??[]){
+      if(!pin.path.startsWith('.ai-org/artifacts/'+ctx.component.task_id+'/goal-browser-')||path.posix.dirname(pin.path)!=='.ai-org/artifacts/'+ctx.component.task_id)fail('visual evidence outside task artifacts');
+      await safeDirectory(ctx.component.root,path.posix.dirname(pin.path));const file=path.join(ctx.component.root,pin.path),handle=await fs.open(file,constants.O_RDONLY|constants.O_NOFOLLOW|constants.O_NONBLOCK);
+      try{const stat=await handle.stat();if(!stat.isFile()||stat.size>1048576)fail('visual evidence exceeds bound');const bytes=await handle.readFile();if(createHash('sha256').update(bytes).digest('hex')!==pin.sha256)fail('visual evidence changed after verification');}finally{await handle.close();}
+      pins.push({...pin,absolute_path:file});
+    }
+  }
+  if(pins.length>256)fail('visual evidence inventory exceeded');return pins;
+}
 function effective(ctx){
   const contract=structuredClone(ctx.task.contract),phase=ctx.input.phase,read=ctx.component.purpose==='discovery'||['planning','review','verification'].includes(phase);
   contract.actor=structuredClone(ctx.input.actor);if(read)contract.environment.write_paths=[];
+  if(!contract.environment.tools.includes('codex'))fail('component did not approve Codex tools');
+  // A task's allowed tools are a ceiling. Model turns use the smaller qualified
+  // profile; coordinator checks do not acquire model-tool or network access.
+  contract.environment.tools=['codex'];
+  contract.environment.network={mode:'none',hosts:[]};
+  contract.environment.resources=[];
+  contract.environment.external_actions=[];
   contract.execution.runtime={kind:'adapter',adapter_id:'codex-app-server',required_features:['filesystem-sandbox','network-disabled','fixed-model','resume','cancel']};
   contract.execution.model_connection={kind:'codex-subscription',model:ctx.input.model.model,effort:ctx.input.model.reasoning};
   return {contract,access:read?'read':'write',selection:{connection:contract.execution.model_connection,runtime_selection:ctx.input.model},policy:{headroom:{mode:'off'},limits:{timeout_ms:duration(ctx),max_cost_usd:null}}};
@@ -51,21 +76,34 @@ async function processResult(command,args,{cwd,signal,timeout_ms,env=environment
     const chunk=(which,data)=>{bytes+=data.length;if(bytes>1024*1024){stop();return;}if(which==='out')stdout+=data;else stderr+=data;};
     child.stdout.on('data',d=>chunk('out',d));child.stderr.on('data',d=>chunk('err',d));
     child.once('error',e=>{finished=true;clearTimeout(timer);signal?.removeEventListener('abort',abort);reject(e);});
-    child.once('close',(code,term)=>{finished=true;clearTimeout(timer);signal?.removeEventListener('abort',abort);resolve({exit_code:code,signal:term,stdout,stderr,output_complete:bytes<=1024*1024});});
+    child.once('close',(code,term)=>{stop();finished=true;clearTimeout(timer);signal?.removeEventListener('abort',abort);resolve({exit_code:code,signal:term,stdout,stderr,output_complete:bytes<=1024*1024});});
   });
 }
 /** Stock local checks use the actual macOS sandbox, not a metadata promise.
  * Write access is limited to private scratch, or Git metadata for checkpointing. */
-async function stockCommand(ctx,{command,args,git_write=false}){
+async function browserPrerequisites(ctx,args){
+  const parent=await readNativeTask(ctx.target,ctx.controller.task_id);
+  for(const task of [parent,ctx.task]){const env=task.contract.environment;
+    if(!env.tools.includes('browser')||!env.tools.includes('node')||env.network.mode!=='allowlist'||!env.network.hosts.includes('127.0.0.1')||!task.contract.authorization.operations.includes('network'))fail('browser checks require explicit coordinator and component browser, node and loopback authority');
+  }
+  if(args.length!==1||!args[0].endsWith('.mjs'))fail('browser check requires one approved Node module path');
+  const file=await readTaskFile(ctx.component.root,args[0]);
+  if(!ctx.task.authority_pins.some(pin=>pin.path===args[0]&&pin.sha256===file.bytes_digest))fail('browser check script must be immutable component approval evidence');
+  if(!(await fs.stat(chrome)).isFile())fail('installed Google Chrome is required for browser checks');
+}
+async function freePort(){const server=net.createServer();await new Promise((resolve,reject)=>server.once('error',reject).listen(0,'127.0.0.1',resolve));const port=server.address().port;await new Promise(resolve=>server.close(resolve));return port;}
+async function stockCommand(ctx,{command,args,git_write=false,check_id='check'}){
   if(process.platform!=='darwin')fail('local command runner requires qualified macOS sandbox');
   const parent=await readNativeTask(ctx.target,ctx.controller.task_id);
   if(!parent.contract.environment.tools.includes(command))fail('coordinator tool was not approved');
   if(command==='git'&&!systemGit){const lookup=await processResult('/usr/bin/xcrun',['--find','git'],{cwd:ctx.component.root,signal:ctx.signal,timeout_ms:duration(ctx)});const selected=lookup.stdout.trim();if(lookup.exit_code!==0||!path.isAbsolute(selected)||!selected.endsWith('/git'))fail('qualified system Git unavailable');systemGit=await fs.realpath(selected);}
-  const binary=command==='node'?process.execPath:command==='git'?systemGit:null;
+  const browser=command==='browser';if(browser)await browserPrerequisites(ctx,args);
+  const binary=command==='node'||browser?process.execPath:command==='git'?systemGit:null;
   if(!binary)fail('explicit command is unsupported by stock local runner');
-  const scratch=await safeDirectory(ctx.target,'.ai-org/goals/'+ctx.goal+'/scratch/'+ctx.operation_id,{create:true});
+  const scratch=browser?await fs.mkdtemp('/private/tmp/workkeel-browser-'):await safeDirectory(ctx.target,'.ai-org/goals/'+ctx.goal+'/scratch/'+ctx.operation_id+'/'+check_id,{create:true});
+  try{
   const components=ctx.component.id===ctx.manifest.integration.component_id?ctx.manifest.components:[ctx.component],readRoots=['/System','/usr','/bin','/sbin','/Library/Apple',path.dirname(process.execPath),path.dirname(path.dirname(binary))],denied=[];
-  if(command==='node')for(const ref of process.report?.getReport().sharedObjects??[])if(path.isAbsolute(ref)&&!ref.startsWith('/System/')&&!ref.startsWith('/usr/')){
+  if(command==='node'||browser)for(const ref of process.report?.getReport().sharedObjects??[])if(path.isAbsolute(ref)&&!ref.startsWith('/System/')&&!ref.startsWith('/usr/')){
     const resolved=await fs.realpath(ref);readRoots.push(path.dirname(resolved));
     // dyld checks the installed Homebrew opt alias before following the Cellar
     // symlink. Grant that exact verified library-directory alias as well.
@@ -73,14 +111,26 @@ async function stockCommand(ctx,{command,args,git_write=false}){
     if(match){const aliasRoot=match[1]+'/opt/'+match[2],alias=aliasRoot+'/'+match[3];try{if(await fs.realpath(alias)===resolved)readRoots.push(aliasRoot);}catch(e){if(e.code!=='ENOENT')throw e;}}
   }
   for(const component of components){const task=component.id===ctx.component.id?ctx.task:await readNativeTask(component.root,component.task_id),profile=await codexPermissionsForContract(component.root,task.contract,{productAccess:'read'});for(const [ref,access]of Object.entries(profile.filesystem)){if(!path.isAbsolute(ref))continue;if(access==='read')readRoots.push(ref);else if(access==='deny')denied.push(ref);}if(command==='git')readRoots.push(path.join(component.root,'.git'));}
+  if(browser)readRoots.push('/Applications/Google Chrome.app',scratch,'/Library/Preferences');
   const terms=readRoots.map(root=>'(subpath '+JSON.stringify(root)+')').join(' ');
   const ancestors=new Set();for(const root of [...readRoots,scratch])for(let parent=path.dirname(root);;parent=path.dirname(parent)){ancestors.add(parent);if(parent==='/')break;}
   const metadata=[...ancestors].map(root=>'(literal '+JSON.stringify(root)+')').join(' ');
   const writes=['(subpath '+JSON.stringify(scratch)+')','(literal "/dev/null")'];
   if(git_write){const git=path.join(ctx.component.root,'.git');if(!(await fs.lstat(git)).isDirectory())fail('stock checkpoints require a regular local .git directory');writes.push('(subpath '+JSON.stringify(git)+')');}
-  const profile='(version 1)(deny default)(allow process*)(allow sysctl-read)(allow file-read-metadata '+metadata+')(allow file-read* '+terms+' (literal "/")(literal "/dev/null")(literal "/dev/urandom"))(deny file-read* '+denied.map(ref=>'(subpath '+JSON.stringify(ref)+')').join(' ')+')(allow file-write* '+writes.join(' ')+')(deny network*)';
-  const env={...environment(),TMPDIR:scratch,TMP:scratch,TEMP:scratch};
-  return processResult('/usr/bin/sandbox-exec',['-p',profile,binary,...args],{cwd:ctx.component.root,signal:ctx.signal,timeout_ms:duration(ctx),env});
+  const port=browser?await freePort():null;
+  const profile='(version 1)'+(browser?'(allow default)(deny file-read*)(deny file-write*)(deny network*)':'(deny default)')+'(allow process*)(allow sysctl-read)(allow file-read-metadata '+metadata+')(allow file-read* '+terms+' (literal "/")(literal "/dev/null")(literal "/dev/urandom"))(deny file-read* '+denied.map(ref=>'(subpath '+JSON.stringify(ref)+')').join(' ')+')(allow file-write* '+writes.join(' ')+')'+(browser?'(allow network-bind (local ip "localhost:'+port+'"))(allow network-inbound (local ip "localhost:'+port+'"))(allow network-outbound (remote ip "localhost:'+port+'"))(allow network* (local unix-socket (subpath '+JSON.stringify(scratch)+')) (remote unix-socket (subpath '+JSON.stringify(scratch)+')))':'(deny network*)');
+  const output=path.join(scratch,'evidence');if(browser)await fs.mkdir(output,{recursive:true});
+  const env={...environment(),TMPDIR:scratch,TMP:scratch,TEMP:scratch,...(browser?{HOME:scratch,CFFIXED_USER_HOME:scratch,MAC_CHROMIUM_TMPDIR:scratch,WORKKEEL_CHECK_PORT:String(port),WORKKEEL_CHECK_OUTPUT:output,WORKKEEL_CHROME:chrome}:{})};
+  const result=await processResult('/usr/bin/sandbox-exec',['-p',profile,binary,...args],{cwd:ctx.component.root,signal:ctx.signal,timeout_ms:duration(ctx),env});
+  if(browser){
+    if(await fs.realpath(output)!==output)fail('browser evidence directory changed');
+    const names=await fs.readdir(output);if(!names.length||names.length>16)return {...result,exit_code:result.exit_code||1,stderr:result.stderr+'\nBrowser check must retain 1 to 16 PNG screenshots',visual_evidence:[]};
+    const visual_evidence=[];let bytes=0;
+    for(const name of names){if(!/^[A-Za-z0-9][A-Za-z0-9._-]{0,95}\.png$/.test(name))fail('browser evidence must be named PNG screenshots');const file=path.join(output,name),handle=await fs.open(file,constants.O_RDONLY|constants.O_NOFOLLOW|constants.O_NONBLOCK);let data;try{const stat=await handle.stat();if(!stat.isFile()||stat.size>1048576||(bytes+=stat.size)>8388608)fail('bounded regular browser evidence required');data=Buffer.alloc(stat.size);let offset=0;while(offset<data.length){const r=await handle.read(data,offset,data.length-offset,null);if(!r.bytesRead)fail('incomplete browser evidence');offset+=r.bytesRead;}}finally{await handle.close();}if(!data.subarray(0,8).equals(Buffer.from([137,80,78,71,13,10,26,10])))fail('browser screenshot is not PNG');const dir=await safeDirectory(ctx.component.root,'.ai-org/artifacts/'+ctx.component.task_id,{create:true}),ref='goal-browser-'+ctx.operation_id+'-'+check_id+'-'+name;await durableAtomicCreate(path.join(dir,ref),data);visual_evidence.push({path:'.ai-org/artifacts/'+ctx.component.task_id+'/'+ref,sha256:createHash('sha256').update(data).digest('hex')});}
+    return {...result,visual_evidence};
+  }
+  return result;
+  }finally{if(browser)await fs.rm(scratch,{recursive:true,force:true});}
 }
 async function productChanges(ctx){
   const root=ctx.component.root,task=ctx.task;
@@ -127,7 +177,7 @@ export async function createCodexGoalAdapter({hostFactory=createLocalCodexSubscr
   async function hostFor(root){if(!hosts.has(root))hosts.set(root,await hostFactory(root));return hosts.get(root);}
   async function componentCapabilities(ctx){
     const model=ctx.input.model;
-    if(commandRunner===stockCommand){if(process.platform!=='darwin')fail('qualified local command sandbox unavailable before model dispatch');const control=await readNativeTask(ctx.target,ctx.controller.task_id);for(const check of ctx.component.checks)if(!['node','git'].includes(check.command)||!control.contract.environment.tools.includes(check.command))fail('mandatory check tool not supported or approved');if(ctx.component.purpose!=='discovery'&&!control.contract.environment.tools.includes('git'))fail('checkpoint Git tool not approved');}
+    if(commandRunner===stockCommand){if(process.platform!=='darwin')fail('qualified local command sandbox unavailable before model dispatch');const control=await readNativeTask(ctx.target,ctx.controller.task_id);for(const check of ctx.component.checks){if(!['node','git','browser'].includes(check.command)||!control.contract.environment.tools.includes(check.command))fail('mandatory check tool not supported or approved');if(check.command==='browser')await browserPrerequisites(ctx,check.args);}if(ctx.component.purpose!=='discovery'&&!control.contract.environment.tools.includes('git'))fail('checkpoint Git tool not approved');}
     if(ctx.manifest.limits.max_cost_usd!==null)fail('stock subscription host cannot enforce finite financial caps');
     if(model.provider!=='openai'||model.service!=='provider-default')fail('fixed provider or service unsupported; no fallback');
     if(ctx.task.contract.execution.runtime.adapter_id!=='codex-app-server'||ctx.task.contract.environment.data.model_access!=='approved-connection')fail('component did not approve the actual Codex model connection');
@@ -142,7 +192,9 @@ export async function createCodexGoalAdapter({hostFactory=createLocalCodexSubscr
         if(policy.model_policy){
           const bridge=policy.model_policy,profile=await readApprovedModelPolicy(ctx.component.root,{policy_id:bridge.policy_id,version:bridge.version,sha256:bridge.sha256},{require_active:true});
           const context=policy.model_contexts?.find(c=>c.node===ctx.input.phase),role=context?.role??bridge.context?.role;
-          const resolved=resolveModelPolicy(profile,{task:ctx.task.id,node:ctx.input.phase,activity:context?.activity??ctx.input.phase,...(role?{role}:{})}),catalog=profile.models.find(m=>m.provider===model.provider&&m.model===model.model);
+          // The desktop dispatch catalog names the Codex host; the subscription
+          // wire protocol names OpenAI. This mapping changes no model setting.
+          const resolved=resolveModelPolicy(profile,{task:ctx.task.id,node:ctx.input.phase,activity:context?.activity??ctx.input.phase,...(role?{role}:{})}),catalog=profile.models.find(m=>(m.provider==='codex'?'openai':m.provider)===model.provider&&m.model===model.model);
           if(!catalog||!catalog.data_classes.includes(ctx.task.contract.environment.data.classification)||!catalog.risk_tiers.includes(ctx.task.contract.verification.risk_tier)||catalog.quality<bridge.min_quality||!catalog.reasoning_efforts.includes(model.reasoning)||!catalog.service_tiers.includes(model.service))fail('goal role model violates original layered data/risk/quality requirements');
           if(resolved.requested.model.mode==='fixed'&&resolved.requested.model.value!==catalog.id||resolved.requested.reasoning.mode==='fixed'&&resolved.requested.reasoning.value!==model.reasoning||resolved.requested.service.mode==='fixed'&&resolved.requested.service.value!==model.service)fail('goal role cannot bypass immutable fixed component policy');
         }
@@ -156,7 +208,7 @@ export async function createCodexGoalAdapter({hostFactory=createLocalCodexSubscr
   async function capabilities(ctx){await componentCapabilities(ctx);const host=await hostFor(ctx.component.root);await host.assertCompatible({target:ctx.component.root,...effective(ctx)});}
   async function verified(ctx){
     const head=(await readNativeGit(ctx.component.root,['rev-parse','HEAD'])).trim();if(head!==ctx.input.candidate)fail('verification candidate changed');
-    const checks=[],logs=[];for(const check of ctx.component.checks){const started=performance.now(),value=await commandRunner(ctx,{command:check.command,args:check.args,git_write:false});checks.push({id:check.id,status:value.exit_code===0&&!value.signal&&value.output_complete!==false?'pass':'fail'});logs.push({id:check.id,command:check.command,args:check.args,...value,duration_ms:performance.now()-started});}
+    const checks=[],logs=[];for(const check of ctx.component.checks){const started=performance.now(),value=await commandRunner(ctx,{command:check.command,args:check.args,git_write:false,check_id:check.id});checks.push({id:check.id,status:value.exit_code===0&&!value.signal&&value.output_complete!==false?'pass':'fail'});logs.push({id:check.id,command:check.command,args:check.args,...value,duration_ms:performance.now()-started});}
     if((await readNativeGit(ctx.component.root,['rev-parse','HEAD'])).trim()!==head)fail('verification changed the committed candidate');
     const pin=await report(ctx,'verification',{schema_version:'workkeel.goal-checks/v1',operation_id:ctx.operation_id,candidate_revision:head,checks,logs,model_called:false});
     let integration_pin=null;
@@ -167,6 +219,7 @@ export async function createCodexGoalAdapter({hostFactory=createLocalCodexSubscr
     const result=slot.runtime_result,e=effective(ctx),base={status:'completed',operation_id:ctx.operation_id,actor:ctx.input.actor,thread_id:result.conversation_id,runtime_selection:result.runtime_selection,product_access:e.access,usage:result.usage,tool:'codex',model_called:true};
     if(result.status!=='completed'||result.outcome!=='done')return {...base,status:'attention',reason:'Actual Codex role reports incomplete work'};
     if(ctx.input.phase==='review'){
+      await visualEvidence(ctx);
       if(ctx.input.previous_threads.includes(result.conversation_id))fail('reviewer must use a distinct actual thread');
       const authored=JSON.parse(result.output);exactKeys(authored,['native_request']);const request=authored.native_request;
       exactKeys(request,['operation_id','expected_version','actor','revision','judgment','summary','evidence'],['review_attempt_id']);
@@ -226,11 +279,13 @@ export async function createCodexGoalAdapter({hostFactory=createLocalCodexSubscr
     }});
     runtimes.set(ctx.operation_id,runtime);
     const discoveryDirection=ctx.manifest.derived_from?JSON.parse((await readTaskFile(ctx.target,ctx.manifest.derived_from.admission_ref)).content).value.direction:ctx.manifest.admission?.directions?.[0]??'unknown';
-    const proof=reportRef(ctx,'review'),instruction=ctx.input.phase==='review'
+    const pictures=ctx.input.phase==='review'?await visualEvidence(ctx):[];
+    const visualInstruction=pictures.length?' You must open the exact PNG screenshots with view_image and assess their actual pixels against the UI acceptance criteria. Check reports alone do not establish visual quality. Include concrete visual observations in your summary; fail if the images cannot be inspected. Screenshot paths and byte digests: '+JSON.stringify(pictures)+'.':'';
+    const proof=reportRef(ctx,'review'),instruction=(ctx.input.phase==='review'
       ?'Independently review the complete exact candidate and mandatory checks. Author the entire native review request JSON {"native_request":{"operation_id":'+JSON.stringify(ctx.operation_id)+',"expected_version":'+ctx.input.task_version+',"actor":'+JSON.stringify(ctx.input.actor)+',"revision":'+JSON.stringify(ctx.input.candidate)+',"judgment":"pass or fail","summary":"your actual judgment","evidence":'+JSON.stringify([...new Set([...(ctx.input.verification?.evidence??[]),proof])])+'}}. Omit review_attempt_id because there is no review recovery attempt. You own judgment and summary. No source edits. Completion is this exact authored request, not task acceptance.'
       :ctx.component.purpose==='discovery'&&ctx.input.phase==='implementation'
         ?'Explore permitted source evidence within the approved standing goal and bounds. Return only JSON {"proposals":[{"id":"stable observed-problem slug","title":"bounded observed opportunity","direction":"the approved direction supplied below","risk_tier":"low, standard, high, critical or unknown","expected_benefit":"specific before/after outcome to test","acceptance":["testable criterion"],"evidence":[{"path":"exact local path","sha256":"exact bytes SHA256"}],"scope":{"read_paths":[],"write_paths":[]},"budget":{"max_attempts":1,"max_runtime_ms":1000,"max_cost_usd":null}}]}. Empty proposals are valid. Unknown risk remains unknown. Never invent permission or call a benefit improved before observing results. Proposals do not create or approve tasks. Read-only product access. Approved discovery direction: '+JSON.stringify(discoveryDirection)+'.'
-        :'Perform the approved '+ctx.input.phase+' for '+ctx.component.id+'. Read AGENTS.md and WORKKEEL.md and applicable Skills. Preserve allowed paths, exact task authority and existing behavior. Report work or attention honestly. The coordinator owns candidate Git/check/lifecycle operations; do not commit, run coordinator checks, or invent review/acceptance. Goal integration requires every mandatory component: '+JSON.stringify(ctx.input.required_components)+'. Prior exact accepted components: '+JSON.stringify(ctx.input.accepted_components)+'.';
+        :'Perform the approved '+ctx.input.phase+' for '+ctx.component.id+'. Read AGENTS.md and WORKKEEL.md and applicable Skills. Preserve allowed paths, exact task authority and existing behavior. Report work or attention honestly. The coordinator owns candidate Git/check/lifecycle operations; do not commit, run coordinator checks, or invent review/acceptance. Goal integration requires every mandatory component: '+JSON.stringify(ctx.input.required_components)+'. Prior exact accepted components: '+JSON.stringify(ctx.input.accepted_components)+'.')+visualInstruction;
     const context={target:ctx.component.root,operation_id:ctx.operation_id,run_id:ctx.goal,contract:e.contract,policy:e.policy,selection:e.selection,input:{instruction,previous_results:{}},signal:ctx.signal};
     const previous=ctx.input.phase==='review'||executionDigest(ctx.input.previous_model)!==executionDigest(ctx.input.model)?null:ctx.input.previous_threads.at(-1);
     try{

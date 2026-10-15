@@ -24,3 +24,8 @@ header{height:60px;background:var(--canvas);padding:0 36px}.header-actions{flex-
 @media(max-width:1000px){.project-story{grid-template-columns:1fr;gap:26px}.work-facts{gap:24px}.feed-label{flex-wrap:wrap;gap:6px}.pulse-meta a{margin-left:0}.project-pulse{padding:20px}.autonomy-status{padding:23px}.autonomy-status h2{font-size:21px}}
 .activity-volume{padding:22px 0}.activity-volume>p{margin:8px 0 20px}.activity-volume>div{display:grid;grid-template-columns:minmax(100px,180px) minmax(70px,1fr) 45px;align-items:center;gap:18px;padding:9px 0;font-size:12px}.activity-volume meter{width:100%;height:9px}.activity-volume meter::-webkit-meter-bar{background:var(--line);border:0;border-radius:3px}.activity-volume meter::-webkit-meter-optimum-value{background:var(--accent)}.activity-volume strong{font-size:12px;font-weight:500;text-align:right}
 .lesson-excerpt{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+/* Project settings use current task authority without exposing internal claim IDs. */
+.operator-context{display:grid;grid-template-columns:auto minmax(180px,420px);align-items:center;gap:8px 14px;margin:0 0 24px;padding:14px 0;border-bottom:1px solid var(--line)}
+.operator-context label{font-size:13px;color:var(--muted)}
+.operator-context select{width:100%;min-width:0}
+.operator-context p{grid-column:1/-1}

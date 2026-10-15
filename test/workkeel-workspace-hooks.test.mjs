@@ -100,6 +100,21 @@ test('autonomy UI changes have actual version and claimed-task authorization',as
   await assert.rejects(f.hooks.autonomy.execute({...context,action:'autonomy.resume',expectedVersion:0,idempotencyKey:'resume',payload:{}}),/version conflict/);
   assert.equal((await f.hooks.autonomy.read(context)).state,'paused');
 });
+
+test('operator eligibility selects exact tasks and explains absent or stale authority across controls',async t=>{
+  const f=await fixture(t),context={project:f.project,actor:f.actor};
+  for(const kind of ['policy','autonomy','retention']){
+    const ready=await f.hooks[kind].read(context);assert.equal(ready.operator.ready,true);assert.equal(ready.operator.selected_task_id,f.task.id);
+    const denied=await f.hooks[kind].read({...context,actor:{agent_id:'reviewer',principal_id:'owner'}});assert.equal(denied.operator.ready,false);assert.equal(denied.operator.reason_code,'no-task');
+    const stale=await f.hooks[kind].read({...context,task:'WK-missing'});assert.equal(stale.operator.ready,false);assert.equal(stale.operator.reason_code,'task-unavailable');
+  }
+  assert.equal((await f.hooks.learning.read(context)).operator.ready,false,'a settings task does not confer learning write authority');
+  const clone=structuredClone(f.task.contract);clone.id='WK-settings-two';clone.environment.write_paths=['.ai-org/learning'];const {createNativeTask}=await import('../src/workkeel-tasks.mjs');await createNativeTask(f.root,clone,{operation_id:'new-settings',expected_version:0,actor:f.actor});
+  const base=execFileSync('git',['-C',f.root,'rev-parse','HEAD'],{encoding:'utf8'}).trim();await mutateNativeTask(f.root,clone.id,'claim',{operation_id:'claim-two',expected_version:1,actor:f.actor,base_revision:base});
+  assert.equal((await f.hooks.policy.read(context)).operator.reason_code,'choose-task');
+  const selected=await f.hooks.policy.read({...context,task:f.task.id});assert.equal(selected.operator.ready,true);assert.equal(selected.policy_document.models[0].id,'careful');
+  await fs.appendFile(f.root+'/docs/approval.md',' changed');assert.equal((await f.hooks.autonomy.read({...context,task:clone.id})).operator.reason_code,'authority-unavailable');
+});
 test('UI can stop the original queued job after its claim ends, without borrowing another active claim',async t=>{
   const f=await fixture(t),request={task_id:f.task.id,actor:f.actor,claim_id:f.task.claim.id,contract_sha256:f.task.contract_sha256,operation_id:'enqueue-original',expected_version:0};
   await mutateAutonomy(f.root,'enqueue',{...request,job:{id:'queued-job',origin:'assigned',direction:null,reason:'Synthetic queued stop',task_id:f.task.id,request_ref:'docs/models.json',depends_on:[]}});

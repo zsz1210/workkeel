@@ -1,4 +1,4 @@
-import {readNativeTask,listTaskItems} from './workkeel-tasks.mjs';
+import {readNativeTask,listTaskItems,assertTaskExecutionContext} from './workkeel-tasks.mjs';
 import {readTaskContractInput,readTaskFile} from './task-contract.mjs';
 import {readModelPolicy,saveModelPolicyDraft,approveModelPolicy,selectModelPolicy} from './workkeel-model-policy.mjs';
 import {listNativeSkillLifecycle,mutateNativeSkillLifecycle} from './workkeel-learning-lifecycle.mjs';
@@ -10,6 +10,7 @@ import {previewRetention,applyRetentionArchive,inventoryRetention} from './workk
 import {safeDirectory} from './workkeel-project.mjs';
 
 async function authority(project,actor,taskId){
+  taskId??=project.operator_task_id;
   const items=taskId?[await readNativeTask(project.task_root,taskId)]:await Promise.all((await listTaskItems(project.task_root)).filter(t=>t.state==='build').map(t=>readNativeTask(project.task_root,t.id)));
   const available=items.filter(t=>t.state==='build'&&t.claim?.actor.agent_id===actor?.agent_id&&t.claim?.actor.principal_id===actor?.principal_id);
   if(available.length!==1)throw Error('Select one approved task assigned to this operator before changing project settings');
@@ -44,7 +45,7 @@ export function createWorkspaceHooks({host_models=[],goalAdapter}={}){
     const catalog=[...new Map(models.map(model=>[model.id,model])).values()];
     return {store,catalog,policy:store.entries.at(-1)?.policy??(catalog.length?{schema_version:'workkeel.model-policy/v1',id:'project-routing',version:1,project:defaults,rules:[],models:catalog}:null),setup_reason:catalog.length?null:'An approved task model allowlist is required'};
   }
-  return {
+  const hooks={
     goals:{
       async read({project,actor}){const entries=[],candidates=[],unavailable_roots=[];
         const roots=new Map([[project.task_root,project.repositories?.find(r=>r.path===project.task_root)?.id??null]]);for(const repo of project.repositories??[])if(!roots.has(repo.path))roots.set(repo.path,repo.id);
@@ -161,4 +162,27 @@ export function createWorkspaceHooks({host_models=[],goalAdapter}={}){
       ,close:()=>closeServices(improvementServices)
     }
   };
+  // Eligibility is a current observation, never a substitute for mutation-time
+  // authority checks. Stop/cancel keep their original recorded authority.
+  for(const [kind,hook] of Object.entries(hooks)){
+    const read=hook.read;
+    hook.read=async context=>{
+      const {project,actor}=context,tasks=[];let selected=null,reason=null,reason_code=null;
+      if(actor)for(const item of await listTaskItems(project.task_root))if(item.state==='build'){
+        const task=await readNativeTask(project.task_root,item.id);if(task.claim?.actor.agent_id===actor.agent_id&&task.claim?.actor.principal_id===actor.principal_id)tasks.push(task);
+      }
+      selected=context.task?tasks.find(task=>task.id===context.task):tasks.length===1?tasks[0]:null;
+      if(!actor){reason_code='view-only';reason='Open an operator connection to change project settings';}
+      else if(!selected){reason_code=context.task?'task-unavailable':tasks.length?'choose-task':'no-task';reason=tasks.length?'Choose an approved task for these settings':'Ask your agent to prepare an approved settings task';}
+      else try{
+        await assertTaskExecutionContext(project.task_root,selected.id,{actor,claim_id:selected.claim.id,contract_sha256:selected.contract_sha256});
+        const root={policy:'.ai-org/model-policies',retention:'.ai-org/retention',learning:'.ai-org/learning',autonomy:'.ai-org/autonomy'}[kind];
+        if(root&&(!selected.contract.authorization.operations.includes('write')||!selected.contract.environment.write_paths.some(p=>p==='.'||root===p||root.startsWith(p+'/'))))throw Error('The selected task does not authorize these project settings');
+      }catch(e){reason_code='authority-unavailable';reason=e.message;}
+      const operator={actor:actor??null,tasks:tasks.map(task=>({id:task.id,title:task.contract.goal})),selected_task_id:selected?.id??null,ready:!!selected&&!reason,reason_code,reason};
+      const value=await read({...context,project:{...project,operator_task_id:selected?.id??context.task??null}});
+      return {...value,operator};
+    };
+  }
+  return hooks;
 }

@@ -13,13 +13,14 @@ import {createNativeGoal,readNativeGoal,controlNativeGoal,runNativeGoalStep,crea
 const builder={agent_id:'builder',principal_id:'owner'},reviewer={agent_id:'reviewer',principal_id:'owner'};
 const model={provider:'openai',model:'gpt-6-luna',reasoning:'low',service:'provider-default'};
 const git=(root,...args)=>execFileSync('git',['-C',root,...args],{encoding:'utf8',stdio:['ignore','pipe','pipe']}).trim();
-async function fixture(t,{count=1,maxReworks=2,purpose='execution',release=false,checks=null,modelPolicy=null,roleModels={}}={}){
+async function fixture(t,{count=1,maxReworks=2,purpose='execution',release=false,checks=null,modelPolicy=null,roleModels={},browserScript=null}={}){
   const directory=await fs.realpath(await fs.mkdtemp(path.join(os.tmpdir(),'workkeel-whole-goal-')));t.after(()=>fs.rm(directory,{recursive:true,force:true}));
   const roots=[];
   for(let n=0;n<count;n++){
     const root=directory+'/repo-'+n;roots.push(root);await fs.mkdir(root+'/src',{recursive:true});await fs.mkdir(root+'/docs');git(root,'init','-q');git(root,'config','user.name','Synthetic');git(root,'config','user.email','fixture@example.invalid');
     await fs.writeFile(root+'/.gitignore','.ai-org/\n');await fs.writeFile(root+'/docs/approval.md','Explicit synthetic whole-goal scope, distinct review and bounded rework.');await fs.writeFile(root+'/src/value.mjs','export const value="baseline";\n');
     if(modelPolicy)await fs.writeFile(root+'/docs/models.json',JSON.stringify(modelPolicy)+'\n');
+    if(browserScript){await fs.writeFile(root+'/docs/browser.mjs',browserScript);await fs.cp(new URL('../node_modules/playwright-core',import.meta.url),root+'/node_modules/playwright-core',{recursive:true});await fs.appendFile(root+'/.gitignore','node_modules/\n');}
     await initializeTaskProject(root,{schema_version:'workkeel.task-policy/v1',principals:['owner'],agents:[builder,reviewer],approvers:['owner'],review_separation:'distinct-agent'});
     git(root,'add','.');git(root,'commit','-qm','Synthetic initial project');
   }
@@ -28,6 +29,7 @@ async function fixture(t,{count=1,maxReworks=2,purpose='execution',release=false
     const root=roots[n],id='WK-component-'+n;
     const contract={schema_version:'workkeel.task-contract/v1',id,goal:'Exact synthetic component',actor:builder,state:'intake',scope:{include:['src'],exclude:['publication']},dependencies:[],acceptance:{criteria:['Exact synthetic component verified','Whole combination accepted'],evidence:[]},verification:{risk_tier:'standard',separation:'distinct-agent',implementer:null,reviewer:null,candidate_revision:null},handoff:null,environment:{cwd:'.',read_paths:['.'],write_paths:['src'],tools:['codex'],resources:[],network:{mode:'none',hosts:[]},external_actions:[],data:{classification:'internal',model_access:'approved-connection',policy_refs:['docs/approval.md']}},authorization:{approved_by:'owner',approval_ref:'docs/approval.md',operations:['read','write','execute'],expires_at:null},execution:{runtime:{kind:'adapter',adapter_id:'codex-app-server',required_features:['filesystem-sandbox','network-disabled','fixed-model','resume','cancel']},model_connection:{kind:'codex-subscription',model:'gpt-6-luna',effort:'low'}},skills:[],legacy:null};
     if(modelPolicy){contract.execution.model_connection={kind:'policy',policy_ref:'docs/models.json'};contract.environment.data.policy_refs.push('docs/models.json');}
+    if(browserScript){contract.environment.tools.push('node','browser');contract.environment.network={mode:'allowlist',hosts:['127.0.0.1']};contract.authorization.operations.push('network');contract.environment.data.policy_refs.push('docs/browser.mjs');}
     await createNativeTask(root,contract,{operation_id:'create-component-'+n,expected_version:0,actor:builder});contracts.push(await readNativeTask(root,id));
   }
   const manifest={schema_version:'workkeel.goal/v1',id:'goal-one',title:'All agreed synthetic components',approval_ref:'docs/approval.md',approved_by:builder,expires_at:null,components:roots.map((root,n)=>({id:'component-'+n,project_id:'project-'+n,repo_id:'repo-'+n,root,task_id:contracts[n].id,contract_sha256:contracts[n].contract_sha256,depends_on:n===count-1?roots.slice(0,-1).map((_,k)=>'component-'+k):[],checks:checks??[{id:'syntax',command:'node',args:['--check','src/value.mjs']}],rollback:'Restore the recorded source baseline with a separately governed revert',interface_refs:['src/value.mjs'],purpose})),integration:{component_id:'component-'+(count-1),criteria:['Whole combination accepted']},roles:{implementer:builder,reviewer,approver:builder},models:Object.fromEntries(['planning','implementation','verification','repair','review'].map(phase=>[phase,model])),limits:{max_operations:80,max_reworks:maxReworks,timeout_ms:800000,operation_timeout_ms:10000,max_cost_usd:null},control:{release_parent:release}};
@@ -38,6 +40,7 @@ async function fixture(t,{count=1,maxReworks=2,purpose='execution',release=false
   git(target,'add','docs/goal.json');git(target,'commit','-qm','Approve synthetic mandatory whole goal');
   const control={...structuredClone(contracts[0].contract),id:'WK-controller',goal:'Coordinate the explicitly approved whole goal',environment:{...contracts[0].contract.environment,write_paths:release?['.']:['.ai-org/goals'],tools:['node','git','codex'],data:{...contracts[0].contract.environment.data,policy_refs:['docs/approval.md','docs/goal.json']}},acceptance:{criteria:['Coordinate exact goal'],evidence:[]}};
   if(modelPolicy)control.environment.data.policy_refs.push('docs/models.json');
+  if(browserScript){control.environment.tools.push('browser');control.environment.data.policy_refs.push('docs/browser.mjs');}
   await createNativeTask(target,control,{operation_id:'create-controller',expected_version:0,actor:builder});await mutateNativeTask(target,control.id,'claim',{operation_id:'claim-controller',expected_version:1,actor:builder,base_revision:git(target,'rev-parse','HEAD')});
   const task=await readNativeTask(target,control.id),request={task_id:task.id,actor:builder,claim_id:task.claim.id,contract_sha256:task.contract_sha256,operation_id:'register-whole-goal',expected_version:0,manifest_ref:'docs/goal.json'};
   await createNativeGoal(target,request);
@@ -174,6 +177,24 @@ test('actual readonly command sandbox denies check writes to approved product so
   const f=await fixture(t,{checks:[{id:'deny-source-write',command:'node',args:['-e',"require('node:fs').writeFileSync('src/forbidden.txt','unauthorized')"]}]}),adapter=await createCodexGoalAdapter({hostFactory:async()=>protocolHost()});let verification;
   for(let n=0;n<6;n++){const step=await runNativeGoalStep(f.target,f.manifest.id,{adapter});if(step.operation?.input.phase==='verification'){verification=step.operation.result;break;}}
   assert.equal(verification.model_called,false);assert.equal(verification.checks[0].status,'fail');await assert.rejects(fs.stat(f.target+'/src/forbidden.txt'),{code:'ENOENT'});assert.equal((await readNativeTask(f.target,'WK-component-0')).state,'build');
+});
+
+test('approved browser check runs real Chrome with isolated writes and one loopback port', {skip:process.platform!=='darwin'||process.env.WORKKEEL_BROWSER_CHECKS!=='1'},async t=>{
+  const browserScript=String.raw`import fs from 'node:fs/promises';import http from 'node:http';import net from 'node:net';import assert from 'node:assert/strict';import {chromium} from 'playwright-core';
+await assert.rejects(fs.writeFile('src/forbidden-browser.txt','forbidden'));
+await assert.rejects(fs.readFile('/etc/hosts'));
+const blocked=await new Promise(resolve=>{const s=net.connect({host:'127.0.0.1',port:Number(process.env.WORKKEEL_CHECK_PORT)===1?2:1});s.on('error',e=>resolve(e.code));s.on('connect',()=>{s.destroy();resolve('connected');});});assert.equal(blocked,'EPERM');
+const server=http.createServer((q,r)=>{r.setHeader('Content-Type','text/html');r.end('<html><body style="background:#171719;color:white"><h1>Ready</h1><button onclick="document.querySelector(\'h1\').textContent=\'Started\'">Start</button></body></html>');});await new Promise(resolve=>server.listen(Number(process.env.WORKKEEL_CHECK_PORT),'127.0.0.1',resolve));let browser;try{browser=await chromium.launch({executablePath:process.env.WORKKEEL_CHROME,timeout:10000});const page=await browser.newPage({viewport:{width:1000,height:700}});await page.goto('http://127.0.0.1:'+process.env.WORKKEEL_CHECK_PORT);await page.getByRole('button',{name:'Start'}).click();assert.equal(await page.locator('h1').innerText(),'Started');await page.screenshot({path:process.env.WORKKEEL_CHECK_OUTPUT+'/dark.png'});}finally{await browser?.close();server.closeAllConnections();await new Promise(resolve=>server.close(resolve));}`;
+  const f=await fixture(t,{browserScript,checks:[{id:'desktop',command:'browser',args:['docs/browser.mjs']}]}),events=[],adapter=await createCodexGoalAdapter({hostFactory:async()=>protocolHost({events})});
+  let verification;for(let n=0;n<5;n++){const step=await runNativeGoalStep(f.target,f.manifest.id,{adapter});if(step.operation?.input.phase==='verification'){verification=step.operation.result;break;}}
+  assert.ok(verification,JSON.stringify(await readNativeGoal(f.target,f.manifest.id)));
+  assert.equal(verification.status,'completed',JSON.stringify(verification));
+  const report=JSON.parse((await readTaskFile(f.target,verification.report_pin.path)).content);
+  assert.equal(verification.checks[0].status,'pass',JSON.stringify(report));assert.equal(report.model_called,false);
+  assert.equal(report.logs[0].visual_evidence.length,1);
+  const pin=report.logs[0].visual_evidence[0],bytes=await fs.readFile(path.join(f.target,pin.path));assert.equal(bytes.subarray(0,4).toString('hex'),'89504e47');
+  const turn=events.find(e=>e.method==='fixture/thread');assert.equal(turn.params.config.permissions[turn.params.permissions].network.enabled,false);
+  await assert.rejects(fs.stat(f.target+'/src/forbidden-browser.txt'),{code:'ENOENT'});
 });
 
 test('crash after exact Git checkpoint recovers persisted role result without another implementation turn',async t=>{
