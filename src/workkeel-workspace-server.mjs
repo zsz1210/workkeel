@@ -44,6 +44,7 @@ export async function startWorkspaceServer(stateDir,{port=0,readSnapshot=readWor
   if(control && (!control.actor || !Array.isArray(control.actions) || control.actions.some(a=>typeof a!=='string')))throw Error('Control requires an explicit actor and action allowlist');
   const readToken=randomBytes(32).toString('hex'),writeToken=control?randomBytes(32).toString('hex'):null,nonce=randomBytes(24).toString('base64');
   const page=renderWorkspacePage(nonce),observers=new Map(),pending=new Map();let origin,closed=false,lastSnapshot=null;
+  const visualAssets=new Map(await Promise.all(['mjs','css'].map(async extension=>['/execution-visuals.'+extension,await fs.readFile(new URL('./workkeel-execution-visuals.'+extension,import.meta.url),'utf8')])));
   const commandDir=path.join(stateDir,'commands');
   async function executeCommand(kind,command) {
     if(!command || !/^[A-Za-z0-9][A-Za-z0-9._-]{0,95}$/.test(command.idempotencyKey??'') || !Number.isSafeInteger(command.expectedVersion) || command.expectedVersion<0 || typeof command.action!=='string' || !command.payload || typeof command.payload!=='object' || Array.isArray(command.payload))throw Error('Invalid command');
@@ -90,6 +91,7 @@ export async function startWorkspaceServer(stateDir,{port=0,readSnapshot=readWor
     if(req.headers.host!==new URL(origin).host || req.headers.origin&&req.headers.origin!==origin || req.headers['sec-fetch-site']==='cross-site')return send(403,{error:'Forbidden origin'});
     let route;try{route=new URL(req.url,origin);}catch{return send(400,{error:'Invalid URL'});}
     const staticAssets=new Map([['/',[page,'text/html; charset=utf-8']],['/workspace.js',[workspaceClient,'text/javascript; charset=utf-8']],['/workspace.css',[workspaceStyle,'text/css; charset=utf-8']]]);
+    if(req.method==='GET'&&visualAssets.has(route.pathname))return send(200,visualAssets.get(route.pathname),route.pathname.endsWith('.css')?'text/css; charset=utf-8':'text/javascript; charset=utf-8');
     if(req.method==='GET'&&staticAssets.has(route.pathname)){const [asset,type]=staticAssets.get(route.pathname);return send(200,asset,type);}
     if(!route.pathname.startsWith('/api/'))return send(404,{error:'Not found'});
     const write=['POST','PUT','DELETE'].includes(req.method);

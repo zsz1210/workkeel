@@ -17,10 +17,21 @@ For authorized direct coordination:
 2. Implement only the approved scope. Preserve immutable task contracts and evidence.
 3. Commit the candidate, run the applicable checks on that exact revision, and record
    checks actually completed, applied Skills and unresolved limitations.
-4. Handoff once with the returned claim ID, candidate and evidence.
-5. A different registered Agent performs and records its own review. Never adopt
+4. Before handoff, compare every approved criterion and supporting design requirement
+   with exact candidate evidence. Record failed, partial and uncovered requirements;
+   repair within authorized scope and repeat the affected checks. Green tests do not
+   establish semantic completeness. For UI, inspect executable required states,
+   hierarchy and interactions, and retain visual review/repair evidence. The pinned CLI
+   provides `task evidence-check . --id TASK --request completion-evidence.json`:
+   a read-only check of exact criteria, candidate, artifact digests, repeated visual
+   reviews and unresolved findings. It does not judge usability or accept work.
+   See the framework's published completion evidence guide for the report format;
+   do not assume framework source scripts or documentation exist in consumer projects.
+5. Handoff once with the returned claim ID, candidate and complete scope evidence.
+6. A different registered Agent performs and records its own whole-scope review,
+   including required UI states and visuals where applicable. Never adopt
    that identity or infer review from tests. A failed review retains its evidence.
-6. Only the authorized approver accepts a passing candidate. Merge and publication
+7. Only the authorized approver accepts a passing candidate. Merge and publication
    need their own authority. Run native Doctor after lifecycle changes.
 
 Stages are intake -> build -> test -> release_gate -> done. Use explicit rework or

@@ -9,7 +9,7 @@ export async function verifyAnalysisUI(page,monitor,output){
   const data=await (await route.fetch()).json();
   data.title='讓執行時間更有意義';data.goal='只計已回報的 AI 執行時間，排除人工等待。';
   data.task_state=mode==='done'?'done':mode==='waiting'?'release_gate':'build';
-  data.runs=[{run_id:'analysis-ui-fixture',runner_state:mode==='paused'?'paused':'running',last_observed_at:reportAt==='near-expiry'?new Date(Date.now()-52000).toISOString():reportAt,operations:[{operation_id:'recorded',result_recorded:true,coverage_complete:false,activity_kind:'implementation',runtime_model:'fixture-model',execution_intervals:[{started_at:'2026-01-01T00:00:00Z',completed_at:'2026-01-01T00:05:00Z'}],adapter_elapsed_ms:300000,usage:{input_tokens:0,output_tokens:0}}]}];
+  data.runs=[{run_id:'analysis-ui-fixture',runner_state:mode==='paused'?'paused':'running',last_observed_at:reportAt==='near-expiry'?new Date(Date.now()-52000).toISOString():reportAt,operations:[{operation_id:'recorded',result_recorded:true,coverage_complete:false,activity_kind:'implementation',runtime_model:'fixture-model',execution_intervals:[{started_at:'2026-01-01T00:00:00Z',completed_at:'2026-01-01T00:05:00Z'}],adapter_elapsed_ms:300000,usage:{input_tokens:0,output_tokens:0}},{operation_id:'active-repair',activity_kind:'repair',state:mode==='paused'?'interrupted':'unconfirmed',result_recorded:false,coverage_complete:false,runtime_model:'fixture-repair-model',usage:{input_tokens:null,output_tokens:null}}]}];
   data.timeline=[{state:'intake',at:'2026-01-01T00:00:00Z'},{state:'build',at:'2026-01-01T00:00:01Z'},{state:'test',at:'2026-01-01T00:06:00Z'},{state:'build',action:'rework',at:'2026-01-01T00:07:00Z'}];
   delete data.execution;
   await route.fulfill({json:data});
@@ -31,21 +31,20 @@ export async function verifyAnalysisUI(page,monitor,output){
   await page.locator('#expand-task').click();await page.locator('.task-full-page').waitFor();
   await page.waitForFunction(()=>document.querySelector('#task-flow')?.dataset.moving==='true');
   assert.match(await page.locator('.flow-status').innerText(),/近期回報/);
-  const current=page.locator('.task-flow-card[aria-current=step]');
-  assert.equal(await current.evaluate(el=>getComputedStyle(el,'::after').animationName),'task-flow-scan');
-  assert.equal(await page.locator('.task-flow-node[data-key="test"] .flow-record').innerText(),'曾到達');
-  assert.equal(await page.locator('.task-flow-node[data-key="release_gate"] .flow-record').innerText(),'尚無紀錄');
-  const flowBefore=await page.locator('#task-flow').boundingBox();
-  await current.focus();await page.keyboard.press('Enter');
-  const popup=page.locator('.help-popover:popover-open');await popup.waitFor();
-  assert.match(await popup.innerText(),/退回修正/);
-  assert.deepEqual(await page.locator('#task-flow').boundingBox(),flowBefore);
-  const bounds=await popup.boundingBox();assert.ok(bounds.x>=0&&bounds.x+bounds.width<=width&&bounds.y>=0&&bounds.y+bounds.height<=page.viewportSize().height);
-  await page.keyboard.press('Escape');await page.waitForFunction(()=>document.querySelector('.task-flow-card[aria-current=step]')?.getAttribute('aria-expanded')==='false');
-  await current.click();await page.locator('.flow-status').click();assert.equal(await popup.count(),0);
+  assert.equal(await page.locator('#task-flow .ev-track>.ev-node').count(),5);
+  const current=page.locator('.ev-node[aria-current=step] button');
+  assert.equal(await current.getAttribute('data-flow-node'),'repair');
+  assert.equal(await page.locator('.ev-node[data-state=unreported]').count(),3,'lifecycle history does not invent planning, verification or review work');
+  const flowBefore=await page.locator('#task-flow .execution-visual').boundingBox();
+  if(width===1440)assert.ok(flowBefore.height<=240,'desktop activity graph remains compact');
+  await current.focus();await page.keyboard.press('Enter');await page.locator('.flow-inspector').waitFor();
+  assert.match(await page.locator('.flow-inspector').innerText(),/fixture-repair-model/);
+  const flowAfter=await page.locator('#task-flow .execution-visual').boundingBox();assert.equal(flowAfter.width,flowBefore.width);assert.equal(flowAfter.height,flowBefore.height,'activity detail keeps the graph geometry; keyboard focus may scroll it into view');
+  await page.getByRole('button',{name:'收起詳情',exact:true}).click();assert.equal(await page.evaluate(()=>document.activeElement.dataset.flowNode),'repair');
   await page.screenshot({path:path.join(output,width+'-analysis-flow.png'),fullPage:false});
-  await page.emulateMedia({reducedMotion:'reduce'});assert.equal(await current.evaluate(el=>getComputedStyle(el,'::after').animationName),'none');
+  await page.emulateMedia({reducedMotion:'reduce'});assert.equal(await current.evaluate(el=>getComputedStyle(el).animationName),'none');
   await page.emulateMedia({reducedMotion:'no-preference'});
+  const details=page.locator('#delivery-measurement-details');if(!await details.evaluate(el=>el.open))await details.locator(':scope > summary').click();
   const time=page.getByText('AI 執行時間（含工具）',{exact:true}).locator('..').locator('..').locator('dd');
   const measured=await time.innerText();assert.match(measured,/5 分/);assert.match(measured,/部分/);
   for(const [next,label] of [['paused','暫停或中斷'],['waiting','等待下一步'],['done','已完成']]){
@@ -79,5 +78,5 @@ export async function verifyAnalysisUI(page,monitor,output){
   await page.route('**/api/changes?*',async route=>{const data=await (await route.fetch()).json();await route.fulfill({json:{...data,changed:true}});});
  }
  await page.unroute('**/api/task?*');await page.unroute('**/api/changes?*');
- return {analysis_ui:true,widths:[1440,390],filters:true,keyboard:true,popover_no_shift:true,reduced_motion:true,wait_excluded:true,stale_expiry:true,rework_history:true,fixture_only:true};
+ return {analysis_ui:true,widths:[1440,390],filters:true,keyboard:true,activity_details_no_graph_shift:true,reduced_motion:true,wait_excluded:true,stale_expiry:true,rework_history:true,fixture_only:true};
 }

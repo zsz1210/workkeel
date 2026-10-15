@@ -287,6 +287,14 @@ coordinator hands off the exact Git candidate and verification evidence. A
 different registered Agent reviews the candidate before an
 authorized Principal closes the task. Completion does not publish or deploy.
 
+Before declaring completion, map every approved criterion and supporting design
+requirement to exact candidate evidence. Retain missing, partial and failed results;
+repair within approved scope and repeat affected checks. UI work needs repeated
+inspection of executable states, information hierarchy and interactions, with
+visual evidence. Passing tests do not establish semantic or visual completeness.
+The pinned CLI's \`task evidence-check\` is a read-only coverage aid; it neither
+judges usability nor replaces the distinct Agent's actual review and owner closure.
+
 At handoff, identify the relevant Skills, what was applied, the resulting artifacts
 and checks, and anything unverified. Reading claims or file hashes alone do not
 prove Skill application or quality. Finish with the recommended next step.

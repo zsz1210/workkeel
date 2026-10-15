@@ -82,6 +82,7 @@ export async function startTaskMonitor(targetInput,{port=0,recordMode='native',s
   for(const name of ['analytics','style'])assets.set('/'+name+(name==='style'?'.css':'.mjs'),await fs.readFile(new URL('./workkeel-monitor-'+name+(name==='style'?'.css':'.mjs'),import.meta.url)));
   assets.set('/workkeel-monitor-time.mjs',await fs.readFile(new URL('./workkeel-monitor-time.mjs',import.meta.url)));
   assets.set('/dom.mjs',await fs.readFile(new URL('./workkeel-monitor-dom.mjs',import.meta.url)));
+  for(const extension of ['mjs','css'])assets.set('/execution-visuals.'+extension,await fs.readFile(new URL('./workkeel-execution-visuals.'+extension,import.meta.url)));
   const html=renderMonitorPage(nonce);let origin,busy=false;
   const cache=createLibraryCache(),diagnostics={requests:0,model_calls:0,last:null};
   const index=createObserverIndex(target,options=>snapshotReader(target,{maxTasks:2000,...options}),{catalogRoots,historyReader:()=>readWorkItemSnapshot(target),detailReader:async id=>{

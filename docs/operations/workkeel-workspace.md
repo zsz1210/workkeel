@@ -6,6 +6,24 @@ not another writable copy of task acceptance. Its overview prioritizes required
 decisions, project progress and recent deliveries. Task details provide execution,
 dependencies and evidence when needed.
 
+The default task and goal view starts with the current situation and next action.
+A compact five-activity diagram shows planning, implementation, verification,
+independent review and repair. These activities do not imply five separate Agents.
+Each node uses recorded executors, models, time and tokens; select a node for its
+records. Exact identifiers, source details and acceptance evidence are disclosed
+on demand. Missing reports stay unknown, explicit zero remains zero, and a
+recent running report expires after 60 seconds without extrapolating elapsed time.
+
+The executor timeline places confirmed intervals on separate identity lanes and
+retains overlaps and repeated repair operations. Goal dependency diagrams include
+the complete mandatory component set across registered repositories. Component
+acceptance does not imply whole-goal acceptance. Analysis compares one metric at a
+time, with filters and measured coverage; it is not a model quality ranking.
+
+Before delivery, use the [completion evidence check](completion-evidence.md) and
+actual repeated visual review. A coverage result cannot judge usability or replace
+the separate registered Agent's native review.
+
 ## Register projects
 
 Choose a private state directory outside the framework source checkout. Create it

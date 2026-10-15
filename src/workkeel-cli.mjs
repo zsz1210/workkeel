@@ -16,6 +16,7 @@ workkeel status|doctor [target]
 workkeel task create [target] --source contract.json --request request.json
 workkeel task show [target] --id task-id
 workkeel task assess [target] --id task-id [--request assessment.json]
+workkeel task evidence-check [target] --id task-id --request completion-evidence.json
 workkeel task metrics [target] --id task-id
 workkeel task summary [target] --id task-id
 workkeel task observe [target] --id task-id --request observation.json
@@ -198,7 +199,11 @@ export async function workkeelMain(args) {
       allow(options,['--request']);output=await handler(target,(await readTaskContractInput(target,required(options,'--request'))).document);
     }
   } else if (command === "task") {
-    if (action === 'assess') {
+    if (action === 'evidence-check') {
+      allow(options, ['--id', '--request']);
+      const {checkCompletionEvidence}=await import('./workkeel-completion-evidence.mjs');
+      output=await checkCompletionEvidence(target,required(options,'--id'),(await readTaskContractInput(target,required(options,'--request'))).document);
+    } else if (action === 'assess') {
       allow(options, ['--id', '--request']);
       const { assessNativeTask } = await import('./workkeel-review-assessment.mjs');
       output = await assessNativeTask(target, required(options, '--id'), options['--request']
@@ -277,5 +282,5 @@ export async function workkeelMain(args) {
     else throw new Error("Headroom requires view or read");
   } else throw new Error("Unsupported task-first command; legacy writers cannot mutate task-first projects");
   console.log(JSON.stringify(output, null, 2));
-  return output.valid === false ? 1 : 0;
+  return output.valid === false || output.coverage_consistent === false ? 1 : 0;
 }

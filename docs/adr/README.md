@@ -98,5 +98,6 @@ change this source checkout's [native instructions](../../AGENTS.md).
 - [ADR-0081: Native dispatch and retained reading state](0081-native-dispatch-and-reading-state.md)
 - [ADR-0084: Role preflight and interrupted review recovery](0084-role-preflight-and-review-recovery.md)
 - [ADR-0085: Native workspace, bounded autonomy and versioned Skill learning](0085-native-workspace-bounded-autonomy-and-skill-learning.md)
+- [ADR-0086: Compact execution views and explicit completion evidence](0086-compact-execution-and-completion-evidence.md)
 
 An ADR is an Architecture Decision Record. It preserves the context, decision, rationale, and consequences of an important technical or organizational choice so that later Agents do not have to infer why it was made from chat memory.

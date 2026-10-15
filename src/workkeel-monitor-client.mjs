@@ -2,6 +2,7 @@ import {label as zhLabel,formatDuration,formatCount,taskActions,handoffText} fro
 import {operationRows,filterRows,aggregateRows,trendRows,executionSummary,stageExecutionSummary,executionBreakdown,taskFlowSummary} from '/analytics.mjs';
 import {resolveTimeZone,validTimeZone,zoneLabel} from '/workkeel-monitor-time.mjs';
 import {reconcile,on} from '/dom.mjs';
+import {renderExecutionVisual,renderExecutionTimeline,taskVisualRows,executionLabel as activityVisualLabel,activityOf,recordedDuration,buildExecutionVisual} from '/execution-visuals.mjs';
 const $=id=>document.getElementById(id);
 const node=(tag,text,cls)=>{const e=document.createElement(tag);if(text!==undefined)e.textContent=text;if(cls)e.className=cls;return e;};
 const append=(el,...children)=>{el.append(...children.filter(Boolean));return el;};
@@ -180,26 +181,39 @@ function activity(){
 
 const flowState=task=>taskFlowSummary(task,{connected:connection==='healthy',visible:!document.hidden});
 const flowLabel=mode=>({done:t('已完成','Completed'),cancelled:t('已取消','Cancelled'),suspended:t('暫停更新','Updates paused'),waiting:t('等待下一步','Waiting for next step'),'reported-running':t('近期回報執行中','Recently reported running'),stale:t('等待最新執行回報','Awaiting a fresh report'),paused:t('執行已暫停或中斷','Execution paused or interrupted'),unreported:t('尚無近期執行回報','No recent execution report')})[mode];
+let selectedFlowActivity=null;
+function observerVisualOptions(task){return {language:lang,connected:flowState(task).moving,read_status:task.read_status,complete:!(task.measurement_errors||[]).length,review_judgment:task.quality?.review_judgment??null,pending_activities:task.task_state==='test'&&!task.quality?.review_judgment?['independent-review']:[]};}
+function renderObserverFlow(el,task){
+ const focused=document.activeElement?.dataset.flowNode,state=flowState(task),rows=taskVisualRows(task);
+ el.dataset.moving=String(!!buildExecutionVisual(rows,observerVisualOptions(task)).current_activity);el.innerHTML=renderExecutionVisual(rows,observerVisualOptions(task));
+ const caption=el.querySelector('.ev-status');caption.classList.add('flow-status');
+ if(['done','cancelled','suspended','waiting','stale','paused'].includes(state.mode))caption.textContent=flowLabel(state.mode);
+ else if(state.moving&&el.dataset.moving!=='true')caption.textContent=t('近期執行回報 · 活動待確認','Recent execution report · activity awaiting confirmation');
+ if(selectedFlowActivity){
+  const section=node('section',undefined,'panel flow-inspector'),head=append(node('div',undefined,'section-heading'),node('h3',activityVisualLabel(selectedFlowActivity,lang)),button(t('收起詳情','Close details'),()=>{const prior=selectedFlowActivity;selectedFlowActivity=null;renderObserverFlow(el,task);el.querySelector('[data-flow-node="'+prior+'"]')?.focus({preventScroll:true});}));
+  section.append(head);
+  const selected=rows.filter(row=>activityOf(row)===selectedFlowActivity);
+  if(!selected.length)section.append(node('p',t('此活動尚無執行量測紀錄。','No execution measurement is recorded for this activity.'),'muted'));
+  for(const row of selected.slice(0,30)){
+   const line=node('div',undefined,'flow-record');
+   line.append(node('strong',row.actor?.agent_id??t('執行者未回報','Executor unreported')),node('span',row.reported.model??t('模型未回報','Model unreported')),node('span',recordedDuration(row.ms)));
+   const detail=node('details');detail.append(node('summary',t('選模與記錄','Model choice & record')),node('p',t('指定模型：','Selected model: ')+(row.selected.model??t('未回報','Unreported'))),node('p',t('執行識別：','Operation: ')+row.operation_id,'mono'));line.append(detail);section.append(line);
+  }
+  if(selected.length>30)section.append(node('p',t('顯示前 30 筆，完整記錄見「模型與執行」。','First 30 records; complete history is in Model & runtime.'),'muted'));
+  el.append(section);
+ }
+ if(focused)el.querySelector('[data-flow-node="'+focused+'"]')?.focus({preventScroll:true});
+}
 function updateFlow(){
  clearTimeout(flowExpiryTimer);const el=$('task-flow');if(!el||!selectedTask)return;
- const state=flowState(selectedTask);el.dataset.moving=String(state.moving);el.querySelector('.flow-status').textContent=flowLabel(state.mode);
- // Expire the observation even when the next network request is still pending.
+ renderObserverFlow(el,selectedTask);
+ const state=flowState(selectedTask);
  if(state.moving)flowExpiryTimer=setTimeout(updateFlow,Math.max(1,Date.parse(state.reported_at)+60000-Date.now()));
 }
 function stageProgress(task){
- const state=flowState(task),box=node('section',undefined,'task-flow');box.id='task-flow';box.dataset.moving=String(state.moving);
- box.append(append(node('div',undefined,'section-head'),node('h2',t('任務流程','Task flow')),node('span',flowLabel(state.mode),'flow-status')));
- const track=node('div',undefined,'task-flow-track');track.setAttribute('aria-label',t('任務階段','Task stages'));
- const purposes=[t('確認需求與驗收條件','Confirm scope and acceptance'),t('實作與開發者驗證','Build and developer checks'),t('由不同 Agent 審查','Review by a different agent'),t('核對證據與交付版本','Accept evidence and candidate'),t('查看本機驗收結果','Inspect local acceptance')];
- state.stages.forEach((stage,i)=>{
-  const status=stage.current?t('目前階段','Current stage'):stage.visited?t('曾到達','Previously reached'):t('尚無紀錄','Not recorded');
-  const wrap=help(name(stage.state),purposes[i]+'\n\n'+status+(stage.last_at?' · '+date(stage.last_at):'')+'\n\n'+t('這是任務階段紀錄，不代表 Agent 現在正在運算。退回修正後，曾到達的階段仍保留；是否驗收以交付與審查紀錄為準。','This records lifecycle stages, not current agent computation. Previously reached stages remain after rework; acceptance is established by delivery and review records.'),'flow-help-'+stage.state);
-  wrap.className='help task-flow-node';wrap.dataset.key=stage.state;const b=wrap.querySelector('button');b.className='task-flow-card';b.replaceChildren(node('small',String(i+1).padStart(2,'0'),'flow-number'),node('strong',name(stage.state)),node('small',purposes[i],'flow-purpose'),node('small',status,'flow-record'));
-  b.setAttribute('aria-label',name(stage.state)+' · '+status);if(stage.current)b.setAttribute('aria-current','step');wrap.dataset.current=String(stage.current);wrap.dataset.visited=String(stage.visited);track.append(wrap);
- });
- const measured=task.execution??executionSummary(task),metrics=node('div',undefined,'flow-metrics');
- metrics.append(append(node('div'),node('small',t('AI 執行時間 · 含工具','AI execution time · includes tools')),reportedMeasurement(measured.execution_ms,measured.time_complete,duration),node('small',t('已回報區間，不計等待','Reported intervals, excluding waits'))),append(node('div'),node('small',t('時間紀錄','Timing coverage')),node('strong',measured.measured_intervals+' / '+measured.recorded_operations),node('small',t('有完整區間／已綁定操作','Complete intervals / bound operations'))));
- box.append(track,metrics,node('p',t('流動效果代表 60 秒內收到執行中回報；不推算即時工時。點選階段查看紀錄。','Motion means a running report arrived within 60 seconds; it does not estimate live work time. Select a stage for its record.'),'chart-note'));
+ const box=node('section',undefined,'task-flow');box.id='task-flow';
+ renderObserverFlow(box,task);
+ box.addEventListener('click',event=>{const control=event.target.closest('[data-flow-node]');if(!control)return;const activity=control.dataset.flowNode;selectedFlowActivity=selectedFlowActivity===activity?null:activity;renderObserverFlow(box,task);box.querySelector('[data-flow-node="'+activity+'"]')?.focus({preventScroll:true});});
  return box;
 }
 function taskNotice(task){if(task.read_status==='available'&&task.task_state==='done'&&task.record_mode!=='work-items')return [t('已完成','Done'),t('最後完成摘要：','Completion summary: ')+(task.closeout?.summary??[...(task.timeline??[])].reverse().find(event=>event.action==='close')?.reason??t('已記錄完成驗收','Completion recorded')),...(task.needs_attention?(lang==='en'?[task.next_action]:taskActions(task)):[])];if(task.record_mode==='work-items')return [t('目前階段：','Recorded stage: ')+name(task.source_state),...(task.unresolved??[])];if(lang!=='en')return taskActions(task);return task.read_status==='unavailable'?['This task record could not be verified.']:[task.next_action??'Inspect the task record.'];}
@@ -272,17 +286,17 @@ function deliveryProgress(task){
  return box;
 }
 function overviewDetail(task){
- const body=node('div');body.append(task.record_mode==='work-items'?node('p',t('歷史紀錄 · 原階段：','Historical record · Original stage: ')+name(task.task_state),'chart-note'):stageProgress(task),executionPanel(task));const action=panel(t('目前狀態','Current state'),...taskNotice(task).map(s=>node('p',s,'attention-text')));action.id='next-action';
+ const body=node('div');const action=panel(t('目前狀態','Current state'),...taskNotice(task).map(s=>node('p',s,'attention-text')));action.id='next-action';
  const copy=button(t('複製接手摘要','Copy handoff'),()=>copyHandoff(task)),status=node('span',undefined,'small'),fallback=node('textarea');copy.id='copy-handoff';copy.disabled=task.read_status!=='available';status.id='copy-status';status.setAttribute('role','status');fallback.id='handoff-text';fallback.readOnly=true;fallback.hidden=true;
  if(task.task_state==='done')action.classList.add('completion');
- action.append(disclosure('handoff-details',t('接手與技術詳情','Handoff & technical details'),node('p',t('複製任務範圍、目前狀態與證據，交給下一位執行者接續查閱。摘要是唯讀快照，不會啟動任務或變更授權。','Copy the task scope, current state and evidence for the next executor to inspect. This read-only snapshot does not start work or change authorization.'),'chart-note'),append(node('div',undefined,'row'),copy,status),fallback));body.append(action);
+ action.append(disclosure('handoff-details',t('接手與技術詳情','Handoff & technical details'),node('p',t('複製任務範圍、目前狀態與證據，交給下一位執行者接續查閱。摘要是唯讀快照，不會啟動任務或變更授權。','Copy the task scope, current state and evidence for the next executor to inspect. This read-only snapshot does not start work or change authorization.'),'chart-note'),append(node('div',undefined,'row'),copy,status),fallback));body.append(action,task.record_mode==='work-items'?node('p',t('歷史紀錄 · 原階段：','Historical record · Original stage: ')+name(task.task_state),'chart-note'):stageProgress(task));
  if(task.read_status!=='available'){body.append(empty(t('紀錄無法驗證，請檢查來源文件。','Record unavailable. Inspect its source.')));return body;}
- body.append(panel(t('任務內容','Task brief'),node('p',task.goal),node('h3',t('範圍','Scope')),list(task.scope?.include),node('h3',t('不包含','Excluded')),list(task.scope?.exclude),node('h3',t('驗收條件','Acceptance criteria')),list(task.acceptance_criteria)));
+ body.append(panel(t('預期成果','Outcome'),node('p',task.goal)),disclosure('task-contract-details',t('範圍與驗收條件','Scope & acceptance criteria'),panel(t('任務內容','Task brief'),node('h3',t('範圍','Scope')),list(task.scope?.include),node('h3',t('不包含','Excluded')),list(task.scope?.exclude),node('h3',t('驗收條件','Acceptance criteria')),list(task.acceptance_criteria))));
  const delivery=panel(t('交付與審查','Delivery & review'));
  if(task.delivery){delivery.append(field(t('候選版本','Candidate'),task.candidate_revision),field(t('交付說明','Delivery'),task.delivery.summary));if(task.review)delivery.append(field(t('審查結果','Review'),name(task.review.judgment)),field(t('審查說明','Review summary'),task.review.summary));else delivery.append(node('p',t('已交付，等待獨立審查','Delivered; awaiting independent review')));
  delivery.append(field(t('驗收','Acceptance'),task.quality?.locally_accepted?t('已驗收','Accepted'):t('尚未驗收','Not accepted')));}
  else delivery.append(node('p',t('尚未交付候選版本；完成實作後才會產生交付與審查紀錄。','No candidate has been delivered. Delivery and review records appear after implementation.')));
- delivery.id='delivery';body.append(delivery,deliveryProgress(task),lifecycle(task),executionOverview(task));
+ delivery.id='delivery';const graph=node('section');graph.innerHTML=renderExecutionTimeline(taskVisualRows(task),observerVisualOptions(task));body.append(disclosure('execution-timeline-details',t('執行者時間軸','Executor timeline'),graph),disclosure('delivery-measurement-details',t('交付、審查與量測詳情','Delivery, review & measurement details'),delivery,deliveryProgress(task),executionPanel(task),lifecycle(task),executionOverview(task)));
  const evidence=task.evidence??[];
 
  const links=node('div',undefined,'row detail-links');
@@ -337,7 +351,7 @@ function taskSettings(task){const s=task.settings;if(!s)return empty();const p=p
  p.append(field(t('路由規則','Routing rules'),policy.rules?.map(r=>r.nodes.join(', ')+' → '+r.model)),field(t('核准的模型','Approved model IDs'),policy.models?.map(m=>m.id)));}
  return p;}
 async function openTask(id){
- const request=++detailRequest;detailOperationPage=0;selected=id;selectedTask=null;learningSelected=null;tab='overview';copyEpoch++;
+ const request=++detailRequest;detailOperationPage=0;selected=id;selectedTask=null;learningSelected=null;tab='overview';selectedFlowActivity=null;copyEpoch++;
  $('drawer').append($('detail-surface'));$('detail-id').textContent=id;$('detail-title').textContent=t('讀取任務…','Loading task…');$('detail-tabs').replaceChildren();$('detail-content').replaceChildren();
  if(!$('drawer').open)$('drawer').showModal();
  try{const task=await api('/api/task?id='+encodeURIComponent(id));if(selected!==id||request!==detailRequest)return;selectedTask=task;renderDetail();}

@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import {executionSummary} from '../src/workkeel-monitor-analytics.mjs';
 
+async function openMeasurementDetails(page){const box=page.locator('#delivery-measurement-details');await box.waitFor({state:'attached'});if(!await box.evaluate(element=>element.open))await box.locator(':scope > summary').click();await page.locator('#lifecycle').waitFor();}
 // Deterministic desktop regression data; no model execution or historical edits.
 export async function verifyExecutionClarity(page,monitor){
  let attempts=0,fail=false,hold=false,release,held,changes=0;
@@ -37,12 +38,12 @@ export async function verifyExecutionClarity(page,monitor){
   task.execution=executionSummary(task);task.timeline=[{at:new Date(at).toISOString(),state:'build',action:'claim',actor:{agent_id:'agent-lulu',principal_id:'human'}}];
   await route.fulfill({json:task});
  });
- await page.locator('#nav-board').click();await page.locator('[data-task-id="WK-unobserved"]').click();await page.locator('#execution-breakdown').waitFor();
+ await page.locator('#nav-board').click();await page.locator('[data-task-id="WK-unobserved"]').click();await openMeasurementDetails(page);await page.locator('#execution-breakdown').waitFor();
  const phase=label=>page.locator('#lifecycle .phase-row').filter({has:page.getByText(label,{exact:true})});
  assert.match(await phase('審查').innerText(),/7/);assert.match(await phase('修正').innerText(),/未記錄工時/);
  const overview=await page.locator('#execution-breakdown').innerText();
  for(const text of ['local-model','review-model','repair-model','實作 · 執行 01','審查 · 執行 02','修正 · 執行 03','最多 2','150'])assert.ok(overview.includes(text),text);
- assert.doesNotMatch(overview,/\[object|xhigh/);assert.doesNotMatch(await page.locator('#detail-content').innerText(),/agent-lulu/);
+ assert.doesNotMatch(overview,/\[object|xhigh/);assert.equal(await page.locator('#task-flow .ev-track>.ev-node').count(),5);assert.equal(await page.locator('#task-flow .flow-inspector').count(),0);
  await page.getByText('紀錄識別',{exact:true}).click();assert.match(await page.locator('#detail-content').innerText(),/agent-lulu/);
  await page.getByRole('button',{name:'查看每次執行',exact:true}).click();await page.locator('#execution-breakdown-full').waitFor();
  await page.locator('details[id^="operation-"] > summary').nth(1).click();
@@ -57,7 +58,7 @@ export async function verifyExecutionClarity(page,monitor){
 async function verifyUsageScope(page,monitor){
  const scope={basis:'after-attachment',started_at:'2026-09-26T09:00:00Z',task_coverage_complete:false,turn_reference:{status:'complete',usage:{input_tokens:10000,output_tokens:2000,total_tokens:12000},outside_operation_usage:{total_tokens:11850}}};
  await page.route('**/api/task?*',async route=>{const response=await route.fetch(),task=await response.json();task.runs=[{run_id:'scope',measurement_source:'native-host-report',operations:[{operation_id:'scope',usage_source:'native-host-report',runtime_model:'fixture-scope',usage:{input_tokens:120,output_tokens:30},usage_scope:scope,result_recorded:true}]}];task.execution=executionSummary(task);await route.fulfill({response,json:task});});
- await page.goto(monitor.url);await page.locator('#nav-board').click();await page.locator('[data-task-id="WK-unobserved"]').click();await page.locator('#task-usage-scope').waitFor();
+ await page.goto(monitor.url);await page.locator('#nav-board').click();await page.locator('[data-task-id="WK-unobserved"]').click();await openMeasurementDetails(page);await page.locator('#task-usage-scope').waitFor();
  assert.equal(await page.locator('#task-usage-scope').evaluate(e=>e.open),false);
  await page.locator('#task-usage-scope > summary').click();const taskTable=page.locator('#task-usage-scope-table');assert.match(await taskTable.innerText(),/12,000/);assert.match(await taskTable.innerText(),/11,850/);
  assert.equal(await page.locator('#task-token-breakdown [data-token-metric="total"]').innerText(),'150');
