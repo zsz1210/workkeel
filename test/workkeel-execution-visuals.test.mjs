@@ -10,10 +10,19 @@ test('reviews retain component-specific verdicts without promoting one pass to w
   assert.equal(buildExecutionVisual([{...rows[0],activity_kind:'implementation'}]).nodes[1].state,'completed','only actual review verdicts affect the review node');
 });
 import assert from 'node:assert/strict';
-import {renderWorkspaceScene} from '../src/workkeel-workspace-scene.mjs';
+import {renderWorkspaceScene,renderWorkspaceMap} from '../src/workkeel-workspace-scene.mjs';
 import {buildExecutionVisual,taskVisualRows,renderExecutionVisual,renderExecutionTimeline,dependencyLayout,renderDependencyDiagram,renderActivityComparison} from '../src/workkeel-execution-visuals.mjs';
 
 const now=Date.parse('2026-01-01T00:02:00Z');
+test('product landscape preserves invalid dependencies, safe links and component-only acceptance',()=>{
+  assert.match(renderWorkspaceScene([]),/scene-empty/);assert.doesNotMatch(renderWorkspaceScene([]),/scene-composition/);
+  const single=renderWorkspaceMap([{id:'one',repo_id:'repo',accepted:true}],{href:()=>'?view=task&task=one'});
+  assert.match(single,/single-component/);assert.match(single,/Whole-goal acceptance is separate/);assert.match(single,/href="\?view=task/);
+  for(const depends_on of [['one'],['missing']]){const invalid=renderWorkspaceMap([{id:'one',depends_on}]);assert.match(invalid,/Dependencies need reconciliation/);assert.doesNotMatch(invalid,/constellation-edge|single-component/);}
+  const multi=renderWorkspaceMap([{id:'<source>',accepted:true},{id:'consumer',depends_on:['<source>']}],{href:()=> 'javascript:alert(1)'});
+  assert.match(multi,/constellation-edge accepted/);assert.match(multi,/&lt;source&gt;/);assert.doesNotMatch(multi,/javascript:|<source>/);assert.match(multi,/1 \/ 2/);
+  assert.match(renderWorkspaceMap([]),/No required components recorded/);
+});
 const row=(activity,extra={})=>({activity_kind:activity,state:'completed',actor:{agent_id:'builder',principal_id:'owner'},reported:{model:'actual-model'},start_at:'2026-01-01T00:00:00Z',end_at:'2026-01-01T00:00:10Z',tokens:0,tokens_complete:true,time_complete:true,...extra});
 test('missing work, explicit zero and selected-only models remain distinct',()=>{
   const rows=[row('implementation',{reported:{model:null},selected:{model:'selected-only'},model:'unreported'}),row('verification',{tokens:null,tokens_complete:false,start_at:null,end_at:null,time_complete:false})];
