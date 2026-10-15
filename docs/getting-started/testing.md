@@ -98,6 +98,17 @@ integration sets, crash ownership, partial intake and authority/resource drift.
 Stock-host tests use offline JSON-RPC processes and actual macOS command-sandbox
 checks; they are not live provider qualifications.
 
+For changes to stock browser verification, run the affected real-browser case on
+macOS with installed Chrome:
+
+```sh
+WORKKEEL_BROWSER_CHECKS=1 node --test --test-name-pattern='approved browser check' test/workkeel-goal-runtime.test.mjs
+```
+
+It checks actual click/screenshot behavior and rejects product writes, unrelated
+ports and detached child processes. It uses offline model fixtures, not inference.
+PNG integrity regressions are covered by `test/workkeel-browser-check.test.mjs`.
+
 ## Continuous integration
 
 Ordinary GitHub Actions is intentionally a short remote consistency check, not Workkeel's complete test environment. Every pull request and push to `main` runs one Node.js 24 job with an eight-minute ceiling. The job uses a clean checkout and performs:

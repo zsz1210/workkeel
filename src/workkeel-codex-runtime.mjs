@@ -3,6 +3,7 @@ import { validateRuntimeResult, exactKeys } from "./workkeel-execution-policy.mj
 import { safeDirectory } from "./workkeel-project.mjs";
 import { createJsonRpcProcess } from "./codex-app-server-provider.mjs";
 import path from "node:path";
+import fs from "node:fs/promises";
 import crypto from "node:crypto";
 import { readTaskFile } from "./task-contract.mjs";
 import { validateRoleContract, assertTrustedRoleHost, runRolePreflight } from "./workkeel-role-preflight.mjs";
@@ -39,13 +40,21 @@ export async function codexPermissionsForContract(target, contract, { productAcc
     "workkeel.lock", "workkeelw.mjs", "TEMPLE.md", "temple.lock", "templew.mjs"].map(name => path.join(root, name));
   const under = (entry, parent) => entry === parent || entry.startsWith(`${parent}${path.sep}`);
   const filesystem = { ":root": "deny", ":minimal": "read" };
+  const scopePath=async(ref,allowMissing=false)=>{
+    if(ref==='.')return root;
+    if(typeof ref!=='string'||path.isAbsolute(ref)||ref.includes('\\')||ref.split('/').some(part=>!part||part==='.'||part==='..'))throw Error('Codex scope requires a normalized project path');
+    const parent=await safeDirectory(root,path.posix.dirname(ref)),resolved=path.join(parent,path.posix.basename(ref));
+    let stat;try{stat=await fs.lstat(resolved);}catch(error){if(error.code==='ENOENT'&&allowMissing)return resolved;throw error;}
+    if(stat.isSymbolicLink()||!stat.isDirectory()&&!stat.isFile())throw Error('Codex scope must be a regular file or directory without symlinks');
+    return resolved;
+  };
   for (const ref of environment.read_paths) {
-    const resolved = await safeDirectory(target, ref);
+    const resolved = await scopePath(ref);
     if (under(resolved, path.join(root, ".ai-org/execution"))) throw new Error("Codex cannot read private workflow execution state");
     filesystem[resolved] = "read";
   }
   for (const ref of environment.write_paths) {
-    const resolved = await safeDirectory(target, ref);
+    const resolved = await scopePath(ref,true);
     if (protectedPaths.some(parent => under(resolved, parent))) throw new Error("Codex write roots cannot target protected task authority");
     // A read-only role keeps its approved scope visible but never writable.
     filesystem[resolved] = productAccess;
@@ -164,7 +173,10 @@ export function createCodexRuntime(host, options = {}) {
         if (typeof text !== "string") return rejectTurn(new Error("Invalid Codex final message"));
         outputBytes += Buffer.byteLength(text) + 1;
         if (outputBytes > 65536) return rejectTurn(new Error("Codex output exceeds the bounded result size"));
-        if (p.item.phase !== "commentary") output += `${text}\n`;
+        // A resumed turn may emit an intermediate question and then its final
+        // structured answer. The latest complete non-commentary message is the
+        // result; concatenating independent JSON/text messages corrupts it.
+        if (p.item.phase !== "commentary") output = text;
       }
       if (message.method === "thread/tokenUsage/updated") {
         if (p.turnId !== current.turnId || current.terminalConfirmed) return;
@@ -264,10 +276,17 @@ export function createCodexRuntime(host, options = {}) {
       let outcome = "attention";
       if (terminal.status === "completed") {
         let result;
-        try { result = JSON.parse(output); } catch { throw new Error("Codex did not return the required structured node result"); }
-        exactKeys(result, ["outcome", "output"]);
-        if (!["done", "attention"].includes(result.outcome) || typeof result.output !== "string") throw new Error("Invalid Codex structured node result");
-        output = result.output; outcome = result.outcome;
+        try {
+          result = JSON.parse(output);exactKeys(result, ["outcome", "output"]);
+          if (!["done", "attention"].includes(result.outcome) || typeof result.output !== "string") throw new Error("Invalid result fields");
+          output = result.output; outcome = result.outcome;
+        } catch {
+          // The actual turn has settled. Invalid content needs attention, not an
+          // unknown process state that invites pointless recovery attempts.
+          // Keep the already bounded raw result intact. Adding a diagnostic
+          // prefix could itself overflow the result contract at its byte limit.
+          output ||= 'Codex returned an empty structured result';
+        }
       }
       return validateRuntimeResult({ status: terminal.status === "completed" && outcome === "attention" ? "failed" : terminal.status,
         conversation_id: current.threadId, output, outcome, runtime_model: started.model, observed_model: null, usage,

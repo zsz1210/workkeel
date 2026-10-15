@@ -105,6 +105,7 @@ export function createWorkspaceHooks({host_models=[],goalAdapter}={}){
       async read({project,actor}){const {store,policy,catalog,setup_reason}=await projectPolicy(project,actor);return {version:store.version,policy:policy?.project??defaults,policy_document:policy,active_version:store.active_version,entries:store.entries,setup_reason,capabilities:{catalog:catalog??[],model:(catalog??[]).map(m=>m.id),reasoning:[...new Set(host_models.flatMap(h=>h.reasoning_efforts))],service:[...new Set(host_models.flatMap(h=>h.service_tiers))]}};},
       async execute({action,expectedVersion,payload,project,actor}){
         const {task,request}=await authority(project,actor,payload.task_id);
+        project={...project,operator_task_id:task.id};
         if(action==='policy.draft'){
           const base=await projectPolicy(project,actor);if(!base.catalog?.length)throw Error(base.setup_reason);let policy=payload.policy;
           if(policy?.schema_version===undefined){if(!base.policy)throw Error(base.setup_reason);policy={...base.policy,version:base.store.entries.length+1,project:policy};}

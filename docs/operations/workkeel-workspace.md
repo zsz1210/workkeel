@@ -63,9 +63,10 @@ is visible under Tasks and is not relabeled as an autonomous run.
 
 Project learning includes recorded lessons and development retrospectives before
 Skill promotion. A lesson awaiting review is neither an active Skill nor a global
-instruction. The built-in autonomous host supports bounded code execution;
-browser-based UI acceptance requires a separately qualified host. Enabling a
-policy alone does not supply that capability.
+instruction. The built-in macOS host supports explicitly approved, sandboxed
+browser checks with installed Chrome and distinct visual review. See the
+[browser verification requirements](workkeel-goals.md#browser-verification-for-ui-work).
+Enabling a policy alone does not supply missing tools or authority.
 
 ## Register projects
 
@@ -118,6 +119,10 @@ absence means unsupported or unknown, not a guessed provider default.
 
 Policy drafts and approval require a currently claimed authorized native task.
 The UI derives the task's claim and contract pins from canonical state. Changing
+a setting also requires that task's write scope to cover the setting. The interface
+shows the selected task and explains unavailable authority before offering the
+action. When several tasks are active, select the intended task; the server uses
+that selection for both policy lookup and mutation-time checks. Changing
 a project policy does not rewrite the policy pinned to an existing task. The model,
 reasoning and service dimensions independently support inheritance, automatic
 selection and fixed values. A fixed unavailable value blocks selection.

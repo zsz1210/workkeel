@@ -50,7 +50,7 @@ async function fixture(t,{count=1,maxReworks=2,purpose='execution',release=false
 import {createCodexGoalAdapter} from '../src/workkeel-goal-runtime.mjs';
 import {createCodexProcessHost} from '../src/workkeel-codex-runtime.mjs';
 // Actual child-process JSON-RPC; agents/model/permissions are offline fixtures.
-function protocolHost({events=[],neverComplete=false,reroute=false,efforts=['low'],models=['gpt-6-luna'],onQualify=async()=>{},onResponse=async()=>{}}={}){
+function protocolHost({events=[],neverComplete=false,reviewAttention=false,reroute=false,efforts=['low'],models=['gpt-6-luna'],onQualify=async()=>{},onResponse=async()=>{}}={}){
   const source=`import readline from 'node:readline';import fs from 'node:fs';import crypto from 'node:crypto';
   const send=x=>process.stdout.write(JSON.stringify(x)+'\\n'),reply=(id,result)=>send({id,result});let thread,cwd;
   readline.createInterface({input:process.stdin}).on('line',line=>{
@@ -68,7 +68,7 @@ function protocolHost({events=[],neverComplete=false,reroute=false,efforts=['low
     if(m.method==='thread/read')reply(m.id,{thread:{id:m.params.threadId,turns:[{id:'fixture-turn',status:'interrupted'}]}});
     if(m.method==='turn/start'){
       const context=JSON.parse(m.params.input[0].text),instruction=context.work.instruction,role=context.execution_context.role.role;
-      send({method:'fixture/turn',params:{role,actor:context.task.actor,thread_id:thread,instruction}});
+      send({method:'fixture/turn',params:{role,actor:context.task.actor,thread_id:thread,instruction,previous_results:context.work.previous_results}});
       reply(m.id,{turn:{id:'fixture-turn',status:'inProgress'}});
       send({method:'turn/started',params:{threadId:thread,turn:{id:'fixture-turn',status:'inProgress'}}});
       if(${reroute}){send({method:'model/rerouted',params:{threadId:thread,turnId:'fixture-turn',toModel:'unapproved'}});return;}
@@ -82,7 +82,8 @@ function protocolHost({events=[],neverComplete=false,reroute=false,efforts=['low
         output=JSON.stringify(authored);
       }
       if(instruction.startsWith('Explore permitted')){const bytes=fs.readFileSync(cwd+'/src/value.mjs');output=JSON.stringify({proposals:[{id:'observed-source-value',title:'Observed source opportunity',direction:'fixture-improvement',risk_tier:'low',expected_benefit:'Test fixed exported value',acceptance:['Value is fixed'],evidence:[{path:'src/value.mjs',sha256:crypto.createHash('sha256').update(bytes).digest('hex')}],scope:{read_paths:['src'],write_paths:['src']},budget:{max_attempts:1,max_runtime_ms:1000,max_cost_usd:null}}]});}
-      send({method:'item/completed',params:{threadId:thread,turnId:'fixture-turn',item:{type:'agentMessage',phase:'final_answer',text:JSON.stringify({outcome:'done',output})}}});
+      const outcome=${reviewAttention}&&role==='review'&&JSON.parse(output).native_request.judgment==='fail'?'attention':'done';
+      send({method:'item/completed',params:{threadId:thread,turnId:'fixture-turn',item:{type:'agentMessage',phase:'final_answer',text:JSON.stringify({outcome,output})}}});
       send({method:'thread/tokenUsage/updated',params:{threadId:thread,turnId:'fixture-turn',tokenUsage:{last:{inputTokens:2,outputTokens:1},total:{inputTokens:10,outputTokens:4}}}});
       send({method:'turn/completed',params:{threadId:thread,turn:{id:'fixture-turn',status:'completed'}}});
     }
@@ -139,10 +140,11 @@ for(const boundary of ['runtime-qualification','thread/start'])test('frozen canc
 });
 async function finish(f,adapter,max=60){for(let n=0;n<max;n++){const view=await readNativeGoal(f.target,f.manifest.id);if(view.accepted)return view;const result=await runNativeGoalStep(f.target,f.manifest.id,{adapter});if(result.idle&&result.idle!=='whole-goal-accepted')throw Error(JSON.stringify({result,components:(await readNativeGoal(f.target,f.manifest.id)).components}));if(result.operation?.status==='unknown')throw Error(JSON.stringify(result.operation.result));}throw Error('Stock goal did not accept');}
 test('stock protocol drives same-thread implementation, independent FAIL, repair and exact native PASS',async t=>{
-  const f=await fixture(t),events=[],adapter=await stockAdapter({events}),accepted=await finish(f,adapter);
+  const f=await fixture(t),events=[],adapter=await stockAdapter({events,reviewAttention:true}),accepted=await finish(f,adapter);
   const task=await readNativeTask(f.target,'WK-component-0');assert.equal(task.state,'done');assert.equal(task.attempts[0].review.judgment,'fail');assert.equal(task.review.judgment,'pass');assert.equal(accepted.accepted,true);
   const turns=events.filter(e=>e.method==='fixture/turn').map(e=>e.params),planning=turns.find(e=>e.role==='planning'),implementation=turns.find(e=>e.role==='implementation'),reviews=turns.filter(e=>e.role==='review');
   assert.equal(planning.thread_id,implementation.thread_id);assert.equal(reviews.length,2);assert.ok(reviews.every(r=>r.actor.agent_id==='reviewer'&&r.thread_id!==implementation.thread_id));
+  assert.equal(turns.find(e=>e.role==='repair').previous_results.prior_attempt.review.judgment,'fail','repair receives the original reviewer finding');
   for(const entry of events.filter(e=>e.method==='fixture/thread')){assert.equal(entry.params.modelProvider,'openai');assert.equal(entry.params.model,'gpt-6-luna');assert.equal(entry.params.serviceTier,'default');const profile=entry.params.config.permissions[entry.params.permissions];assert.equal(profile.network.enabled,false);assert.equal(profile.filesystem[':root'],'deny');}
   for(const review of accepted.operations.filter(o=>o.input.phase==='review')){assert.equal(review.result.product_access,'read');assert.equal(review.result.runtime_selection.provider,'openai');assert.equal(review.result.usage.input_tokens,10);}
   assert.equal(accepted.cost_complete,false);assert.equal(events.some(e=>e.method==='fixture/interrupt'),false);
@@ -179,12 +181,13 @@ test('actual readonly command sandbox denies check writes to approved product so
   assert.equal(verification.model_called,false);assert.equal(verification.checks[0].status,'fail');await assert.rejects(fs.stat(f.target+'/src/forbidden.txt'),{code:'ENOENT'});assert.equal((await readNativeTask(f.target,'WK-component-0')).state,'build');
 });
 
-test('approved browser check runs real Chrome with isolated writes and one loopback port', {skip:process.platform!=='darwin'||process.env.WORKKEEL_BROWSER_CHECKS!=='1'},async t=>{
+test('approved browser check runs owned Chrome, denies child processes and confines loopback ports', {skip:process.platform!=='darwin'||process.env.WORKKEEL_BROWSER_CHECKS!=='1'},async t=>{
   const browserScript=String.raw`import fs from 'node:fs/promises';import http from 'node:http';import net from 'node:net';import assert from 'node:assert/strict';import {chromium} from 'playwright-core';
 await assert.rejects(fs.writeFile('src/forbidden-browser.txt','forbidden'));
 await assert.rejects(fs.readFile('/etc/hosts'));
+const {spawn}=await import('node:child_process');assert.throws(()=>spawn(process.execPath,['-e','setInterval(()=>{},1000)'],{detached:true,stdio:'ignore'}),{code:'EPERM'});
 const blocked=await new Promise(resolve=>{const s=net.connect({host:'127.0.0.1',port:Number(process.env.WORKKEEL_CHECK_PORT)===1?2:1});s.on('error',e=>resolve(e.code));s.on('connect',()=>{s.destroy();resolve('connected');});});assert.equal(blocked,'EPERM');
-const server=http.createServer((q,r)=>{r.setHeader('Content-Type','text/html');r.end('<html><body style="background:#171719;color:white"><h1>Ready</h1><button onclick="document.querySelector(\'h1\').textContent=\'Started\'">Start</button></body></html>');});await new Promise(resolve=>server.listen(Number(process.env.WORKKEEL_CHECK_PORT),'127.0.0.1',resolve));let browser;try{browser=await chromium.launch({executablePath:process.env.WORKKEEL_CHROME,timeout:10000});const page=await browser.newPage({viewport:{width:1000,height:700}});await page.goto('http://127.0.0.1:'+process.env.WORKKEEL_CHECK_PORT);await page.getByRole('button',{name:'Start'}).click();assert.equal(await page.locator('h1').innerText(),'Started');await page.screenshot({path:process.env.WORKKEEL_CHECK_OUTPUT+'/dark.png'});}finally{await browser?.close();server.closeAllConnections();await new Promise(resolve=>server.close(resolve));}`;
+const server=http.createServer((q,r)=>{r.setHeader('Content-Type','text/html');r.end('<html><body style="background:#171719;color:white"><h1>Ready</h1><button onclick="document.querySelector(\'h1\').textContent=\'Started\'">Start</button></body></html>');});await new Promise(resolve=>server.listen(Number(process.env.WORKKEEL_CHECK_PORT),'127.0.0.1',resolve));let browser;try{browser=await chromium.connectOverCDP(process.env.WORKKEEL_BROWSER_URL,{timeout:10000});const page=await browser.newPage({viewport:{width:1000,height:700}});await page.goto('http://127.0.0.1:'+process.env.WORKKEEL_CHECK_PORT);await page.getByRole('button',{name:'Start'}).click();assert.equal(await page.locator('h1').innerText(),'Started');await page.screenshot({path:process.env.WORKKEEL_CHECK_OUTPUT+'/dark.png'});}finally{await browser?.close();server.closeAllConnections();await new Promise(resolve=>server.close(resolve));}`;
   const f=await fixture(t,{browserScript,checks:[{id:'desktop',command:'browser',args:['docs/browser.mjs']}]}),events=[],adapter=await createCodexGoalAdapter({hostFactory:async()=>protocolHost({events})});
   let verification;for(let n=0;n<5;n++){const step=await runNativeGoalStep(f.target,f.manifest.id,{adapter});if(step.operation?.input.phase==='verification'){verification=step.operation.result;break;}}
   assert.ok(verification,JSON.stringify(await readNativeGoal(f.target,f.manifest.id)));
@@ -209,6 +212,17 @@ test('frozen stock cancellation interrupts exactly one actual owned turn after s
   const view=await readNativeGoal(f.target,f.manifest.id);await fs.appendFile(f.target+'/docs/goal.json',' ');await fs.appendFile(f.target+'/docs/approval.md',' changed');await controlNativeGoal(f.target,f.manifest.id,'cancel',{actor:builder,operation_id:'stop-stock-drift',expected_version:view.version});
   await runNativeGoalStep(f.target,f.manifest.id,{adapter});await running;for(let n=0;n<5;n++)await runNativeGoalStep(f.target,f.manifest.id,{adapter});
   assert.equal((await readNativeGoal(f.target,f.manifest.id)).status,'cancelled');assert.equal(events.filter(e=>e.method==='fixture/turn').length,1);assert.ok(events.some(e=>e.method==='fixture/interrupt'));
+});
+test('cancellation loads an already terminal persisted thread without starting another turn',async t=>{
+  const f=await fixture(t),events=[];let injected=false;
+  const host=protocolHost({events,onResponse:async method=>{if(method==='thread/backgroundTerminals/list'&&!injected&&events.some(e=>e.method==='fixture/turn')){injected=true;throw Error('Synthetic lost cleanup acknowledgment');}}});
+  const adapter=await createCodexGoalAdapter({hostFactory:async()=>host,commandRunner:fixtureCommand});
+  await runNativeGoalStep(f.target,f.manifest.id,{adapter});const failed=await runNativeGoalStep(f.target,f.manifest.id,{adapter});assert.equal(failed.operation.status,'unknown');
+  const before=await readNativeGoal(f.target,f.manifest.id);await controlNativeGoal(f.target,f.manifest.id,'cancel',{actor:builder,operation_id:'cancel-terminal-thread',expected_version:before.version});
+  const cold=await stockAdapter({events});for(let n=0;n<4;n++)await runNativeGoalStep(f.target,f.manifest.id,{adapter:cold});
+  assert.equal((await readNativeGoal(f.target,f.manifest.id)).status,'cancelled');
+  assert.equal(events.filter(e=>e.method==='fixture/turn').length,1);assert.equal(events.filter(e=>e.method==='fixture/interrupt').length,0);
+  assert.equal(events.filter(e=>e.method==='fixture/thread'&&e.params.method==='thread/resume').length,1);
 });
 test('readonly discovery exposes pinned benefit proposal only after actual native independent acceptance',async t=>{
   const f=await fixture(t,{purpose:'discovery'}),events=[],adapter=await stockAdapter({events});await fs.writeFile(f.target+'/src/value.mjs','export const value="fixed";\n');git(f.target,'add','src/value.mjs');git(f.target,'commit','-qm','Synthetic observed source');

@@ -117,7 +117,9 @@ unresolved problem remains visible.
 The stock adapter uses Codex app-server with actual model/effort catalogue and
 thread/turn confirmation, exact filesystem permissions, disabled network and
 provider-default service. Its model provider is `openai`; its tool is Codex. There
-is no provider alias or silent fallback. Component tasks must authorize
+is no silent model fallback. The desktop policy catalogue's `codex` provider names
+the host and maps to `openai` only on this explicit subscription path; model,
+reasoning, service, risk and data constraints remain unchanged. Component tasks must authorize
 `codex-app-server` and `approved-connection`; fixed implementation connections must
 match the manifest. A fixed component connection constrains every inference role.
 To authorize different planning/review models, use a `kind:"policy"` connection and pin its execution
@@ -147,3 +149,43 @@ must satisfy task, risk, data and host boundaries.
 
 See [bounded improvement](workkeel-autonomy.md) and
 [workspace operations](workkeel-workspace.md).
+
+## Browser verification for UI work
+
+The stock macOS host supports `command:"browser"` with one `.mjs` check path.
+Pin that exact script as component approval evidence before intake. Both component
+and controller must authorize the `browser` and `node` tools, allowlist
+`127.0.0.1`, and authorize the `network` operation. Google Chrome must already be
+installed at its standard application path. Model turns still have no network
+access and do not gain browser tools.
+
+If the application needs subprocesses (for example, a native Git-backed server),
+start its preview separately under its approved application host. Pass a second
+check argument naming a component-authority-pinned JSON file containing exactly
+`{"origin":"http://127.0.0.1:4310"}` with the actual preview port. The check then
+receives `WORKKEEL_CHECK_ORIGIN`; only that preview port and the coordinator's
+browser control port are reachable. Workkeel does not stop a separately owned
+preview. Its operator remains responsible for the preview's scope, lifetime and
+candidate identity. The check receives `WORKKEEL_CHECK_CANDIDATE` to compare with
+the application's version evidence. No remote origin or credential-bearing URL
+is accepted.
+
+The coordinator starts and owns Chrome. The approved check connects to
+`process.env.WORKKEEL_BROWSER_URL` using CDP; for an already installed Playwright
+Core, use `chromium.connectOverCDP(...)`. Serve the actual application on
+`127.0.0.1` and `Number(process.env.WORKKEEL_CHECK_PORT)`. The check must start its
+preview in-process: its OS sandbox denies child processes, including detached
+ones. Product writes and connections to other ports are denied. Scratch belongs
+under `process.env.TMPDIR`; save screenshots in `WORKKEEL_CHECK_OUTPUT`.
+
+Keep one to sixteen named PNG files, at most 1 MiB each and 8 MiB total. Supported
+screenshots are non-interlaced eight-bit RGB/RGBA, at most 16 million pixels and
+10,000 pixels in either dimension. Invalid or missing screenshots fail the check.
+The coordinator retains their exact hashes and dimensions with the committed
+candidate, then removes browser scratch. The separate reviewer must inspect the
+actual images. A screenshot or green script alone cannot accept the UI.
+
+Cancellation settles the check process and owned browser before confirmation.
+The same subprocess restriction applies to stock Node checks. Checks requiring a
+different runtime, subprocess tools or external network need a separately
+qualified host; there is no unrestricted fallback.

@@ -18,7 +18,7 @@ async function context(t) {
     selection: { connection: { kind: "gateway", provider: "litellm", base_url: "http://localhost:4000/v1", model: "fixture-fixed", selection: "fixed", credential_env: "FIXTURE_KEY" } },
     input: { instruction: "Offline protocol fixture", previous_results: {} } };
 }
-function fixtureHost({ reroute = false, earlyReroute = false, approval = false, neverComplete = false, account = "chatgpt", available = true, permissionMismatch = false, effortMismatch = false, serviceMismatch = false, earlyApproval = false, dirtyTerminals = false, wrongCwd = false, attention = false, delayedStart = false, hideStarted = false, onStart = () => {}, onTurn = () => {}, onStarted = () => {}, onInterrupt = () => {} } = {}) {
+function fixtureHost({ reroute = false, earlyReroute = false, approval = false, neverComplete = false, account = "chatgpt", available = true, permissionMismatch = false, effortMismatch = false, serviceMismatch = false, earlyApproval = false, dirtyTerminals = false, wrongCwd = false, attention = false, prelude = false, malformed = false, delayedStart = false, hideStarted = false, onStart = () => {}, onTurn = () => {}, onStarted = () => {}, onInterrupt = () => {} } = {}) {
   const source = `import readline from 'node:readline';
     const send = x => process.stdout.write(JSON.stringify(x)+'\\n');
     const reply = (id,result) => send({id,result});
@@ -46,7 +46,8 @@ function fixtureHost({ reroute = false, earlyReroute = false, approval = false, 
         ${approval ? "send({id:80,method:'item/commandExecution/requestApproval',params:{}});" : ""}
         ${reroute ? "send({method:'model/rerouted',params:{threadId:'thread-one',turnId:'turn-one',toModel:'unapproved'}});" : ""}
         ${neverComplete || approval ? "" : `send({method:'item/completed',params:{threadId:'thread-one',turnId:'turn-one',item:{type:'agentMessage',phase:'commentary',text:'Interim text is not the node result'}}});
-        send({method:'item/completed',params:{threadId:'thread-one',turnId:'turn-one',item:{type:'agentMessage',phase:'final_answer',text:JSON.stringify({outcome:${JSON.stringify(attention ? "attention" : "done")},output:'Offline fixture complete'})}}});
+        ${prelude ? "send({method:'item/completed',params:{threadId:'thread-one',turnId:'turn-one',item:{type:'agentMessage',phase:'final_answer',text:'Interim clarification before the structured final result'}}});" : ""}
+        send({method:'item/completed',params:{threadId:'thread-one',turnId:'turn-one',item:{type:'agentMessage',phase:'final_answer',text:${malformed ? JSON.stringify(typeof malformed==='string'?malformed:'unstructured completion claim') : "JSON.stringify({outcome:"+JSON.stringify(attention ? "attention" : "done")+",output:'Offline fixture complete'})"}}}});
         send({method:'thread/tokenUsage/updated',params:{threadId:'thread-one',turnId:'turn-one',tokenUsage:{last:{inputTokens:2,outputTokens:1},total:{inputTokens:10,outputTokens:4}}}});
         send({method:'turn/completed',params:{threadId:'thread-one',turn:{id:'turn-one',status:'completed'}}});`}
       }
@@ -93,6 +94,26 @@ test('layered subscription routing sends and confirms the exact default service 
   assert.equal(turns[0].serviceTierForTurn,'default');assert.equal(turns[0].effort,'low');
   const resumed=await runtime.resume({...c,conversation_id:'thread-one'});assert.deepEqual(resumed.runtime_selection,c.selection.runtime_selection);
   assert.equal(turns[1].serviceTierForTurn,'default');
+});
+
+test('a final structured answer supersedes interim text and malformed settled output needs attention',async t=>{
+  const c=await context(t),structured=await createCodexRuntime(fixtureHost({prelude:true})).start(c);
+  assert.equal(structured.status,'completed');assert.equal(structured.output,'Offline fixture complete');
+  const malformed=await createCodexRuntime(fixtureHost({malformed:true})).start(c);
+  assert.equal(malformed.status,'failed');assert.equal(malformed.outcome,'attention');assert.match(malformed.output,/unstructured completion claim/);
+  assert.equal(malformed.usage.input_tokens,10,'known usage survives invalid content after actual process settlement');
+  const bounded=await createCodexRuntime(fixtureHost({malformed:'x'.repeat(65499)})).start(c);
+  assert.equal(bounded.status,'failed');assert.equal(bounded.outcome,'attention');assert.equal(Buffer.byteLength(bounded.output),65499);
+});
+
+test('exact file scopes remain exact, support new files and reject symlink escapes',async t=>{
+  const c=await context(t),root=await fs.realpath(c.target);await fs.writeFile(path.join(root,'src/value.mjs'),'export default 1;');
+  c.contract.environment.read_paths=['src/value.mjs'];c.contract.environment.write_paths=['src/value.mjs','src/new.mjs'];
+  const profile=await codexPermissionsForContract(root,c.contract);assert.equal(profile.filesystem[root+'/src/value.mjs'],'write');assert.equal(profile.filesystem[root+'/src/new.mjs'],'write');assert.equal(profile.filesystem[root+'/src'],undefined);
+  const readonly=await codexPermissionsForContract(root,c.contract,{productAccess:'read'});assert.equal(readonly.filesystem[root+'/src/value.mjs'],'read');
+  await fs.symlink('/tmp',root+'/src/escape');c.contract.environment.write_paths=['src/escape'];await assert.rejects(codexPermissionsForContract(root,c.contract),/symlink/);
+  c.contract.environment.write_paths=['../outside'];await assert.rejects(codexPermissionsForContract(root,c.contract),/normalized/);
+  c.contract.environment.write_paths=['.ai-org/new'];await fs.mkdir(root+'/.ai-org',{recursive:true});await assert.rejects(codexPermissionsForContract(root,c.contract),/protected/);
 });
 
 test('unsupported fixed service or connection tuple blocks before process dispatch and host mode drift blocks before inference',async t=>{
@@ -169,8 +190,9 @@ test("usage observations replace cumulative totals, ignore unrelated turns and s
       if (failResult && message.method === "item/completed" && message.params.item.phase === "final_answer") message.params.item.text = "not structured JSON";
       options.onNotification(message);
     } });
-    if (failResult) await assert.rejects(createCodexRuntime(host).start(c), /structured/);
-    else assert.deepEqual((await createCodexRuntime(host).start(c)).usage, { input_tokens: 20, output_tokens: 8, cost_usd: null });
+    const result=await createCodexRuntime(host).start(c);
+    assert.deepEqual(result.usage, { input_tokens: 20, output_tokens: 8, cost_usd: null });
+    if(failResult){assert.equal(result.status,'failed');assert.equal(result.outcome,'attention');assert.match(result.output,/structured/);}
     assert.equal(observations.at(-1).usage.input_tokens, 20);
     assert.equal(observations.at(-1).usage.cost_usd, null);
     assert.equal(observations.some(value => value.usage.input_tokens === 999), false);

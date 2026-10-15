@@ -3,7 +3,7 @@ import path from 'node:path';
 import {spawn} from 'node:child_process';
 import {performance} from 'node:perf_hooks';
 import net from 'node:net';
-import {createHash} from 'node:crypto';
+import {createHash,randomUUID} from 'node:crypto';
 import {constants} from 'node:fs';
 import {executionDigest,exactKeys,validateExecutionPolicy} from './workkeel-execution-policy.mjs';
 import {createTrustedGoalAdapter} from './workkeel-goals.mjs';
@@ -16,6 +16,7 @@ import {readTaskProject,assertActor,safeDirectory,readNativeGit} from './workkee
 import {readNativeTask,mutateNativeTask,assertTaskExecutionContext} from './workkeel-tasks.mjs';
 import {readTaskFile} from './task-contract.mjs';
 import {durableAtomicCreate,durableAtomicWrite,formatJson} from './files.mjs';
+import {assertScreenshotPNG,withOwnedBrowser} from './workkeel-browser-check.mjs';
 
 const within=(p,root)=>root==='.'||p===root||p.startsWith(root+'/');
 const fail=m=>{throw Error('Codex goal host: '+m);};
@@ -41,8 +42,10 @@ async function artifactRefs(ctx){
 }
 async function visualEvidence(ctx){
   const pins=[];
-  for(const ref of ctx.input.verification?.evidence??[]){
-    const value=JSON.parse((await readTaskFile(ctx.component.root,ref)).content);
+  const refs=[...new Set([...(ctx.input.verification?.evidence??[]),...(ctx.task.delivery?.evidence??[]).map(pin=>pin.path)])];
+  for(const ref of refs){
+    if(!ref.endsWith('.json'))continue;
+    let value;try{value=JSON.parse((await readTaskFile(ctx.component.root,ref)).content);}catch(error){if(error instanceof SyntaxError)continue;throw error;}
     if(value.schema_version!=='workkeel.goal-checks/v1'||value.candidate_revision!==ctx.input.candidate)continue;
     for(const log of value.logs??[])for(const pin of log.visual_evidence??[]){
       if(!pin.path.startsWith('.ai-org/artifacts/'+ctx.component.task_id+'/goal-browser-')||path.posix.dirname(pin.path)!=='.ai-org/artifacts/'+ctx.component.task_id)fail('visual evidence outside task artifacts');
@@ -86,10 +89,19 @@ async function browserPrerequisites(ctx,args){
   for(const task of [parent,ctx.task]){const env=task.contract.environment;
     if(!env.tools.includes('browser')||!env.tools.includes('node')||env.network.mode!=='allowlist'||!env.network.hosts.includes('127.0.0.1')||!task.contract.authorization.operations.includes('network'))fail('browser checks require explicit coordinator and component browser, node and loopback authority');
   }
-  if(args.length!==1||!args[0].endsWith('.mjs'))fail('browser check requires one approved Node module path');
+  if(![1,2].includes(args.length)||!args[0].endsWith('.mjs'))fail('browser check requires an approved Node module and optional pinned preview configuration');
   const file=await readTaskFile(ctx.component.root,args[0]);
   if(!ctx.task.authority_pins.some(pin=>pin.path===args[0]&&pin.sha256===file.bytes_digest))fail('browser check script must be immutable component approval evidence');
+  let origin=null;
+  if(args.length===2){
+    const config=await readTaskFile(ctx.component.root,args[1]);
+    if(!ctx.task.authority_pins.some(pin=>pin.path===args[1]&&pin.sha256===config.bytes_digest))fail('preview configuration must be immutable component approval evidence');
+    const value=JSON.parse(config.content);exactKeys(value,['origin']);const url=new URL(value.origin);
+    if(url.protocol!=='http:'||url.hostname!=='127.0.0.1'||!url.port||url.username||url.password||url.pathname!=='/'||url.search||url.hash||value.origin!==url.origin)fail('preview must be an exact loopback HTTP origin with an explicit port');
+    origin=url.origin;
+  }
   if(!(await fs.stat(chrome)).isFile())fail('installed Google Chrome is required for browser checks');
+  return origin;
 }
 async function freePort(){const server=net.createServer();await new Promise((resolve,reject)=>server.once('error',reject).listen(0,'127.0.0.1',resolve));const port=server.address().port;await new Promise(resolve=>server.close(resolve));return port;}
 async function stockCommand(ctx,{command,args,git_write=false,check_id='check'}){
@@ -97,7 +109,7 @@ async function stockCommand(ctx,{command,args,git_write=false,check_id='check'})
   const parent=await readNativeTask(ctx.target,ctx.controller.task_id);
   if(!parent.contract.environment.tools.includes(command))fail('coordinator tool was not approved');
   if(command==='git'&&!systemGit){const lookup=await processResult('/usr/bin/xcrun',['--find','git'],{cwd:ctx.component.root,signal:ctx.signal,timeout_ms:duration(ctx)});const selected=lookup.stdout.trim();if(lookup.exit_code!==0||!path.isAbsolute(selected)||!selected.endsWith('/git'))fail('qualified system Git unavailable');systemGit=await fs.realpath(selected);}
-  const browser=command==='browser';if(browser)await browserPrerequisites(ctx,args);
+  const browser=command==='browser',previewOrigin=browser?await browserPrerequisites(ctx,args):null;
   const binary=command==='node'||browser?process.execPath:command==='git'?systemGit:null;
   if(!binary)fail('explicit command is unsupported by stock local runner');
   const scratch=browser?await fs.mkdtemp('/private/tmp/workkeel-browser-'):await safeDirectory(ctx.target,'.ai-org/goals/'+ctx.goal+'/scratch/'+ctx.operation_id+'/'+check_id,{create:true});
@@ -117,17 +129,21 @@ async function stockCommand(ctx,{command,args,git_write=false,check_id='check'})
   const metadata=[...ancestors].map(root=>'(literal '+JSON.stringify(root)+')').join(' ');
   const writes=['(subpath '+JSON.stringify(scratch)+')','(literal "/dev/null")'];
   if(git_write){const git=path.join(ctx.component.root,'.git');if(!(await fs.lstat(git)).isDirectory())fail('stock checkpoints require a regular local .git directory');writes.push('(subpath '+JSON.stringify(git)+')');}
-  const port=browser?await freePort():null;
-  const profile='(version 1)'+(browser?'(allow default)(deny file-read*)(deny file-write*)(deny network*)':'(deny default)')+'(allow process*)(allow sysctl-read)(allow file-read-metadata '+metadata+')(allow file-read* '+terms+' (literal "/")(literal "/dev/null")(literal "/dev/urandom"))(deny file-read* '+denied.map(ref=>'(subpath '+JSON.stringify(ref)+')').join(' ')+')(allow file-write* '+writes.join(' ')+')'+(browser?'(allow network-bind (local ip "localhost:'+port+'"))(allow network-inbound (local ip "localhost:'+port+'"))(allow network-outbound (remote ip "localhost:'+port+'"))(allow network* (local unix-socket (subpath '+JSON.stringify(scratch)+')) (remote unix-socket (subpath '+JSON.stringify(scratch)+')))':'(deny network*)');
+  const port=browser?(previewOrigin?Number(new URL(previewOrigin).port):await freePort()):null;let browserPort=browser?await freePort():null;while(browser&&browserPort===port)browserPort=await freePort();
+  const profile='(version 1)'+(browser?'(allow default)(deny file-read*)(deny file-write*)(deny network*)':'(deny default)')+'(allow process*)(allow sysctl-read)(allow file-read-metadata '+metadata+')(allow file-read* '+terms+' (literal "/")(literal "/dev/null")(literal "/dev/urandom"))(deny file-read* '+denied.map(ref=>'(subpath '+JSON.stringify(ref)+')').join(' ')+')(allow file-write* '+writes.join(' ')+')'+(browser?[port,browserPort].map(p=>'(allow network-bind (local ip "localhost:'+p+'"))(allow network-inbound (local ip "localhost:'+p+'"))(allow network-outbound (remote ip "localhost:'+p+'"))').join('')+'(allow network* (local unix-socket (subpath '+JSON.stringify(scratch)+')) (remote unix-socket (subpath '+JSON.stringify(scratch)+')))':'(deny network*)');
   const output=path.join(scratch,'evidence');if(browser)await fs.mkdir(output,{recursive:true});
-  const env={...environment(),TMPDIR:scratch,TMP:scratch,TEMP:scratch,...(browser?{HOME:scratch,CFFIXED_USER_HOME:scratch,MAC_CHROMIUM_TMPDIR:scratch,WORKKEEL_CHECK_PORT:String(port),WORKKEEL_CHECK_OUTPUT:output,WORKKEEL_CHROME:chrome}:{})};
-  const result=await processResult('/usr/bin/sandbox-exec',['-p',profile,binary,...args],{cwd:ctx.component.root,signal:ctx.signal,timeout_ms:duration(ctx),env});
+  const env={...environment(),TMPDIR:scratch,TMP:scratch,TEMP:scratch,...(browser?{HOME:scratch,CFFIXED_USER_HOME:scratch,MAC_CHROMIUM_TMPDIR:scratch,WORKKEEL_CHECK_PORT:String(port),WORKKEEL_CHECK_OUTPUT:output,WORKKEEL_CHECK_CANDIDATE:ctx.input.candidate??'',...(previewOrigin?{WORKKEEL_CHECK_ORIGIN:previewOrigin}:{})}:{})};
+  const checkProfile=profile+(command==='node'||browser?'(deny process-fork)':'');
+  const run=(signal,endpoint)=>processResult('/usr/bin/sandbox-exec',['-p',checkProfile,binary,...(browser?[args[0]]:args)],{cwd:ctx.component.root,signal,timeout_ms:duration(ctx),env:{...env,...(endpoint?{WORKKEEL_BROWSER_URL:endpoint}:{})}});
+  const result=browser?await withOwnedBrowser({chrome,profile,port:browserPort,scratch,cwd:ctx.component.root,env,signal:ctx.signal,timeout_ms:duration(ctx)},({endpoint,signal})=>run(signal,endpoint)):await run(ctx.signal);
   if(browser){
+    try{
     if(await fs.realpath(output)!==output)fail('browser evidence directory changed');
     const names=await fs.readdir(output);if(!names.length||names.length>16)return {...result,exit_code:result.exit_code||1,stderr:result.stderr+'\nBrowser check must retain 1 to 16 PNG screenshots',visual_evidence:[]};
     const visual_evidence=[];let bytes=0;
-    for(const name of names){if(!/^[A-Za-z0-9][A-Za-z0-9._-]{0,95}\.png$/.test(name))fail('browser evidence must be named PNG screenshots');const file=path.join(output,name),handle=await fs.open(file,constants.O_RDONLY|constants.O_NOFOLLOW|constants.O_NONBLOCK);let data;try{const stat=await handle.stat();if(!stat.isFile()||stat.size>1048576||(bytes+=stat.size)>8388608)fail('bounded regular browser evidence required');data=Buffer.alloc(stat.size);let offset=0;while(offset<data.length){const r=await handle.read(data,offset,data.length-offset,null);if(!r.bytesRead)fail('incomplete browser evidence');offset+=r.bytesRead;}}finally{await handle.close();}if(!data.subarray(0,8).equals(Buffer.from([137,80,78,71,13,10,26,10])))fail('browser screenshot is not PNG');const dir=await safeDirectory(ctx.component.root,'.ai-org/artifacts/'+ctx.component.task_id,{create:true}),ref='goal-browser-'+ctx.operation_id+'-'+check_id+'-'+name;await durableAtomicCreate(path.join(dir,ref),data);visual_evidence.push({path:'.ai-org/artifacts/'+ctx.component.task_id+'/'+ref,sha256:createHash('sha256').update(data).digest('hex')});}
+    for(const name of names){if(!/^[A-Za-z0-9][A-Za-z0-9._-]{0,95}\.png$/.test(name))fail('browser evidence must be named PNG screenshots');const file=path.join(output,name),handle=await fs.open(file,constants.O_RDONLY|constants.O_NOFOLLOW|constants.O_NONBLOCK);let data;try{const stat=await handle.stat();if(!stat.isFile()||stat.size>1048576||(bytes+=stat.size)>8388608)fail('bounded regular browser evidence required');data=Buffer.alloc(stat.size);let offset=0;while(offset<data.length){const r=await handle.read(data,offset,data.length-offset,null);if(!r.bytesRead)fail('incomplete browser evidence');offset+=r.bytesRead;}}finally{await handle.close();}const dimensions=assertScreenshotPNG(data);const dir=await safeDirectory(ctx.component.root,'.ai-org/artifacts/'+ctx.component.task_id,{create:true}),ref='goal-browser-'+ctx.operation_id+'-'+check_id+'-'+name;await durableAtomicCreate(path.join(dir,ref),data);visual_evidence.push({path:'.ai-org/artifacts/'+ctx.component.task_id+'/'+ref,sha256:createHash('sha256').update(data).digest('hex'),...dimensions});}
     return {...result,visual_evidence};
+    }catch(error){return {...result,exit_code:result.exit_code||1,stderr:result.stderr+'\nInvalid browser evidence: '+error.message,visual_evidence:[]};}
   }
   return result;
   }finally{if(browser)await fs.rm(scratch,{recursive:true,force:true});}
@@ -168,6 +184,10 @@ function roleContract(ctx,access){
   // Discovery implementation is intentionally a read-only planning capability.
   const actualRole=access==='read'&&role==='implementation'?'planning':role;
   return {schema_version:'workkeel.role-contract/v1',role:actualRole,product_access:access,tests:actualRole==='planning'?'none':'coordinator',edit_tools:access==='write'?['codex']:[],model:{provider:'openai',model:ctx.input.model.model,effort:ctx.input.model.reasoning},usage:{fields:['input_tokens','output_tokens']}};
+}
+function authoredFailure(ctx,result){
+  if(ctx.input.phase!=='review'||result?.status!=='failed'||result.outcome!=='attention')return false;
+  try{return JSON.parse(result.output).native_request?.judgment==='fail';}catch{return false;}
 }
 /** Trusted stock host with fixed Codex protocol, role sandbox and unchanged
  * reviewer-authored request relay. Optional factories are trusted embedding code. */
@@ -217,7 +237,10 @@ export async function createCodexGoalAdapter({hostFactory=createLocalCodexSubscr
   }
   async function finalize(ctx,slot){
     const result=slot.runtime_result,e=effective(ctx),base={status:'completed',operation_id:ctx.operation_id,actor:ctx.input.actor,thread_id:result.conversation_id,runtime_selection:result.runtime_selection,product_access:e.access,usage:result.usage,tool:'codex',model_called:true};
-    if(result.status!=='completed'||result.outcome!=='done')return {...base,status:'attention',reason:'Actual Codex role reports incomplete work'};
+    if((result.status!=='completed'||result.outcome!=='done')&&!authoredFailure(ctx,result)){
+      const pin=await report(ctx,'attention',{schema_version:'workkeel.goal-attention/v1',operation_id:ctx.operation_id,phase:ctx.input.phase,thread_id:result.conversation_id,output:result.output,usage:result.usage});
+      return {...base,status:'attention',reason:('Actual Codex role reports incomplete work: '+result.output).slice(0,1000),report_pin:pin};
+    }
     if(ctx.input.phase==='review'){
       await visualEvidence(ctx);
       if(ctx.input.previous_threads.includes(result.conversation_id))fail('reviewer must use a distinct actual thread');
@@ -246,7 +269,12 @@ export async function createCodexGoalAdapter({hostFactory=createLocalCodexSubscr
     await capabilities(ctx);
     if(typeof ctx.beforeEffects!=='function')fail('native goal dispatch guard required');
     await ctx.beforeEffects();
-    if(ctx.input.phase==='verification'){effectsMayExist=true;return await verified(ctx);}
+    if(ctx.input.phase==='verification'){
+      effectsMayExist=true;const controller=new AbortController(),signal=ctx.signal?AbortSignal.any([ctx.signal,controller.signal]):controller.signal;
+      const settled=verified({...ctx,signal});
+      runtimes.set(ctx.operation_id,{cancel:async()=>{controller.abort();await settled.catch(()=>{});}});
+      try{return await settled;}finally{runtimes.delete(ctx.operation_id);}
+    }
     const e=effective(ctx),host=await hostFor(ctx.component.root);
     slot={schema_version:'workkeel.goal-runtime-slot/v1',operation_id:ctx.operation_id,input_sha256:executionDigest(ctx.input),actor:ctx.input.actor,thread_id:null,turn_id:null,model:ctx.input.model,product_access:e.access,status:'intent',model_requested:false,pre_model_stops:[],runtime_result:null,source_pins:[],final:null};
     let writes=Promise.resolve();const persist=()=>{const snapshot=structuredClone(slot);writes=writes.then(()=>writeSlot(ctx,snapshot));return writes;};
@@ -282,11 +310,12 @@ export async function createCodexGoalAdapter({hostFactory=createLocalCodexSubscr
     const pictures=ctx.input.phase==='review'?await visualEvidence(ctx):[];
     const visualInstruction=pictures.length?' You must open the exact PNG screenshots with view_image and assess their actual pixels against the UI acceptance criteria. Check reports alone do not establish visual quality. Include concrete visual observations in your summary; fail if the images cannot be inspected. Screenshot paths and byte digests: '+JSON.stringify(pictures)+'.':'';
     const proof=reportRef(ctx,'review'),instruction=(ctx.input.phase==='review'
-      ?'Independently review the complete exact candidate and mandatory checks. Author the entire native review request JSON {"native_request":{"operation_id":'+JSON.stringify(ctx.operation_id)+',"expected_version":'+ctx.input.task_version+',"actor":'+JSON.stringify(ctx.input.actor)+',"revision":'+JSON.stringify(ctx.input.candidate)+',"judgment":"pass or fail","summary":"your actual judgment","evidence":'+JSON.stringify([...new Set([...(ctx.input.verification?.evidence??[]),proof])])+'}}. Omit review_attempt_id because there is no review recovery attempt. You own judgment and summary. No source edits. Completion is this exact authored request, not task acceptance.'
+      ?'Independently review the complete exact candidate and mandatory checks. Author the entire native review request JSON {"native_request":{"operation_id":'+JSON.stringify(ctx.operation_id)+',"expected_version":'+ctx.input.task_version+',"actor":'+JSON.stringify(ctx.input.actor)+',"revision":'+JSON.stringify(ctx.input.candidate)+',"judgment":"pass or fail","summary":"your actual judgment","evidence":'+JSON.stringify([...new Set([...(ctx.input.verification?.evidence??[]),...(ctx.task.delivery?.evidence??[]).map(pin=>pin.path),proof])])+'}}. Omit review_attempt_id because there is no review recovery attempt. You own judgment and summary. No source edits. Completion is this exact authored request, not task acceptance.'
       :ctx.component.purpose==='discovery'&&ctx.input.phase==='implementation'
         ?'Explore permitted source evidence within the approved standing goal and bounds. Return only JSON {"proposals":[{"id":"stable observed-problem slug","title":"bounded observed opportunity","direction":"the approved direction supplied below","risk_tier":"low, standard, high, critical or unknown","expected_benefit":"specific before/after outcome to test","acceptance":["testable criterion"],"evidence":[{"path":"exact local path","sha256":"exact bytes SHA256"}],"scope":{"read_paths":[],"write_paths":[]},"budget":{"max_attempts":1,"max_runtime_ms":1000,"max_cost_usd":null}}]}. Empty proposals are valid. Unknown risk remains unknown. Never invent permission or call a benefit improved before observing results. Proposals do not create or approve tasks. Read-only product access. Approved discovery direction: '+JSON.stringify(discoveryDirection)+'.'
         :'Perform the approved '+ctx.input.phase+' for '+ctx.component.id+'. Read AGENTS.md and WORKKEEL.md and applicable Skills. Preserve allowed paths, exact task authority and existing behavior. Report work or attention honestly. The coordinator owns candidate Git/check/lifecycle operations; do not commit, run coordinator checks, or invent review/acceptance. Goal integration requires every mandatory component: '+JSON.stringify(ctx.input.required_components)+'. Prior exact accepted components: '+JSON.stringify(ctx.input.accepted_components)+'.')+visualInstruction;
-    const context={target:ctx.component.root,operation_id:ctx.operation_id,run_id:ctx.goal,contract:e.contract,policy:e.policy,selection:e.selection,input:{instruction,previous_results:{}},signal:ctx.signal};
+    const previous_results={verification:ctx.input.verification??null,delivery:ctx.task.delivery??null,prior_attempt:ctx.task.attempts?.at(-1)??null};
+    const context={target:ctx.component.root,operation_id:ctx.operation_id,run_id:ctx.goal,contract:e.contract,policy:e.policy,selection:e.selection,input:{instruction:instruction+' Read previous_results and its exact evidence paths before repair or review. They are observed results, not new authority.',previous_results},signal:ctx.signal};
     const previous=ctx.input.phase==='review'||executionDigest(ctx.input.previous_model)!==executionDigest(ctx.input.model)?null:ctx.input.previous_threads.at(-1);
     try{
       const result=await (previous?runtime.resume({...context,conversation_id:previous}):runtime.start(context));
@@ -308,7 +337,7 @@ export async function createCodexGoalAdapter({hostFactory=createLocalCodexSubscr
   async function reconcile(ctx){
     let slot;try{slot=await readSlot(ctx);}catch(e){if(e.code==='ENOENT')return {status:'unknown',reason:'No runtime slot; no automatic inference replay'};throw e;}
     if(slot.input_sha256!==executionDigest(ctx.input))fail('reconciliation input differs');
-    if(slot.final)return slot.final;
+    if(slot.final&&(slot.final.status!=='attention'||!authoredFailure(ctx,slot.runtime_result)))return slot.final;
     if(slot.runtime_result){await capabilities(ctx);const final=await finalize(ctx,slot);slot.final=final;slot.status='completed';await writeSlot(ctx,slot);return final;}
     return {status:'unknown',reason:'Actual turn result unavailable; reconcile exact host thread before continuation',thread_id:slot.thread_id,turn_id:slot.turn_id};
   }
@@ -325,10 +354,18 @@ export async function createCodexGoalAdapter({hostFactory=createLocalCodexSubscr
       return {status:'cancelled',reason:'Exact unstarted operation and settled owned runtime confirmed',model_called:false};
     }
     if(!slot.thread_id||!slot.turn_id)return {status:'unknown',reason:'Actual dispatched thread/turn identity not confirmed; stop requires host reconciliation'};
-    const host=await hostFor(ctx.component.root),rpc=host.connect({onNotification:()=>{},onRequest:()=>{throw Error('Approval forbidden during stop');},onError:()=>{}});
+    const host=await hostFor(ctx.component.root),permissions='workkeel-'+randomUUID(),profile=await codexPermissionsForContract(ctx.component.root,effective(ctx).contract,{productAccess:'read'}),rpc=host.connect({target:ctx.component.root,permissionProfile:{id:permissions,profile},onNotification:()=>{},onRequest:()=>{throw Error('Approval forbidden during stop');},onError:()=>{}});
     try{
       await rpc.request('initialize',{clientInfo:{name:'workkeel-goal-stop',version:'1'},capabilities:{experimentalApi:true}});rpc.notify('initialized');
-      await rpc.request('turn/interrupt',{threadId:slot.thread_id,turnId:slot.turn_id});
+      const before=await rpc.request('thread/read',{threadId:slot.thread_id,includeTurns:true}),recorded=before.thread?.turns?.find(t=>t.id===slot.turn_id);
+      if(!recorded)return {status:'unknown',reason:'Exact recorded turn is unavailable for cancellation'};
+      if(['completed','failed','interrupted'].includes(recorded.status)){
+        // A new app-server does not load persisted threads merely by reading
+        // them. Resume the exact settled thread with read-only permissions and
+        // no turn/start, then confirm its background resources are empty.
+        const loaded=await rpc.request('thread/resume',{threadId:slot.thread_id,cwd:ctx.component.root,approvalPolicy:'never',permissions,model:ctx.input.model.model,modelProvider:'openai',serviceTier:'default',config:{model_reasoning_effort:ctx.input.model.reasoning}});
+        if(loaded.thread?.id!==slot.thread_id||loaded.activePermissionProfile?.id!==permissions)return {status:'unknown',reason:'Settled thread could not be loaded with the cancellation permission profile'};
+      }else await rpc.request('turn/interrupt',{threadId:slot.thread_id,turnId:slot.turn_id});
       await rpc.request('thread/backgroundTerminals/clean',{threadId:slot.thread_id});
       const data=await rpc.request('thread/backgroundTerminals/list',{threadId:slot.thread_id}),thread=await rpc.request('thread/read',{threadId:slot.thread_id,includeTurns:true});
       const turn=thread.thread?.turns?.find(t=>t.id===slot.turn_id);

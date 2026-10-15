@@ -113,6 +113,8 @@ test('operator eligibility selects exact tasks and explains absent or stale auth
   const base=execFileSync('git',['-C',f.root,'rev-parse','HEAD'],{encoding:'utf8'}).trim();await mutateNativeTask(f.root,clone.id,'claim',{operation_id:'claim-two',expected_version:1,actor:f.actor,base_revision:base});
   assert.equal((await f.hooks.policy.read(context)).operator.reason_code,'choose-task');
   const selected=await f.hooks.policy.read({...context,task:f.task.id});assert.equal(selected.operator.ready,true);assert.equal(selected.policy_document.models[0].id,'careful');
+  const saved=await f.hooks.policy.execute({...context,action:'policy.draft',expectedVersion:0,payload:{task_id:f.task.id,policy:selected.policy_document}});
+  assert.equal(saved.version,1,'the selected settings task is used for draft source lookup as well as mutation authority');
   await fs.appendFile(f.root+'/docs/approval.md',' changed');assert.equal((await f.hooks.autonomy.read({...context,task:clone.id})).operator.reason_code,'authority-unavailable');
 });
 test('UI can stop the original queued job after its claim ends, without borrowing another active claim',async t=>{
