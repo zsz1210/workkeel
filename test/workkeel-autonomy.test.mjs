@@ -13,7 +13,7 @@ import {createAutonomyWorkflowAdapter} from '../src/workkeel-autonomy-workflow.m
 import {readWorkflowRun} from '../src/workkeel-workflows.mjs';
 import {sha256} from '../src/files.mjs';
 
-async function fixture(t,{workflow=false,definition=null,budget=null,read_paths=['docs'],expires_at=null}={}){
+async function fixture(t,{workflow=false,definition=null,budget=null,read_paths=['docs'],expires_at=null,workflow_timeout_ms=1000}={}){
   const root=await fs.realpath(await fs.mkdtemp(path.join(os.tmpdir(),'workkeel-autonomy-')));t.after(()=>fs.rm(root,{recursive:true,force:true}));
   const git=(...a)=>execFileSync('git',['-C',root,...a],{encoding:'utf8'}).trim();
   git('init','-q');git('config','user.name','Fixture');git('config','user.email','fixture@example.invalid');
@@ -22,7 +22,7 @@ async function fixture(t,{workflow=false,definition=null,budget=null,read_paths=
   await fs.writeFile(root+'/docs/run2.json',JSON.stringify({run:{run_id:'sample-two',workflow_ref:'docs/workflow.json',policy_ref:'docs/policy.json'}}));
   await fs.writeFile(root+'/docs/recovery.json','{}');await fs.writeFile(root+'/docs/improvements.md','TODO: Fix the exact observed stale state.\nFIXME: Preserve task receipt bytes.\n');
   await fs.writeFile(root+'/docs/workflow.json',JSON.stringify(definition??{schema_version:'workkeel.workflow/v1',nodes:[{id:'work',kind:'runtime',input:'Do bounded synthetic work'}],edges:[{from:'start',to:'work'},{from:'work',to:'end'}]}));
-  await fs.writeFile(root+'/docs/policy.json',JSON.stringify({schema_version:'workkeel.execution-policy/v1',models:[{id:'native',connection:{kind:'native'},data_classes:['internal']}],default_model:'native',rules:[],headroom:{mode:'off'},limits:{steps:10,attempts_per_node:2,parallelism:1,timeout_ms:1000,max_cost_usd:budget}}));
+  await fs.writeFile(root+'/docs/policy.json',JSON.stringify({schema_version:'workkeel.execution-policy/v1',models:[{id:'native',connection:{kind:'native'},data_classes:['internal']}],default_model:'native',rules:[],headroom:{mode:'off'},limits:{steps:10,attempts_per_node:2,parallelism:1,timeout_ms:workflow_timeout_ms,max_cost_usd:budget}}));
   git('add','docs');git('commit','-qm','Synthetic baseline');
   const actor={agent_id:'builder',principal_id:'owner'};
   await initializeTaskProject(root,{schema_version:'workkeel.task-policy/v1',principals:['owner'],agents:[actor,{agent_id:'reviewer',principal_id:'owner'}],approvers:['owner'],review_separation:'distinct-agent'});
@@ -217,7 +217,9 @@ test('explicit recovery never rebinds an old run to a replacement claim',async t
 
 test('qualified checkpoint resume uses exact pending approval and never infers approval from a wakeup',async t=>{
   const definition={schema_version:'workkeel.workflow/v1',nodes:[{id:'confirm',kind:'approval',input:'Inspect exact synthetic approval'},{id:'work',kind:'runtime',input:'Bounded approved work'}],edges:[{from:'start',to:'confirm'},{from:'confirm',to:'work'},{from:'work',to:'end'}]};
-  const f=await fixture(t,{workflow:true,definition});await f.enqueue();let calls=0;
+  // This positive case checks exact approval and run identity. The absolute
+  // workflow budget includes the paused checkpoint, so allow full-suite I/O time.
+  const f=await fixture(t,{workflow:true,definition,workflow_timeout_ms:30000});await f.enqueue();let calls=0;
   const runtime={id:'fixture',assertCompatible:async()=>{},start:async()=>{calls++;return {status:'completed',conversation_id:'approved-thread',output:'bounded approved result',outcome:'done',observed_model:null,usage:{input_tokens:0,output_tokens:0,cost_usd:0}};},resume:async()=>{throw Error('No old conversation expected');},cancel:async()=>{}};
   const adapter=createAutonomyWorkflowAdapter(f.root,{runtimeFactory:async()=>runtime});
   const first=await runAutonomyStep(f.root,{adapter});assert.equal(first.job.status,'recovery-required');assert.equal(calls,0);
