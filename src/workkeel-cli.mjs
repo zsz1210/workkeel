@@ -49,7 +49,7 @@ workkeel autonomy policy|enqueue|pause|resume|cancel|event|discover|resume-job [
 workkeel autonomy tick|serve [target]
 workkeel goal list [target]
 workkeel goal show|tick|serve [target] --id goal-id
-workkeel goal create|pause|resume|cancel|recover [target] --request request.json
+workkeel goal create|pause|resume|cancel|recover|extend-admission [target] --request request.json
 workkeel retention inventory|preview|archive|verify|usage [target] --request request.json
 workkeel workspace create|register|remove|integration [private state directory] --request request.json
 workkeel workspace show|serve [private state directory]
@@ -152,6 +152,7 @@ export async function workkeelMain(args) {
       else {const controller=new AbortController(),service=await goals.serveNativeGoal(target,id,{signal:controller.signal,onError:e=>console.error(JSON.stringify({error:e.message}))});const stop=()=>{controller.abort();service.close();};process.once('SIGINT',stop);process.once('SIGTERM',stop);console.log(JSON.stringify({schema_version:'workkeel.goal-service/v1',goal_id:id,state:'listening',foreground:true,inference:'sealed-approved-operations-only'}));return 0;}
     }else{allow(options,['--request']);const request=(await readTaskContractInput(target,required(options,'--request'))).document;
       if(action==='create')output=await goals.createNativeGoal(target,request);
+      else if(action==='extend-admission'){const {extendGoalAdmission}=await import('./workkeel-autonomy-admission.mjs');output=await extendGoalAdmission(target,request);}
       else {const {goal_id,...control}=request;output=await goals.controlNativeGoal(target,goal_id,action,control);}}
   } else if(command==='autonomy') {
     const autonomy=await import('./workkeel-autonomy.mjs');

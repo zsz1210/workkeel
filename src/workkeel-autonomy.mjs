@@ -92,8 +92,8 @@ async function authorizeStandingControl(target,action,r,s){
 }
 async function admissionPolicy(target,p,actor){
   if(!p.admission?.enabled)return;
-  const {readNativeGoal,assertNativeGoalAuthority}=await import('./workkeel-goals.mjs'),{validateGoalAdmissionGrant}=await import('./workkeel-autonomy-admission.mjs');
-  const goal=await readNativeGoal(target,p.admission.goal_id);await assertNativeGoalAuthority(target,goal,{actor,execution:true});const g=validateGoalAdmissionGrant(goal.manifest.admission);
+  const {readNativeGoal,assertNativeGoalAuthority}=await import('./workkeel-goals.mjs'),{readGoalAdmissionAuthority}=await import('./workkeel-autonomy-admission.mjs');
+  const goal=await readNativeGoal(target,p.admission.goal_id);await assertNativeGoalAuthority(target,goal,{actor,execution:true});const {grant:g}=await readGoalAdmissionAuthority(target,goal);
   if(!g.enabled||p.directions.some(d=>!g.directions.includes(d))||p.max_attempts>g.max_attempts)throw Error('Policy exceeds the sealed standing admission grant');
   if(p.discovery){const d=p.discovery;if(d.read_paths.some(root=>!g.read_paths.some(base=>under(root,base)))||d.write_paths.some(root=>!g.write_paths.some(base=>under(root,base)))||d.max_rounds>g.max_rounds||d.max_source_bytes>g.max_source_bytes||d.max_runtime_ms>g.max_runtime_ms||!costWithin(d.max_cost_usd,g.max_cost_usd)||d.cooldown_ms<g.cooldown_ms)throw Error('Discovery policy exceeds standing scope or resources');}
 }

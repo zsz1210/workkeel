@@ -3,7 +3,7 @@ import os from 'node:os';
 import {randomUUID} from 'node:crypto';
 import {exactKeys,executionDigest} from './workkeel-execution-policy.mjs';
 import {readTaskFile,validateTaskContract} from './task-contract.mjs';
-import {readNativeTask,createNativeTask,mutateNativeTask} from './workkeel-tasks.mjs';
+import {readNativeTask,createNativeTask,mutateNativeTask,assertTaskExecutionContext} from './workkeel-tasks.mjs';
 import {assertActor,assertApprover,readTaskProject,readNativeGit,safeDirectory} from './workkeel-project.mjs';
 import {withProjectMutationLock} from './project.mjs';
 import {durableAtomicCreate,durableAtomicWrite,formatJson,sha256} from './files.mjs';
@@ -21,6 +21,11 @@ const text=v=>{if(typeof v!=='string'||!v.trim()||v.length>4000)fail('invalid bo
 const cost=v=>v===null||Number.isFinite(v)&&v>=0&&v<=100000;
 const withinCost=(v,max)=>cost(v)&&(max===null||v!==null&&v<=max);
 const current=()=>new Date().toISOString();
+const limitFields=['max_rounds','max_goals','max_total_operations','max_total_runtime_ms'];
+const limits=g=>Object.fromEntries(limitFields.map(k=>[k,g[k]]));
+function extensionRequest(r){exactKeys(r,['operation_id','expected_version','actor','task_id','claim_id','contract_sha256','approval_ref']);id(r.operation_id);integer(r.expected_version,0,1000);exactKeys(r.actor,['agent_id','principal_id']);id(r.actor.agent_id);id(r.actor.principal_id);id(r.task_id);id(r.claim_id);pin(r.contract_sha256);relative(r.approval_ref);}
+function extensionApproval(a){exactKeys(a,['schema_version','goal_id','manifest_sha256','from','to','reevaluate_unchanged_sources','reason']);if(a.schema_version!=='workkeel.admission-extension/v1')fail('invalid extension approval');id(a.goal_id);pin(a.manifest_sha256);text(a.reason);if(typeof a.reevaluate_unchanged_sources!=='boolean')fail('explicit reevaluation decision required');for(const p of [a.from,a.to]){exactKeys(p,limitFields);for(const v of Object.values(p))integer(v,1,86400000);}if(a.to.max_rounds<=a.from.max_rounds||limitFields.some(k=>a.to[k]<a.from[k]))fail('extension must increase rounds without reducing cumulative ceilings');}
+function extensionRecord(e){exactKeys(e,['request','request_sha256','approval','approval_sha256','policy_sha256','created_at']);extensionRequest(e.request);extensionApproval(e.approval);for(const k of ['request_sha256','approval_sha256','policy_sha256'])pin(e[k]);if(executionDigest(e.request)!==e.request_sha256||!Number.isFinite(Date.parse(e.created_at)))fail('invalid extension record');}
 
 export function validateGoalAdmissionGrant(g){
   exactKeys(g,['enabled','directions','read_paths','write_paths','template_ref','source_refs','max_source_bytes','max_rounds','cooldown_ms','max_goals','max_total_operations','max_total_runtime_ms','max_total_cost_usd','max_reworks','max_operations','max_attempts','max_runtime_ms','max_cost_usd']);
@@ -31,7 +36,8 @@ export function validateGoalAdmissionGrant(g){
 }
 const empty=()=>({schema_version:'workkeel.goal-admissions/v1',version:0,entries:[],receipts:[]});
 function validateStore(s){
-  exactKeys(s,['schema_version','version','entries','receipts']);if(s.schema_version!=='workkeel.goal-admissions/v1')fail('invalid journal');integer(s.version,0,1000);
+  exactKeys(s,['schema_version','version','entries','receipts'],['extensions']);if(s.schema_version!=='workkeel.goal-admissions/v1')fail('invalid journal');integer(s.version,0,1000);
+  if(s.extensions!==undefined){bounded(s.extensions,extensionRecord,0,32);if(new Set(s.extensions.map(e=>e.request.operation_id)).size!==s.extensions.length)fail('duplicate extension operation');}
   bounded(s.entries,e=>{exactKeys(e,['id','goal_id','kind','proposal_id','problem_sha256','input_sha256','source_manifest_sha256','status','reservation','intent','owner','updated_at','error']);id(e.id);id(e.goal_id);id(e.proposal_id);pin(e.problem_sha256);pin(e.input_sha256);pin(e.source_manifest_sha256);if(!['discovery','execution'].includes(e.kind)||!['reserved','created','recovery-required'].includes(e.status))fail('invalid admission status');exactKeys(e.reservation,['operations','max_runtime_ms','max_cost_usd']);integer(e.reservation.operations,1,10000);integer(e.reservation.max_runtime_ms,1,86400000);if(!cost(e.reservation.max_cost_usd))fail('invalid reservation');if(!e.intent||typeof e.intent!=='object'||Array.isArray(e.intent))fail('invalid frozen intake intent');if(e.owner){exactKeys(e.owner,['pid','host','token']);integer(e.owner.pid,1,Number.MAX_SAFE_INTEGER);text(e.owner.host);text(e.owner.token);}if(!Number.isFinite(Date.parse(e.updated_at)))fail('invalid admission timestamp');},0,200);
   bounded(s.receipts,r=>{exactKeys(r,['operation_id','input_sha256','admission_id']);id(r.operation_id);id(r.admission_id);pin(r.input_sha256);},0,1000);return s;
 }
@@ -48,12 +54,49 @@ async function immutable(target,ref,content){
   relative(ref);const directory=await safeDirectory(target,path.posix.dirname(ref),{create:true});
   try{await durableAtomicCreate(path.join(directory,path.posix.basename(ref)),content);}catch(e){if(e.code!=='EEXIST')throw e;if((await readTaskFile(target,ref,{preserveBom:true})).content!==content)fail('frozen intake artifact conflict');}
 }
+/** Extra capacity is a separate pinned human authorization, never a rewritten
+ * manifest or refunded reservation. Closed setup tasks retain their approval. */
+export async function readGoalAdmissionAuthority(target,goal,{journal}={}){
+  const goalId=goal.id,{assertNativeGoalAuthority}=await import('./workkeel-goals.mjs');goal=await assertNativeGoalAuthority(target,goalId,{execution:true});
+  const original=validateGoalAdmissionGrant(goal.manifest.admission),s=journal??await readGoalAdmissions(target),project=await readTaskProject(target);
+  let grant=structuredClone(original),extension_sha256=null,continuation_sha256=null;const authorizations=[];
+  for(const e of (s.extensions??[]).filter(e=>e.approval.goal_id===goal.id)){
+    const r=e.request,a=e.approval,t=await readNativeTask(target,r.task_id);assertActor(project.policy,r.actor);assertApprover(project.policy,r.actor);
+    if(!sameActor(r.actor,goal.manifest.roles.approver)||a.manifest_sha256!==goal.manifest_sha256||t.contract_sha256!==r.contract_sha256||t.policy_sha256!==e.policy_sha256||e.policy_sha256!==executionDigest(project.policy)||t.state==='cancelled'||t.contract.authorization.expires_at&&Date.parse(t.contract.authorization.expires_at)<=Date.now())fail('extension authority changed or expired');
+    for(const p of t.authority_pins)if((await readTaskFile(target,p.path)).digest!==p.sha256)fail('extension approval source changed');
+    const approved=await readTaskFile(target,r.approval_ref);
+    if(!t.authority_pins.some(p=>p.path===r.approval_ref&&p.sha256===approved.digest)||approved.bytes_digest!==e.approval_sha256||executionDigest(JSON.parse(approved.content))!==executionDigest(a))fail('extension requires exact pinned approval');
+    if(executionDigest(a.from)!==executionDigest(limits(grant)))fail('extension prior limits differ');
+    grant=validateGoalAdmissionGrant({...grant,...a.to});extension_sha256=executionDigest(e);authorizations.push({sha256:extension_sha256,reevaluation:a.reevaluate_unchanged_sources});
+    if(a.reevaluate_unchanged_sources)continuation_sha256=extension_sha256;
+  }
+  return {grant,extension_sha256,continuation_sha256,authorizations};
+}
+export async function extendGoalAdmission(target,input){
+  extensionRequest(input);const r=structuredClone(input),hash=executionDigest(r);
+  return withProjectMutationLock(target,async()=>{
+    const s=await readGoalAdmissions(target),{readNativeGoal,assertNativeGoalAuthority}=await import('./workkeel-goals.mjs');
+    const approvalFile=await readTaskFile(target,r.approval_ref),approval=JSON.parse(approvalFile.content);extensionApproval(approval);
+    const goal=await readNativeGoal(target,approval.goal_id);await assertNativeGoalAuthority(target,goal,{actor:r.actor,execution:true});
+    if(goal.manifest.derived_from)fail('extend the original standing source goal');
+    const authority=await readGoalAdmissionAuthority(target,goal,{journal:s}),prior=(s.extensions??[]).find(e=>e.request.operation_id===r.operation_id);
+    if(prior){if(prior.request_sha256!==hash||prior.approval_sha256!==approvalFile.bytes_digest)fail('extension replay conflict');return {version:s.version,...authority,replayed:true};}
+    if(s.version!==r.expected_version)fail('extension journal version conflict');
+    const task=await assertTaskExecutionContext(target,r.task_id,r),project=await readTaskProject(target);assertApprover(project.policy,r.actor);
+    if(!task.contract.environment.write_paths.some(p=>under(ROOT,p))||!task.contract.environment.read_paths.some(p=>under(r.approval_ref,p))||!task.contract.authorization.operations.includes('write'))fail('extension requires admission metadata write scope');
+    if(!task.authority_pins.some(p=>p.path===r.approval_ref&&p.sha256===approvalFile.digest))fail('extension approval must be task-authority pinned');
+    if(approval.manifest_sha256!==goal.manifest_sha256||executionDigest(approval.from)!==executionDigest(limits(authority.grant)))fail('extension prior limits or manifest differ');
+    validateGoalAdmissionGrant({...authority.grant,...approval.to});
+    s.extensions??=[];s.extensions.push({request:r,request_sha256:hash,approval,approval_sha256:approvalFile.bytes_digest,policy_sha256:executionDigest(project.policy),created_at:current()});await save(target,s);
+    return {version:s.version,...await readGoalAdmissionAuthority(target,goal,{journal:s}),replayed:false};
+  });
+}
 function alive(owner){if(!owner)return false;if(owner.host!==os.hostname())return true;try{process.kill(owner.pid,0);return true;}catch(e){return e.code!=='ESRCH';}}
 
 async function source(target,request){
   const goals=await import('./workkeel-goals.mjs'),goal=await goals.readNativeGoal(target,request.goal_id);
   await goals.assertNativeGoalAuthority(target,goal,{actor:request.actor,execution:true});
-  const grant=validateGoalAdmissionGrant(goal.manifest.admission);if(!grant.enabled)fail('standing admission is disabled');
+  const authority=await readGoalAdmissionAuthority(target,goal),grant=authority.grant;if(!grant.enabled)fail('standing admission is disabled');
   // Subsequent approved improvements can change an interface at HEAD. Preserve
   // the original accepted baseline; never relabel it as current acceptance.
   if(!goal.accepted&&!(goal.state==='done'&&goal.integration))fail('complete the source goal before autonomous improvement');
@@ -74,7 +117,7 @@ async function source(target,request){
   for(const p of task.authority_pins)if((await readTaskFile(component.root,p.path)).digest!==p.sha256)fail('source component approval changed');
   if(!['low','standard'].includes(task.contract.verification.risk_tier)||task.contract.environment.data.classification==='sensitive')fail('unsupported automatic risk');
   if(grant.read_paths.some(root=>!task.contract.environment.read_paths.some(base=>under(root,base)))||grant.write_paths.some(root=>!task.contract.environment.write_paths.some(base=>under(root,base))))fail('standing scope exceeds approved source component');
-  return {goals,goal,grant,controller,template,component,task};
+  return {goals,goal,grant,controller,template,component,task,authority};
 }
 
 function contractFor(base,{id:taskId,goal,actor,read_paths,write_paths,refs,acceptance,include,exclude}){
@@ -106,7 +149,7 @@ export async function admitGoalImprovement(target,request,{proposal=null,trigger
     if(trigger.read_paths){bounded(trigger.read_paths,relative,1);if(trigger.read_paths.some(root=>!grant.read_paths.some(base=>under(root,base)))||trigger.source_refs.some(ref=>!trigger.read_paths.some(root=>under(ref,root))))fail('trigger read scope exceeds policy');}
     if(trigger.max_runtime_ms!==undefined)integer(trigger.max_runtime_ms,1,grant.max_runtime_ms);if(trigger.max_cost_usd!==undefined&&!withinCost(trigger.max_cost_usd,grant.max_cost_usd))fail('trigger financial scope exceeds standing grant');
     let bytes=0;const pins=[];for(const ref of trigger.source_refs){const file=await readTaskFile(component.root,ref,{preserveBom:true});bytes+=Buffer.byteLength(file.content);if(bytes>grant.max_source_bytes)fail('trigger source capacity');pins.push({path:ref,sha256:file.bytes_digest});}
-    problem=executionDigest({direction,source_refs:pins});proposalId='discovery-'+problem.slice(0,24);read_paths=trigger.read_paths??grant.read_paths;write_paths=[];attempts=1;max_runtime_ms=trigger.max_runtime_ms??grant.max_runtime_ms;max_cost_usd=trigger.max_cost_usd===undefined?grant.max_cost_usd:trigger.max_cost_usd;input={direction,source_refs:pins,read_paths,max_runtime_ms,max_cost_usd};
+    problem=executionDigest({direction,source_refs:pins,...(context.authority.continuation_sha256?{continuation_sha256:context.authority.continuation_sha256}:{})});proposalId='discovery-'+problem.slice(0,24);read_paths=trigger.read_paths??grant.read_paths;write_paths=[];attempts=1;max_runtime_ms=trigger.max_runtime_ms??grant.max_runtime_ms;max_cost_usd=trigger.max_cost_usd===undefined?grant.max_cost_usd:trigger.max_cost_usd;input={direction,source_refs:pins,read_paths,max_runtime_ms,max_cost_usd};
   }
   if(!grant.directions.includes(direction))fail('direction is outside the standing grant');
   if(request.direction!==undefined&&request.direction!==direction)fail('requested direction differs');
@@ -120,6 +163,8 @@ export async function admitGoalImprovement(target,request,{proposal=null,trigger
   const control=contractFor(controlBase,{id:controlId,goal:'Coordinate '+derivedId,actor:goal.controller.actor,read_paths:controlBase.contract.environment.read_paths,write_paths:['.ai-org/goals/'+derivedId],refs:[manifestRef,localReceipt],acceptance:['All mandatory derived components and their independent review/integration are accepted'],include:['Coordinate this exact bounded derived goal'],exclude:['Publication','Deployment']});
   const manifest={schema_version:'workkeel.goal/v1',id:derivedId,title:product.goal,approval_ref:product.authorization.approval_ref,approved_by:goal.manifest.approved_by,expires_at:goal.manifest.expires_at,components:[{...structuredClone(component),id:'work',root:component.root,task_id:componentId,contract_sha256:executionDigest(product),depends_on:[],...(kind==='discovery'?{purpose:'discovery'}:{})}],integration:{component_id:'work',criteria:accepted},roles:structuredClone(goal.manifest.roles),models:structuredClone(goal.manifest.models),limits:{max_operations:grant.max_operations,max_reworks:Math.min(grant.max_reworks,attempts-1),timeout_ms:max_runtime_ms,max_cost_usd},control:{release_parent:true},derived_from:{goal_id:goal.id,manifest_sha256:goal.manifest_sha256,admission_ref:localReceipt,admission_sha256:'0'.repeat(64),...(path.resolve(component.root)!==path.resolve(target)?{source_root:path.resolve(target)}:{})}};
   const receipt={schema_version:'workkeel.goal-admission/v1',id:admissionId,source_goal_id:goal.id,source_manifest_sha256:goal.manifest_sha256,source_task_id:controller.id,source_contract_sha256:controller.contract_sha256,proposal_id:proposalId,proposal_sha256:inputHash,problem_sha256:problem,direction,derived_goal_id:derivedId,derived_manifest_body_sha256:goals.goalAdmissionManifestDigest(manifest),control_task_id:controlId,components:[{id:'work',root:component.root,task_id:componentId,contract_sha256:executionDigest(product)}],reservation:{operations:grant.max_operations,max_runtime_ms,max_cost_usd},created_at:current(),kind,source_goal_root:path.resolve(target),...(trigger?{source_fingerprint:problem,source_refs:input.source_refs}:{})};
+  if(context.authority.extension_sha256)receipt.extension_sha256=context.authority.extension_sha256;
+  if(trigger&&context.authority.continuation_sha256)receipt.continuation_sha256=context.authority.continuation_sha256;
   const receiptContent=formatJson({value:receipt,sha256:executionDigest(receipt)});manifest.derived_from.admission_sha256=sha256(receiptContent);
   const intent={receipt,receipt_content:receiptContent,manifest,manifest_ref:manifestRef,receipt_ref:localReceipt,control,product,root:component.root};
   const owner={pid:process.pid,host:os.hostname(),token:randomUUID()};

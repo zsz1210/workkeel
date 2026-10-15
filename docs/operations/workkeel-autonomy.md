@@ -200,6 +200,42 @@ allowance is reported even if approved sources are unchanged. It remains exhaust
 after a new source event; the service does not renew its own grant. The workspace
 shows the limit and retained results so a new authorized round is an explicit choice.
 
+### Extend an approved discovery allowance
+
+An authorized operator can raise a sealed goal's **cumulative** allowance without
+rewriting its manifest or resetting spent rounds. For example, extending a total
+of one round to five leaves four rounds available if one was already reserved.
+The settings screen can only narrow the effective authorization; moving its limit
+does not grant additional capacity.
+
+Create and claim a configuration task whose write scope covers
+`.ai-org/autonomy/admissions`. Pin a separate JSON approval in that task's policy
+references before intake. The approval has schema
+`workkeel.admission-extension/v1`, the original `goal_id` and `manifest_sha256`,
+`from` and `to` objects containing exactly `max_rounds`, `max_goals`,
+`max_total_operations` and `max_total_runtime_ms`, a nonempty `reason`, and an
+explicit boolean `reevaluate_unchanged_sources`. The `from` values must match the
+current effective grant; `to` must increase rounds without reducing any of these
+cumulative ceilings. Allocate capacity for discovery and any approved repairs.
+Scope, model choices, risk, cost limits and individual operation limits cannot be
+changed by this extension.
+
+Run `goal extend-admission . --request extension-request.json` through the pinned
+launcher. The request contains `operation_id`, the current admission journal's
+`expected_version`, `actor`, configuration `task_id`, `claim_id`,
+`contract_sha256` and pinned `approval_ref`. Repeating the exact request is
+idempotent. A stale version, changed approval, unpinned authority or conflicting
+replay fails without adding capacity. Accepted setup tasks retain their approval;
+cancellation, expiry or authority drift stops further execution. Pause and cancel
+remain available.
+
+After the extension, save the desired bounded discovery policy and continue the
+service. `reevaluate_unchanged_sources:true` explicitly permits one new inspection
+of unchanged sources under this authorization. Subsequent unchanged or empty
+results return to standby; five is a ceiling, not a requirement to spend five
+model turns. Old admissions, failed attempts and reservations remain intact, and
+new admissions identify the extension that authorized them.
+
 Off, unchanged sources, empty findings, exhausted budgets and cooldown make no
 inference calls. Turning improvement off stops new exploration/admission; each
 goal has controls for existing work. Neither mode publishes, deploys, installs

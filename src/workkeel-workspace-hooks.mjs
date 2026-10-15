@@ -5,7 +5,7 @@ import {listNativeSkillLifecycle,mutateNativeSkillLifecycle} from './workkeel-le
 import {listNativeLearning} from './workkeel-learning.mjs';
 import {readAutonomy,mutateAutonomy,cancelAutonomyJob,serveAutonomy} from './workkeel-autonomy.mjs';
 import {listNativeGoals,readNativeGoal,createNativeGoal,validateGoalManifest,controlNativeGoal,assertNativeGoalAuthority,serveNativeGoal,runNativeGoalStep} from './workkeel-goals.mjs';
-import {readGoalAdmissions} from './workkeel-autonomy-admission.mjs';
+import {readGoalAdmissions,readGoalAdmissionAuthority} from './workkeel-autonomy-admission.mjs';
 import {previewRetention,applyRetentionArchive,inventoryRetention} from './workkeel-retention.mjs';
 import {safeDirectory} from './workkeel-project.mjs';
 
@@ -138,7 +138,7 @@ export function createWorkspaceHooks({host_models=[],goalAdapter}={}){
     },
     autonomy:{
       async read({project,actor}){const s=await readAutonomy(project.task_root),admissions=await readGoalAdmissions(project.task_root),goals=await listNativeGoals(project.task_root),item=improvementServices.get(project.task_root);const available_goals=[];
-        for(const goal of goals)if(goal.manifest?.admission&&goal.controller?.actor.agent_id===actor?.agent_id&&goal.controller?.actor.principal_id===actor?.principal_id){let current=true;try{await assertNativeGoalAuthority(project.task_root,goal,{actor,execution:true});}catch{current=false;}available_goals.push({id:goal.id,title:goal.manifest.title,accepted:goal.accepted,historically_accepted:goal.state==='done'&&!!goal.integration,authority_current:current,grant:goal.manifest.admission});}
+        for(const goal of goals)if(goal.manifest?.admission&&goal.controller?.actor.agent_id===actor?.agent_id&&goal.controller?.actor.principal_id===actor?.principal_id){let current=true,grant=goal.manifest.admission;try{await assertNativeGoalAuthority(project.task_root,goal,{actor,execution:true});grant=(await readGoalAdmissionAuthority(project.task_root,goal)).grant;}catch{current=false;}available_goals.push({id:goal.id,title:goal.manifest.title,accepted:goal.accepted,historically_accepted:goal.state==='done'&&!!goal.integration,authority_current:current,grant});}
         return {...s,admissions:admissions.entries.map(e=>({id:e.id,goal_id:e.intent.manifest.id,root:e.intent.root,kind:e.kind,status:e.status,proposal_id:e.proposal_id,reservation:e.reservation,error:e.error})),available_goals,service:{state:item?'running-in-this-host':'not-confirmed-in-this-host',errors:item?.errors??[],last_step:item?.last_step??null},enabled:s.policy.enabled,state:s.paused?'paused':s.jobs.some(j=>j.status==='recovery-required')?'needs-reconciliation':s.jobs.some(j=>j.status==='running')?'execution-recorded':s.jobs.some(j=>j.status==='awaiting-acceptance')?'awaiting-acceptance':'idle',live_activity:item?'service-running':'unconfirmed',limits:s.policy,next_action:s.last_event??'Await an approved event'};},
       async execute({action,expectedVersion,idempotencyKey,payload,project,actor}){
         if(action==='autonomy.start-service'){

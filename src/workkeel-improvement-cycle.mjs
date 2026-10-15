@@ -1,6 +1,6 @@
 import {readAutonomy,recordGoalDiscovery} from './workkeel-autonomy.mjs';
 import {readNativeGoal,runNativeGoalStep,assertNativeGoalAuthority} from './workkeel-goals.mjs';
-import {readGoalAdmissions,admitGoalImprovement,validateGoalAdmissionGrant} from './workkeel-autonomy-admission.mjs';
+import {readGoalAdmissions,admitGoalImprovement,readGoalAdmissionAuthority} from './workkeel-autonomy-admission.mjs';
 import {executionDigest} from './workkeel-execution-policy.mjs';
 import {readTaskFile} from './task-contract.mjs';
 
@@ -15,7 +15,7 @@ export async function runImprovementCycle(target,{adapter,signal}={}){
   const state=await readAutonomy(target),policy=state.policy;
   if(signal?.aborted)return idle('aborted');
   if(state.paused||!policy.enabled||!policy.admission?.enabled)return idle('improvement-disabled');
-  const source=await readNativeGoal(target,policy.admission.goal_id),grant=validateGoalAdmissionGrant(source.manifest.admission);
+  const source=await readNativeGoal(target,policy.admission.goal_id),authority=await readGoalAdmissionAuthority(target,source),grant=authority.grant;
   await assertNativeGoalAuthority(target,source,{actor:source.manifest.roles.approver,execution:true});
   if(!source.accepted&&!(source.state==='done'&&source.integration))return idle('source-goal-awaiting-acceptance');
   const journal=await readGoalAdmissions(target),entries=journal.entries.filter(e=>e.goal_id===source.id);
@@ -60,7 +60,7 @@ export async function runImprovementCycle(target,{adapter,signal}={}){
   let bytes=0;const pins=[];for(const ref of refs){const file=await readTaskFile(component.root,ref);bytes+=Buffer.byteLength(file.content);if(bytes>policy.discovery.max_source_bytes)return idle('discovery-source-capacity');pins.push({path:ref,sha256:file.bytes_digest});}
   if(!refs.length)return idle('no-approved-trigger-sources');
   for(const direction of policy.directions){
-    const fingerprint=executionDigest({direction,source_refs:pins});
+    const fingerprint=executionDigest({direction,source_refs:pins,...(authority.continuation_sha256?{continuation_sha256:authority.continuation_sha256}:{})});
     if(entries.some(e=>e.kind==='discovery'&&e.problem_sha256===fingerprint))continue;
     if(entries.length+state.jobs.length>=policy.max_jobs)return idle('project-job-budget');
     if(discoveries.at(-1)&&Date.now()-Date.parse(discoveries.at(-1).updated_at)<policy.discovery.cooldown_ms)return idle('discovery-cooldown');

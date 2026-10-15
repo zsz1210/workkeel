@@ -10,7 +10,7 @@ import {createNativeGoal,readNativeGoal,runNativeGoalStep,createTrustedGoalAdapt
 import {readTaskFile} from '../src/task-contract.mjs';
 import {executionDigest} from '../src/workkeel-execution-policy.mjs';
 import {mutateAutonomy,readAutonomy,runAutonomyStep,serveAutonomy} from '../src/workkeel-autonomy.mjs';
-import {readGoalAdmissions,admitGoalImprovement,reconcileGoalAdmission} from '../src/workkeel-autonomy-admission.mjs';
+import {readGoalAdmissions,admitGoalImprovement,reconcileGoalAdmission,extendGoalAdmission,readGoalAdmissionAuthority} from '../src/workkeel-autonomy-admission.mjs';
 import {runImprovementCycle} from '../src/workkeel-improvement-cycle.mjs';
 import {createWorkspaceHooks} from '../src/workkeel-workspace-hooks.mjs';
 import {inventoryRetention} from '../src/workkeel-retention.mjs';
@@ -103,6 +103,42 @@ test('event driver progresses native derived goals without a human continue and 
   const service=await serveAutonomy(f.root,{adapter:workflow,goalAdapter:f.adapter,signal:controller.signal,debounce_ms:1,reconcile_ms:20,onError:e=>errors.push(e)});t.after(()=>{controller.abort();service.close();});
   for(let n=0;n<200;n++){const entries=(await readGoalAdmissions(f.root)).entries;if(entries[0]?.status==='created'&&(await readNativeGoal(f.root,entries[0].intent.manifest.id)).accepted)break;await new Promise(r=>setTimeout(r,10));}
   const entry=(await readGoalAdmissions(f.root)).entries[0];assert.ok(entry);assert.equal((await readNativeGoal(f.root,entry.intent.manifest.id)).accepted,true);assert.deepEqual(errors,[]);controller.abort();service.close();
+});
+
+test('explicit extension preserves spent rounds, reexamines once, and enforces the total through actual hooks and derived authority',async t=>{
+  const f=await fixture(t,{empty:true,maxRounds:1,maxGoals:1}),root=f.root;
+  async function settle(){let result;for(let n=0;n<50;n++){result=await runImprovementCycle(root,{adapter:f.adapter});if(result.idle)return result;}assert.fail('cycle did not settle: '+JSON.stringify(result));}
+  assert.equal((await settle()).idle,'discovery-round-budget');
+  const before=await readGoalAdmissions(root),oldEntry=JSON.stringify(before.entries[0]),goal=await readNativeGoal(root,f.manifest.id),fields=['max_rounds','max_goals','max_total_operations','max_total_runtime_ms'];
+  const stale=structuredClone(goal);stale.manifest.admission.max_rounds=99;assert.equal((await readGoalAdmissionAuthority(root,stale)).grant.max_rounds,1);
+  const from=Object.fromEntries(fields.map(k=>[k,goal.manifest.admission[k]])),approval={schema_version:'workkeel.admission-extension/v1',goal_id:goal.id,manifest_sha256:goal.manifest_sha256,from,to:{max_rounds:5,max_goals:5,max_total_operations:480,max_total_runtime_ms:600000},reevaluate_unchanged_sources:true,reason:'Explicit synthetic total five including the spent round'};
+  await fs.writeFile(root+'/docs/extension.json',JSON.stringify(approval)+'\n');git(root,'add','docs/extension.json');git(root,'commit','-qm','Approve synthetic extra discovery capacity');
+  const contract=structuredClone((await readNativeTask(root,'WK-source')).contract);contract.id='WK-extend';contract.environment.write_paths=['.ai-org/autonomy'];contract.environment.data.policy_refs.push('docs/extension.json');
+  await createNativeTask(root,contract,{actor,operation_id:'create-extension-task',expected_version:0});await mutateNativeTask(root,contract.id,'claim',{actor,operation_id:'claim-extension-task',expected_version:1,base_revision:git(root,'rev-parse','HEAD')});
+  const task=await readNativeTask(root,contract.id),request={actor,task_id:task.id,claim_id:task.claim.id,contract_sha256:task.contract_sha256,operation_id:'extend-five',expected_version:before.version,approval_ref:'docs/extension.json'};
+  await assert.rejects(extendGoalAdmission(root,{...request,actor:reviewer}),/operator|actor|claim/);
+  await assert.rejects(extendGoalAdmission(root,{...request,expected_version:before.version+1}),/version/);
+  assert.equal((await readGoalAdmissions(root)).version,before.version);
+  const mutable=structuredClone(request),pending=extendGoalAdmission(root,mutable);mutable.approval_ref='docs/approval.md';const extended=await pending;
+  assert.equal(extended.grant.max_rounds,5);assert.equal((await extendGoalAdmission(root,request)).replayed,true);assert.equal((await readGoalAdmissions(root)).version,extended.version);
+  await assert.rejects(extendGoalAdmission(root,{...request,expected_version:extended.version}),/replay conflict/);
+  assert.equal(JSON.stringify((await readGoalAdmissions(root)).entries[0]),oldEntry);assert.equal((await readNativeGoal(root,goal.id)).manifest_sha256,goal.manifest_sha256);
+  const revision=git(root,'rev-parse','HEAD'),evidence=['docs/extension.json'];
+  await mutateNativeTask(root,task.id,'handoff',{actor,operation_id:'handoff-extension',expected_version:2,claim_id:task.claim.id,revision,summary:'Synthetic authorized configuration',evidence,unresolved:[]});
+  await mutateNativeTask(root,task.id,'review',{actor:reviewer,operation_id:'review-extension',expected_version:3,revision,judgment:'pass',summary:'Synthetic distinct authority fixture',evidence});
+  await mutateNativeTask(root,task.id,'close',{actor,operation_id:'close-extension',expected_version:4,revision,summary:'Synthetic configuration accepted',rollback:'Explicit reviewed follow-up',evidence});
+  assert.equal((await readGoalAdmissionAuthority(root,goal)).grant.max_rounds,5);assert.equal((await extendGoalAdmission(root,request)).replayed,true);
+  const policy={...f.policy,discovery:{...f.policy.discovery,max_rounds:5}};
+  await mutateAutonomy(root,'policy',{...f.request,goal_id:goal.id,operation_id:'use-five',expected_version:(await readAutonomy(root)).version,policy});
+  const hooks=createWorkspaceHooks({goalAdapter:f.adapter});try{const view=await hooks.autonomy.read({project:{task_root:root},actor});assert.equal(view.available_goals[0].grant.max_rounds,5);}finally{hooks.autonomy.close();}
+  assert.equal((await settle()).idle,'unchanged-approved-sources');assert.equal((await readGoalAdmissions(root)).entries.length,2);
+  const count=f.calls.length;assert.equal((await settle()).idle,'unchanged-approved-sources');assert.equal(f.calls.length,count);
+  for(let round=3;round<=5;round++){await fs.appendFile(root+'/src/value.mjs','// actual synthetic source event '+round+'\n');git(root,'add','src/value.mjs');git(root,'commit','-qm','Synthetic approved source event '+round);assert.equal((await settle()).idle,round===5?'discovery-round-budget':'unchanged-approved-sources');}
+  const after=await readGoalAdmissions(root);assert.equal(after.entries.length,5);assert.equal(JSON.stringify(after.entries[0]),oldEntry);
+  for(const entry of after.entries.slice(1)){assert.equal(entry.intent.receipt.extension_sha256,extended.extension_sha256);assert.equal(entry.intent.receipt.continuation_sha256,extended.continuation_sha256);const child=await readNativeGoal(root,entry.intent.manifest.id);assert.ok(child.accepted||child.state==='done'&&child.integration);assert.equal(child.authority_status,'current');}
+  const finalCalls=f.calls.length;await fs.appendFile(root+'/src/value.mjs','// cannot renew five\n');assert.equal((await settle()).idle,'discovery-round-budget');assert.equal(f.calls.length,finalCalls);
+  await fs.appendFile(root+'/docs/extension.json',' ');await assert.rejects(readGoalAdmissionAuthority(root,goal),/approval source changed/);await assert.rejects(runImprovementCycle(root,{adapter:f.adapter}),/approval source changed/);
+  await mutateAutonomy(root,'pause',{...f.request,goal_id:goal.id,operation_id:'stop-after-extension-drift',expected_version:(await readAutonomy(root)).version});assert.equal((await runImprovementCycle(root,{adapter:f.adapter})).idle,'improvement-disabled');
 });
 
 test('automatic admission rejects widening, unknown risk and missing outcomes, and stops on approval drift',async t=>{
