@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {editPolicy} from '../src/workkeel-model-rules-ui.mjs';
+import {editPolicy,latestRecordedExecution} from '../src/workkeel-model-rules-ui.mjs';
+import {buildExecutionVisual,taskVisualRows} from '../src/workkeel-execution-visuals.mjs';
 import {resolveModelPolicy} from '../src/workkeel-model-policy.mjs';
 import {renderWorkspaceScene} from '../src/workkeel-workspace-scene.mjs';
 
@@ -9,6 +10,19 @@ const model=(id,efforts,services)=>({id,provider:'synthetic',model:id,data_class
   reasoning_efforts:efforts,service_tiers:services,auto_efforts:{low:efforts[0],standard:efforts[0],high:efforts[0]},auto_service:services[0],cost:null,quota_remaining:null});
 const policy=()=>({schema_version:'workkeel.model-policy/v1',id:'test',version:1,
   project:{model:auto,reasoning:auto,service:auto},rules:[],models:[model('a',['low','high'],['standard','priority']),model('b',['high'],['standard'])]});
+
+test('latest execution uses canonical operation chronology and preserves missing or tied timestamps',()=>{
+  const task={updated_at:'2030-01-01T00:00:00Z',runs:[{run_id:'r',operations:[
+    {operation_id:'older',activity_kind:'implementation',start_at:'2026-01-01T00:00:00Z',runtime_model:'older-model'},
+    {operation_id:'newer',activity_kind:'implementation',dispatched_at:'2026-01-02T00:00:00Z',runtime_model:'newer-model'}]}]};
+  const rows=buildExecutionVisual(taskVisualRows(task)).operations.map(row=>({task,row}));
+  assert.equal(latestRecordedExecution(rows).row.actual_model,'newer-model');
+  assert.equal(rows[0].row.actual_model,'older-model','selection does not reorder input');
+  assert.equal(latestRecordedExecution([...rows,{task,row:{order_at:null}}]),null);
+  assert.equal(latestRecordedExecution([...rows,rows[1]]),null);
+  assert.equal(latestRecordedExecution([]),null);
+  assert.equal(latestRecordedExecution([{task,row:{order_at:null}}]).task,task);
+});
 
 test('product editor rejects incompatible tuples in both selection orders and inherited descendants',()=>{
   const p=policy();

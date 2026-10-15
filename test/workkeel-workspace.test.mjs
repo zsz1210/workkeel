@@ -13,6 +13,23 @@ import {workspaceClient} from '../src/workkeel-workspace-ui.mjs';
 
 test('workspace browser module parses before deployment',()=>{new vm.Script('async function parseOnly(){'+workspaceClient+'}');});
 
+test('project selector waits for the first workspace snapshot before accepting input', {skip:process.env.WORKKEEL_WORKSPACE_BROWSER!=='1'},async t=>{
+  const {chromium}=await import('playwright-core'),{state}=await setup(t);
+  const service=await startWorkspaceServer(state);t.after(()=>service.close());
+  const browser=await chromium.launch({channel:'chrome',headless:true});t.after(()=>browser.close());
+  const page=await browser.newPage();let release,requested;
+  const waiting=new Promise(resolve=>{requested=resolve;}),gate=new Promise(resolve=>{release=resolve;});
+  t.after(()=>release());
+  await page.route('**/api/workspace',async route=>{requested();await gate;await route.continue();});
+  await page.goto(service.url);await waiting;
+  assert.equal(await page.locator('#project-switch').isDisabled(),true);
+  await page.getByRole('link',{name:'Model rules',exact:true}).click();
+  assert.equal(await page.locator('#project-switch').isDisabled(),true);
+  release();await page.getByRole('button',{name:'Switch project',exact:true}).click();
+  await page.locator('[data-project-select=alpha]').click();
+  assert.equal(new URL(page.url()).searchParams.get('project'),'alpha');
+});
+
 test('desktop project selector stays bounded with 200 long names and restores keyboard focus', {skip:process.env.WORKKEEL_WORKSPACE_BROWSER!=='1'},async t=>{
   const {chromium}=await import('playwright-core'),{state}=await setup(t);
   const service=await startWorkspaceServer(state,{readSnapshot:async directory=>{

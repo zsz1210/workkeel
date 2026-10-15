@@ -12,6 +12,14 @@ const idPattern = /^[A-Za-z0-9][A-Za-z0-9._-]{0,95}$/;
 const matches = (rule, selector) => selector.id ? rule.id === selector.id :
   rule.layer === selector.layer && rule.match === selector.match && (rule.task ?? '') === (selector.task ?? '');
 
+/** Only operation timestamps establish chronology; task updates do not. */
+export function latestRecordedExecution(entries) {
+  if (entries.length < 2) return entries[0] ?? null;
+  if (entries.some(entry => !Number.isFinite(entry.row.order_at))) return null;
+  const ordered = [...entries].sort((a,b) => b.row.order_at - a.row.order_at);
+  return ordered[0].row.order_at === ordered[1].row.order_at ? null : ordered[0];
+}
+
 /** Immutable edits preserve opaque catalog metadata and every unrelated rule. */
 export function editPolicy(document, selector, settings, allowed, nextVersion) {
   const candidate = structuredClone(document);
@@ -78,7 +86,8 @@ export function createModelRulesUI(host) {
   function report(activity) {
     const rows = scopeTasks().filter(task => !taskScope || task.id === taskScope).flatMap(task =>
       executionRows(task).filter(row => row.activity === activity).map(row => ({task, row})));
-    const latest = rows.sort((a,b) => String(b.row.started_at ?? b.task.updated_at ?? '').localeCompare(String(a.row.started_at ?? a.task.updated_at ?? '')))[0];
+    const latest = latestRecordedExecution(rows);
+    if (rows.length && !latest) return '<p class="small">'+t('Execution reports exist, but their order cannot be confirmed. Open a task for the recorded evidence.','已有執行回報，但無法確認先後順序。請開啟任務查看原始紀錄。')+'</p>';
     return latest ? '<a href="'+link('task',current.project.id,latest.task.id)+'">'+esc(latest.task.id)+'</a><p>'+esc(latest.row.actual_model || t('Model not reported','模型未回報'))+'</p><p class="small">'+t('Execution report; not inferred from this policy.','執行回報，不由目前政策推定。')+'</p>' : '<p class="small">'+t('No execution report for this activity.','此活動尚無執行回報。')+'</p>';
   }
   function ruleRow(activity) {
