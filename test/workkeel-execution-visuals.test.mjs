@@ -31,6 +31,11 @@ test('canonical review and pending component phases inform status without invent
   result=buildExecutionVisual([],{review_judgment:'pass',blocked_activities:['verification']});assert.equal(result.nodes[3].state,'review-passed');assert.equal(result.nodes[2].state,'blocked');
   assert.equal(buildExecutionVisual([],{review_judgment:'invented'}).nodes[3].state,'unreported');
 });
+test('unrelated undated rows cannot invert known chronology and conflicting undated outcomes remain ambiguous',()=>{
+  const newer=row('implementation',{start_at:'2026-01-01T00:00:10Z',state:'completed'}),older=row('implementation',{start_at:'2026-01-01T00:00:05Z',state:'failed'}),undated=row('planning',{start_at:null,end_at:null});
+  for(const rows of [[newer,undated,older],[undated,older,newer],[older,newer,undated],[newer,older,undated]]){const visual=buildExecutionVisual(rows);assert.equal(visual.nodes[1].state,'completed');assert.deepEqual(visual.nodes[1].items.map(item=>item.state),['failed','completed']);assert.equal(visual.chronology_complete,false);assert.equal(visual.recent_activity,null);}
+  const mixed=[newer,row('implementation',{start_at:null,end_at:null,state:'failed'})],ambiguous=buildExecutionVisual(mixed);assert.equal(ambiguous.nodes[1].state,'unconfirmed');assert.equal(ambiguous.nodes[1].ordering_ambiguous,true);assert.match(renderExecutionVisual(mixed),/Activity order partly unknown/);
+});
 test('task rows preserve provenance, operation identity and unknown timing without charging cached input twice',()=>{
   const op={operation_id:'op',activity_kind:'implementation',selected_model:'chosen',runtime_model:'observed',result_recorded:true,adapter_elapsed_ms:0,usage:{input_tokens:10,output_tokens:5,cached_input_tokens:8}};
   const rows=taskVisualRows({runs:[{run_id:'run',actor:{agent_id:'one',principal_id:'owner'},operations:[op,op]}]});

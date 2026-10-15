@@ -20,6 +20,11 @@ the complete mandatory component set across registered repositories. Component
 acceptance does not imply whole-goal acceptance. Analysis compares one metric at a
 time, with filters and measured coverage; it is not a model quality ranking.
 
+Known timestamps remain ordered even when other activities lack dates. If an
+activity has conflicting outcomes whose order cannot be established, its node
+requires reconciliation. Missing chronology does not override an authoritative
+native review decision or invent a latest activity.
+
 Before delivery, use the [completion evidence check](completion-evidence.md) and
 actual repeated visual review. A coverage result cannot judge usability or replace
 the separate registered Agent's native review.
