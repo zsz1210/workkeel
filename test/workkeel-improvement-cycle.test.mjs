@@ -88,6 +88,13 @@ test('exhausted discovery is explicit on unchanged sources without blocking admi
     await fs.appendFile(f.root+'/src/value.mjs','// new event cannot renew an exhausted allowance\n');
     assert.equal((await runImprovementCycle(f.root,{adapter:f.adapter})).idle,'discovery-round-budget');assert.equal(f.calls.length,before);
     assert.equal(JSON.stringify((await readGoalAdmissions(f.root)).entries.map(e=>e.reservation)),reservations);
+    const hooks=createWorkspaceHooks({goalAdapter:f.adapter}),project={task_root:f.root};
+    try{
+      await hooks.autonomy.execute({action:'autonomy.start-service',expectedVersion:(await readAutonomy(f.root)).version,idempotencyKey:'observe-exhausted',payload:{},project,actor});
+      let observed;
+      for(let n=0;n<100;n++){observed=await hooks.autonomy.read({project,actor});if(observed.service.last_step?.idle==='discovery-round-budget')break;await new Promise(r=>setTimeout(r,20));}
+      assert.equal(observed.service.last_step.idle,'discovery-round-budget');assert.equal(observed.service.last_step.rounds_used,1);assert.equal(observed.service.last_step.rounds_limit,1);assert.deepEqual(observed.service.errors,[]);assert.equal(f.calls.length,before);
+    }finally{hooks.autonomy.close();}
   }
 });
 
