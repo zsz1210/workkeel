@@ -245,7 +245,7 @@ function taskDependencyComponents(task){
  while(pending.length){const key=pending.shift();if(seen.has(key))continue;seen.add(key);if(seen.size>128)throw Error('Dependency display limit');
  const item=snapshot.tasks.find(value=>value.key===key),deps=item?.dependencies||[];
  const project=snapshot.projects.find(value=>value.id===item?.project_id),repos=project?.repositories.filter(repo=>repo.path===(item?.task_root??project.task_root))||[];
-  items.push({id:key,task_id:item?.id,project_id:item?.project_id,repo_id:repos.length===1?repos[0].id:t('Repository unconfirmed','Repository 未確認'),state:item?statusText(item):t('Unavailable','無法讀取'),accepted:item?.quality?.locally_accepted===true,depends_on:deps});
+  items.push({id:key,task_id:item?.id,project_id:item?.project_id,repo_id:repos.length===1?repos[0].id:t('Repository unconfirmed','Repository 未確認'),state:item?.task_state??null,accepted:item?.quality?.locally_accepted===true,depends_on:deps});
  pending.push(...deps);}
  return items;
 }

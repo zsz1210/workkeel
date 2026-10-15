@@ -535,6 +535,33 @@ test('goal browser shows canonical component FAIL despite completed execution an
   await page.getByRole('button',{name:'Refresh',exact:true}).click();await page.locator('.scene-current[data-state=review-passed] button[data-flow-node="independent-review"]').waitFor();assert.equal(await page.locator('.scene-current[data-state=review-passed]').count(),1);await page.locator('button[data-flow-node="independent-review"]').click();assert.equal(await page.locator('.flow-inspector .flow-record').count(),2);assert.deepEqual(errors,[]);
 });
 
+test('task dependency landscape navigates the exact project and keeps missing dependencies unlinked', {skip:process.env.WORKKEEL_WORKSPACE_BROWSER!=='1'},async t=>{
+  const {chromium}=await import('playwright-core'),{state,repo}=await setup(t),other=await fs.realpath(await createMonitorFixture());
+  t.after(()=>fs.rm(other,{recursive:true,force:true}));
+  await registerWorkspaceProject(state,projectInput(other,'beta'),{expectedVersion:2});
+  let sourceId,targetId;
+  const service=await startWorkspaceServer(state,{readSnapshot:async directory=>{
+    const snapshot=await readWorkspaceSnapshot(directory),source=snapshot.tasks.find(task=>task.project_id==='alpha'),target=snapshot.tasks.find(task=>task.project_id==='beta');
+    sourceId=source.id;targetId=target.id;source.title='Synthetic source task';target.title='Synthetic dependency task';source.task_state='build';target.task_state='test';source.dependencies=[target.key,'missing:WK-unavailable'];
+    return snapshot;
+  }});t.after(()=>service.close());
+  const browser=await chromium.launch({channel:'chrome',headless:true});t.after(()=>browser.close());
+  const page=await browser.newPage({viewport:{width:1280,height:900}});
+  await page.goto(service.url);await page.waitForFunction(()=>document.getElementById('connection')?.textContent.startsWith('Connected locally'));
+  await page.goto(service.origin+'/?'+new URLSearchParams({view:'task',project:'alpha',task:sourceId}));
+  await page.getByRole('tab',{name:'Dependencies',exact:true}).click();
+  const missing=page.locator('.constellation-node').filter({has:page.locator('strong[title="missing:WK-unavailable"]')});
+  assert.equal(await missing.locator('a').count(),0);
+  const link=page.locator('.workspace-map a').filter({hasText:'beta:'+targetId});
+  assert.equal(await link.locator('small').innerText(),'Independent review');
+  await page.getByRole('button',{name:'繁體中文',exact:true}).click();
+  assert.equal(await link.locator('small').innerText(),'獨立審查');
+  assert.equal(await missing.locator('small').innerText(),'狀態待確認');
+  await link.click();await page.getByRole('heading',{name:'Synthetic dependency task',exact:true}).waitFor();
+  const url=new URL(page.url());assert.equal(url.searchParams.get('project'),'beta');assert.equal(url.searchParams.get('task'),targetId);
+  assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
+});
+
 test('actual browser narrows sealed standing grant, saves null cost and separately starts the event service', {skip:process.env.WORKKEEL_WORKSPACE_BROWSER!=='1'},async t=>{
   const {chromium}=await import('playwright-core');const {state,repo}=await setup(t);const beta=await fs.realpath(await createMonitorFixture());t.after(()=>fs.rm(beta,{recursive:true,force:true}));await registerWorkspaceProject(state,projectInput(beta,'beta'),{expectedVersion:2});const alphaGoal=syntheticGoal(repo),betaGoal=syntheticGoal(beta);alphaGoal.manifest.title='Alpha improvement with same identifier';betaGoal.manifest.title='Beta admitted improvement';let writes=0,starts=0,serviceActive=false,policy={enabled:false,directions:[],max_jobs:20,max_attempts:2,cooldown_ms:1001};
   const grant={enabled:true,directions:['quality','reliability'],read_paths:['src','docs'],write_paths:['src'],max_goals:3,max_total_operations:30,max_total_runtime_ms:90000,max_attempts:1,max_runtime_ms:1001,max_cost_usd:null,max_rounds:2,max_source_bytes:4096,cooldown_ms:1001};
