@@ -23,6 +23,9 @@ export async function runImprovementCycle(target,{adapter,signal}={}){
   let waiting=null;
   for(const entry of pending){
     const goal=await readNativeGoal(entry.intent.root,entry.intent.manifest.id);
+    // Explicitly stopped work keeps its reservation and evidence, but cannot
+    // block unrelated approved work or earn an automatic retry of the same input.
+    if(goal.state==='cancelled')continue;
     if(goal.accepted){if(entry.kind==='discovery')await recordGoalDiscovery(target,{goal_root:entry.intent.root,goal_id:goal.id});continue;}
     if(goal.state==='done'&&goal.integration)continue;
     if(['done','paused','cancelled','cancel-requested'].includes(goal.state)){waiting??=goal;continue;}

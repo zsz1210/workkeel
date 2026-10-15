@@ -16,6 +16,48 @@ import {renderWorkspaceScene,renderWorkspaceMap} from '../src/workkeel-workspace
 import {buildExecutionVisual,taskVisualRows,renderExecutionVisual,renderExecutionTimeline,dependencyLayout,renderDependencyDiagram,renderActivityComparison} from '../src/workkeel-execution-visuals.mjs';
 
 const now=Date.parse('2026-01-01T00:02:00Z');
+test('autonomy guidance follows usable standing authority without changing settings task gates',()=>{
+  // Run the emitted client's real notice, goal selection and permission helpers.
+  const block=(start,end)=>{const from=workspaceClient.indexOf(start),to=workspaceClient.indexOf(end,from);assert.ok(from>=0&&to>from);return workspaceClient.slice(from,to);};
+  const code=block('const may=','const modelRules=')+block('function selectedImprovementGoal(','function improvementGoalPicker(')+'\n({html:operatorContext(),save:may("autonomy.policy"),start:may("autonomy.start-service"),settings:may("policy.update"),learning:may("learning.activate"),storage:may("retention.archive")});';
+  const goal={id:'approved-goal',authority_current:true,grant:{enabled:true}};
+  const actions=['autonomy.policy','autonomy.start-service','policy.update','learning.activate','retention.archive'];
+  const base={snapshot:{projects:[{id:'project',read_status:'available'}],capabilities:{actions}},connected:true,writeToken:'operator',improvementGoal:'approved-goal',hookData:{operator:{ready:false,reason_code:'no-task',tasks:[],selected_task_id:null},available_goals:[goal]}};
+  const render=({view='autonomy',lang='en',...overrides}={})=>vm.runInNewContext(code,{...base,...overrides,route:()=>({view,project:'project'}),t:(en,zh)=>lang==='zh-TW'?zh:en,escape:value=>String(value??'')});
+  for(const lang of ['en','zh-TW']){
+    const result=render({lang});
+    assert.match(result.html,/approved goal|核准目標/);
+    assert.doesNotMatch(result.html,/settings task|設定任務|operator-task/);
+    assert.equal(result.save,true);assert.equal(result.start,true);
+    assert.equal(result.settings,false);assert.equal(result.learning,false);assert.equal(result.storage,false);
+    for(const view of ['settings','learning','storage'])assert.match(render({view,lang}).html,/settings task|設定任務/,'standing authority does not replace another settings page’s task');
+    const readOnly=render({lang,writeToken:'',hookData:{...base.hookData,operator:{...base.hookData.operator,reason_code:'view-only'}}});
+    assert.match(readOnly.html,/operator connection|操作連線/);assert.equal(readOnly.save,false);assert.equal(readOnly.start,false);
+    for(const available_goals of [[],[{...goal,authority_current:false}],[{...goal,grant:{enabled:false}}]]){
+      const missing=render({lang,hookData:{...base.hookData,available_goals}});
+      assert.match(missing.html,/settings task|設定任務/);
+      assert.doesNotMatch(missing.html,/approved goal|核准目標/);
+      if(!available_goals[0]?.authority_current)assert.equal(missing.save,false,'missing standing authority still needs task authorization');
+    }
+  }
+  for(const overrides of [{connected:false},{writeToken:''},{snapshot:{...base.snapshot,capabilities:{actions:[]}}},{snapshot:{...base.snapshot,projects:[{id:'project',read_status:'unavailable'}]}}]){
+    const unavailable=render(overrides);assert.doesNotMatch(unavailable.html,/approved goal/);assert.equal(unavailable.save,false);assert.equal(unavailable.start,false);
+  }
+  const startOnly=render({snapshot:{...base.snapshot,capabilities:{actions:['autonomy.start-service']}}});
+  assert.match(startOnly.html,/approved goal/);assert.equal(startOnly.save,false);assert.equal(startOnly.start,true);
+  const policySelected=render({improvementGoal:'',hookData:{...base.hookData,policy:{admission:{goal_id:goal.id}}}});
+  assert.match(policySelected.html,/approved goal/,'the recorded policy can select the standing goal');
+  for(const reason_code of ['choose-task','task-unavailable','authority-unavailable']){
+    const operator={...base.hookData.operator,reason_code};
+    assert.match(render({hookData:{...base.hookData,operator}}).html,/approved goal/,'an unrelated settings task problem does not invalidate standing authority');
+    const invalid=render({hookData:{...base.hookData,operator,available_goals:[{...goal,authority_current:false}]}});
+    assert.doesNotMatch(invalid.html,/approved goal/);assert.match(invalid.html,/task|settings/);assert.equal(invalid.save,false);
+  }
+  const task={id:'settings-task',title:'Approved settings'};
+  const selected=render({view:'settings',hookData:{...base.hookData,operator:{ready:true,tasks:[task],selected_task_id:task.id}}});
+  assert.match(selected.html,/operator-task-disclosure/);assert.match(selected.html,/Approved settings/);
+  assert.equal(selected.settings,true);assert.equal(selected.learning,true);assert.equal(selected.storage,true);
+});
 test('task dependency navigation preserves project-local identity and leaves missing tasks unlinked',()=>{
   // Execute the emitted client's actual helpers and task renderer without booting its host connection.
   const block=(start,end)=>{const from=workspaceClient.indexOf(start),to=workspaceClient.indexOf(end,from);assert.ok(from>=0&&to>from);return workspaceClient.slice(from,to);};

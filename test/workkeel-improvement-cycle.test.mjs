@@ -6,7 +6,7 @@ import os from 'node:os';
 import {execFileSync} from 'node:child_process';
 import {initializeTaskProject} from '../src/workkeel-project.mjs';
 import {createNativeTask,readNativeTask,mutateNativeTask} from '../src/workkeel-tasks.mjs';
-import {createNativeGoal,readNativeGoal,runNativeGoalStep,createTrustedGoalAdapter} from '../src/workkeel-goals.mjs';
+import {createNativeGoal,readNativeGoal,runNativeGoalStep,createTrustedGoalAdapter,controlNativeGoal} from '../src/workkeel-goals.mjs';
 import {readTaskFile} from '../src/task-contract.mjs';
 import {executionDigest} from '../src/workkeel-execution-policy.mjs';
 import {mutateAutonomy,readAutonomy,runAutonomyStep,serveAutonomy} from '../src/workkeel-autonomy.mjs';
@@ -139,6 +139,18 @@ test('explicit extension preserves spent rounds, reexamines once, and enforces t
   const finalCalls=f.calls.length;await fs.appendFile(root+'/src/value.mjs','// cannot renew five\n');assert.equal((await settle()).idle,'discovery-round-budget');assert.equal(f.calls.length,finalCalls);
   await fs.appendFile(root+'/docs/extension.json',' ');await assert.rejects(readGoalAdmissionAuthority(root,goal),/approval source changed/);await assert.rejects(runImprovementCycle(root,{adapter:f.adapter}),/approval source changed/);
   await mutateAutonomy(root,'pause',{...f.request,goal_id:goal.id,operation_id:'stop-after-extension-drift',expected_version:(await readAutonomy(root)).version});assert.equal((await runImprovementCycle(root,{adapter:f.adapter})).idle,'improvement-disabled');
+});
+
+test('settled cancellation retains spent discovery and cannot starve new source events or retry unchanged input',async t=>{
+  const f=await fixture(t,{empty:true});await runImprovementCycle(f.root,{adapter:f.adapter});
+  const before=await readGoalAdmissions(f.root),child=await readNativeGoal(f.root,before.entries[0].intent.manifest.id);
+  await controlNativeGoal(f.root,child.id,'cancel',{actor,operation_id:'stop-exact-discovery',expected_version:child.version});
+  assert.equal((await runImprovementCycle(f.root,{adapter:f.adapter})).idle,'derived-goal-needs-attention');
+  for(let n=0;n<8&&(await readNativeGoal(f.root,child.id)).state!=='cancelled';n++)await runNativeGoalStep(f.root,child.id,{adapter:f.adapter});
+  assert.equal((await readNativeGoal(f.root,child.id)).state,'cancelled');assert.equal(f.calls.length,0);
+  assert.equal((await runImprovementCycle(f.root,{adapter:f.adapter})).idle,'unchanged-approved-sources');assert.deepEqual((await readGoalAdmissions(f.root)).entries,before.entries);
+  await fs.appendFile(f.root+'/src/value.mjs','// distinct approved event\n');git(f.root,'add','src/value.mjs');git(f.root,'commit','-qm','Synthetic source event');
+  assert.equal((await runImprovementCycle(f.root,{adapter:f.adapter})).progressed,true);assert.equal((await readGoalAdmissions(f.root)).entries.length,2);assert.equal(f.calls.length,0);
 });
 
 test('automatic admission rejects widening, unknown risk and missing outcomes, and stops on approval drift',async t=>{

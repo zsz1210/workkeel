@@ -339,6 +339,14 @@ export async function runNativeGoalStep(target,goalId,{adapter,signal}={}){
     else {stored.timing.latest_observation=timing;stored.timing.observation_count++;}
     if(!result||!['completed','unknown','cancelled','attention'].includes(result.status))result={status:'unknown',reason:'Invalid host result'};
     if(Buffer.byteLength(formatJson(result))>131072)result={status:'unknown',reason:'Oversized host result; retained source required'};
+    if(reservation.mode==='cancel'){
+      // A stop observation does not erase the execution it stopped or count as
+      // another inference. Preserve measured facts and keep stop proof separate.
+      const facts={};for(const key of ['actor','thread_id','operation_id','runtime_selection','product_access','usage','model_called','tool','report_pin']){
+        const value=stored.result?.[key]??stored.first_result?.[key];if(value!==undefined)facts[key]=structuredClone(value);
+      }
+      result={...result,...facts,cancellation:structuredClone(result)};
+    }
     stored.first_result??=structuredClone(result);stored.result=result;stored.owner=null;stored.status=result.status==='completed'?'completed':'unknown';
     if(result.status!=='completed'){p.last_error=result.reason??'Uncertain runtime effects require exact reconciliation';current.last_error=p.last_error;if(result.status==='cancelled'&&current.status==='cancel-requested')stored.status='completed';await save(target,current);return {operation:stored,status:current.status,accepted:false,model_called:op.kind==='runtime'&&reservation.mode==='execute'&&result.model_called!==false};}
     p.last_error=null;

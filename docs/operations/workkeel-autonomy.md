@@ -236,6 +236,11 @@ results return to standby; five is a ceiling, not a requirement to spend five
 model turns. Old admissions, failed attempts and reservations remain intact, and
 new admissions identify the extension that authorized them.
 
+Explicitly cancelled work keeps its spent allowance and execution measurements.
+Once cancellation is confirmed, it no longer blocks unrelated approved work.
+Unresolved cancellation still needs attention, and cancelling an empty or blocked
+discovery never automatically retries the same unchanged source.
+
 Off, unchanged sources, empty findings, exhausted budgets and cooldown make no
 inference calls. Turning improvement off stops new exploration/admission; each
 goal has controls for existing work. Neither mode publishes, deploys, installs

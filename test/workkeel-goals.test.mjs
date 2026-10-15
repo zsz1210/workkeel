@@ -132,6 +132,16 @@ test('bounded repair stops after first retained FAIL and source drift never gran
   assert.equal((await readNativeGoal(f.target,f.manifest.id)).authority_status,'unavailable');
 });
 
+test('cancelling settled attention preserves execution identity, usage and original report without counting stop as inference',async t=>{
+  const f=await fixture(t),usage={input_tokens:31,output_tokens:7},actor={agent_id:'builder',principal_id:'owner'};let calls=0;
+  const adapter=createTrustedGoalAdapter({id:'attention-usage',assertCapabilities:async()=>{},execute:async ctx=>{calls++;return {status:'attention',reason:'Current visual evidence required',model_called:true,usage,actor:ctx.input.actor,thread_id:'actual-synthetic-thread',operation_id:ctx.operation_id,runtime_selection:ctx.input.model,product_access:'read',tool:'synthetic'};},reconcile:async()=>({status:'unknown',reason:'No new model turn'}),cancel:async()=>({status:'cancelled',reason:'Settled exact runtime',model_called:false,usage:{input_tokens:0,output_tokens:0}})});
+  for(let n=0;n<4&&!calls;n++)await runNativeGoalStep(f.target,f.manifest.id,{adapter});assert.equal(calls,1);
+  const before=await readNativeGoal(f.target,f.manifest.id),original=before.operations.find(o=>o.kind==='runtime');
+  await controlNativeGoal(f.target,f.manifest.id,'cancel',{actor:builder,operation_id:'stop-measured-attention',expected_version:before.version});
+  for(let n=0;n<8&&(await readNativeGoal(f.target,f.manifest.id)).state!=='cancelled';n++)await runNativeGoalStep(f.target,f.manifest.id,{adapter});
+  const stopped=await readNativeGoal(f.target,f.manifest.id),op=stopped.operations.find(o=>o.id===original.id);assert.equal(stopped.state,'cancelled');assert.deepEqual(op.first_result,original.first_result);assert.deepEqual(op.result.usage,usage);assert.deepEqual(op.result.actor,original.result.actor);assert.equal(op.result.thread_id,'actual-synthetic-thread');assert.deepEqual(op.result.runtime_selection,original.result.runtime_selection);assert.equal(op.result.model_called,true);assert.equal(op.result.status,'cancelled');assert.equal(op.result.cancellation.model_called,false);assert.equal(calls,1);assert.deepEqual(op.timing.execution,original.timing.execution);
+});
+
 test('frozen goal remains cancellable after approved manifest and approval bytes drift',async t=>{
   const f=await fixture(t),adapter=fixtureAdapter();await runNativeGoalStep(f.target,f.manifest.id,{adapter});
   await fs.appendFile(f.target+'/docs/goal.json',' ');await fs.appendFile(f.target+'/docs/approval.md','Drift');
