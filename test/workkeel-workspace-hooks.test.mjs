@@ -13,8 +13,17 @@ import {mutateAutonomy,readAutonomy} from '../src/workkeel-autonomy.mjs';
 import {createWorkspace,registerWorkspaceProject} from '../src/workkeel-workspace.mjs';
 import {startWorkspaceServer} from '../src/workkeel-workspace-server.mjs';
 import {readModelPolicy} from '../src/workkeel-model-policy.mjs';
+import {captureNativeLearning} from '../src/workkeel-learning.mjs';
 
-async function fixture(t){
+test('observatory native hooks retain lessons before Skill promotion and isolate unreadable learning',async t=>{
+  const f=await fixture(t,{learning:true});
+  await captureNativeLearning(f.root,{task_id:f.task.id,actor:f.actor,claim_id:f.task.claim.id,contract_sha256:f.task.contract_sha256,operation_id:'capture-lesson',record:{id:'LESSON-synthetic',kind:'lesson',title:'A captured experience',summary:'A concrete learned behavior',applicability:'This synthetic case',exclusions:'No automatic promotion',aliases:[],derived_from:[],evidence:['docs/approval.md'],skill_refs:[]}});
+  const view=await f.hooks.learning.read({project:f.project});assert.equal(view.entries.length,0);assert.equal(view.lessons.length,1);assert.equal(view.lessons[0].effective_state,'candidate');assert.equal(view.lesson_status,'available');
+  await fs.writeFile(f.root+'/.ai-org/learning/native/000001.json','broken');
+  const broken=await f.hooks.learning.read({project:f.project});assert.equal(broken.lesson_status,'unavailable');assert.deepEqual(broken.lessons,[]);assert.deepEqual(broken.entries,[]);
+});
+
+async function fixture(t,{learning=false}={}){
   const root=await fs.realpath(await fs.mkdtemp(path.join(os.tmpdir(),'workspace-hooks-')));t.after(()=>fs.rm(root,{recursive:true,force:true}));
   const git=(...args)=>execFileSync('git',['-C',root,...args],{encoding:'utf8'}).trim();git('init','-q');git('config','user.name','Fixture');git('config','user.email','fixture@example.invalid');
   const actor={agent_id:'builder',principal_id:'owner'};await initializeTaskProject(root,{schema_version:'workkeel.task-policy/v1',principals:['owner'],agents:[actor,{agent_id:'reviewer',principal_id:'owner'}],approvers:['owner'],review_separation:'distinct-agent'});
@@ -22,6 +31,7 @@ async function fixture(t){
   const policy={schema_version:'workkeel.dispatch-policy/v1',models:[{alias:'careful',provider:'codex',model:'fixture-model',reasoning:'high',data_classes:['internal']}],default_alias:'careful',conservative_alias:'careful',parallelism:1};
   await fs.writeFile(root+'/docs/models.json',JSON.stringify(policy));git('add','docs');git('commit','-qm','Synthetic settings baseline');
   const brief={schema_version:'workkeel.task-brief/v1',id:'WK-settings',goal:'Configure synthetic project settings',actor,acceptance:['Keep native task unchanged'],environment:{cwd:'.',read_paths:['docs','.ai-org/host-usage'],write_paths:['.ai-org/model-policies','.ai-org/autonomy','.ai-org/retention'],tools:['node'],resources:[],network:{mode:'none',hosts:[]},external_actions:[],data:{classification:'internal',model_access:'none',policy_refs:['docs/approval.md','docs/models.json']}},authorization:{approved_by:'owner',approval_ref:'docs/approval.md',operations:['read','write','execute'],expires_at:null}};
+  if(learning)brief.environment.write_paths.push('.ai-org/learning');
   const p=await previewTaskIntake(root,brief);await applyTaskIntake(root,brief,p.fingerprint);await mutateNativeTask(root,brief.id,'claim',{operation_id:'claim',expected_version:1,actor,base_revision:git('rev-parse','HEAD')});
   const host_models=[{provider:'codex',model:'fixture-model',reasoning_efforts:['high'],service_tiers:['standard']}];
   return {root,actor,project:{task_root:root},hooks:createWorkspaceHooks({host_models}),task:await readNativeTask(root,brief.id)};

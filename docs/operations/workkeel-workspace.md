@@ -15,8 +15,18 @@ shows a recovery message instead of another project's tasks. Search is shown onl
 on the list views it filters. Task rows show their identifiers and update times;
 dates from earlier years include the year.
 
-The default task and goal view starts with the current situation and next action.
-A compact five-activity diagram shows planning, implementation, verification,
+The project home shows current work, accepted outcomes and recent activity from
+native task and execution records. Optional delivery goals appear only when
+registered or when their records need attention. Completed work remains useful
+even when its host did not report timing or tokens: delivery summaries, review
+decisions, responsible identities and lifecycle dates remain visible. The activity
+analysis distinguishes reported partial usage from complete coverage and shows
+operation counts when a time or token comparison has no measurements.
+
+The default task view starts with the current situation, recorded milestones and
+delivered result; full execution details remain expandable. Its Timeline tab opens
+the task lifecycle before optional measured intervals. The task execution tab and
+goal overview retain a compact five-activity diagram: planning, implementation, verification,
 independent review and repair. A completed review execution can still have a
 recorded FAIL. Goal views retain each component's actual review verdict and the
 rejected review operations; one component's PASS never clears another's FAIL.
@@ -43,6 +53,19 @@ native review decision or invent a latest activity.
 Before delivery, use the [completion evidence check](completion-evidence.md) and
 actual repeated visual review. A coverage result cannot judge usability or replace
 the separate registered Agent's native review.
+
+Autonomous improvement reports whether a goal is configured, policy is enabled,
+the service is connected, or current work needs recovery. Historical terminal
+failures remain in history without permanently blocking a healthy service. A
+view-only link cannot start work. Background updates preserve unsaved settings;
+the service status updates even when no task record changes. Agent-assigned work
+is visible under Tasks and is not relabeled as an autonomous run.
+
+Project learning includes recorded lessons and development retrospectives before
+Skill promotion. A lesson awaiting review is neither an active Skill nor a global
+instruction. The built-in autonomous host supports bounded code execution;
+browser-based UI acceptance requires a separately qualified host. Enabling a
+policy alone does not supply that capability.
 
 ## Register projects
 

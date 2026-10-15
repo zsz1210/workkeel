@@ -2,6 +2,7 @@ import {readNativeTask,listTaskItems} from './workkeel-tasks.mjs';
 import {readTaskContractInput,readTaskFile} from './task-contract.mjs';
 import {readModelPolicy,saveModelPolicyDraft,approveModelPolicy,selectModelPolicy} from './workkeel-model-policy.mjs';
 import {listNativeSkillLifecycle,mutateNativeSkillLifecycle} from './workkeel-learning-lifecycle.mjs';
+import {listNativeLearning} from './workkeel-learning.mjs';
 import {readAutonomy,mutateAutonomy,cancelAutonomyJob,serveAutonomy} from './workkeel-autonomy.mjs';
 import {listNativeGoals,readNativeGoal,createNativeGoal,validateGoalManifest,controlNativeGoal,assertNativeGoalAuthority,serveNativeGoal,runNativeGoalStep} from './workkeel-goals.mjs';
 import {readGoalAdmissions} from './workkeel-autonomy-admission.mjs';
@@ -123,13 +124,14 @@ export function createWorkspaceHooks({host_models=[],goalAdapter}={}){
     },
     learning:{
       async read({project}){const view=await listNativeSkillLifecycle(project.task_root);const actions=[];
+        let lessons,lesson_status;try{lessons=(await listNativeLearning(project.task_root)).items;lesson_status='available';}catch{lessons=[];lesson_status='unavailable';}
         for(const item of view.items){
           const base={skill_id:item.skill_id,version:item.version,evidence:item.review?.request.evidence??item.candidate.request.evidence};
           if(item.reviewed&&!item.approval)actions.push({action:'learning.approve',label:'Approve '+item.skill_id+' '+item.version,payload:{...base,decision:'approve'}});
           if(item.reviewed&&item.approval?.request.decision==='approve'&&!item.active)actions.push({action:'learning.activate',label:'Use '+item.skill_id+' '+item.version,payload:base});
           if(item.active)actions.push({action:'learning.suspend',label:'Disable '+item.skill_id+' '+item.version,payload:{...base,decision:'Disabled by the workspace operator'}});
         }
-        return {...view,version:view.version,entries:view.items.map(item=>({...item,id:item.skill_id,title:item.skill_id,status:item.active?'active':item.suspended?'suspended':item.approval?.request.decision==='approve'?'approved':item.reviewed?'reviewed':item.evaluation?'evaluated':'candidate',summary:item.candidate.request.trigger})),actions};},
+        return {...view,version:view.version,lessons,lesson_status,entries:view.items.map(item=>({...item,id:item.skill_id,title:item.skill_id,status:item.active?'active':item.suspended?'suspended':item.approval?.request.decision==='approve'?'approved':item.reviewed?'reviewed':item.evaluation?'evaluated':'candidate',summary:item.candidate.request.trigger})),actions};},
       async execute({action,expectedVersion,idempotencyKey,payload,project,actor}){const {request}=await authority(project,actor,payload.task_id);const {task_id,...fields}=payload;return mutateNativeSkillLifecycle(project.task_root,action.replace(/^learning\./,''),{...fields,...request,operation_id:idempotencyKey,expected_version:expectedVersion});}
     },
     autonomy:{

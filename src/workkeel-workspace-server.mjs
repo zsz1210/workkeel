@@ -3,7 +3,7 @@ import fs from 'node:fs/promises';
 import {constants} from 'node:fs';
 import path from 'node:path';
 import {randomBytes,timingSafeEqual,createHash} from 'node:crypto';
-import {readWorkspace,readWorkspaceSnapshot,registerWorkspaceProject,removeWorkspaceProject,projectWorkspaceAttention,projectWorkspaceExecution,projectWorkspaceAnalysis} from './workkeel-workspace.mjs';
+import {readWorkspace,readWorkspaceSnapshot,registerWorkspaceProject,removeWorkspaceProject,projectWorkspaceAttention,projectWorkspaceExecution,projectWorkspaceAnalysis,workspaceWorkSummary,workspaceExecutionRows} from './workkeel-workspace.mjs';
 import {startTaskMonitor} from './workkeel-monitor.mjs';
 import {renderWorkspacePage,workspaceClient,workspaceStyle} from './workkeel-workspace-ui.mjs';
 
@@ -115,6 +115,9 @@ export async function startWorkspaceServer(stateDir,{port=0,readSnapshot=readWor
             for(const task of oldTasks)if(!snapshot.tasks.some(t=>t.key===task.key))snapshot.tasks.push({...task,read_status:'stale',last_confirmed_at:previous.last_confirmed_at});
           }
         }
+        const rows=workspaceExecutionRows(snapshot.tasks,snapshot.goals??[]);
+        snapshot.work=workspaceWorkSummary(snapshot.tasks,rows);
+        for(const project of snapshot.projects)project.work=workspaceWorkSummary(snapshot.tasks.filter(task=>task.project_id===project.id),rows.filter(row=>row.project_id===project.id));
         snapshot.attention=projectWorkspaceAttention(snapshot.tasks,snapshot.projects,snapshot.goals??[]);lastSnapshot=structuredClone(snapshot);
         return send(200,{...snapshot,capabilities:{control:!!writeToken,actions:control?.actions??[],hooks:Object.keys(hooks).filter(k=>typeof hooks[k]?.read==='function')}});
       }

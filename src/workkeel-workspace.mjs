@@ -122,6 +122,32 @@ export async function removeWorkspaceProject(stateDir,id,{expectedVersion}={}) {
   return mutate(stateDir,expectedVersion,value=>{if(!value.projects.some(p=>p.id===id))fail('Project not found');value.projects=value.projects.filter(p=>p.id!==id);return value;});
 }
 export const workspaceTaskKey=(projectId,taskId)=>{if(!identifier(projectId)||!identifier(taskId))fail('Invalid task reference');return projectId+':'+taskId;};
+/** Work exists independently of telemetry. Only current canonical records count
+ * as current results; older or unavailable records stay explicitly separate. */
+export function workspaceWorkSummary(tasks, rows=[]) {
+  const current=tasks.filter(task=>task.read_status==='available'),byKey=new Map(tasks.map(task=>[task.key,task]));
+  const events=[];
+  for(const task of current)for(const [index,event] of (task.timeline??[]).entries()) {
+    if(!Number.isFinite(Date.parse(event.at)))continue;
+    events.push({id:task.key+':lifecycle:'+index,kind:'lifecycle',task_id:task.id,task_key:task.key,project_id:task.project_id,title:task.title,at:event.at,action:event.action,actor:event.actor??null,summary:event.reason??null,outcome:event.outcome??null});
+  }
+  for(const row of rows) {
+    if(row.read_status!=='available')continue;
+    const at=row.end_at??row.last_observed_at??row.start_at;
+    if(!Number.isFinite(Date.parse(at)))continue;
+    events.push({id:row.key,kind:'execution',task_key:row.task_key,task_id:byKey.get(row.task_key)?.id??null,project_id:row.project_id,title:row.task_title,at,action:row.activity_kind,state:row.state,actor:row.actor,summary:row.display_label,model:row.reported?.model??null,requested_model:row.requested?.model??null,tokens:row.tokens,tokens_complete:row.tokens_complete,reported_ms:row.reported_ms});
+  }
+  events.sort((a,b)=>Date.parse(b.at)-Date.parse(a.at)||a.id.localeCompare(b.id));
+  const accepted=current.filter(task=>task.quality?.locally_accepted===true);
+  const delivered=current.filter(task=>task.delivery).sort((a,b)=>Date.parse(b.updated_at)-Date.parse(a.updated_at));
+  return {total:tasks.length,current:current.length,unavailable:tasks.length-current.length,
+    active:current.filter(task=>!['done','cancelled'].includes(task.task_state)).length,
+    accepted:accepted.length,awaiting_acceptance:delivered.filter(task=>!task.quality?.locally_accepted&&task.task_state!=='cancelled').length,
+    recorded_operations:rows.length,tasks_with_operations:new Set(rows.map(row=>row.task_key)).size,
+    measured_time:rows.filter(row=>Number.isFinite(row.reported_ms)).length,reported_tokens:rows.filter(row=>Number.isFinite(row.tokens)).length,measured_tokens:rows.filter(row=>row.tokens_complete).length,
+    activity:events.slice(0,12),activity_total:events.length,
+    outcomes:delivered.slice(0,4).map(task=>({task_id:task.id,task_key:task.key,project_id:task.project_id,title:task.title,at:task.updated_at,task_state:task.task_state,accepted:task.quality?.locally_accepted===true,summary:task.delivery.summary??null,review:task.review?.summary??null,review_judgment:task.quality?.review_judgment??null}))};
+}
 export function workspaceAutonomySummary(value) {
   const jobs=(value.jobs??[]).filter(job=>job.origin==='improvement');
   const times=[...jobs.map(job=>job.updated_at),...(value.discovery_runs??[]).map(run=>run.at),...(value.proposals??[]).map(proposal=>proposal.created_at)].filter(at=>Number.isFinite(Date.parse(at))).sort();
@@ -218,7 +244,7 @@ export function projectWorkspaceAnalysis(snapshot,{project='all',activity='all',
   const all=workspaceExecutionRows(snapshot.tasks,snapshot.goals??[]),rows=all.filter(row=>(project==='all'||row.project_id===project)&&(activity==='all'||(row.activity_kind??'unreported')===activity)&&(tool==='all'||row.tool===tool)&&(model==='all'||row.model===model));
   const grouped=aggregateRows(rows.map(row=>({...row,task_id:row.task_key,ms:row.reported_ms,turn_ms:null,turn_complete:false})),group).sort((a,b)=>b.rows-a.rows||a.id.localeCompare(b.id));
   return {authority:'observation-only',read_at:snapshot.read_at,filters:{project,activity,tool,model,group},groups:queryPage(grouped,{limit,offset}),operations:queryPage(rows,{limit,offset}),dimensions:{projects:snapshot.projects.map(p=>({id:p.id,name:p.name})),activity:[...new Set(all.map(row=>row.activity_kind??'unreported'))].sort(),tool:[...new Set(all.map(row=>row.tool))].sort(),model:[...new Set(all.map(row=>row.model))].sort()},
-    totals:aggregateRows(rows.map(row=>({...row,task_id:row.task_key,ms:row.reported_ms,total:'all'})),'total')[0]??null,coverage:{selected_operations:rows.length,recorded_operations:all.length,measured_tokens:rows.filter(row=>row.tokens_complete).length,measured_time:rows.filter(row=>row.time_complete).length,unavailable_projects:snapshot.projects.filter(p=>p.read_status!=='available').map(p=>p.id),stale_operations:rows.filter(row=>row.read_status==='stale').length,scope:'recorded-operations-only',unobserved_host_conversation:'not-measured'}};
+    totals:aggregateRows(rows.map(row=>({...row,task_id:row.task_key,ms:row.reported_ms,total:'all'})),'total')[0]??null,coverage:{selected_operations:rows.length,recorded_operations:all.length,reported_tokens:rows.filter(row=>Number.isFinite(row.tokens)).length,reported_time:rows.filter(row=>Number.isFinite(row.reported_ms)).length,measured_tokens:rows.filter(row=>row.tokens_complete).length,measured_time:rows.filter(row=>row.time_complete).length,unavailable_projects:snapshot.projects.filter(p=>p.read_status!=='available').map(p=>p.id),stale_operations:rows.filter(row=>row.read_status==='stale').length,scope:'recorded-operations-only',unobserved_host_conversation:'not-measured'}};
 }
 
 /** An attention summary never promotes automatic review/wait into a human ask. */
@@ -292,7 +318,9 @@ export async function readWorkspaceSnapshot(stateDir,{snapshotReader=readMonitor
   for(const goal of goals)for(const component of goal.mandatory_components)component.task_view_available=tasks.some(task=>task.key===component.key&&task.task_root===component.root);
   for(const task of tasks){task.goals=goals.filter(g=>g.mandatory_components.some(c=>c.key===task.key)).map(g=>({key:g.key,id:g.id,reference_id:g.reference_id,project_id:g.project_id,title:g.title,acceptance:g.acceptance}));const relevant=goals.map(g=>({...g,operations:g.operations.filter(row=>row.task_key===task.key)}));task.execution={...task.execution,...workspaceRecordedSummary(workspaceExecutionRows([task],relevant))};}
   const rows=workspaceExecutionRows(tasks,goals).map(row=>({...row,task_id:row.task_key,ms:row.reported_ms})),attention=projectWorkspaceAttention(tasks,projects,goals);
+  for(const project of projects)project.work=workspaceWorkSummary(tasks.filter(task=>task.project_id===project.id),rows.filter(row=>row.project_id===project.id));
   return {schema_version:'workkeel.workspace-snapshot/v1',authority:'observation-only',model_calls:0,read_at:now.toISOString(),registry_version:registry.version,id:registry.id,name:registry.name,complete:projects.every(p=>p.complete),projects,tasks,attention,shared_scopes:sharing,
+    work:workspaceWorkSummary(tasks,rows),
     goals,recent_deliveries:tasks.filter(t=>t.delivery).sort((a,b)=>String(b.updated_at??'').localeCompare(String(a.updated_at??''))).slice(0,12).map(t=>({key:t.key,project_id:t.project_id,title:t.title,candidate_revision:t.candidate_revision,accepted:t.quality?.locally_accepted===true,merged:'unreported',published:'unreported',deployed:'unreported',updated_at:t.updated_at})),
     usage:aggregateRows(rows.map(row=>({...row,total:'all'})),'total')[0]??null,usage_coverage:{recorded_operations:rows.length,total_tasks:tasks.length,tasks_with_operations:new Set(rows.map(row=>row.task_id)).size,scope:'recorded-operations-only',unobserved_host_conversation:'not-measured'}};
 }
