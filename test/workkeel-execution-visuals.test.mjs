@@ -10,10 +10,29 @@ test('reviews retain component-specific verdicts without promoting one pass to w
   assert.equal(buildExecutionVisual([{...rows[0],activity_kind:'implementation'}]).nodes[1].state,'completed','only actual review verdicts affect the review node');
 });
 import assert from 'node:assert/strict';
+import vm from 'node:vm';
+import {workspaceClient} from '../src/workkeel-workspace-ui.mjs';
 import {renderWorkspaceScene,renderWorkspaceMap} from '../src/workkeel-workspace-scene.mjs';
 import {buildExecutionVisual,taskVisualRows,renderExecutionVisual,renderExecutionTimeline,dependencyLayout,renderDependencyDiagram,renderActivityComparison} from '../src/workkeel-execution-visuals.mjs';
 
 const now=Date.parse('2026-01-01T00:02:00Z');
+test('task dependency navigation preserves project-local identity and leaves missing tasks unlinked',()=>{
+  // Execute the emitted client's actual helpers and task renderer without booting its host connection.
+  const block=(start,end)=>{const from=workspaceClient.indexOf(start),to=workspaceClient.indexOf(end,from);assert.ok(from>=0&&to>from);return workspaceClient.slice(from,to);};
+  const code=block('const t=','const listViews=')+block('function taskDependencyComponents(','function projectPicker(')+'\ntaskView("alpha","WK-same");';
+  const task=(project_id,dependencies=[])=>({key:project_id+':WK-same',id:'WK-same',project_id,dependencies,task_state:'build',read_status:'available'});
+  const snapshot={tasks:[task('alpha')],projects:['alpha','beta'].map(id=>({id,task_root:'/'+id,repositories:[{id:id+'-repo',path:'/'+id,scope:'.'}]}))};
+  const render=()=>vm.runInNewContext(code,{snapshot,renderWorkspaceMap,URLSearchParams,lang:'en',tab:'dependencies',escape:value=>String(value??''),heading:()=>'',taskNext:()=>''});
+  const single=render();
+  assert.match(single,/single-component/);
+  assert.match(single,/href="\?view=task&amp;project=alpha&amp;task=WK-same"/);
+  snapshot.tasks=[task('alpha',['beta:WK-same','missing:WK-lost']),task('beta')];
+  const multi=render();
+  assert.match(multi,/href="\?view=task&amp;project=alpha&amp;task=WK-same"/);
+  assert.match(multi,/href="\?view=task&amp;project=beta&amp;task=WK-same"/);
+  assert.match(multi,/missing:WK-lost/);
+  assert.equal((multi.match(/<a href=/g)||[]).length,2,'only the two resolved tasks are navigation targets');
+});
 test('product landscape preserves invalid dependencies, safe links and component-only acceptance',()=>{
   assert.match(renderWorkspaceScene([]),/scene-empty/);assert.doesNotMatch(renderWorkspaceScene([]),/scene-composition/);
   const single=renderWorkspaceMap([{id:'one',repo_id:'repo',accepted:true}],{href:()=>'?view=task&task=one'});
@@ -24,6 +43,18 @@ test('product landscape preserves invalid dependencies, safe links and component
   assert.match(renderWorkspaceMap([]),/No required components recorded/);
 });
 const row=(activity,extra={})=>({activity_kind:activity,state:'completed',actor:{agent_id:'builder',principal_id:'owner'},reported:{model:'actual-model'},start_at:'2026-01-01T00:00:00Z',end_at:'2026-01-01T00:00:10Z',tokens:0,tokens_complete:true,time_complete:true,...extra});
+test('compact scenes keep empty evidence distinct from unknown and recorded zero tokens',()=>{
+  for(const [language,message]of [['en','Waiting for execution evidence'],['zh-TW','等待執行證據']]){
+    const empty=renderWorkspaceScene([],{language});
+    assert.match(empty,/scene-empty/);assert.ok(empty.includes(message));
+    assert.doesNotMatch(empty,/scene-composition|scene-current-metrics|data-flow-node|aria-current="step"/);
+  }
+  const unknown=renderWorkspaceScene([row('implementation',{tokens:null,tokens_complete:false})]);
+  assert.match(unknown,/<strong aria-label="— tokens">—<\/strong>/);
+  assert.doesNotMatch(unknown,/aria-label="0 tokens"|aria-current="step"/);
+  assert.match(renderWorkspaceScene([row('implementation')]),/<strong aria-label="0 tokens">0<\/strong>/);
+  assert.match(renderWorkspaceScene([row('implementation',{tokens:3,tokens_complete:false})]),/<strong aria-label="≥ 3 tokens">≥ 3<\/strong>/);
+});
 test('missing work, explicit zero and selected-only models remain distinct',()=>{
   const rows=[row('implementation',{reported:{model:null},selected:{model:'selected-only'},model:'unreported'}),row('verification',{tokens:null,tokens_complete:false,start_at:null,end_at:null,time_complete:false})];
   const result=buildExecutionVisual(rows),build=result.nodes[1],verify=result.nodes[2];

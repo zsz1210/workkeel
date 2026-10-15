@@ -245,7 +245,7 @@ function taskDependencyComponents(task){
  while(pending.length){const key=pending.shift();if(seen.has(key))continue;seen.add(key);if(seen.size>128)throw Error('Dependency display limit');
  const item=snapshot.tasks.find(value=>value.key===key),deps=item?.dependencies||[];
  const project=snapshot.projects.find(value=>value.id===item?.project_id),repos=project?.repositories.filter(repo=>repo.path===(item?.task_root??project.task_root))||[];
- items.push({id:key,repo_id:repos.length===1?repos[0].id:t('Repository unconfirmed','Repository 未確認'),state:item?statusText(item):t('Unavailable','無法讀取'),accepted:item?.quality?.locally_accepted===true,depends_on:deps});
+  items.push({id:key,task_id:item?.id,project_id:item?.project_id,repo_id:repos.length===1?repos[0].id:t('Repository unconfirmed','Repository 未確認'),state:item?statusText(item):t('Unavailable','無法讀取'),accepted:item?.quality?.locally_accepted===true,depends_on:deps});
  pending.push(...deps);}
  return items;
 }
@@ -262,7 +262,7 @@ function taskView(projectId,id){
  if(tab==='execution')body=entityFlow(task)+renderExecutionTimeline(entityRows(task),visualOptions(task))+executionView(task);
  else if(tab==='timeline')body='<section class="panel detail-body"><h3>'+t('Task lifecycle & handoffs','任務歷程與交接')+'</h3><ol class="timeline">'+(task.timeline||[]).map(event=>'<li><time>'+escape(date(event.at))+'</time><p><strong>'+escape(lifecycleAction(event.action))+'</strong> · '+escape(event.actor?.agent_id||t('Executor not recorded','執行者未記錄'))+'</p><p class="small">'+escape(event.reason||'')+'</p></li>').join('')+'</ol></section>'+(entityRows(task).length?'<details class="panel detail-body"><summary>'+t('Execution timing','執行時間記錄')+'</summary>'+renderExecutionTimeline(entityRows(task),visualOptions(task))+'</details>':'');
  else if(tab==='dependencies'){
-  try{body=renderWorkspaceMap(taskDependencyComponents(task),{language:lang,href:component=>link('task',projectId,component.task_id)});}catch(error){body='<p class="connection error">'+t('Dependency diagram exceeds its display bound; inspect complete source records.','依賴圖超出顯示範圍，請核對完整來源記錄。')+'</p>';}
+  try{body=renderWorkspaceMap(taskDependencyComponents(task),{language:lang,href:component=>component.project_id&&component.task_id?link('task',component.project_id,component.task_id):null});}catch(error){body='<p class="connection error">'+t('Dependency diagram exceeds its display bound; inspect complete source records.','依賴圖超出顯示範圍，請核對完整來源記錄。')+'</p>';}
   body+='<details class="panel detail-body"><summary>'+t('Repository scope & records','Repo 範圍與記錄')+'</summary><ul class="dependency-list">'+(project?.repositories||[]).map(repo=>'<li><strong>'+escape(repo.id)+'</strong><p>'+escape(repo.scope)+'</p><p class="mono">'+escape(repo.path)+'</p></li>').join('')+'</ul><p class="small">'+t('Registration describes scope; it does not authorize writes.','登記描述範圍，不授予寫入權限。')+'</p></details>';
  }else{
   const measured=buildExecutionVisual(entityRows(task),visualOptions(task)),tokens=measured.tokens,partial=!measured.tokens_complete;
