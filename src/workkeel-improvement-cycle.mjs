@@ -28,6 +28,10 @@ export async function runImprovementCycle(target,{adapter,signal}={}){
     if(['done','paused','cancelled','cancel-requested'].includes(goal.state)){waiting??=goal;continue;}
     const result=await runNativeGoalStep(entry.intent.root,goal.id,{adapter,signal});
     if(result.operation)return {...result,goal_id:goal.id,goal_root:entry.intent.root,progressed:result.operation.status==='completed'};
+    if(result.accepted){
+      if(entry.kind==='discovery')await recordGoalDiscovery(target,{goal_root:entry.intent.root,goal_id:goal.id});
+      continue;
+    }
     waiting??=goal;
   }
   // An unresolved host or rejected issue remains visible and consumes its

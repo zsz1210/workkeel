@@ -68,7 +68,7 @@ test('opt-in discovery creates bounded work, retains reviewer FAIL, repairs, acc
 test('off and unchanged empty discovery are idle without model turns; supported source changes trigger a new round',async t=>{
   const f=await fixture(t,{empty:true});const state=await readAutonomy(f.root);await mutateAutonomy(f.root,'policy',{...f.request,goal_id:f.manifest.id,operation_id:'off',expected_version:state.version,policy:{...f.policy,enabled:false}});assert.equal((await runImprovementCycle(f.root,{adapter:f.adapter})).idle,'improvement-disabled');assert.equal(f.calls.length,0);
   await mutateAutonomy(f.root,'policy',{...f.request,goal_id:f.manifest.id,operation_id:'on',expected_version:(await readAutonomy(f.root)).version,policy:f.policy});
-  let result;for(let n=0;n<30;n++){result=await runImprovementCycle(f.root,{adapter:f.adapter});if(result.idle==='unchanged-approved-sources')break;}assert.equal(result.idle,'unchanged-approved-sources');const count=f.calls.length;await runImprovementCycle(f.root,{adapter:f.adapter});assert.equal(f.calls.length,count);
+  let result;for(let n=0;n<30;n++){result=await runImprovementCycle(f.root,{adapter:f.adapter});assert.notEqual(result.idle,'derived-goal-needs-attention','newly accepted discovery must settle directly to its real idle state');if(result.idle==='unchanged-approved-sources')break;}assert.equal(result.idle,'unchanged-approved-sources');const count=f.calls.length;await runImprovementCycle(f.root,{adapter:f.adapter});assert.equal(f.calls.length,count);
   await fs.appendFile(f.root+'/src/value.mjs','// source event\n');assert.equal((await runImprovementCycle(f.root,{adapter:f.adapter})).progressed,true);
 });
 
