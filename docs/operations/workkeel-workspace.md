@@ -8,7 +8,13 @@ dependencies and evidence when needed.
 
 The default task and goal view starts with the current situation and next action.
 A compact five-activity diagram shows planning, implementation, verification,
-independent review and repair. These activities do not imply five separate Agents.
+independent review and repair. A completed review execution can still have a
+recorded FAIL. Goal views retain each component's actual review verdict and the
+rejected review operations; one component's PASS never clears another's FAIL.
+Current verdicts are bound to their reviewed candidate, rather than inferred from
+task phase. Repository labels and dependency state are plain text, while exact
+root-local task keys remain available for keyboard inspection.
+These activities do not imply five separate Agents.
 Each node uses recorded executors, models, time and tokens; select a node for its
 records. Exact identifiers, source details and acceptance evidence are disclosed
 on demand. Missing reports stay unknown, explicit zero remains zero, and a

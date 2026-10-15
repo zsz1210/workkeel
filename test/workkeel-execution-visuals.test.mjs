@@ -1,4 +1,14 @@
 import test from 'node:test';
+
+test('reviews retain component-specific verdicts without promoting one pass to whole-goal success',()=>{
+  const review=(component,judgment,at)=>({component_id:component,activity_kind:'review',state:'completed',review_judgment:judgment,start_at:at});
+  let rows=[review('first','fail','2026-01-01T00:00:00Z'),review('second','pass','2026-01-01T00:01:00Z')];
+  assert.equal(buildExecutionVisual(rows,{review_judgments:['fail','pass']}).nodes[3].state,'failed');
+  rows.push(review('first','pass','2026-01-01T00:02:00Z'));
+  assert.equal(buildExecutionVisual(rows,{review_judgments:['pass','pass']}).nodes[3].state,'review-passed');
+  assert.equal(buildExecutionVisual(rows,{review_judgments:['pass',null]}).nodes[3].state,'completed');
+  assert.equal(buildExecutionVisual([{...rows[0],activity_kind:'implementation'}]).nodes[1].state,'completed','only actual review verdicts affect the review node');
+});
 import assert from 'node:assert/strict';
 import {buildExecutionVisual,taskVisualRows,renderExecutionVisual,renderExecutionTimeline,dependencyLayout,renderDependencyDiagram,renderActivityComparison} from '../src/workkeel-execution-visuals.mjs';
 

@@ -1,4 +1,6 @@
 import test from 'node:test';
+import {projectWorkspaceGoals} from '../src/workkeel-workspace.mjs';
+import {buildExecutionVisual} from '../src/workkeel-execution-visuals.mjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import path from 'node:path';
@@ -73,10 +75,16 @@ function fixtureAdapter({firstFail=true,onExecute=()=>{},wrongThread=false,inter
 async function finish(f,adapter,max=60){for(let n=0;n<max;n++){const view=await readNativeGoal(f.target,f.manifest.id);if(view.accepted)return view;const step=await runNativeGoalStep(f.target,f.manifest.id,{adapter});if(step.idle&&['components-blocked','host-capability-unavailable'].includes(step.idle))throw Error(step.idle+': '+JSON.stringify((await readNativeGoal(f.target,f.manifest.id)).components));}const view=await readNativeGoal(f.target,f.manifest.id);throw Error('Goal did not accept: '+JSON.stringify({status:view.status,components:view.components,canonical:view.mandatory_components.map(c=>({id:c.id,state:c.state,accepted:c.accepted,reason:c.reason})),ops:view.operations.slice(-3).map(o=>({phase:o.input.phase,status:o.status,reason:o.result?.reason,first:o.first_result?.reason}))}));}
 
 test('whole goal continues first FAIL, native rework, fresh candidate, distinct PASS and authorized closure',async t=>{
-  const f=await fixture(t),adapter=fixtureAdapter();const accepted=await finish(f,adapter),task=await readNativeTask(f.target,'WK-component-0');
+  const f=await fixture(t),adapter=fixtureAdapter();let failed;
+  for(let n=0;n<12;n++){await runNativeGoalStep(f.target,f.manifest.id,{adapter});failed=await readNativeGoal(f.target,f.manifest.id);if(failed.mandatory_components[0].review?.judgment==='fail')break;}
+  assert.equal(failed.mandatory_components[0].review.judgment,'fail');
+  const registry={projects:[{id:'project-0',task_root:f.target,repositories:[{id:'repo-0',path:f.target,scope:'.'}]}]},projected=projectWorkspaceGoals([failed],registry,'project-0')[0],row=projected.operations.find(op=>op.review_judgment==='fail');
+  assert.ok(row);assert.equal(row.state,'completed','successful host execution does not mean a passing verdict');assert.equal(buildExecutionVisual(projected.operations).nodes[3].state,'failed');assert.equal(projected.mandatory_components[0].review_judgment,'fail');
+  const accepted=await finish(f,adapter),task=await readNativeTask(f.target,'WK-component-0');
   assert.equal(task.state,'done');assert.equal(task.attempts[0].kind,'rejected');assert.equal(task.attempts[0].review.judgment,'fail');assert.notEqual(task.attempts[0].delivery.revision,task.delivery.revision);
   assert.equal(task.review.actor.agent_id,'reviewer');assert.equal(accepted.whole_acceptance,'accepted');assert.equal(accepted.components[0].failures[0].kind,'review');assert.equal(accepted.mandatory_components.length,1);assert.equal(accepted.published,'not-performed');
   const failProof=task.attempts[0].review.evidence.find(p=>p.path.includes('goal-review-'));assert.equal(JSON.parse((await readTaskFile(f.target,failProof.path)).content).native_request.judgment,'fail');
+  const repaired=projectWorkspaceGoals([accepted],registry,'project-0')[0];assert.deepEqual(repaired.mandatory_components[0].reviews.map(value=>value.judgment),['fail','pass']);assert.deepEqual(repaired.operations.filter(op=>op.review_judgment).map(op=>op.review_judgment),['fail','pass']);assert.equal(buildExecutionVisual(repaired.operations,{review_judgments:repaired.mandatory_components.map(value=>value.review_judgment)}).nodes[3].state,'review-passed');
 });
 
 test('three repositories remain partial until every required task and exact integration set are accepted',async t=>{
