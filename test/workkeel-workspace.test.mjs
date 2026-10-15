@@ -43,7 +43,11 @@ test('desktop project selector stays bounded with 200 long names and restores ke
   await page.getByRole('button',{name:'Next projects',exact:true}).click();assert.match(await page.locator('#project-results .picker-item').first().innerText(),/Synthetic 20/);
   await page.getByRole('searchbox',{name:'Search projects',exact:true}).fill('synthetic-199');assert.equal(await page.locator('#project-results .picker-item').count(),1);
   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
+  await page.getByRole('searchbox',{name:'Search projects',exact:true}).fill('');await page.evaluate(()=>document.documentElement.style.zoom='2');
+  for(const selector of ['#close-project-picker','#project-search','[data-picker-page="1"]'])assert.equal(await page.locator(selector).evaluate(el=>{const b=el.getBoundingClientRect();return b.top>=0&&b.bottom<=innerHeight&&b.left>=0&&b.right<=innerWidth;}),true,'project picker search, close and paging stay visible at 200%');
+  await page.getByRole('button',{name:'Next projects',exact:true}).click();assert.match(await page.locator('#project-results .picker-item').first().innerText(),/Synthetic 20/);
   await page.keyboard.press('Escape');await page.locator('dialog').waitFor({state:'detached'});assert.equal(await page.locator('#project-switch').evaluate(el=>el===document.activeElement),true);
+  await page.evaluate(()=>document.documentElement.style.zoom='1');
   await page.getByRole('link',{name:'All projects',exact:true}).click();assert.equal(await page.locator('.project-row').count(),30);
   await page.getByRole('button',{name:'Next',exact:true}).click();assert.equal(await page.locator('.project-row').count(),30);
   await page.locator('#search').fill('Synthetic 199 —');assert.equal(await page.locator('.project-row').count(),1);
@@ -302,7 +306,7 @@ test('actual desktop browser supports navigation, escaped text, controls, zoom, 
 test('actual browser edits contextual model rules and separately previews and approves an exact draft', {skip:process.env.WORKKEEL_WORKSPACE_BROWSER!=='1'},async t=>{
   const {chromium}=await import('playwright-core');const {state}=await setup(t);
   let storeVersion=0,entries=[],policy={schema_version:'workkeel.model-policy/v1',id:'synthetic-model-policy',version:1,project:{model:{mode:'auto'},reasoning:{mode:'auto'},service:{mode:'auto'}},rules:[],models:[{id:'synthetic-approved-model',provider:'synthetic',model:'synthetic-model',opaque_scope:'kept'}]},approved=false,previewed=false;
-  const service=await startWorkspaceServer(state,{control:{actor:{agent_id:'synthetic-operator',principal_id:'synthetic-owner'},actions:['policy.draft','policy.preview','policy.approve']},hooks:{policy:{read:async()=>({version:storeVersion,policy:policy.project,policy_document:policy,entries,active_version:approved?policy.version:null,capabilities:{model:['synthetic-approved-model'],reasoning:['high'],service:['standard']}}),execute:async request=>{
+  const service=await startWorkspaceServer(state,{control:{actor:{agent_id:'synthetic-operator',principal_id:'synthetic-owner'},actions:['policy.draft','policy.preview','policy.approve']},readSnapshot:async directory=>{const snapshot=await readWorkspaceSnapshot(directory);return {...snapshot,tasks:Array.from({length:40},(_,i)=>({...snapshot.tasks[0],id:'WK-zoom-'+i,key:'alpha:WK-zoom-'+i,title:'Synthetic zoom task '+i}))};},hooks:{policy:{read:async()=>({version:storeVersion,policy:policy.project,policy_document:policy,entries,active_version:approved?policy.version:null,capabilities:{model:['synthetic-approved-model'],reasoning:['high'],service:['standard']}}),execute:async request=>{
     assert.equal(request.expectedVersion,storeVersion);
     if(request.action==='policy.draft'){policy=request.payload.policy;assert.equal(policy.models[0].opaque_scope,'kept');assert.equal(policy.rules[0].layer,'role');assert.equal(policy.rules[0].match,'review');assert.equal(policy.rules[0].settings.model.value,'synthetic-approved-model');entries=[{policy,sha256:'a'.repeat(64),approval:null}];storeVersion++;return {draft_saved:true};}
     if(request.action==='policy.preview'){previewed=true;assert.equal(request.payload.selectors.role,'review');return {requested:policy.rules[0].settings,selected:{model:'synthetic-model'},reported:{model:null},dispatch_performed:false};}
@@ -318,6 +322,22 @@ test('actual browser edits contextual model rules and separately previews and ap
   await page.getByText('Advanced rules & exact versions',{exact:true}).click();await page.locator('[data-rule-action="rule:ui-rule-1"]').click();await page.getByRole('button',{name:'Preview choices',exact:true}).click();await page.locator('#rule-selection-preview').filter({hasText:'synthetic-model'}).waitFor();assert.equal(previewed,true);await captureDesktop(page,'workspace-model-policy-desktop.png');assert.equal(await page.locator('#rule-selection-preview .model-observation-row').count(),3);assert.equal(await page.locator('#rule-selection-preview pre').isVisible(),false);await page.getByRole('button',{name:'Cancel',exact:true}).click();
   await page.getByRole('button',{name:'Approve this exact draft',exact:true}).click();await page.getByText('Exact draft approved.',{exact:false}).waitFor();assert.equal(approved,true);assert.equal(storeVersion,2);
   await page.evaluate(()=>document.documentElement.style.zoom='2');assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
+  for(const width of [1440,1280]){await page.setViewportSize({width,height:900});
+  for(const control of await page.locator('[data-rule-action^="edit:"]').all()){
+    await control.scrollIntoViewIfNeeded();
+    assert.equal(await control.evaluate(el=>{const b=el.getBoundingClientRect(),r=el.closest('.mr-list').getBoundingClientRect();return b.left>=r.left&&b.right<=r.right&&b.left>=0&&b.right<=innerWidth;}),true,'every Adjust control remains inside the visible container');
+    await control.click();
+    for(const name of ['Cancel','Preview choices','Save draft'])assert.equal(await page.getByRole('button',{name,exact:true}).evaluate(el=>{const b=el.getBoundingClientRect();return b.left>=0&&b.right<=innerWidth&&b.top>=0&&b.bottom<=innerHeight;}),true,'all editor footer controls remain visible at 200%');
+    await page.getByRole('button',{name:'Cancel',exact:true}).click();
+  }}
+  await page.getByRole('button',{name:'Adjust Implementation',exact:true}).click();
+  await page.locator('[name="reasoning-mode"]').selectOption('fixed');await page.locator('[name="reasoning-value"]').fill('high');
+  await captureDesktop(page,'workspace-policy-zoom2.png');
+  await page.getByRole('button',{name:'Save draft',exact:true}).click();await page.locator('#model-rule-dialog').waitFor({state:'detached'});assert.equal(storeVersion,3);
+  await page.getByRole('button',{name:'Task exception',exact:true}).click();assert.equal(await page.locator('#rule-task-results .picker-item').count(),20);
+  for(const selector of ['[data-rule-action="close-picker"]','#rule-task-search','[data-rule-action="picker-next"]'])assert.equal(await page.locator(selector).evaluate(el=>{const b=el.getBoundingClientRect();return b.top>=0&&b.bottom<=innerHeight&&b.left>=0&&b.right<=innerWidth;}),true,'large task picker controls stay visible at 200%');
+  await page.locator('[data-rule-action="picker-next"]').click();assert.match(await page.locator('#rule-task-results .picker-item').first().innerText(),/WK-zoom-20/);
+  await page.locator('#rule-task-search').fill('WK-zoom-39');await page.locator('[data-rule-action="task:WK-zoom-39"]').click();assert.equal(new URL(page.url()).searchParams.get('policy_task'),'WK-zoom-39');
   await page.keyboard.press('Tab');assert.notEqual(await page.evaluate(()=>document.activeElement.tagName),'BODY');assert.deepEqual(errors,[]);
 });
 
