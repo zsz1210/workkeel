@@ -10,6 +10,7 @@ test('reviews retain component-specific verdicts without promoting one pass to w
   assert.equal(buildExecutionVisual([{...rows[0],activity_kind:'implementation'}]).nodes[1].state,'completed','only actual review verdicts affect the review node');
 });
 import assert from 'node:assert/strict';
+import {renderWorkspaceScene} from '../src/workkeel-workspace-scene.mjs';
 import {buildExecutionVisual,taskVisualRows,renderExecutionVisual,renderExecutionTimeline,dependencyLayout,renderDependencyDiagram,renderActivityComparison} from '../src/workkeel-execution-visuals.mjs';
 
 const now=Date.parse('2026-01-01T00:02:00Z');
@@ -40,6 +41,11 @@ test('canonical review and pending component phases inform status without invent
   assert.equal(result.nodes[3].state,'failed');assert.equal(result.nodes[4].state,'queued');assert.equal(result.nodes[3].ms,null);assert.equal(result.nodes[3].tokens,null);assert.deepEqual(result.nodes[3].actors,[]);
   result=buildExecutionVisual([],{review_judgment:'pass',blocked_activities:['verification']});assert.equal(result.nodes[3].state,'review-passed');assert.equal(result.nodes[2].state,'blocked');
   assert.equal(buildExecutionVisual([],{review_judgment:'invented'}).nodes[3].state,'unreported');
+});
+test('a dispatched goal review awaits its report instead of returning to the queue',()=>{
+  const rows=[row('review',{state:'running',actor:null,requested_actor:{agent_id:'reviewer<&'},reported:{model:null},end_at:null,last_observed_at:null,tokens:null,tokens_complete:false,time_complete:false})],options={now,pending_activities:['independent-review']};
+  const visual=buildExecutionVisual(rows,options),node=visual.nodes[3];assert.equal(node.state,'stale');assert.equal(visual.current_activity,null);assert.deepEqual(node.actors,[]);assert.equal(node.assigned_actor,'reviewer<&');assert.equal(node.ms,null);assert.equal(node.tokens,null);
+  const html=renderWorkspaceScene(rows,options);assert.match(html,/Dispatched · awaiting report/);assert.match(html,/Assigned: reviewer&lt;&amp;/);assert.doesNotMatch(html,/LATEST LIVE REPORT|Identity not reported/);
 });
 test('unrelated undated rows cannot invert known chronology and conflicting undated outcomes remain ambiguous',()=>{
   const newer=row('implementation',{start_at:'2026-01-01T00:00:10Z',state:'completed'}),older=row('implementation',{start_at:'2026-01-01T00:00:05Z',state:'failed'}),undated=row('planning',{start_at:null,end_at:null});

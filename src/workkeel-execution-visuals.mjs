@@ -72,12 +72,14 @@ export function buildExecutionVisual(rows,{now=Date.now(),connected=true,read_st
     if(activity==='independent-review'&&review_judgment==='fail')state='failed';
     if(activity==='independent-review'&&review_judgment==='pass'&&!live)state='review-passed';
     if(blocked_activities.includes(activity))state='blocked';
-    else if(pending_activities.includes(activity)&&!live)state='queued';
+    // A pending lifecycle phase can already have a dispatched operation. Lack
+    // of a fresh heartbeat must not turn that recorded dispatch back into a queue.
+    else if(pending_activities.includes(activity)&&!live&&state!=='stale')state='queued';
     return {activity,items,state,ordering_ambiguous,current:live,latest:!active&&recent?.activity===activity,
       ms:measured,time_complete:complete&&items.length>0&&items.every(row=>row.time_complete),
       tokens:knownTokens.length?sum(knownTokens.map(row=>row.tokens)):null,tokens_complete:complete&&items.length>0&&items.every(row=>row.tokens_complete),
       actors:[...new Set(items.map(row=>row.actor?.agent_id).filter(Boolean))],models:[...new Set(items.map(row=>row.actual_model).filter(Boolean))],
-      selected_model:last?.selected_model??null,attempts:items.length};
+      selected_model:last?.selected_model??null,assigned_actor:text(last?.requested_actor?.agent_id),attempts:items.length};
   });
   const measured=operations.filter(row=>row.ms!==null),known=operations.filter(row=>row.tokens!==null),spans=operations.flatMap(row=>row.spans);
   return {nodes,operations,chronology_complete,other_operations:operations.filter(row=>!executionActivities.includes(row.activity)),current_activity:active?.activity??null,recent_activity:recent?.activity??null,
