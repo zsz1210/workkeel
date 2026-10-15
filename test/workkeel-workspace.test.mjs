@@ -535,6 +535,26 @@ test('goal browser shows canonical component FAIL despite completed execution an
   await page.getByRole('button',{name:'Refresh',exact:true}).click();await page.locator('.scene-current[data-state=review-passed] button[data-flow-node="independent-review"]').waitFor();assert.equal(await page.locator('.scene-current[data-state=review-passed]').count(),1);await page.locator('button[data-flow-node="independent-review"]').click();assert.equal(await page.locator('.flow-inspector .flow-record').count(),2);assert.deepEqual(errors,[]);
 });
 
+test('project rest state never claims completion when task records are unavailable', {skip:process.env.WORKKEEL_WORKSPACE_BROWSER!=='1'},async t=>{
+  const {chromium}=await import('playwright-core'),{state}=await setup(t);
+  const service=await startWorkspaceServer(state,{readSnapshot:async directory=>{
+    const snapshot=await readWorkspaceSnapshot(directory);
+    snapshot.projects[0].complete=false;
+    for(const task of snapshot.tasks)task.read_status='unavailable';
+    return snapshot;
+  }});t.after(()=>service.close());
+  const browser=await chromium.launch({channel:'chrome',headless:true});t.after(()=>browser.close());
+  const page=await browser.newPage();await page.goto(service.url);
+  await page.waitForFunction(()=>document.getElementById('connection')?.textContent.startsWith('Connected locally'));
+  await page.goto(service.origin+'/?view=project&project=alpha');
+  await page.locator('.project-rest').waitFor();
+  assert.match(await page.locator('.project-rest').innerText(),/Some work cannot be confirmed/);
+  assert.equal(await page.locator('.project-rest [aria-hidden]').count(),0);
+  await page.getByRole('button',{name:'繁體中文',exact:true}).click();
+  assert.match(await page.locator('.project-rest').innerText(),/部分工作狀態尚無法確認/);
+  assert.doesNotMatch(await page.locator('main').innerText(),/目前任務已告一段落/);
+});
+
 test('task dependency landscape navigates the exact project and keeps missing dependencies unlinked', {skip:process.env.WORKKEEL_WORKSPACE_BROWSER!=='1'},async t=>{
   const {chromium}=await import('playwright-core'),{state,repo}=await setup(t),other=await fs.realpath(await createMonitorFixture());
   t.after(()=>fs.rm(other,{recursive:true,force:true}));
