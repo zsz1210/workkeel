@@ -21,7 +21,7 @@ const now=Date.parse('2026-01-01T00:02:00Z');
 test('autonomy guidance follows usable standing authority without changing settings task gates',()=>{
   // Run the emitted client's real notice, goal selection and permission helpers.
   const block=(start,end)=>{const from=workspaceClient.indexOf(start),to=workspaceClient.indexOf(end,from);assert.ok(from>=0&&to>from);return workspaceClient.slice(from,to);};
-  const code=block('const may=','const modelRules=')+block('function selectedImprovementGoal(','function improvementGoalPicker(')+'\n({html:operatorContext(),save:may("autonomy.policy"),start:may("autonomy.start-service"),settings:may("policy.update"),learning:may("learning.activate"),storage:may("retention.archive")});';
+  const code=block('const may=','const modelRules=')+block('function selectedImprovementGoal(','function autonomyJourney(')+'\n({html:operatorContext(),save:may("autonomy.policy"),start:may("autonomy.start-service"),settings:may("policy.update"),learning:may("learning.activate"),storage:may("retention.archive")});';
   const goal={id:'approved-goal',authority_current:true,grant:{enabled:true}};
   const actions=['autonomy.policy','autonomy.start-service','policy.update','learning.activate','retention.archive'];
   const base={snapshot:{projects:[{id:'project',read_status:'available'}],capabilities:{actions}},connected:true,writeToken:'operator',improvementGoal:'approved-goal',hookData:{operator:{ready:false,reason_code:'no-task',tasks:[],selected_task_id:null},available_goals:[goal]}};
