@@ -50,6 +50,6 @@ test('scene escapes recorded identities, preserves unknown metrics and does not 
   const empty=renderWorkspaceScene([],{language:'zh-TW'});
   assert.match(empty,/等待執行證據/);assert.doesNotMatch(empty,/aria-current="step"/);
   const html=renderWorkspaceScene([{activity_kind:'implementation',actor:{agent_id:'<img onerror=x>',principal_id:'p'},state:'completed',started_at:'2026-01-01T00:00:00Z',ended_at:'2026-01-01T00:00:01Z',reported:{model:'<script>bad</script>'},tokens:null}],{});
-  assert.doesNotMatch(html,/<img|<script>/);assert.match(html,/&lt;img/);assert.match(html,/Not reported tokens/);
+  assert.doesNotMatch(html,/<img|<script>/);assert.match(html,/&lt;img/);assert.match(html,/Tokens not reported/);
   assert.doesNotMatch(html,/aria-current="step"/);
 });
