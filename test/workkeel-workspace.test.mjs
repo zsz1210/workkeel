@@ -103,6 +103,16 @@ test('autonomy live status explains unchanged inputs, pending checks and stale d
  assert.equal(writes,0);assert.deepEqual(errors,[]);
 });
 
+test('a late autonomy response preserves newly focused untouched settings', {skip:process.env.WORKKEEL_WORKSPACE_BROWSER!=='1'},async t=>{
+ const {chromium}=await import('playwright-core'),{state}=await setup(t);let reads=0,release,notify;
+ const pending=new Promise(resolve=>notify=resolve),gate=new Promise(resolve=>release=resolve);
+ const service=await startWorkspaceServer(state,{hooks:{autonomy:{read:async()=>{if(++reads===2){notify();await gate;}return {version:0,enabled:true,policy:{enabled:true,directions:['quality'],max_jobs:7,max_attempts:1,cooldown_ms:1000,admission:{enabled:true,goal_id:'approved'}},available_goals:[{id:'approved',title:'Approved scope',authority_current:true,grant:{enabled:true,directions:['quality'],max_goals:7,max_attempts:1,read_paths:['src'],write_paths:['src']}}],service:{state:'running-in-this-host',observed_at:new Date().toISOString()},jobs:[],admissions:[],proposals:[]};}}}});
+ const browser=await chromium.launch({channel:'chrome',headless:true});t.after(async()=>{release();await browser.close();await service.close();});const page=await browser.newPage();page.setDefaultTimeout(8000);
+ await page.addInitScript(()=>{const real=setInterval;window.setInterval=(fn,ms)=>real(fn,ms===15000?400:ms);});await page.goto(service.url);await page.goto(service.origin+'/?view=autonomy&project=alpha');await page.locator('[data-autonomy-state=waiting]').waitFor();await page.locator('#autonomy-settings>summary').click();await pending;
+ const input=page.locator('[name=improvement-max-jobs]');await input.focus();const response=page.waitForResponse(r=>new URL(r.url()).pathname==='/api/autonomy');release();await response;await page.evaluate(()=>new Promise(resolve=>setTimeout(resolve,200)));
+ assert.equal(await input.evaluate(node=>node===document.activeElement),true);assert.equal(await input.inputValue(),'7');assert.match(await page.locator('[data-autonomy-freshness]').innerText(),/Editing settings/);
+});
+
 test('workspace browser module parses before deployment',()=>{new vm.Script('async function parseOnly(){'+workspaceClient+'}');});
 
 test('autonomy next steps preserve controls, reveal detail and recover from unknown state', {skip:process.env.WORKKEEL_WORKSPACE_BROWSER!=='1'},async t=>{
