@@ -269,7 +269,21 @@ The editor's preview shows requested, selected and reported values separately;
 it does not run a model or fill missing runtime reports from configured values.
 
 Dark is the initial appearance; light and system remain available. Task and goal
-execution views use a compact activity rail and emphasize the latest evidenced
-activity, identity, model and measurements. Rows in project and goal lists contain
+execution views use a compact work-to-activity map and emphasize evidenced
+activities, identity, model and measurements. Rows in project and goal lists contain
 no decorative miniature flow diagrams. Evidence, executor timelines and complete
 dependency diagrams remain available within task and goal detail.
+
+## Live execution map
+
+Task, goal and current autonomous work show a work-to-activity map using the
+reported tool's official mark. Moving signals mean a running observation less
+than 60 seconds old; they are not measurements of network traffic or confirmed
+handoffs. Parallel activities can move together. Expired, disconnected, hidden,
+paused and historical views stay static, and reduced-motion preferences suppress
+the moving signals while preserving the running label and active border.
+
+The map keeps recorded time and tokens alongside each activity. Missing values
+stay unknown, partial totals use `≥`, and selected models remain distinct from
+reported models. Activity details and workflow history remain available; detailed
+autonomy configuration stays in the conversation-defined plan.

@@ -94,10 +94,10 @@ test('compact scenes keep empty evidence distinct from unknown and recorded zero
     assert.doesNotMatch(empty,/scene-composition|scene-current-metrics|data-flow-node|aria-current="step"/);
   }
   const unknown=renderWorkspaceScene([row('implementation',{tokens:null,tokens_complete:false})]);
-  assert.match(unknown,/<strong aria-label="Not reported tokens">Not reported<\/strong>/);
+  assert.match(unknown,/Tokens not reported/);
   assert.doesNotMatch(unknown,/aria-label="0 tokens"|aria-current="step"/);
-  assert.match(renderWorkspaceScene([row('implementation')]),/<strong aria-label="0 tokens">0<\/strong>/);
-  assert.match(renderWorkspaceScene([row('implementation',{tokens:3,tokens_complete:false})]),/<strong aria-label="≥ 3 tokens">≥ 3<\/strong>/);
+  assert.match(renderWorkspaceScene([row('implementation')]),/0 tokens/);
+  assert.match(renderWorkspaceScene([row('implementation',{tokens:3,tokens_complete:false})]),/≥ 3 tokens/);
 });
 test('missing work, explicit zero and selected-only models remain distinct',()=>{
   const rows=[row('implementation',{reported:{model:null},selected:{model:'selected-only'},model:'unreported'}),row('verification',{tokens:null,tokens_complete:false,start_at:null,end_at:null,time_complete:false})];
@@ -176,10 +176,27 @@ test('official product marks follow observed tools, never model or Agent guesses
   const scene=renderWorkspaceScene([row('implementation',{tool:'codex'}),row('implementation',{tool:'claude-code'})]);
   assert.match(scene,/Multiple executors/);assert.doesNotMatch(scene,/data-official-tool/);
 });
-test('quiet scene discloses missing phases and draws only supported recorded time order',()=>{
+test('signal scene relates work to recorded activities without inventing handoffs or motion',()=>{
   const first=row('planning',{tool:'claude-code'}),last=row('repair',{tool:'codex',start_at:'2026-01-01T00:00:20Z',end_at:'2026-01-01T00:00:25Z'});
-  const linked=renderWorkspaceScene([first,last]);assert.match(linked,/class="scene-connector"/);assert.match(linked,/No records:/);assert.doesNotMatch(linked,/class="scene-pending"/);
+  const linked=renderWorkspaceScene([first,last]);assert.equal((linked.match(/class="signal-wire"/g)||[]).length,2);assert.match(linked,/No records:/);assert.doesNotMatch(linked,/class="signal-packet"/);assert.match(linked,/not handoffs between agents/);
   const overlapping=renderWorkspaceScene([first,{...last,start_at:'2026-01-01T00:00:05Z'}]);assert.doesNotMatch(overlapping,/class="scene-connector"/);
   const unknown=renderWorkspaceScene([{...first,start_at:null},last]);assert.doesNotMatch(unknown,/class="scene-connector"/);
-  const queued=renderWorkspaceScene([first],{pending_activities:['independent-review']});assert.match(queued,/class="scene-pending"/);
+  const queued=renderWorkspaceScene([first],{pending_activities:['independent-review']});assert.match(queued,/data-state="queued"/);assert.doesNotMatch(queued,/class="signal-packet"/);
+});
+test('signal packets require effective live status and stop at the observation boundary',()=>{
+ const observed='2026-01-01T00:01:00.001Z',rows=['implementation','verification'].map(activity=>row(activity,{state:'running',end_at:null,last_observed_at:observed,tool:'codex'}));
+ const count=options=>(renderWorkspaceScene(rows,{now,...options}).match(/class="signal-packet"/g)||[]).length;
+ assert.equal(count({}),2);assert.equal(count({connected:false}),0);assert.equal(count({now:Date.parse(observed)+60000}),0);assert.equal(count({read_status:'stale'}),0);assert.equal(count({blocked_activities:['verification']}),1);
+ assert.doesNotMatch(renderWorkspaceScene([row('review',{state:'running',last_observed_at:observed})],{now,review_judgment:'fail'}),/class="signal-packet"/);
+ assert.doesNotMatch(renderWorkspaceScene(rows.map(r=>({...r,running_eligible:false})),{now}),/class="signal-packet"/);
+ assert.doesNotMatch(renderWorkspaceScene(rows.map(r=>({...r,read_status:'stale'})),{now}),/class="signal-packet"/);
+ const readOnly=renderWorkspaceScene(rows,{now,interactive:false,title:'<work>'});assert.match(readOnly,/&lt;work&gt;/);assert.doesNotMatch(readOnly,/data-flow-node|<button/);
+});
+test('task and goal scene options keep paused or recovery work static despite a fresh heartbeat',()=>{
+ const code=workspaceClient.slice(workspaceClient.indexOf('function visualOptions('),workspaceClient.indexOf('function activityDetails('));
+ const options=entity=>vm.runInNewContext(code+';visualOptions(entity)',{entity,lang:'en',connected:true,document:{hidden:false},activityOf:row=>row.activity_kind});
+ const fresh=[row('implementation',{state:'running',last_observed_at:new Date(now).toISOString()})];
+ for(const state of ['paused','blocked','done','cancelled','review-required'])for(const entity of [{task_state:state},{state,mandatory_components:[]}])assert.doesNotMatch(renderWorkspaceScene(fresh,{...options(entity),now}),/class="signal-packet"/);
+ assert.doesNotMatch(renderWorkspaceScene(fresh,{...options({state:'running',requires_recovery:true}),now}),/class="signal-packet"/);
+ assert.match(renderWorkspaceScene(fresh,{...options({state:'running'}),now}),/class="signal-packet"/);
 });
