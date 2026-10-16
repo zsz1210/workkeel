@@ -113,9 +113,11 @@ test('autonomy exposes blocked result collection even when service listens and g
  await page.goto(service.url);await page.goto(service.origin+'/?view=autonomy&project=alpha');await page.locator('[data-autonomy-state=blocked]').waitFor();
  assert.equal(await page.getByRole('heading',{name:'Improvement needs attention',exact:true}).isVisible(),true);
  await page.getByRole('button',{name:'View what needs attention',exact:true}).click();assert.equal(await page.getByText(reason,{exact:true}).isVisible(),true);
+ assert.equal(await page.getByText('Stopped during: Implementation',{exact:true}).isVisible(),true);
  assert.equal(await page.locator('[data-autonomy-state=waiting]').count(),0);assert.equal(await page.locator('[data-control="autonomy.start-service"]').count(),0);
  const evidence=process.env.WORKKEEL_WORKSPACE_EVIDENCE_DIR;if(evidence)await fs.mkdir(evidence,{recursive:true});
  await page.getByRole('button',{name:'繁體中文',exact:true}).click();await page.getByRole('heading',{name:'改善工作需要處理',exact:true}).waitFor();
+ assert.equal(await page.getByText('停在：實作',{exact:true}).isVisible(),true);
  for(const width of [1440,1280]){await page.setViewportSize({width,height:1000});await page.evaluate(async()=>{window.scrollTo(0,0);await document.fonts.ready;await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));});assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);if(evidence)await page.screenshot({path:path.join(evidence,'autonomy-result-blocked-'+width+'.png'),fullPage:false});}
  recovered=true;await page.reload();await page.locator('[data-autonomy-state=waiting]').waitFor();assert.equal(await page.getByText(reason,{exact:true}).count(),0);assert.deepEqual(errors,[]);
 });
