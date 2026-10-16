@@ -159,10 +159,13 @@ test('exhausted discovery is explicit on unchanged sources without blocking admi
   }
 });
 
-test('event driver progresses native derived goals without a human continue and stops cleanly',async t=>{
+test('event driver progresses native derived goals without a human continue and stops cleanly',{timeout:60000},async t=>{
   const f=await fixture(t,{empty:true});const errors=[],controller=new AbortController();const workflow={id:'unused-workflow',idempotent:true,start:async()=>({status:'unknown'}),reconcile:async()=>({status:'unknown'}),cancel:async()=>({status:'cancelled'})};
-  const service=await serveAutonomy(f.root,{adapter:workflow,goalAdapter:f.adapter,signal:controller.signal,debounce_ms:1,reconcile_ms:20,onError:e=>errors.push(e)});t.after(()=>{controller.abort();service.close();});
-  for(let n=0;n<200;n++){const entries=(await readGoalAdmissions(f.root)).entries;if(entries[0]?.status==='created'&&(await readNativeGoal(f.root,entries[0].intent.manifest.id)).accepted)break;await new Promise(r=>setTimeout(r,10));}
+  const settled=Promise.withResolvers();
+  const service=await serveAutonomy(f.root,{adapter:workflow,goalAdapter:f.adapter,signal:controller.signal,debounce_ms:1,reconcile_ms:20,onError:e=>{errors.push(e);settled.reject(e);},onStep:result=>{if(result.idle==='unchanged-approved-sources')settled.resolve();}});t.after(()=>{controller.abort();service.close();});
+  t.signal.addEventListener('abort',()=>{controller.abort();service.close();settled.reject(t.signal.reason);},{once:true});
+  // Observe the driver's actual settled event, not a machine-speed dependent poll count.
+  await settled.promise;
   const entry=(await readGoalAdmissions(f.root)).entries[0];assert.ok(entry);assert.equal((await readNativeGoal(f.root,entry.intent.manifest.id)).accepted,true);assert.deepEqual(errors,[]);controller.abort();service.close();
 });
 
