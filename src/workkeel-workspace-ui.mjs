@@ -33,7 +33,7 @@ window.addEventListener('hashchange',()=>{if(isCapability(location.hash.slice(1)
 const {renderExecutionVisual,renderExecutionTimeline,renderDependencyDiagram,taskVisualRows,executionLabel,activityOf,buildExecutionVisual,renderActivityComparison}=await import('/execution-visuals.mjs');
 const {createModelRulesUI}=await import('/model-rules-ui.mjs');
 const {renderWorkspaceScene,renderWorkspaceMap,workspaceGlyph}=await import('/workspace-scene.mjs');
-const {installToolMarkFallback}=await import('/workkeel-tool-identity.mjs');
+const {installToolMarkFallback,toolMark,resolveToolIdentity}=await import('/workkeel-tool-identity.mjs');
 installToolMarkFallback(document);
 let snapshot=null,connected=false,query='',filter='all',page=0,tab='overview',hookData=null,busy=false,lastSignature='',refreshTimer=null,visualExpiryTimer=null,selectedFlowActivity=null;
 const operatorTasks=new Map();
@@ -329,38 +329,140 @@ function storageView(projectId){
 }
 function proposalsView(proposals){return section(t('Proposed improvements','改善候選'),proposals.length?'<div class="panel">'+proposals.map(proposal=>'<div class="proposal-row"><h3>'+escape(proposal.title)+'</h3><p class="small">'+escape(proposal.direction)+' · '+escape(date(proposal.created_at))+' · '+t('Proposed · task approval required','候選・需要任務核准')+'</p><details><summary>'+t('Trigger evidence & scope','觸發證據與範圍')+'</summary><ul class="dependency-list">'+(proposal.evidence||[]).map(source=>'<li><strong>'+escape(source.path)+'</strong><p class="mono">'+escape(source.sha256)+'</p></li>').join('')+'</ul><dl class="facts"><dt>'+t('Source line','來源行')+'</dt><dd>'+escape(proposal.line??t('Unreported','未回報'))+'</dd><dt>'+t('Read scope','讀取範圍')+'</dt><dd>'+escape((proposal.scope?.read_paths||[]).join(', '))+'</dd><dt>'+t('Write scope','寫入範圍')+'</dt><dd>'+escape((proposal.scope?.write_paths||[]).join(', '))+'</dd><dt>'+t('Limits','限制')+'</dt><dd>'+escape(proposal.budget?JSON.stringify(proposal.budget):t('Unreported','未回報'))+'</dd></dl></details></div>').join('')+'</div>':empty(t('No improvement proposals have been recorded.','尚未記錄改善候選。')));}
 function selectedImprovementGoal(){return (hookData.available_goals||[]).find(g=>g.id===(improvementGoal||hookData.policy?.admission?.goal_id||''));}
-function improvementGoalPicker(policy){if(!Array.isArray(hookData.available_goals))return '';const chosen=improvementGoal||policy.admission?.goal_id||'',goals=hookData.available_goals;return '<label>'+t('Approved standing goal','已核准持續目標')+'<select id="improvement-goal" name="improvement-goal"><option value="">'+t('Choose an approved goal','選擇核准目標')+'</option>'+goals.map(g=>'<option value="'+escape(g.id)+'" '+(g.id===chosen?'selected':'')+' '+(g.authority_current&&g.grant?.enabled?'':'disabled')+'>'+escape(g.title)+(g.authority_current?'':' · '+t('Authority needs renewal','需要更新授權'))+'</option>').join('')+'</select></label><p class="form-help">'+t('Choose the original approved goal. Its sealed scope and resources bound new low or standard risk work. High risk changes need separate approval.','選擇原始核准目標，其固定範圍與資源限制新建低或標準風險工作。高風險變更需另行核准。')+'</p>'+(!goals.length?'<p class="connection error">'+t('Register an approved goal with an improvement grant before enabling new work.','啟用新的工作前，請先登記帶有改善授權的核准目標。')+'</p>':'');}
-function autonomyPolicyForm(){
-  const policy=hookData.policy||hookData.limits||{enabled:!!hookData.enabled,directions:[],max_jobs:20,max_attempts:2,cooldown_ms:3600000};
-  const discovery=policy.discovery||{enabled:false,read_paths:[],write_paths:[],max_proposals:20,max_source_bytes:1048576,max_rounds:10,cooldown_ms:3600000,max_runtime_ms:60000,max_cost_usd:null},goal=selectedImprovementGoal(),grant=goal?.grant;
-  const numeric=(name,label,value,min,max,step=1,required=true)=>'<label>'+label+'<input type="number" name="'+name+'" value="'+escape(value??'')+'" min="'+min+'" max="'+max+'" step="'+step+'" '+(required?'required':'')+'></label>';
-  const directions=grant?'<fieldset><legend>'+t('Allowed directions','允許方向')+'</legend><div class="model-catalog">'+grant.directions.map(value=>'<label><input type="checkbox" name="improvement-direction" value="'+escape(value)+'" '+(policy.directions.includes(value)?'checked':'')+'><span>'+escape(value)+'</span></label>').join('')+'</div></fieldset>':'<label>'+t('Allowed directions','允許方向')+'<textarea class="policy-directions" name="improvement-directions" '+(Array.isArray(hookData.available_goals)?'disabled':'')+'>'+escape((policy.directions||[]).join(', '))+'</textarea></label>';
-  return '<div class="panel detail-body"><form id="autonomy-form">'+improvementGoalPicker(policy)+'<label class="switch-control"><input type="checkbox" name="improvement-enabled" '+(policy.enabled?'checked':'')+'><span>'+t('Allow new autonomous improvements','允許新的自主改善')+'</span></label><p class="form-help">'+t('Default is off. Enabling grants permission within the approved scope; it does not start inference. Turning it off stops new discovery and new work. Existing work follows its recorded controls.','預設關閉。開啟只在核准範圍內允許改善，不會開始推論。關閉停止新探索與新工作，既有工作依已記錄控制執行。')+'</p>'+directions+'<div class="fields">'+numeric('improvement-max-jobs',t('Maximum jobs','工作上限'),policy.max_jobs,1,200)+numeric('improvement-max-attempts',t('Attempts per job','每項工作嘗試上限'),policy.max_attempts,1,Math.min(10,grant?.max_attempts??10))+numeric('improvement-cooldown',t('Retry cooldown · seconds','重試冷卻・秒'),policy.cooldown_ms/1000,0,86400,0.001)+'</div>'+(goal?'<label class="switch-control"><input type="checkbox" name="admission-enabled" '+(policy.admission?.enabled?'checked':'')+'><span>'+t('Allow evidence-backed work within this grant','允許依證據在此授權內建立工作')+'</span></label><p class="form-help">'+t('Grant ceiling: ','授權上限：')+escape(grant.max_goals)+' '+t('goals','目標')+' · '+escape(grant.max_total_operations)+' '+t('operations','執行次數')+' · '+escape(grant.max_total_runtime_ms/1000)+' s'+'</p>':'')+'<details id="autonomy-discovery-limits"><summary>'+t('Scoped discovery & limits','探索範圍與限制')+'</summary><div class="policy-group"><label class="switch-control"><input type="checkbox" name="discovery-enabled" '+(discovery.enabled?'checked':'')+'><span>'+t('Permit bounded discovery','允許有界探索')+'</span></label><p class="form-help">'+t('Discovery needs an approved recipe and a qualified host. Use enforceable duration and operation limits. A blank USD field means no financial hard cap; stock hosts reject unsupported financial enforcement before launch.','探索需要核准配方與合格主機，使用可強制的時間與執行次數限制。USD 留白表示未設財務硬上限，內建主機會在啟動前拒絕不支援的財務限制。')+'</p><div class="fields"><label>'+t('Read paths','讀取路徑')+'<textarea class="policy-directions" name="discovery-read-paths">'+escape(discovery.read_paths.join('\n'))+'</textarea>'+(grant?'<span class="form-help">'+t('Approved: ','已核准：')+escape(grant.read_paths.join(', '))+'</span>':'')+'</label><label>'+t('Write paths','寫入路徑')+'<textarea class="policy-directions" name="discovery-write-paths">'+escape(discovery.write_paths.join('\n'))+'</textarea>'+(grant?'<span class="form-help">'+t('Approved: ','已核准：')+escape(grant.write_paths.join(', '))+'</span>':'')+'</label></div><div class="fields">'+numeric('discovery-max-proposals',t('Proposal limit','候選上限'),discovery.max_proposals,1,200)+numeric('discovery-max-rounds',t('Round limit','輪數上限'),discovery.max_rounds,1,Math.min(100,grant?.max_rounds??100))+numeric('discovery-max-source-bytes',t('Source byte limit','來源位元組上限'),discovery.max_source_bytes,1,Math.min(1048576,grant?.max_source_bytes??1048576))+'</div><div class="fields">'+numeric('discovery-runtime',t('Runtime limit · seconds','執行時間上限・秒'),discovery.max_runtime_ms/1000,0.001,Math.min(86400,(grant?.max_runtime_ms??86400000)/1000),0.001)+numeric('discovery-cooldown',t('Discovery cooldown · seconds','探索冷卻・秒'),discovery.cooldown_ms/1000,(grant?.cooldown_ms??0)/1000,86400,0.001)+numeric('discovery-cost',t('Financial cap · USD · optional','財務上限・USD・選填'),discovery.max_cost_usd,0,grant?.max_cost_usd??100000,'any',false)+'</div></div></details><div class="actions"><button class="primary" '+(may('autonomy.policy')?'':'disabled')+'>'+t('Save improvement policy','儲存改善政策')+'</button><span class="small">'+t('Version ','版本 ')+escape(hookData.version)+'</span></div><div id="policy-result" role="status"></div></form></div>';
+function autonomyJourney(admissions, goals, projectId) {
+  const STAGES = ["planning", "implementation", "repair", "verification", "independent-review"];
+  const ATTENTION_STATES = ["blocked", "review-required"];
+  const ACTIVE_STATES = ["running", "paused"];
+  const VISIBLE = 12;
+
+  const list = (value) => (Array.isArray(value) ? value.filter(Boolean) : []);
+  const last = (items) => items[items.length - 1];
+  // A source project can admit work in another registered repository.
+  const projectGoals = list(goals);
+
+  const opStatus = (op) => {
+    if (op.read_status && op.read_status !== "available") return "unknown";
+    if (["pending", "running", "inProgress"].includes(op.state)) return "active";
+    if (op.state === "failed" || op.review_judgment === "fail") return "attention";
+    if (op.state === "completed") return "complete";
+    return "unknown";
+  };
+
+  // Exactly one readable goal in this project with the same id and root, else null.
+  const matchGoal = (admission) => {
+    if (typeof admission.goal_id !== "string" || typeof admission.root !== "string") return null;
+    const found = projectGoals.filter((goal) => goal.id === admission.goal_id && goal.root === admission.root);
+    return found.length === 1 && found[0].read_status === "available" ? found[0] : null;
+  };
+
+  // A pending operation wins; otherwise the latest one. Later stages never imply earlier success.
+  const latestOf = (ops) => last(ops.filter((op) => opStatus(op) === "active")) || last(ops);
+
+  const createdAt = (goal) => {
+    const value = goal && goal.created_at;
+    const time = typeof value === "number" ? value : Date.parse(value);
+    return Number.isFinite(time) ? time : null;
+  };
+
+  const entries = list(admissions).map((admission, index) => {
+    const goal = matchGoal(admission);
+    const operations = goal ? list(goal.operations).filter((op) => op.activity_kind !== "coordination") : [];
+    const staged = operations.filter((op) => STAGES.includes(op.activity_kind));
+    const latest = latestOf(staged);
+    const phase = latest ? { kind: latest.activity_kind, status: opStatus(latest), operation: latest } : null;
+    const stages = STAGES.flatMap((kind) => {
+      const op = latestOf(staged.filter((item) => item.activity_kind === kind));
+      return op ? [{ kind, status: opStatus(op) }] : [];
+    });
+
+    const attention =
+      admission.status === "recovery-required" ||
+      Boolean(admission.error) ||
+      Boolean(goal && goal.state !== "cancelled" && !goal.historically_accepted && (goal.requires_recovery || ATTENTION_STATES.includes(goal.state))) ||
+      Boolean(goal && !goal.historically_accepted && !["done","cancelled"].includes(goal.state) && phase && phase.status === "attention");
+
+    const category = !goal ? "unknown"
+      : goal.state === "cancelled" ? "cancelled"
+      : attention ? "attention"
+      : goal.historically_accepted && !goal.accepted ? "historical"
+      : goal.state === "done" ? "finished"
+      : ACTIVE_STATES.includes(goal.state) ? "active"
+      : "unknown";
+
+    const accepted = Boolean(goal) && goal.read_status === "available" && goal.state === "done" && goal.accepted === true;
+    // Accepted at some point, but not currently.
+    const historicallyAccepted = Boolean(goal) && !accepted && goal.historically_accepted === true;
+
+    const row = { admission, goal, category, attention, accepted, historicallyAccepted, operations, phase, stages };
+    return { row, index, time: createdAt(goal) };
+  });
+
+  // Dated rows newest first, then undated rows; ties fall back to reverse insertion.
+  const sorted = entries
+    .slice()
+    .sort((a, b) => {
+      if ((a.time === null) !== (b.time === null)) return a.time === null ? 1 : -1;
+      if (a.time !== null && a.time !== b.time) return b.time - a.time;
+      return b.index - a.index;
+    })
+    .map((entry) => entry.row);
+
+  const counts = { discoveries: 0, improvements: 0, acceptedImprovements: 0, historicalImprovements: 0, cancelled: 0, attention: 0, unknown: 0 };
+  for (const row of sorted) {
+    if (row.admission.kind === "discovery") counts.discoveries += 1;
+    if (row.admission.kind === "execution") {
+      counts.improvements += 1;
+      if (row.accepted) counts.acceptedImprovements += 1;
+      if (row.historicallyAccepted) counts.historicalImprovements += 1;
+    }
+    if (row.category === "cancelled") counts.cancelled += 1;
+    if (row.attention) counts.attention += 1;
+    if (row.category === "unknown") counts.unknown += 1;
+  }
+
+  const current =
+    sorted.find((row) => row.category === "active" && row.goal.state === "running") ||
+    sorted.find((row) => row.attention) ||
+    sorted.find((row) => row.category === "active") ||
+    null;
+
+  return { counts, rows: sorted.slice(0, VISIBLE), total: sorted.length, current };
 }
-function captureAutonomyPolicy(form){
-  const data=new FormData(form),list=name=>[...new Set(String(data.get(name)||'').split(/[\n,]+/).map(value=>value.trim()).filter(Boolean))];
-  const number=(name,min,max,factor=1,whole=true)=>{const raw=String(data.get(name)||'');if(!/^\d+(?:\.\d+)?$/.test(raw))throw Error(t('Enter a valid non-negative limit.','請填寫有效的非負上限。'));const scaled=Number(raw)*factor,value=whole?Math.round(scaled):scaled;if(!Number.isFinite(value)||value<min||value>max||whole&&(!Number.isSafeInteger(value)||Math.abs(scaled-value)>0.000001))throw Error(t('A configured limit is outside its supported range.','設定上限超出支援範圍。'));return value;};
-  const goal=selectedImprovementGoal(),grant=goal?.grant,enabled=data.has('improvement-enabled'),directions=grant?data.getAll('improvement-direction'):list('improvement-directions');
-  if(enabled&&Array.isArray(hookData.available_goals)&&(!goal?.authority_current||!grant?.enabled))throw Error(t('Select a goal with current standing authority.','請選擇具有有效持續授權的目標。'));
-  if(enabled&&!directions.length)throw Error(t('Choose at least one improvement direction before enabling.','啟用前至少選擇一個改善方向。'));
-  if(directions.length>16||directions.some(value=>!/^[A-Za-z0-9][A-Za-z0-9._-]{0,95}$/.test(value)))throw Error(t('Use up to 16 valid direction identifiers.','最多使用 16 個有效的方向識別。'));
-  const read_paths=list('discovery-read-paths'),write_paths=list('discovery-write-paths'),discoveryEnabled=data.has('discovery-enabled');
-  if(discoveryEnabled&&(!read_paths.length||!write_paths.length))throw Error(t('Bounded discovery requires explicit read and write scope.','有界探索需要明確的讀取與寫入範圍。'));
-  for(const paths of [read_paths,write_paths])if(paths.length>32||paths.some(value=>value!=='.'&&(/[\\:\x00-\x1f]/.test(value)||value.startsWith('/')||value.split('/').some(part=>!part||part==='.'||part==='..'))))throw Error(t('Use normalized relative project paths.','請使用正規化的專案相對路徑。'));
-  const under=(candidate,base)=>base==='.'||candidate===base||candidate.startsWith(base+'/');
-  if(grant&&(directions.some(value=>!grant.directions.includes(value))||read_paths.some(p=>!grant.read_paths.some(base=>under(p,base)))||write_paths.some(p=>!grant.write_paths.some(base=>under(p,base)))))throw Error(t('Keep directions and paths within the approved standing grant.','方向與路徑須在核准持續授權範圍內。'));
-  const discovery={enabled:discoveryEnabled,read_paths,write_paths,max_proposals:number('discovery-max-proposals',1,200),max_rounds:number('discovery-max-rounds',1,Math.min(100,grant?.max_rounds??100)),max_source_bytes:number('discovery-max-source-bytes',1,Math.min(1048576,grant?.max_source_bytes??1048576)),max_runtime_ms:number('discovery-runtime',1,Math.min(86400000,grant?.max_runtime_ms??86400000),1000),cooldown_ms:number('discovery-cooldown',grant?.cooldown_ms??0,86400000,1000),max_cost_usd:String(data.get('discovery-cost')||'').trim()===''?null:number('discovery-cost',0,grant?.max_cost_usd??100000,1,false)};
-  if(grant?.max_cost_usd!==null&&grant?.max_cost_usd!==undefined&&discovery.max_cost_usd===null)throw Error(t('The approved grant requires its financial cap.','核准授權要求財務上限。'));
-  const policy={enabled,directions,max_jobs:number('improvement-max-jobs',1,200),max_attempts:number('improvement-max-attempts',1,Math.min(10,grant?.max_attempts??10)),cooldown_ms:number('improvement-cooldown',0,86400000,1000)};
-  if(goal||hookData.policy?.discovery||hookData.limits?.discovery||discovery.enabled)policy.discovery=discovery;
-  if(goal)policy.admission={enabled:data.has('admission-enabled'),goal_id:goal.id};
-  return policy;
+
+function journeyOutcome(row){
+ if(!row.goal)return t('Details unavailable','詳情尚無法確認');
+ if(row.category==='cancelled')return t('Cancelled','已取消');
+ if(row.accepted)return row.admission.kind==='discovery'?t('Exploration accepted','探索已驗收'):t('Improvement accepted','改善已驗收');
+ if(row.historicallyAccepted)return t('Previously accepted · needs recheck','先前已驗收・目前待重新確認');
+ if(row.category==='attention')return t('Needs attention','需要處理');
+ if(row.goal.state==='paused')return t('Paused','已暫停');
+ return row.phase?activityLabel(row.phase.kind)+' · '+operationState(row.phase.operation.state):operationState(row.goal.state);
 }
-function prefillStandingGrant(id){
-  const goal=(hookData.available_goals||[]).find(g=>g.id===id);improvementGoal=id;if(!goal?.authority_current)return render();const grant=goal.grant,policy=structuredClone(hookData.policy||hookData.limits);
-  policy.directions=[...grant.directions];policy.max_jobs=Math.min(policy.max_jobs,grant.max_goals);policy.max_attempts=Math.min(policy.max_attempts,grant.max_attempts);policy.admission={enabled:false,goal_id:id};
-  policy.discovery={enabled:false,read_paths:[...grant.read_paths],write_paths:[...grant.write_paths],max_proposals:Math.min(20,grant.max_goals),max_source_bytes:grant.max_source_bytes??1048576,max_rounds:grant.max_rounds??10,cooldown_ms:grant.cooldown_ms??3600000,max_runtime_ms:grant.max_runtime_ms,max_cost_usd:grant.max_cost_usd};hookData={...hookData,policy};render();
+function journeyStages(row){
+ const discovery=row?.admission.kind==='discovery',ops=row?.operations||[];
+ const stages=[['planning',t('Plan','規劃')],['implementation',discovery?t('Explore','探索'):t('Build','實作')],['verification',t('Verify','驗證')],['independent-review',t('Review','獨立審查')],['acceptance',t('Result','成果')]];
+ return '<ol class="journey-stages" aria-label="'+t('Recorded workflow','已記錄流程')+'">'+stages.map(([kind,label],index)=>{
+  const matches=ops.filter(op=>op.activity_kind===kind||kind==='implementation'&&op.activity_kind==='repair'),last=matches.at(-1);
+  let status=kind==='acceptance'?(row?.accepted?'complete':row?.historicallyAccepted?'historical':'unrecorded'):!last?'unrecorded':last.read_status&&last.read_status!=='available'?'unknown':last.state==='failed'||last.review_judgment==='fail'?'attention':last.state==='completed'?'complete':['pending','running','inProgress'].includes(last.state)?'active':'unknown';
+  if(status==='active'&&(!row||row.goal?.state==='paused'||['cancelled','historical','finished'].includes(row.category)))status='unknown';
+  const statusText={complete:t('Recorded complete','已有完成紀錄'),historical:t('Previous revision','先前版本'),active:t('Execution recorded','已記錄執行'),attention:t('Needs attention','需要處理'),unknown:t('Unconfirmed','尚未確認'),unrecorded:t('Not recorded','尚無紀錄')}[status];
+  return '<li data-stage="'+kind+'" data-stage-state="'+status+'"><span aria-hidden="true">'+(status==='complete'?'✓':String(index+1).padStart(2,'0'))+'</span><div><b>'+label+'</b><small>'+statusText+'</small></div></li>';
+ }).join('')+'</ol>';
 }
+function journeyWork(row,highlight=false){
+ const goal=row.goal,ops=row.operations,kind=row.admission.kind==='discovery'?t('Exploration','探索'):row.admission.kind==='execution'?t('Improvement','改善'):t('Recorded work','工作紀錄');
+ const goalLink=goal?'<a href="'+link('goal',goal.project_id,goal.reference_id||goal.id)+'">'+t('View task & evidence','查看任務與證據')+' ↗</a>':'';
+ const body=journeyStages(row)+(goal?.reason?'<p class="small">'+escape(goal.reason)+'</p>':'')+(row.admission.error?'<p class="small">'+escape(row.admission.error)+'</p>':'')+
+ '<details id="journey-ops-'+escape(row.admission.id||row.admission.goal_id)+'" class="journey-operation-details"><summary>'+t('Models, time & evidence','模型、耗時與證據')+'</summary>'+
+ (ops.length?'<div class="journey-operations">'+ops.slice(-12).map(op=>'<div>'+toolMark(resolveToolIdentity(op,lang))+'<div><strong>'+escape(activityLabel(op.activity_kind))+'</strong><span>'+escape(op.reported?.model||t('Model not reported','模型未回報'))+'</span></div><span>'+escape(operationState(op.state))+'</span><span>'+escape(Number.isFinite(op.reported_ms)?duration(op.reported_ms):t('Time not reported','耗時未回報'))+'</span><span>'+escape(op.tokens_complete&&Number.isFinite(op.tokens)?op.tokens.toLocaleString()+' tokens':t('Tokens incomplete','Token 未完整回報'))+'</span></div>').join('')+'</div>':'<p class="small">'+t('No operation details have been reported.','尚無執行明細。')+'</p>')+goalLink+'</details>';
+ const head='<div><span class="eyebrow">'+kind+'</span><h3>'+escape(goal?.title||row.admission.goal_id||t('Unresolved work','待確認工作'))+'</h3></div><span class="journey-outcome">'+escape(journeyOutcome(row))+'</span>';
+ return highlight?'<article class="journey-current">'+head+body+'</article>':'<details id="journey-record-'+escape(row.admission.id||row.admission.goal_id)+'" class="journey-record"><summary>'+head+'</summary>'+body+'</details>';
+}
+function autonomyBrief(){
+ const goal=selectedImprovementGoal(),project=snapshot.projects.find(p=>p.id===route().project);
+ return t('Please review the autonomous improvement plan for ','請檢視自主改善計畫：')+(goal?.title||project?.name||route().project)+t('. Define the intended outcome, repositories and working copy, what must be preserved, acceptance checks, and stop conditions. Show proposed changes before applying them; preserve current grants and do not start new work until the plan is approved.','。請確認改善目標、repo 與工作副本、必須保留的要求、驗收方式和停止條件。調整前列出變更，維持現有授權；計畫確認前不要啟動新的工作。');
+}
+
 function admittedGoalLink(entry){const matches=(snapshot.goals||[]).filter(goal=>goal.id===entry.goal_id&&goal.root===entry.root);return matches.length===1?'<a href="'+link('goal',matches[0].project_id,matches[0].reference_id||matches[0].id)+'">'+escape(matches[0].title)+'</a>':'<span>'+escape(entry.goal_id)+'</span><p class="small">'+t('Goal detail is unavailable in the registered scope.','登記範圍內尚無可確認的目標詳情。')+'</p>';}
 function admittedGoalState(entry){
  if(entry.status!=='created')return operationState(entry.status);
@@ -387,7 +489,7 @@ function autonomyView(projectId){
   blocked:idle==='known-findings-need-attention'?[t('Resolve known findings first','先處理已發現的問題'),t('A known finding needs a scope or risk decision. New exploration is on hold; review the proposals below.','已有問題需要確認處理範圍或風險，暫不進行新的探索。請查看下方提案。')]:[t('Improvement needs attention','改善工作需要處理'),t('A service or execution problem was recorded. Existing work is retained; inspect its details before resuming.','已記錄服務或執行問題，既有工作會保留。請查看問題內容後再恢復。')],
   paused:[t('New execution is paused','已暫停新的執行'),t('Existing work remains visible below. Resume when you want the service to continue.','既有工作仍保留在下方，恢復後才會接續安排執行。')],
   unconfigured:[t('Choose what Workkeel may improve','尚未設定改善目標'),t('No approved improvement goal is connected. Workkeel is not exploring or creating new work automatically.','尚未連接核准的改善目標，目前不會自動探索或建立新工作。')],
-  off:[t('Autonomous improvement is off','自主改善已關閉'),t('Your approved scope is retained. Enable it in settings when you want automatic improvement to continue.','已保留核准範圍。需要自主改善時，可在設定中啟用。')],
+  off:[t('Autonomous improvement is off','自主改善已關閉'),t('Your approved scope is retained. Ask your agent to prepare the next improvement when you want to continue.','已保留核准範圍。需要繼續時，請透過對話準備下一次改善。')],
   'admission-off':[t('Creating improvement work is off','尚未開啟建立改善工作'),t('The approved goal is connected, but permission to create derived work is switched off.','已連接核准目標，但尚未開啟依此目標建立改善工作的設定。')],
   ready:[t('Settings ready; service not confirmed','設定已就緒，尚未確認啟動'),t('The policy allows improvements, but this host has not confirmed a running service. Starting checks the host before listening for eligible work.','設定已允許改善，但此主機尚未確認服務正在執行。啟動時會先核對執行環境，再安排符合條件的工作。')],
   recorded:[t('Improvement work was dispatched','已派出改善工作'),t('Open the work below for its latest confirmed phase and result.','請開啟下方工作查看最後確認的階段與結果。')],
@@ -407,13 +509,13 @@ function autonomyView(projectId){
   if(Number.isSafeInteger(service.last_step.rounds_used)&&Number.isSafeInteger(service.last_step.rounds_limit))copy[1]+=t(' Completed or reserved rounds: ','已完成或預留輪數：')+service.last_step.rounds_used+' / '+service.last_step.rounds_limit+'。';
  }
  const canStart=configured&&enabled&&policy.admission?.enabled&&!data.paused&&!serviceActive&&!failed;
- const action=canStart&&may('autonomy.start-service')?'<button class="primary" data-control="autonomy.start-service">'+t('Start improvement service','啟動改善服務')+'</button>':data.paused&&may('autonomy.resume')?'<button data-control="autonomy.resume">'+t('Resume new execution','恢復新的執行')+'</button>':serviceActive&&may('autonomy.pause')?'<button data-control="autonomy.pause">'+t('Pause new execution','暫停新的執行')+'</button>':'';
+ const action=canStart&&may('autonomy.start-service')?'<button class="primary" id="autonomy-simple-control" data-control="autonomy.start-service">'+t('Start improvement service','啟動改善服務')+'</button>':data.paused&&may('autonomy.resume')?'<button id="autonomy-simple-control" data-control="autonomy.resume">'+t('Resume new execution','恢復新的執行')+'</button>':serviceActive&&may('autonomy.pause')?'<button id="autonomy-simple-control" data-control="autonomy.pause">'+t('Pause new execution','暫停新的執行')+'</button>':'';
  const open=(id,label)=>'<button data-autonomy-open="'+id+'">'+label+'</button>';
  const next={
  blocked:[t('Inspect the problem before continuing.','先確認問題，再決定如何接續。'),open('autonomy-attention',t('View what needs attention','查看待處理問題'))],
  unconfigured:[t('Define a goal and its limits with your agent.','先與 Agent 決定要改善什麼，以及何時停止。'),open('autonomy-setup',t('See how to get started','查看開始方式'))],
- off:[t('Enable new improvements in the saved settings when needed.','需要時，在設定中允許新的改善工作。'),open('autonomy-settings',t('Review improvement settings','查看改善設定'))],
- 'admission-off':[t('Review permission to create work within this approved goal.','確認是否允許在此目標範圍內建立改善工作。'),open('autonomy-settings',t('Review improvement settings','查看改善設定'))],
+ off:[t('Prepare the next improvement with your agent.','透過對話交辦下一次改善。'),open('autonomy-settings',t('Review plan scope','查看計畫範圍'))],
+ 'admission-off':[t('Review permission to create work within this approved goal.','確認是否允許在此目標範圍內建立改善工作。'),open('autonomy-settings',t('Review plan scope','查看計畫範圍'))],
  ready:[t('Start the service when you want it to look for eligible work.','準備好讓它接續安排工作時，再啟動服務。'),action],
  paused:[t('Resume when you want new execution to continue.','要接續安排新的執行時，再選擇恢復。'),action],
  recorded:[t('Open the work for its latest confirmed phase and result.','開啟工作，查看最後確認的階段與結果。'),open('autonomy-work',t('View current work','查看目前工作'))],
@@ -426,23 +528,28 @@ function autonomyView(projectId){
  const observationTime=value=>Number.isFinite(Date.parse(value))?new Date(value).toLocaleString(lang==='zh-TW'?'zh-TW':'en-US',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit',second:'2-digit'}):t('Not reported','未回報');
  const serviceEvidence=serviceActive?'<div class="autonomy-observation"><span class="autonomy-service-mark" aria-hidden="true"></span><strong>'+t('Service connected','服務已連接')+'</strong><span>'+t('Last completed check: ','最近完成檢查：')+(service.last_step?.at?observationTime(service.last_step.at):t('Waiting for the first result','等待首次結果'))+'</span>'+(Number.isFinite(service.check_interval_ms)?'<span>'+t('Checks every ','每 ')+(service.check_interval_ms/1000)+t(' seconds while idle',' 秒檢查一次（待命時）')+'</span>':'')+(checking&&service.current_check_started_at?'<span>'+t('Current check started: ','本輪開始：')+observationTime(service.current_check_started_at)+'</span>':'')+'</div>':'';
  const freshness='<p class="autonomy-freshness" data-autonomy-freshness data-observed-at="'+escape(service?.observed_at||'')+'">'+t('Service data read: ','服務資料讀取：')+observationTime(service?.observed_at)+' · '+t('Refreshes every 15 seconds while this page is visible','頁面開啟時每 15 秒更新')+'</p>';
- const rounds=Number.isSafeInteger(service?.last_step?.rounds_used)&&Number.isSafeInteger(service?.last_step?.rounds_limit)?t('Used or reserved: ','已使用或預留：')+service.last_step.rounds_used+' / '+service.last_step.rounds_limit+t(' rounds',' 輪'):null;
+ const rounds=Number.isSafeInteger(service?.last_step?.rounds_used)&&Number.isSafeInteger(service?.last_step?.rounds_limit)?service.last_step.rounds_used+' / '+service.last_step.rounds_limit:null;
  const watched=data.watch_scope,scope=watched?.repositories?.length?'<div class="autonomy-watch"><span>'+t('Watched working copy','監看工作副本')+'</span><strong>'+watched.repositories.map(repo=>escape(repo.root.split('/').filter(Boolean).at(-1))).join(' · ')+'</strong><details><summary>'+t('View watched files','查看監看檔案')+'</summary>'+watched.repositories.map(repo=>'<p>'+escape(repo.root)+'</p>').join('')+'<ul>'+(watched.source_refs||[]).map(ref=>'<li>'+escape(ref)+'</li>').join('')+'</ul><p>'+t('Only these approved files in this working copy trigger exploration; other projects and conversation tasks are separate.','只有這份工作副本內的核准檔案會觸發探索；其他專案與對話任務是分開的。')+'</p></details></div>':'<p class="small">'+t('Watched scope has not been reported by this host.','此主機尚未回報監看範圍。')+'</p>';
- const facts=[[t('Permission for new work','建立工作的權限'),!configured?t('No current goal grant','尚無有效目標授權'):enabled&&policy.admission?.enabled?t('Allowed within scope','範圍內允許'):t('Not enabled','尚未開放')],[t('Service connection','服務連接'),serviceActive?t('Connected here','此處已連接'):t('Not confirmed here','此處尚未確認')],[t('Execution records','執行紀錄'),recorded?t('Unfinished work recorded','有未結束工作'):awaiting?t('Awaiting acceptance','等待驗收'):t('No active work recorded','未記錄執行中工作')]];
- const setup='<details id="autonomy-setup" class="autonomy-setup"><summary><h2>'+t('Set it up with your agent','交給 Agent 完成設定')+'</h2></summary><p>'+t('Agree on the outcome, allowed scope and stop condition once. Your agent records the goal and connects the service; you should not need to edit internal files.','一次說清楚目標、允許範圍與停止條件，由 Agent 登記目標並連接服務，不需要你手動修改內部檔案。')+'</p><details><summary>'+t('Example of a bounded improvement request','有明確範圍的改善指令範例')+'</summary><blockquote>'+t('Inspect the current project for a concrete usability problem and implement one bounded improvement. Preserve existing behavior, verify the changed user journey and obtain independent review. Stop after this improvement or report a blocker. Confirm the native host supports every required check before starting.','針對目前專案找出一個具體的使用體驗問題，在已核准範圍內完成一項改善。保留既有功能，驗證修改的使用流程，並交由不同 Agent 審查。完成這項改善就停止，遇到阻礙則回報。啟動前先確認原生執行環境能完成所需檢查。')+'</blockquote></details>'+open('autonomy-settings',t('View available goals and settings','查看可選目標與設定'))+'</details>';
+ const journey=autonomyJourney(admissions,snapshot.goals||[],projectId),selected=journey.current||journey.rows.find(row=>row.historicallyAccepted||row.accepted)||journey.rows[0],remaining=journey.rows.filter(row=>row!==selected);
+ const plan='<div class="journey-plan"><div><span class="eyebrow">'+t('Improvement plan','改善計畫')+'</span><h2>'+escape(goal?.title||t('Define your first improvement','定義第一個改善目標'))+'</h2><p>'+escape(snapshot.projects.find(p=>p.id===projectId)?.name||projectId)+'</p></div>'+open('autonomy-settings',t('View scope','查看範圍'))+'</div>';
+ const controls=(action||'')+(configured&&enabled&&may('autonomy.policy')?'<details id="autonomy-end" class="journey-end"><summary>'+t('End future improvement','結束後續改善')+'</summary><p>'+t('Stops new exploration and new work. Existing work keeps its recorded controls; this does not cancel an active task.','停止新的探索與派工，既有工作仍依原有控制執行；不會取消執行中的任務。')+'</p><button id="end-improvement" data-autonomy-end>'+t('Confirm end of future improvement','確認結束後續改善')+'</button></details>':'');
+ const limits=[ [t('Exploration','探索'),policy.discovery?.enabled?t('Enabled','已開放'):t('Disabled','未開放')], [t('Round ceiling','探索輪數上限'),policy.discovery?.max_rounds??t('Not reported','未回報')], [t('Work ceiling','工作上限'),policy.max_jobs??t('Not reported','未回報')], [t('Read scope','可讀取範圍'),(policy.discovery?.read_paths||[]).join(' · ')||t('Not reported','未回報')], [t('Write scope','可修改範圍'),(policy.discovery?.write_paths||[]).join(' · ')||t('Not reported','未回報')], [t('Per-exploration runtime','每輪探索時間上限'),Number.isFinite(policy.discovery?.max_runtime_ms)?duration(policy.discovery.max_runtime_ms):t('Not reported','未回報')] ];
  const terminalJob=job=>['completed','cancelled','failed'].includes(job.status);
- const terminalAdmission=entry=>!attention.includes(entry)&&(['cancelled','failed'].includes(entry.status)||admitted[admissions.indexOf(entry)]&&['done','cancelled'].includes(admitted[admissions.indexOf(entry)].state));
- const currentJobs=jobs.filter(job=>!terminalJob(job)),pastJobs=jobs.filter(terminalJob),currentAdmissions=admissions.filter(entry=>!terminalAdmission(entry)),pastAdmissions=admissions.filter(terminalAdmission);
- const records=(jobRows,admissionRows)=>'<div class="panel">'+jobRows.slice().reverse().map(job=>'<div class="delivery-row"><div><h3>'+escape(job.reason||job.id)+'</h3><p class="small">'+escape(operationState(job.status))+'</p></div><button data-job-cancel="'+escape(job.id)+'" data-job-task="'+escape(job.task_id)+'" '+(may('autonomy.cancel')&&!terminalJob(job)?'':'disabled')+'>'+t('Cancel this work','取消此工作')+'</button></div>').join('')+admissionRows.slice(-20).reverse().map(entry=>'<div class="delivery-row"><div>'+admittedGoalLink(entry)+'<p class="small">'+escape(admittedGoalState(entry))+'</p>'+(entry.error?'<p class="connection error">'+escape(entry.error)+'</p>':'')+'</div><details><summary>'+t('Source & reservation','來源與預留資源')+'</summary><p>'+escape(entry.proposal_id||entry.kind)+'</p><p>'+escape(Number.isSafeInteger(entry.reservation?.max_runtime_ms)?entry.reservation.max_runtime_ms/1000+' s':t('Not reported','未回報'))+'</p></details></div>').join('')+'</div>';
- return '<section class="autonomy-status autonomy-summary" data-autonomy-state="'+state+'"><div class="autonomy-now"><span class="eyebrow">'+t('Current situation','目前狀況')+'</span><h2>'+copy[0]+'</h2><p>'+copy[1]+'</p></div><div class="autonomy-next"><h3>'+t('Next step','下一步')+'</h3><p>'+next[0]+'</p>'+next[1]+(action&&next[1]!==action?action:'')+'</div><dl class="autonomy-facts">'+facts.map(([label,value])=>'<div><dt>'+label+'</dt><dd>'+value+'</dd></div>').join('')+'</dl>'+serviceEvidence+freshness+(data.actions?declaredActions(data.actions):'')+'<div id="command-result" role="status"></div><div id="service-result" role="status"></div></section>'+
- (readOnly?'<p class="measurement-note">'+t('This window is view-only. It can show work, but cannot enable or start the service.','此視窗僅供檢視，可以查看工作，但無法啟用或啟動服務。')+'</p>':'')+
- (!configured?setup:'<section class="autonomy-scope"><div><span class="eyebrow">'+t('Improvement goal','改善目標')+'</span><h3>'+escape(goal.title||goal.id)+'</h3></div><p>'+t('New exploration: ','探索新方向：')+(policy.discovery?.enabled?t('Allowed','已開放'):t('Not enabled','未開放'))+(rounds?' · '+rounds:'')+(!rounds&&policy.discovery?.enabled&&Number.isSafeInteger(policy.discovery.max_rounds)?' · '+t('Up to ','最多 ')+policy.discovery.max_rounds+t(' rounds',' 輪'):'')+'</p>'+open('autonomy-settings',t('Scope & settings','範圍與設定'))+'</section>'+scope)+
- '<details class="autonomy-explainer"><summary>'+t('How this relates to tasks in your conversation','這與對話中的任務有什麼不同？')+'</summary><p>'+t('Work assigned in a conversation is tracked under Tasks. It is not automatically an autonomous improvement run.','在對話中交辦的工作仍會記錄在「任務」，不代表已啟動這裡的自主改善流程。')+' <a href="'+link('work',projectId)+'">'+t('View project tasks','查看專案任務')+' →</a></p></details>'+
- (failed?'<details id="autonomy-attention" class="panel detail-body" data-autonomy-attention open><summary>'+t('What needs attention','需要處理的問題')+'</summary>'+(problems||'<p>'+(idle==='known-findings-need-attention'?t('Review the proposals below; their scope or risk needs a decision before more exploration.','請查看下方提案，確認範圍或風險後再安排工作。'):t('The service reported an improvement that needs attention, but its goal details are unavailable. Check the last service observation below before resuming.','服務回報有改善工作需要處理，但目前無法取得目標詳情。請先查看下方「最近一次服務觀察」，再決定是否恢復。'))+'</p>')+'</details>':'')+
- (currentJobs.length||currentAdmissions.length?'<div id="autonomy-work" tabindex="-1">'+section(t('Work to follow','需要追蹤的工作'),records(currentJobs,currentAdmissions))+'</div>':'')+
- (pastJobs.length||pastAdmissions.length?'<details class="autonomy-history"><summary>'+t('Past work','過往工作')+' <span>'+(pastJobs.length+pastAdmissions.length)+'</span></summary>'+records(pastJobs,pastAdmissions)+'</details>':'')+(proposals.length?proposalsView(proposals):'')+
- '<details id="autonomy-settings" class="panel detail-body autonomy-settings"><summary>'+t('Scope, limits & advanced settings','範圍、限制與進階設定')+'</summary>'+operatorContext()+autonomyPolicyForm()+(service?.last_step?'<details><summary>'+t('Last service observation','最近一次服務觀察')+'</summary><pre>'+escape(JSON.stringify(service.last_step,null,2))+'</pre></details>':'')+'<p class="small">'+t('The built-in macOS host can run approved browser checks with installed Chrome. Visual acceptance still requires a distinct reviewer; enabling this policy does not grant missing tools or authority.','macOS 內建執行環境可使用已安裝的 Chrome 完成核准的瀏覽器檢查；畫面仍需由獨立 Agent 驗收。啟用政策不會擴大工具或操作權限。')+'</p></details>';
+ const legacyJobs=jobs.length?'<details id="autonomy-jobs" class="autonomy-history"><summary>'+t('Other recorded work','其他工作紀錄')+' · '+jobs.length+'</summary>'+jobs.slice(-20).reverse().map(job=>'<div class="delivery-row"><div><h3>'+escape(job.reason||job.id)+'</h3><p class="small">'+escape(operationState(job.status))+'</p></div>'+(!terminalJob(job)?'<button data-job-cancel="'+escape(job.id)+'" data-job-task="'+escape(job.task_id)+'" '+(may('autonomy.cancel')?'':'disabled')+'>'+t('Cancel this work','取消此工作')+'</button>':'')+'</div>').join('')+'</details>':'';
+ return '<div class="autonomy-journey">'+plan+
+ '<section class="autonomy-status autonomy-summary journey-summary" data-autonomy-state="'+state+'"><div class="autonomy-now"><span class="eyebrow">'+t('Right now','目前進度')+'</span><h2>'+copy[0]+'</h2><p>'+copy[1]+'</p><div class="journey-controls">'+controls+'</div><div id="command-result" role="status"></div><div id="service-result" role="status"></div><div id="policy-result" role="status"></div></div><div class="autonomy-next"><h3>'+t('Next step','下一步')+'</h3><p>'+next[0]+'</p>'+(next[1]===action?'':next[1])+'</div></section>'+
+ freshness+(readOnly?'<p class="measurement-note">'+t('This window is view-only. It can show work, but cannot enable or start the service.','此視窗僅供檢視，可以查看工作，但無法啟用或啟動服務。')+'</p>':'')+
+ '<div class="journey-totals"><div><strong>'+escape(rounds||String(journey.counts.discoveries))+'</strong><span>'+t('Exploration rounds · used or reserved','探索輪次・已使用或預留')+'</span></div><div><strong>'+journey.counts.acceptedImprovements+'</strong><span>'+t('Currently accepted improvements','目前驗收有效的改善')+'</span></div><div><strong>'+proposals.length+'</strong><span>'+t('Recorded proposals','已記錄提案')+'</span></div></div>'+
+ '<section id="autonomy-work" class="journey-work" tabindex="-1"><div class="section-heading"><h2>'+ (journey.current?t('Work to follow','需要追蹤的工作'):selected?t('Latest recorded outcome','最近的工作結果'):t('Improvement workflow','改善流程'))+'</h2><span class="small">'+(journey.current?t('Recorded work · open for latest evidence','已記錄工作・詳情以最新證據為準'):t('No current execution is implied','不代表目前有工作執行中'))+'</span></div>'+
+ (selected?journeyWork(selected,true):'<article class="journey-current">'+journeyStages(null)+'<p class="small">'+t('Your first run will appear here with its real stages and outcomes. A service check does not create a model execution record.','開始工作後，這裡會呈現實際階段與結果。服務的定時檢查不會被當成模型執行紀錄。')+'</p></article>')+'</section>'+
+ (remaining.length?'<details id="autonomy-history" class="autonomy-history"><summary>'+t('Past work','過往工作')+' <span>'+remaining.length+' / '+journey.total+'</span></summary>'+remaining.map(row=>journeyWork(row)).join('')+(journey.total>12?'<p class="small">'+t('Showing the latest 12 records. View project tasks for the complete history.','此處顯示最近 12 筆紀錄，完整歷史可至專案任務查看。')+'</p>':'')+'</details>':'')+legacyJobs+
+ (failed?'<details id="autonomy-attention" class="panel detail-body" data-autonomy-attention open><summary>'+t('What needs attention','需要處理的問題')+'</summary>'+(problems||'<p>'+t('Open the recorded work to inspect its latest result and required decision.','請開啟工作紀錄查看最新結果及需要決定的事項。')+'</p>')+'</details>':'')+(proposals.length?proposalsView(proposals):'')+
+ '<details id="autonomy-settings" class="journey-scope"><summary>'+t('Plan scope & limits · read only','計畫範圍與限制・唯讀')+'</summary>'+scope+'<dl class="facts">'+limits.map(([label,value])=>'<dt>'+label+'</dt><dd>'+escape(value)+'</dd>').join('')+'</dl><p class="small">'+t('Define detailed changes with your agent. This page cannot widen the approved scope or reset spent rounds.','詳細變更請透過對話交辦。此頁不會擴大核准範圍或重設已使用的輪數。')+'</p>'+open('autonomy-setup',t('Prepare a change request','準備調整需求'))+'</details>'+
+ '<details id="autonomy-setup" class="journey-scope autonomy-setup"><summary><h2>'+t('Set it up with your agent','交給 Agent 完成設定')+'</h2></summary><p>'+t('Copy this brief into your conversation and describe the change you want.','將這段需求帶回對話，再補充你想調整的內容。')+'</p><pre id="autonomy-brief" tabindex="0">'+escape(autonomyBrief())+'</pre><button id="copy-autonomy-brief" data-copy-autonomy>'+t('Copy conversation brief','複製對話需求')+'</button><span id="autonomy-copy-status" role="status"></span></details>'+
+ '<details id="autonomy-service" class="journey-scope journey-service"><summary>'+t('Service & data freshness','服務與資料更新')+'</summary>'+serviceEvidence+'</details>'+
+ '<p class="journey-footer"><a href="'+link('work',projectId)+'">'+t('All project tasks','全部專案任務')+' ↗</a><a href="'+link('learning',projectId)+'">'+t('Knowledge & Skills','知識與 Skills')+' ↗</a><span>'+t('Recorded experience needs review before becoming an active Skill.','經驗紀錄需經審查才會成為啟用中的 Skill。')+'</span></p></div>';
 }
+
 function commandFeedback(record,action){
   if(record.status!=='confirmed')return t('Request recorded; its outcome needs reconciliation. Do not submit it again with a new key.','已記錄要求，結果仍待核對。請勿使用新的要求識別重送。');
   if(action==='autonomy.cancel')return {'host-confirmed':t('The host confirmed cancellation.','主機已確認取消。'),'cancelled-before-dispatch':t('Cancelled before dispatch.','已在派工前取消。'),'requested-not-confirmed':t('Cancellation requested. The host has not confirmed stopping.','已要求取消，主機尚未確認停止。'),'runtime-already-completed':t('Execution already completed. Acceptance remains separate.','執行已完成，驗收狀態另列。')}[record.result?.cancellation]||t('Cancellation request recorded. Check the host outcome.','已記錄取消要求，請核對主機結果。');
@@ -458,7 +565,7 @@ function learningHistory(data){
 function controlView(view,projectId){
   if(view==='storage')return storageView(projectId);
   if(view==='settings')return heading(t('Model rules','模型規則'),t('Choose a model, reasoning and service mode for each work activity.','依工作活動設定模型、推理強度與服務模式。'))+operatorContext()+modelRules.render({project:snapshot.projects.find(p=>p.id===projectId),projects:snapshot.projects,tasks:snapshot.tasks,data:hookData});
-  const titles={settings:[t('Model policy','模型政策'),t('Model, reasoning and service mode are independent choices.','模型、推理與服務模式是獨立設定。')],learning:[t('Learning & Skills','學習與 Skills'),t('Inspect captured evidence, evaluated candidates and activated versions.','查看已收集證據、候選評估與啟用版本。')],autonomy:[t('Autonomous improvement','自主改善'),t('Project improvement is opt-in and stays within recorded scope and limits.','專案改善需明確啟用，並維持已記錄範圍與限制。')]};
+  const titles={settings:[t('Model policy','模型政策'),t('Model, reasoning and service mode are independent choices.','模型、推理與服務模式是獨立設定。')],learning:[t('Learning & Skills','學習與 Skills'),t('Inspect captured evidence, evaluated candidates and activated versions.','查看已收集證據、候選評估與啟用版本。')],autonomy:[t('Autonomous improvement','自主改善'),t('Follow the work, understand the results, and decide what happens next.','追蹤改善進度、理解成果，掌握接下來會發生什麼。')]};
   let html=heading(...titles[view])+(projectId?'':projectPicker(projectId));
   if(!projectId)return html+empty(t('Choose a project to inspect its settings.','請選擇專案查看設定。'));
   if(!hookData)return html+empty(t('Reading project controls…','正在讀取專案控制…'));
@@ -496,7 +603,7 @@ const analysisSelection=()=>({...analysisFilters,project:route().project||analys
 async function readAnalysis(){if(route().view!=='analysis')return;const scope=JSON.stringify([route().project,analysisSelection(),analysisOffset]);try{const data=await api('/api/analysis?'+new URLSearchParams({...analysisSelection(),limit:30,offset:analysisOffset}));if(route().view==='analysis'&&scope===JSON.stringify([route().project,analysisSelection(),analysisOffset])){analysisData=data;render();}}catch(error){notice(error.message);}}
 async function readCurrentView(){if(route().project&&!snapshot?.projects.some(p=>p.id===route().project))return;await readControls();if(route().view==='analysis')await readAnalysis();if(route().view==='task'&&tab==='execution')await readExecution();}
 function render(){
-  const r=route(),previous=window.scrollY,focused=document.activeElement?.id,focusedLink=document.activeElement?.matches('a')?{href:document.activeElement.getAttribute('href'),region:document.activeElement.closest('nav')?'navigation':'content'}:null,focusedFlow=document.activeElement?.dataset.flowNode,focusedTab=document.activeElement?.dataset.tab;
+  const r=route(),previous=window.scrollY,focused=document.activeElement?.id,focusedLink=document.activeElement?.matches('a')?{href:document.activeElement.getAttribute('href'),region:document.activeElement.closest('nav')?'navigation':'content'}:null,focusedDisclosure=document.activeElement?.tagName==='SUMMARY'?document.activeElement.parentElement?.id:null,focusedFlow=document.activeElement?.dataset.flowNode,focusedTab=document.activeElement?.dataset.tab;
   const nextScope=JSON.stringify([r,tab]),openDetails=renderScope===nextScope?Array.from(document.querySelectorAll('main details[id][open]'),node=>node.id):[];renderScope=nextScope;
   document.querySelector('.skip').textContent=t('Skip to content','跳至主要內容');
   $('search').setAttribute('aria-label',t('Search projects and tasks','搜尋專案與任務'));
@@ -523,7 +630,7 @@ function render(){
   updateAutonomyFreshness();
   $('footer').textContent=snapshot.projects.length+' '+t('projects','個專案')+' · '+t('Updated ','更新於 ')+date(snapshot.read_at)+' · '+t(writeToken?'Operator controls available':'Viewing only',writeToken?'可使用操作控制':'僅供檢視');
   document.querySelector('.sidebar-bottom p').textContent=t('Workspace on this computer','此電腦上的工作空間');
-  if(focused&&$(focused))$(focused).focus({preventScroll:true});else if(focusedLink){const match=Array.from($(focusedLink.region).querySelectorAll('a')).find(a=>a.getAttribute('href')===focusedLink.href);(match||$('content')).focus({preventScroll:true});}else if(focusedFlow)document.querySelector('[data-flow-node="'+focusedFlow+'"]')?.focus({preventScroll:true});else if(focusedTab)document.querySelector('[data-tab="'+focusedTab+'"]')?.focus({preventScroll:true});window.scrollTo(0,previous);
+  if(focused&&$(focused))$(focused).focus({preventScroll:true});else if(focusedLink){const match=Array.from($(focusedLink.region).querySelectorAll('a')).find(a=>a.getAttribute('href')===focusedLink.href);(match||$('content')).focus({preventScroll:true});}else if(focusedDisclosure&&$(focusedDisclosure))$(focusedDisclosure).querySelector('summary')?.focus({preventScroll:true});else if(focusedFlow)document.querySelector('[data-flow-node="'+focusedFlow+'"]')?.focus({preventScroll:true});else if(focusedTab)document.querySelector('[data-tab="'+focusedTab+'"]')?.focus({preventScroll:true});window.scrollTo(0,previous);
 }
 async function readControls({background=false}={}){
  const r=route();if(!['settings','learning','autonomy','storage','goal','project'].includes(r.view)||!r.project)return;
@@ -548,6 +655,8 @@ document.addEventListener('click',async event=>{
   const target=event.target.closest('a,button');if(!target)return;
   if(target.matches('a')&&target.getAttribute('href')?.startsWith('?')&&!event.metaKey&&!event.ctrlKey&&!event.shiftKey&&!event.altKey&&event.button===0&&!target.hasAttribute('download')&&(!target.target||target.target==='_self')){event.preventDefault();if(listViews.includes(route().view))history.replaceState({...history.state,listFocus:target.getAttribute('href'),listScroll:scrollY},'',location.href);modelRules.leave();controlDirty=false;history.pushState(null,'',target.href);readListState();tab='overview';selectedFlowActivity=null;hookData=null;executionData=null;executionOffset=0;analysisData=null;analysisOffset=0;render();window.scrollTo(0,0);$('content').focus({preventScroll:true});await readCurrentView();}
   if(target.hasAttribute('data-autonomy-refresh')){await refresh(true);await readControls();}
+  if(target.hasAttribute('data-copy-autonomy')){try{await navigator.clipboard.writeText(autonomyBrief());$('autonomy-copy-status').textContent=t('Copied. Paste it into your conversation.','已複製，請貼到對話中。');}catch{$('autonomy-copy-status').textContent=t('Automatic copy is unavailable. Select and copy the text above.','無法自動複製，請選取上方文字複製。');$('autonomy-brief')?.focus();}return;}
+  if(target.hasAttribute('data-autonomy-end')){const goal=selectedImprovementGoal();if(!goal?.authority_current||!hookData.policy)return;target.disabled=true;const policy=structuredClone(hookData.policy);policy.enabled=false;const record=await send('autonomy','autonomy.policy',{goal_id:goal.id,policy});if(record?.status==='confirmed'){await readControls();notice(t('New exploration and work are disabled. Existing work was not cancelled.','已停止新的探索與派工，既有工作未被取消。'));}else target.disabled=false;return;}
   if(target.dataset.autonomyOpen){const section=$(target.dataset.autonomyOpen);if(section){if(section.tagName==='DETAILS')section.open=true;(section.tagName==='DETAILS'?section.querySelector('summary'):section).focus({preventScroll:true});section.scrollIntoView({block:'center'});}}
   if(target.dataset.flowNode){selectedFlowActivity=selectedFlowActivity===target.dataset.flowNode?null:target.dataset.flowNode;render();document.querySelector('[data-flow-node="'+target.dataset.flowNode+'"]')?.focus({preventScroll:true});}
   if(target.dataset.flowClose){const previous=selectedFlowActivity;selectedFlowActivity=null;render();document.querySelector('[data-flow-node="'+previous+'"]')?.focus({preventScroll:true});}
@@ -566,10 +675,9 @@ document.addEventListener('click',async event=>{
 });
 function updateAutonomyFreshness(){
  const node=document.querySelector('[data-autonomy-freshness]');if(!node)return;
- if(controlDirty||document.activeElement?.closest('#autonomy-form')){node.textContent=t('Editing settings · Live status updates are paused. The displayed state is from the last read.','正在編輯設定・即時狀態更新已暫停，目前顯示上次讀取的狀態。');node.dataset.stale='true';return;}
+ if(controlDirty){node.textContent=t('Editing settings · Live status updates are paused. The displayed state is from the last read.','正在編輯設定・即時狀態更新已暫停，目前顯示上次讀取的狀態。');node.dataset.stale='true';return;}
  const at=Date.parse(node.dataset.observedAt);if(Number.isFinite(at)&&Date.now()-at>45000){node.textContent=t('No recent service observation · The displayed state may be out of date. Refresh to confirm.','尚無最近的服務觀察・目前顯示的狀態可能已過期，請重新整理確認。');node.dataset.stale='true';}
 }
-document.addEventListener('input',event=>{if(event.target.closest('#autonomy-form')){controlDirty=true;updateAutonomyFreshness();}});
 document.addEventListener('focusin',()=>updateAutonomyFreshness());
 setInterval(updateAutonomyFreshness,1000);
 document.addEventListener('change',async event=>{
@@ -585,8 +693,8 @@ document.addEventListener('change',async event=>{
  const target=disclosure&&!disclosure.open?$('operator-task-summary'):$('operator-task');
  target?.focus({preventScroll:true});
 });
-document.addEventListener('change',event=>{if(event.target.closest('#autonomy-form'))controlDirty=true;if(['model-mode','reasoning-mode','service-mode'].includes(event.target.name)){const input=event.target.form.elements[event.target.name.replace('-mode','-value')];input.hidden=input.disabled=event.target.value!=='fixed';}if(event.target.id==='analysis-metric'){analysisMetric=event.target.value;render();$('analysis-metric')?.focus();}if(event.target.id==='improvement-goal')prefillStandingGrant(event.target.value);if(event.target.dataset.analysisFilter){analysisFilters[event.target.dataset.analysisFilter]=event.target.value;analysisOffset=0;void readAnalysis();}if(event.target.id==='task-filter'){filter=event.target.value;page=0;saveListState();render();}if(event.target.id==='project-picker'){history.replaceState(null,'',link(route().view,event.target.value||null));modelRules.leave();controlDirty=false;readControls();}});
-document.addEventListener('submit',async event=>{const formId=event.target.getAttribute('id');if(!['registration-form','autonomy-form','goal-registration-form'].includes(formId))return;event.preventDefault();const data=new FormData(event.target);if(formId==='goal-registration-form'){const c=hookData.candidates?.[Number(data.get('goal-candidate'))];if(c){const record=await send('goals','goals.create',{task_id:c.task_id,manifest_ref:c.manifest_ref,...(c.repo_id?{repo_id:c.repo_id}:{})},c.version);if(record?.status==='confirmed'){await refresh(true);await readControls();notice(t('Approved goal registered. Start its delivery service from goal details.','已登記核准目標，可在目標詳情啟動交付服務。'));}}return;}if(formId==='autonomy-form'){try{const record=await send('autonomy','autonomy.policy',{policy:captureAutonomyPolicy(event.target),...(selectedImprovementGoal()?{goal_id:selectedImprovementGoal().id}:{})});if(record?.status==='confirmed'){controlDirty=false;await readControls();notice(t('Improvement policy saved. Activity is reported separately.','已儲存改善政策，活動狀態另行回報。'));}}catch(error){notice(error.message);}return;}if(formId==='registration-form'){const repositories=[];for(let i=0;i<registrationRepositories;i++)repositories.push({id:data.get('repo-id-'+i).trim(),path:data.get('repo-path-'+i).trim(),scope:data.get('repo-scope-'+i).trim()});await send('workspace','workspace.register',{id:data.get('id').trim(),name:data.get('name').trim(),task_root:data.get('task_root').trim(),repositories});return;}});
+document.addEventListener('change',event=>{if(['model-mode','reasoning-mode','service-mode'].includes(event.target.name)){const input=event.target.form.elements[event.target.name.replace('-mode','-value')];input.hidden=input.disabled=event.target.value!=='fixed';}if(event.target.id==='analysis-metric'){analysisMetric=event.target.value;render();$('analysis-metric')?.focus();}if(event.target.dataset.analysisFilter){analysisFilters[event.target.dataset.analysisFilter]=event.target.value;analysisOffset=0;void readAnalysis();}if(event.target.id==='task-filter'){filter=event.target.value;page=0;saveListState();render();}if(event.target.id==='project-picker'){history.replaceState(null,'',link(route().view,event.target.value||null));modelRules.leave();controlDirty=false;readControls();}});
+document.addEventListener('submit',async event=>{const formId=event.target.getAttribute('id');if(!['registration-form','goal-registration-form'].includes(formId))return;event.preventDefault();const data=new FormData(event.target);if(formId==='goal-registration-form'){const c=hookData.candidates?.[Number(data.get('goal-candidate'))];if(c){const record=await send('goals','goals.create',{task_id:c.task_id,manifest_ref:c.manifest_ref,...(c.repo_id?{repo_id:c.repo_id}:{})},c.version);if(record?.status==='confirmed'){await refresh(true);await readControls();notice(t('Approved goal registered. Start its delivery service from goal details.','已登記核准目標，可在目標詳情啟動交付服務。'));}}return;}if(formId==='registration-form'){const repositories=[];for(let i=0;i<registrationRepositories;i++)repositories.push({id:data.get('repo-id-'+i).trim(),path:data.get('repo-path-'+i).trim(),scope:data.get('repo-scope-'+i).trim()});await send('workspace','workspace.register',{id:data.get('id').trim(),name:data.get('name').trim(),task_root:data.get('task_root').trim(),repositories});return;}});
 
 $('project-switch').addEventListener('click',()=>{
  if(!snapshot)return;

@@ -162,12 +162,31 @@ separate operations, with host confirmation required before reporting a running
 operation as stopped.
 
 Automatic task creation additionally requires the source goal's sealed standing
-admission grant. Settings only narrow its scope/resources, and select its real
-registered goal rather than typing claim identities. `autonomy.start-service`
+admission grant. Define the goal, preserved requirements, scope, models, acceptance
+checks and stop limits through an authorized conversation. Configuration only
+narrows the sealed grant; the observatory displays its connected plan and limits
+as read-only information, with a copyable conversation brief for changes.
+`autonomy.start-service`
 starts the approved event controller. The service indicator distinguishes a
 service running in this host from an unconfirmed separate process; recorded task
 activity is not process-liveness proof. Source discovery, proposed work and accepted
 derived goals remain separately traceable, with unknown cost/token fields preserved.
+
+The autonomy page prioritizes the current situation, next action, recorded workflow
+and outcomes. Workflow stages reflect reported operations, not separate Agent
+identities or inferred success. Exploration rounds include reservations; they are
+not completed improvements. Historical acceptance is labeled separately from
+acceptance that is valid for the current candidate. Expand work for its reported
+tool, model, duration, tokens and evidence. Recent history is bounded; complete
+records remain accessible through project tasks.
+
+Simple controls start the approved service, pause or resume future execution, or
+disable future improvement. Ending requires confirmation and changes only the
+policy's enabled flag. It does not cancel active tasks, alter grants or reset
+spent rounds. Controls require the existing capability and version checks; a
+submitted request is not confirmation that execution stopped. Reading the page
+does not start model work. Live observations continue while read-only details are
+open, and stale or unavailable observations are explicitly identified.
 
 The background runner uses the qualified workflow engine and stable run identity.
 It cannot grant scope, bypass independent review or infer acceptance from a finished
