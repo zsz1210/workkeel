@@ -63,7 +63,7 @@ test('autonomy guidance follows usable standing authority without changing setti
 test('task dependency navigation preserves project-local identity and leaves missing tasks unlinked',()=>{
   // Execute the emitted client's actual helpers and task renderer without booting its host connection.
   const block=(start,end)=>{const from=workspaceClient.indexOf(start),to=workspaceClient.indexOf(end,from);assert.ok(from>=0&&to>from);return workspaceClient.slice(from,to);};
-  const code=block('const t=','const listViews=')+block('function taskDependencyComponents(','function projectPicker(')+'\ntaskView("alpha","WK-same");';
+  const code=block('const t=','const listViews=')+block('const taskName=','function heading(')+block('function taskDependencyComponents(','function projectPicker(')+'\ntaskView("alpha","WK-same");';
   const task=(project_id,dependencies=[])=>({key:project_id+':WK-same',id:'WK-same',project_id,dependencies,task_state:'build',read_status:'available'});
   const snapshot={tasks:[task('alpha')],projects:['alpha','beta'].map(id=>({id,task_root:'/'+id,repositories:[{id:id+'-repo',path:'/'+id,scope:'.'}]}))};
   const render=()=>vm.runInNewContext(code,{snapshot,renderWorkspaceMap,URLSearchParams,lang:'en',tab:'dependencies',escape:value=>String(value??''),heading:()=>'',taskNext:()=>''});
