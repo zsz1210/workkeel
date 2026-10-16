@@ -24,7 +24,8 @@ export function renderWorkspaceScene(rows,{language='en',title=null,interactive=
   if(!nodes.length)return '<section class="ws-scene scene-empty" aria-label="'+t('Execution activity flow','執行活動流程')+'"><span class="executor-medallion">'+workspaceGlyph('plan')+'</span><div><h3>'+t('Waiting for execution evidence','等待執行證據')+'</h3><p>'+t('Recorded progress is available in the timeline. Agent, model and usage will appear when the host reports them.','目前進度可在時間軸查看；主機回報後，這裡會顯示負責 Agent、模型與用量。')+'</p></div></section>';
   const height=nodes.length*84-10,mid=height/2;
   const wires=nodes.map((node,i)=>{
-    const y=i*84+37,d='M 0 '+mid+' H 42 V '+y+' H 100';
+    const y=i*84+37,direction=Math.sign(y-mid),bend=Math.min(10,Math.abs(y-mid)/2);
+    const d=direction?'M 0 '+mid+' H '+(36-bend)+' Q 36 '+mid+' 36 '+(mid+direction*bend)+' V '+(y-direction*bend)+' Q 36 '+y+' '+(36+bend)+' '+y+' H 100':'M 0 '+mid+' H 100';
     return '<path class="signal-wire" data-live="'+live(node)+'" d="'+d+'"/>'+(live(node)?'<g class="signal-packet"><circle cx="96" cy="'+y+'" r="1.7"/></g>':'');
   }).join('');
   const lanes=nodes.map(node=>{
