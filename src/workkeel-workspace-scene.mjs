@@ -31,7 +31,7 @@ export function renderWorkspaceScene(rows,{language='en',title=null,interactive=
     const tool=product(node),actor=node.actors.join(' · ')||(node.assigned_actor?t('Assigned: ','已指派：')+node.assigned_actor:t('Agent not reported','Agent 未回報'));
     const content='<span class="signal-identity">'+toolMark(tool)+'<span><strong>'+esc(executionLabel(node.activity,language))+'</strong><small title="'+esc(actor)+'">'+esc(tool.label)+'</small></span></span><span class="signal-model" title="'+esc(model(node))+'">'+esc(model(node))+'</span><span class="signal-result"><span class="signal-state"><i aria-hidden="true"></i>'+esc(state(node))+'</span><small>'+esc(time(node))+'<span aria-hidden="true"> · </span>'+esc(tokens(node))+'</small></span>'+(interactive?'<span class="signal-detail" aria-hidden="true">↗</span>':'');
     const target=interactive?'<button class="signal-target" data-flow-node="'+node.activity+'">'+content+'</button>':'<div class="signal-target">'+content+'</div>';
-    return '<div class="signal-lane ev-node'+(node===focus?' scene-current':'')+'" data-state="'+node.state+'" data-live="'+live(node)+'" data-recorded="'+!!node.attempts+'"'+(live(node)?' aria-current="step"':'')+'>'+target+'</div>';
+    return '<div class="signal-lane ev-node'+(node===focus?' scene-current':node.attempts&&!live(node)?' scene-history':'')+'" data-state="'+node.state+'" data-live="'+live(node)+'" data-recorded="'+!!node.attempts+'"'+(live(node)?' aria-current="step"':'')+'>'+target+'</div>';
   }).join('');
   const status=active.length?t(active.length+' '+(active.length===1?'activity running':'activities running'),active.length+' 項活動執行中'):t('No live execution confirmed','目前無已確認的執行');
   const unrecorded=view.nodes.filter(node=>!nodes.includes(node));
