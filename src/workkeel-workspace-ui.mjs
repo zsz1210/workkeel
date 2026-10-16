@@ -492,10 +492,11 @@ function autonomyView(projectId){
  const recorded=jobs.some(job=>job.status==='running')||admitted.some(item=>item&&['running','recovery-required','blocked'].includes(item.state)),awaiting=jobs.some(job=>job.status==='awaiting-acceptance');
  const limited=['discovery-round-budget','project-job-budget','standing-budget-or-cooldown'].includes(idle);
  const state=failed?'blocked':data.paused?'paused':!configured?'unconfigured':!enabled?'off':!policy.admission?.enabled?'admission-off':recorded?'recorded':awaiting?'review':journey.counts.unknown?'unknown-work':checking?'checking':idle==='source-goal-awaiting-acceptance'?'baseline-review':limited?'limited':serviceActive?'waiting':'ready';
+ const canResume=may('autonomy.resume');
  const copy={
   'unknown-work':[t('Some work cannot be confirmed','部分工作狀態尚無法確認'),t('Work was admitted, but its current record is missing or incomplete. This does not mean the work is idle or finished.','已建立工作，但目前紀錄缺漏或不完整，尚不能判定工作已停止或完成。')],
   blocked:idle==='known-findings-need-attention'?[t('Resolve known findings first','先處理已發現的問題'),t('A known finding needs a scope or risk decision. New exploration is on hold; review the proposals below.','已有問題需要確認處理範圍或風險，暫不進行新的探索。請查看下方提案。')]:[t('Improvement needs attention','改善工作需要處理'),t('A service or execution problem was recorded. Existing work is retained; inspect its details before resuming.','已記錄服務或執行問題，既有工作會保留。請查看問題內容後再恢復。')],
-  paused:[t('New execution is paused','已暫停新的執行'),t('Existing work remains visible below. Resume when you want the service to continue.','既有工作仍保留在下方，恢復後才會接續安排執行。')],
+  paused:[t('New execution is paused','已暫停新的執行'),t('Existing work remains visible below.','既有工作仍保留在下方。')+' '+(canResume?t('Use “Resume new execution” to continue.','需要接續執行時，可選擇「恢復新的執行」。'):t('This connection cannot resume execution.','此連線無法恢復執行。'))],
   unconfigured:[t('Choose what Workkeel may improve','尚未設定改善目標'),t('No approved improvement goal is connected. Workkeel is not exploring or creating new work automatically.','尚未連接核准的改善目標，目前不會自動探索或建立新工作。')],
   off:[t('Autonomous improvement is off','自主改善已關閉'),t('Your approved scope is retained. Ask your agent to prepare the next improvement when you want to continue.','已保留核准範圍。需要繼續時，請透過對話準備下一次改善。')],
   'admission-off':[t('Creating improvement work is off','尚未開啟建立改善工作'),t('The approved goal is connected, but permission to create derived work is switched off.','已連接核准目標，但尚未開啟依此目標建立改善工作的設定。')],
@@ -526,7 +527,7 @@ function autonomyView(projectId){
  off:[t('Prepare the next improvement with your agent.','透過對話交辦下一次改善。'),open('autonomy-settings',t('Review plan scope','查看計畫範圍'))],
  'admission-off':[t('Review permission to create work within this approved goal.','確認是否允許在此目標範圍內建立改善工作。'),open('autonomy-settings',t('Review plan scope','查看計畫範圍'))],
  ready:[t('Start the service when you want it to look for eligible work.','準備好讓它接續安排工作時，再啟動服務。'),action],
- paused:[t('Resume when you want new execution to continue.','要接續安排新的執行時，再選擇恢復。'),action],
+ paused:[canResume?t('Choose “Resume new execution” when you want to continue.','要接續安排新的執行時，請選擇「恢復新的執行」。'):t('Ask your Agent to check the execution connection.','請與 Agent 核對執行連線。'),action],
  recorded:[t('Open the work for its latest confirmed phase and result.','開啟工作，查看最後確認的階段與結果。'),open(admitted.some(item=>item&&['running','recovery-required','blocked'].includes(item.state))?'autonomy-work':'autonomy-jobs',t('View current work','查看目前工作'))],
  review:[t('Inspect the result before accepting the improvement.','先審查並驗收成果，再視為改善完成。'),open(journey.current?'autonomy-work':'autonomy-jobs',t('View results to review','查看待驗收成果'))],
  'baseline-review':[t('Ask your agent to finish acceptance of the starting goal.','請 Agent 先完成基準目標的驗收。'),open('autonomy-settings',t('View the connected goal','查看已連接目標'))],

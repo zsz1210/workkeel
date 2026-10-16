@@ -60,6 +60,62 @@ test('autonomy guidance follows usable standing authority without changing setti
   assert.match(selected.html,/operator-task-disclosure/);assert.match(selected.html,/Approved settings/);
   assert.equal(selected.settings,true);assert.equal(selected.learning,true);assert.equal(selected.storage,true);
 });
+test('paused autonomy guidance follows Resume capability in both languages without hiding policy or history',()=>{
+  // Render the actual emitted view, journey and permission helper without connecting or writing.
+  const block=(start,end)=>{const from=workspaceClient.indexOf(start),to=workspaceClient.indexOf(end,from);assert.ok(from>=0&&to>from);return workspaceClient.slice(from,to);};
+  const code=block('const t=','const states=')+block('const activityLabel=','const measuredTokens=')+block('const may=','function operatorContext(')+block('function selectedImprovementGoal(','function commandFeedback(')+'\nautonomyView("project");';
+  const goal={id:'approved-goal',title:'Approved improvement',authority_current:true,grant:{enabled:true}};
+  const accepted={id:'accepted-work',title:'Accepted work',root:'/fictional/accepted',project_id:'project',read_status:'available',state:'done',accepted:true,created_at:'2026-01-02T00:00:00Z'};
+  const historical={id:'historical-work',title:'Historical work',root:'/fictional/historical',project_id:'project',read_status:'available',state:'review-required',historically_accepted:true,accepted:false,created_at:'2026-01-01T00:00:00Z'};
+  const base={connected:true,writeToken:'operator',improvementGoal:goal.id,connectionError:null,
+    snapshot:{projects:[{id:'project',name:'Example project',read_status:'available'}],goals:[accepted,historical],capabilities:{actions:['autonomy.policy','autonomy.resume']}},
+    hookData:{enabled:true,paused:true,available_goals:[goal],policy:{admission:{enabled:true}},
+      admissions:[accepted,historical].map(item=>({goal_id:item.id,root:item.root,kind:'execution',status:'created'})),
+      jobs:[{id:'old-failure',reason:'Retained synthetic failure',status:'failed'}]}};
+  const render=(lang,overrides={})=>vm.runInNewContext(code,{...base,...overrides,lang,document:{hidden:false},
+    route:()=>({view:'autonomy',project:'project'}),escape:value=>String(value??''),
+    link:(view,project,task)=>'?'+new URLSearchParams({view,project,...(task?{task}:{})}),renderWorkspaceScene,toolMark,resolveToolIdentity});
+  for(const lang of ['en','zh-TW']){
+    const zh=lang==='zh-TW',html=render(lang);
+    const resumeLabel=zh?'恢復新的執行':'Resume new execution';
+    const unavailable=zh?'此連線無法恢復執行。':'This connection cannot resume execution.';
+    const checkConnection=zh?'請與 Agent 核對執行連線。':'Ask your Agent to check the execution connection.';
+    const summary=html.match(/<div class="autonomy-now">[\s\S]*?<div class="journey-controls">/)[0];
+    const next=html.match(/<div class="autonomy-next">[\s\S]*?<\/div>/)[0];
+    assert.match(html,/data-autonomy-state="paused"/);
+    assert.ok(summary.includes(resumeLabel));assert.ok(next.includes(resumeLabel));
+    assert.equal((html.match(/data-control="autonomy.resume"/g)||[]).length,1);
+    assert.ok(html.includes('data-control="autonomy.resume">'+resumeLabel+'</button>'));
+    assert.ok(!html.includes(unavailable));assert.ok(!html.includes(checkConnection));
+    const cases=[
+      {actions:[],policy:false},
+      {actions:['autonomy.policy'],policy:true},
+      {actions:['autonomy.policy','autonomy.start-service'],policy:true},
+      {actions:['autonomy.policy','autonomy.resume'],writeToken:'',policy:false},
+      {actions:['autonomy.policy','autonomy.resume'],read_status:'unavailable',policy:false}
+    ];
+    for(const {actions,policy,writeToken=base.writeToken,read_status='available'} of cases){
+      const result=render(lang,{writeToken,snapshot:{...base.snapshot,capabilities:{actions},projects:[{...base.snapshot.projects[0],read_status}]}});
+      assert.match(result,/data-autonomy-state="paused"/);
+      assert.ok(result.includes(unavailable));assert.ok(result.includes(checkConnection));
+      assert.doesNotMatch(result,/data-control="autonomy\.(resume|start-service|pause)"/);
+      assert.equal(result.includes('data-autonomy-end'),policy,'policy-only controls remain usable without execution capability');
+      assert.ok(result.includes(zh?'既有工作仍保留在下方。':'Existing work remains visible below.'));
+      assert.doesNotMatch(result,/Resume when|恢復後才會|再選擇恢復|adapter|expired approval|授權過期/);
+      assert.match(result,/id="autonomy-history"/);assert.match(result,/id="autonomy-settings"/);
+      assert.match(result,/view=work/);assert.match(result,/view=learning/);
+      assert.ok(result.includes(zh?'先前已驗收・目前待重新確認':'Previously accepted · needs recheck'));
+      assert.ok(result.includes(zh?'改善已驗收':'Improvement accepted'));
+      assert.match(result,/Retained synthetic failure/);assert.ok(result.includes(zh?'已失敗':'Failed'));
+      assert.match(result,/<strong>1<\/strong><span>(Currently accepted improvements|目前驗收有效的改善)/);
+    }
+    const blocked=render(lang,{hookData:{...base.hookData,service:{errors:['Recorded service problem']}}});
+    assert.match(blocked,/data-autonomy-state="blocked"/);assert.match(blocked,/Recorded service problem/);
+    assert.ok(!blocked.includes(unavailable));assert.ok(!blocked.includes(checkConnection));
+    const disconnected=render(lang,{connected:false});
+    assert.match(disconnected,/data-autonomy-state="unavailable"/);assert.doesNotMatch(disconnected,/data-control=/);
+  }
+});
 test('task dependency navigation preserves project-local identity and leaves missing tasks unlinked',()=>{
   // Execute the emitted client's actual helpers and task renderer without booting its host connection.
   const block=(start,end)=>{const from=workspaceClient.indexOf(start),to=workspaceClient.indexOf(end,from);assert.ok(from>=0&&to>from);return workspaceClient.slice(from,to);};
