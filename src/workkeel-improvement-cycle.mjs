@@ -71,5 +71,5 @@ export async function runImprovementCycle(target,{adapter,signal}={}){
     try{const result=await admitGoalImprovement(target,{goal_id:source.id,actor:source.manifest.roles.approver,operation_id:'event-'+fingerprint.slice(0,32),expected_version:(await readGoalAdmissions(target)).version},{trigger:{direction,source_refs:refs,read_paths:policy.discovery.read_paths,max_runtime_ms:policy.discovery.max_runtime_ms,max_cost_usd:policy.discovery.max_cost_usd}});return {...result,progressed:!result.replayed,model_called:false};}
     catch(e){if(exhausted(e))return idle('standing-budget-or-cooldown',{reason:e.message});throw e;}
   }
-  return idle('unchanged-approved-sources',{manual_proposals:manual});
+  return idle('unchanged-approved-sources',{manual_proposals:manual,rounds_used:discoveries.length,rounds_limit:roundLimit});
 }

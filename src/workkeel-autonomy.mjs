@@ -319,7 +319,7 @@ export async function cancelAutonomyJob(target,request,{adapter}={}){
  * Discovery requires an explicit bounded event and never runs on this timer. */
 export async function serveAutonomy(target,{adapter,goalAdapter,signal,onError=()=>{},debounce_ms=100,reconcile_ms=30000,watchFactory=null,onStep=()=>{}}={}){
   host(adapter);integer(debounce_ms,0,10000);integer(reconcile_ms,10,60000);await safeDirectory(target,ROOT,{create:true});
-  let working=false,pending=false,timer=null,retryTimer=null,closed=false;
+  let working=false,pending=false,timer=null,retryTimer=null,closed=false,startedAt=null;
   const signature=s=>digest({paused:s.paused,policy:s.policy,event:s.last_event,receipts:s.receipts.at(-1)??null,jobs:s.jobs.map(j=>({id:j.id,request:j.request_sha256,depends_on:j.depends_on,resume:j.resume_ref}))});
   let last=signature(await readAutonomy(target));
   const trigger=()=>{if(timer||closed||signal?.aborted)return;timer=setTimeout(()=>{timer=null;void tick();},debounce_ms);};
@@ -330,14 +330,14 @@ export async function serveAutonomy(target,{adapter,goalAdapter,signal,onError=(
     if(progressed&&s.policy.enabled&&s.policy.admission?.enabled)due.push(Date.now());
     if(due.length){const delay=Math.max(progressed?1:reconcile_ms,Math.min(...due)-Date.now());retryTimer=setTimeout(trigger,Math.min(delay,2147483647));}
   };
-  const tick=async()=>{if(closed||signal?.aborted)return;if(working){pending=true;return;}working=true;
+  const tick=async()=>{if(closed||signal?.aborted)return;if(working){pending=true;return;}working=true;startedAt=now();
     let progressed=false;try{const result=await runAutonomyStep(target,{adapter,goalAdapter,signal,reconcile_ms});progressed=!!result.job||result.progressed===true;await onStep(result);}catch(e){onError(e);}finally{working=false;try{await schedule(progressed);}catch(e){onError(e);}if(pending){pending=false;trigger();}}};
   const changed=async()=>{try{const next=signature(await readAutonomy(target));if(next!==last){last=next;trigger();}}catch(e){onError(e);}};
   const watchers=[],watch=watchFactory??(await import('node:fs')).watch;
   for(const ref of [ROOT,'.ai-org/work-items'])try{watchers.push(watch(path.join(target,ref),ref===ROOT?()=>void changed():trigger));}catch(e){if(e.code!=='ENOENT')throw e;}
   const interval=setInterval(trigger,reconcile_ms);
   const close=()=>{if(closed)return;closed=true;if(timer)clearTimeout(timer);if(retryTimer)clearTimeout(retryTimer);clearInterval(interval);watchers.forEach(w=>w.close());signal?.removeEventListener('abort',close);};
-  signal?.addEventListener('abort',close,{once:true});if(signal?.aborted)close();else trigger();return {close,trigger};
+  signal?.addEventListener('abort',close,{once:true});if(signal?.aborted)close();else trigger();return {close,trigger,observe:()=>({state:closed?'stopped':working?'checking':'listening',started_at:working?startedAt:null,reconcile_ms})};
 }
 
 /** Only import proposals from a currently accepted, source-pinned discovery

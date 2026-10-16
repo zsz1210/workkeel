@@ -157,6 +157,16 @@ test('service retries after cooldown without filesystem events and ignores its o
   await new Promise(r=>setTimeout(r,350));assert.equal(starts,2);assert.equal(reconciles,0);assert.deepEqual(errors,[]);service.close();
 });
 
+test('service observation distinguishes a pending cycle from idle without triggering additional work',async t=>{
+  const f=await fixture(t);await f.enqueue();let release,starts=0,completed=false;
+  const adapter=observer(async()=>{starts++;await new Promise(resolve=>release=resolve);return {status:'completed'};});
+  const service=await serveAutonomy(f.root,{adapter,reconcile_ms:60000,debounce_ms:0,watchFactory:()=>({close(){}}),onStep:()=>{completed=true;}});
+  t.after(()=>{release?.();service.close();});await waitFor(()=>starts===1);
+  const pending=service.observe();assert.equal(pending.state,'checking');assert.ok(Number.isFinite(Date.parse(pending.started_at)));assert.equal(pending.reconcile_ms,60000);
+  for(let n=0;n<20;n++)assert.deepEqual(service.observe(),pending);assert.equal(starts,1);
+  release();await waitFor(()=>completed&&service.observe().state==='listening');assert.equal(service.observe().started_at,null);service.close();assert.equal(service.observe().state,'stopped');assert.equal(starts,1);
+});
+
 test('periodic zero-model reconciliation observes canonical cancellation when watchers miss changes',async t=>{
   const f=await fixture(t);await f.enqueue();let starts=0;
   const adapter=observer(async()=>{starts++;return {status:'completed'};});

@@ -124,6 +124,7 @@ test('exhausted discovery is explicit on unchanged sources without blocking admi
       let observed;
       for(let n=0;n<100;n++){observed=await hooks.autonomy.read({project,actor});if(observed.service.last_step?.idle==='discovery-round-budget')break;await new Promise(r=>setTimeout(r,20));}
       assert.equal(observed.service.last_step.idle,'discovery-round-budget');assert.equal(observed.service.last_step.rounds_used,1);assert.equal(observed.service.last_step.rounds_limit,1);assert.deepEqual(observed.service.errors,[]);assert.equal(f.calls.length,before);
+      assert.ok(Number.isFinite(Date.parse(observed.service.observed_at)));assert.equal(observed.service.check_interval_ms,30000);assert.ok(['checking','listening'].includes(observed.service.activity));assert.deepEqual(observed.watch_scope.repositories.map(r=>r.root),[f.root]);assert.deepEqual(observed.watch_scope.source_refs,['src/value.mjs']);
     }finally{hooks.autonomy.close();}
   }
 });
