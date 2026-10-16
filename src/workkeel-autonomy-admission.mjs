@@ -2,6 +2,7 @@ import path from 'node:path';
 import os from 'node:os';
 import {randomUUID} from 'node:crypto';
 import {exactKeys,executionDigest} from './workkeel-execution-policy.mjs';
+import {loadTaskRequirements} from './workkeel-requirements.mjs';
 import {readTaskFile,validateTaskContract} from './task-contract.mjs';
 import {readNativeTask,createNativeTask,mutateNativeTask,assertTaskExecutionContext} from './workkeel-tasks.mjs';
 import {assertActor,assertApprover,readTaskProject,readNativeGit,safeDirectory} from './workkeel-project.mjs';
@@ -160,6 +161,12 @@ export async function admitGoalImprovement(target,request,{proposal=null,trigger
   for(const ref of [artifactRoot,'.ai-org/goals/'+derivedId])if(!controlBase.contract.environment.write_paths.some(root=>under(ref,root)))fail('explicit metadata write scope is required for derived coordination');
   if(kind==='discovery')write_paths=[artifactRoot+'/discovery'];
   const product=contractFor(task,{id:componentId,goal:template.title_prefix+': '+(proposal?.title??'Explore '+direction),actor:goal.manifest.roles.implementer,read_paths,write_paths,refs:[manifestRef,localReceipt],acceptance:accepted,include:template.include,exclude:template.exclude});
+  // Admission receipts do not exist yet. Resolve inherited authority against the
+  // narrowed product scope before adding the new coordinator-owned receipts.
+  const requirementContract = structuredClone(product);
+  requirementContract.environment.data.policy_refs = task.contract.environment.data.policy_refs;
+  const requirements = await loadTaskRequirements(component.root, requirementContract, {enforceCoverage:false});
+  for (const requirement of requirements.applicable) if (!accepted.includes(requirement.criterion)) accepted.push(requirement.criterion);
   const control=contractFor(controlBase,{id:controlId,goal:'Coordinate '+derivedId,actor:goal.controller.actor,read_paths:controlBase.contract.environment.read_paths,write_paths:['.ai-org/goals/'+derivedId],refs:[manifestRef,localReceipt],acceptance:['All mandatory derived components and their independent review/integration are accepted'],include:['Coordinate this exact bounded derived goal'],exclude:['Publication','Deployment']});
   const manifest={schema_version:'workkeel.goal/v1',id:derivedId,title:product.goal,approval_ref:product.authorization.approval_ref,approved_by:goal.manifest.approved_by,expires_at:goal.manifest.expires_at,components:[{...structuredClone(component),id:'work',root:component.root,task_id:componentId,contract_sha256:executionDigest(product),depends_on:[],...(kind==='discovery'?{purpose:'discovery'}:{})}],integration:{component_id:'work',criteria:accepted},roles:structuredClone(goal.manifest.roles),models:structuredClone(goal.manifest.models),limits:{max_operations:grant.max_operations,max_reworks:Math.min(grant.max_reworks,attempts-1),timeout_ms:max_runtime_ms,max_cost_usd},control:{release_parent:true},derived_from:{goal_id:goal.id,manifest_sha256:goal.manifest_sha256,admission_ref:localReceipt,admission_sha256:'0'.repeat(64),...(path.resolve(component.root)!==path.resolve(target)?{source_root:path.resolve(target)}:{})}};
   const receipt={schema_version:'workkeel.goal-admission/v1',id:admissionId,source_goal_id:goal.id,source_manifest_sha256:goal.manifest_sha256,source_task_id:controller.id,source_contract_sha256:controller.contract_sha256,proposal_id:proposalId,proposal_sha256:inputHash,problem_sha256:problem,direction,derived_goal_id:derivedId,derived_manifest_body_sha256:goals.goalAdmissionManifestDigest(manifest),control_task_id:controlId,components:[{id:'work',root:component.root,task_id:componentId,contract_sha256:executionDigest(product)}],reservation:{operations:grant.max_operations,max_runtime_ms,max_cost_usd},created_at:current(),kind,source_goal_root:path.resolve(target),...(trigger?{source_fingerprint:problem,source_refs:input.source_refs}:{})};

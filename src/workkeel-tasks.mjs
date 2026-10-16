@@ -5,6 +5,7 @@ import { durableAtomicCreate, durableAtomicWrite, formatJson, sha256 } from "./f
 import { withProjectMutationLock } from "./project.mjs";
 import { readTaskContractInput, readTaskFile, validateTaskContract } from "./task-contract.mjs";
 import { assertActor, assertApprover, readTaskProject, safeDirectory, existsEntry, readLegacyDigest, readNativeGit } from "./workkeel-project.mjs";
+import {loadTaskRequirements, assertRequirementOutcomes} from './workkeel-requirements.mjs';
 
 const ID = /^[A-Za-z0-9][A-Za-z0-9._-]{0,95}$/;
 const SHA = /^(?:[a-f0-9]{40}|[a-f0-9]{64})$/;
@@ -111,6 +112,7 @@ function assertContractPolicy(contract, policy) {
   const valid = validateTaskContract(contract);
   if (!valid.contract_complete) throw new Error(`Incomplete task contract: ${[...valid.errors, ...valid.incomplete_fields].join("; ")}`);
   assertActor(policy, contract.actor);
+  if ((policy.requirements_refs ?? []).some(ref => !contract.environment.data.policy_refs.includes(ref))) throw Error('Required project decision source omitted from task');
   if (!policy.approvers.includes(contract.authorization.approved_by)) throw new Error("Task approval must name a registered approving Principal");
   if (!["low", "standard"].includes(contract.verification.risk_tier) || contract.environment.data.classification === "sensitive") throw new Error("High-risk or sensitive work requires the established assurance workflow; task-first v1 cannot downgrade it");
   if (!["distinct-agent", "distinct-principal"].includes(contract.verification.separation) ||
@@ -136,6 +138,7 @@ async function context(target, item, project) {
   if (item.policy_sha256 !== digest(project.policy)) throw new Error("Task policy changed after approval");
   assertContractPolicy(item.contract, project.policy);
   await assertPins(target, item.authority_pins);
+  await loadTaskRequirements(target, item.contract, {requiredRefs: project.policy.requirements_refs ?? []});
   await safeDirectory(target, item.contract.environment.cwd);
 }
 
@@ -364,6 +367,7 @@ export async function mutateNativeTask(targetInput, id, action, request) {
         item.claim = null; item.state = "intake"; item.dependency_pins = null;
       } else {
         if (!Array.isArray(request.unresolved) || request.unresolved.length) throw new Error("Resolve outstanding issues before delivery");
+        await assertRequirementOutcomes(target, item, request, 'delivery');
         if (item.attempts.some(a => a.kind === "rejected" && a.delivery.revision === request.revision)) throw new Error("Rework requires a fresh candidate, not the rejected revision");
         await assertCandidate(target, item, request.revision, { handoff: true, action, request });
         await dependencies(target, item);
@@ -383,6 +387,10 @@ export async function mutateNativeTask(targetInput, id, action, request) {
       if (attempt && (attempt.result?.value.status !== "completed" || !sameActor(attempt.value.reviewer, request.actor) ||
           attempt.value.revision !== request.revision)) throw new Error("Review recovery attempt is not completed by this reviewer for this candidate");
       await assertDelivery(target, item, action, request); assertText(request.summary);
+      if (request.judgment === 'pass') {
+        await assertRequirementOutcomes(target, item, {revision:item.delivery.revision,actor:item.delivery.implementer,evidence:item.delivery.evidence.map(p=>p.path)}, 'delivery');
+        await assertRequirementOutcomes(target, item, request, 'review');
+      }
       item.review = { actor: request.actor, revision: request.revision, judgment: request.judgment,
         summary: request.summary, evidence: await evidence(target, request.evidence),
         // The reviewed attempt, its completed result and the whole chain are immutable evidence.
@@ -402,6 +410,8 @@ export async function mutateNativeTask(targetInput, id, action, request) {
           attempt.result?.value.status !== "completed" || attempt.result.sha256 !== reviewed.attempt_result_sha256 ||
           chain.sha256 !== reviewed.recovery_chain_sha256)) throw new Error("Review recovery chain changed after the authored review");
       await assertDelivery(target, item, action, request); await assertPins(target, item.review.evidence);
+      await assertRequirementOutcomes(target, item, {revision: item.delivery.revision, actor: item.delivery.implementer, evidence: item.delivery.evidence.map(p => p.path)}, 'delivery');
+      await assertRequirementOutcomes(target, item, {revision: item.review.revision, actor: item.review.actor, judgment: item.review.judgment, evidence: item.review.evidence.map(p => p.path)}, 'review');
       assertText(request.summary); assertText(request.rollback);
       item.closeout = { actor: request.actor, revision: request.revision, summary: request.summary,
         rollback: request.rollback, evidence: await evidence(target, request.evidence), external_release: "not-performed" };

@@ -65,12 +65,14 @@ export const policySchema = {
       type: "object", additionalProperties: false, required: ["agent_id", "principal_id"],
       properties: { agent_id: identifier, principal_id: identifier }
     } },
-    review_separation: { enum: ["distinct-agent", "distinct-principal"] }
+    review_separation: { enum: ["distinct-agent", "distinct-principal"] },
+    requirements_refs: {type: 'array', maxItems: 8, uniqueItems: true, items: {type: 'string', minLength: 1, maxLength: 1024}}
   }
 };
 const validate = new Ajv({ strict: true, allErrors: true }).compile(policySchema);
 export function assertPolicy(policy) {
   if (!validate(policy)) throw new Error("Invalid task policy; use explicit Principals, Agents, approvers and review separation");
+  if ((policy.requirements_refs ?? []).some(ref => ref.trim() !== ref || /[\\:\x00-\x1f\x7f*?\[\]{}]/.test(ref) || ref.startsWith('/') || ref.split('/').some(p => !p || p === '.' || p === '..'))) throw Error('Invalid required decision source path');
   if (new Set(policy.agents.map(a => a.agent_id)).size !== policy.agents.length ||
       policy.agents.some(a => !policy.principals.includes(a.principal_id)) ||
       policy.approvers.some(id => !policy.principals.includes(id))) throw new Error("Policy identities must be unique and reference registered Principals");

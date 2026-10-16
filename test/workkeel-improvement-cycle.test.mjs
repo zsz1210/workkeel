@@ -14,11 +14,12 @@ import {readGoalAdmissions,admitGoalImprovement,reconcileGoalAdmission,extendGoa
 import {runImprovementCycle} from '../src/workkeel-improvement-cycle.mjs';
 import {createWorkspaceHooks} from '../src/workkeel-workspace-hooks.mjs';
 import {inventoryRetention} from '../src/workkeel-retention.mjs';
+import {loadTaskRequirements} from '../src/workkeel-requirements.mjs';
 
 const actor={agent_id:'builder',principal_id:'owner'},reviewer={agent_id:'reviewer',principal_id:'owner'};
 const git=(root,...args)=>execFileSync('git',['-C',root,...args],{encoding:'utf8',stdio:['ignore','pipe','pipe']}).trim();
 const tuple={provider:'openai',model:'synthetic-only',reasoning:'high',service:'provider-default'};
-async function fixture(t,{risk='standard',maxGoals=8,empty=false,maxRounds=2}={}){
+async function fixture(t,{risk='standard',maxGoals=8,empty=false,maxRounds=2,guarded=false}={}){
   const root=await fs.realpath(await fs.mkdtemp(path.join(os.tmpdir(),'workkeel-improvement-')));t.after(()=>fs.rm(root,{recursive:true,force:true}));
   await fs.mkdir(root+'/src');await fs.mkdir(root+'/docs');git(root,'init','-q');git(root,'config','user.name','Synthetic');git(root,'config','user.email','fixture@example.invalid');
   await fs.writeFile(root+'/.gitignore','.ai-org/\n');await fs.writeFile(root+'/docs/approval.md','Synthetic explicit bounded source/goal/improvement approval.');await fs.writeFile(root+'/src/value.mjs','export const value="baseline";\n');
@@ -26,6 +27,12 @@ async function fixture(t,{risk='standard',maxGoals=8,empty=false,maxRounds=2}={}
   const template={schema_version:'workkeel.improvement-template/v1',id:'template-one',source_component_id:'source',title_prefix:'Improve',acceptance:['Syntax remains valid'],include:['src/value.mjs'],exclude:['Publication']};await fs.writeFile(root+'/docs/template.json',JSON.stringify(template)+'\n');
   git(root,'add','.');git(root,'commit','-qm','Synthetic baseline');
   const contract={schema_version:'workkeel.task-contract/v1',id:'WK-source',goal:'Synthetic source',actor,state:'intake',scope:{include:['src'],exclude:['Publication']},dependencies:[],acceptance:{criteria:['Verified source'],evidence:[]},verification:{risk_tier:'standard',separation:'distinct-agent',implementer:null,reviewer:null,candidate_revision:null},handoff:null,environment:{cwd:'.',read_paths:['.'],write_paths:['src'],tools:['node','git'],resources:[],network:{mode:'none',hosts:[]},external_actions:[],data:{classification:'internal',model_access:'none',policy_refs:['docs/approval.md','docs/template.json']}},authorization:{approved_by:'owner',approval_ref:'docs/approval.md',operations:['read','write','execute'],expires_at:null},execution:{runtime:{kind:'host-owned',adapter_id:null,required_features:[]},model_connection:{kind:'native'}},skills:[],legacy:null};
+  if(guarded){
+    await fs.writeFile(root+'/docs/original.md','Synthetic original decision: preserve the value export binding.');
+    const requirement={id:'R-export',criterion:'Preserve the value export binding',paths:['src'],sources:[{path:'docs/original.md',sha256:(await readTaskFile(root,'docs/original.md')).bytes_digest,quote:'preserve the value export binding'}],superseded_by:null,visual:false};
+    await fs.writeFile(root+'/docs/requirements.json',JSON.stringify({schema_version:'workkeel.requirements/v1',id:'source-decisions',requirements:[requirement]}));
+    contract.environment.data.policy_refs.push('docs/requirements.json');contract.acceptance.criteria.push(requirement.criterion);
+  }
   await createNativeTask(root,contract,{operation_id:'intake-source',expected_version:0,actor});const sourceTask=await readNativeTask(root,contract.id);
   const grant={enabled:true,directions:['quality'],read_paths:['.'],write_paths:['src'],template_ref:'docs/template.json',source_refs:['src/value.mjs'],max_source_bytes:65536,max_rounds:maxRounds,cooldown_ms:0,max_goals:maxGoals,max_total_operations:320,max_total_runtime_ms:400000,max_total_cost_usd:null,max_reworks:1,max_operations:40,max_attempts:2,max_runtime_ms:50000,max_cost_usd:null};
   const manifest={schema_version:'workkeel.goal/v1',id:'source-goal',title:'Synthetic accepted source',approval_ref:'docs/approval.md',approved_by:actor,expires_at:null,components:[{id:'source',project_id:'project',repo_id:'repo',root,task_id:contract.id,contract_sha256:sourceTask.contract_sha256,depends_on:[],checks:[{id:'syntax',command:'node',args:['--check','src/value.mjs']}],rollback:'Governed revert to baseline',interface_refs:['src/value.mjs']}],integration:{component_id:'source',criteria:['Verified source']},roles:{implementer:actor,reviewer,approver:actor},models:Object.fromEntries(['planning','implementation','verification','repair','review'].map(p=>[p,tuple])),limits:{max_operations:40,max_reworks:1,timeout_ms:50000,max_cost_usd:null},control:{release_parent:true},admission:grant};
@@ -33,7 +40,7 @@ async function fixture(t,{risk='standard',maxGoals=8,empty=false,maxRounds=2}={}
   const controller={...structuredClone(contract),id:'WK-controller',environment:{...contract.environment,write_paths:['.'],data:{...contract.environment.data,policy_refs:[...contract.environment.data.policy_refs,'docs/goal.json']}}};
   await createNativeTask(root,controller,{operation_id:'intake-controller',expected_version:0,actor});await mutateNativeTask(root,controller.id,'claim',{operation_id:'claim-controller',expected_version:1,actor,base_revision:git(root,'rev-parse','HEAD')});
   const control=await readNativeTask(root,controller.id),request={task_id:control.id,actor,claim_id:control.claim.id,contract_sha256:control.contract_sha256,operation_id:'create-goal',expected_version:0,manifest_ref:'docs/goal.json'};await createNativeGoal(root,request);
-  const calls=[],receipts=new Map(),reviews=new Map();
+  const calls=[],receipts=new Map(),reviews=new Map(),deliveries=new Map();
   async function artifact(ctx,kind,value){const ref='.ai-org/artifacts/'+ctx.task.id+'/'+kind+'-'+ctx.operation_id+'.json';await fs.mkdir(path.dirname(root+'/'+ref),{recursive:true});await fs.writeFile(root+'/'+ref,JSON.stringify(value)+'\n');return {path:ref,sha256:(await readTaskFile(root,ref)).bytes_digest};}
   const adapter=createTrustedGoalAdapter({id:'synthetic-improvement-only',assertCapabilities:async()=>{},cancel:async()=>({status:'cancelled'}),reconcile:async ctx=>receipts.get(ctx.operation_id)??{status:'unknown'},execute:async ctx=>{
     calls.push(ctx);const phase=ctx.input.phase,discovery=ctx.component.purpose==='discovery',thread=phase==='review'?'synthetic-review-'+ctx.task.id+'-'+ctx.input.cycle:'synthetic-builder-'+ctx.task.id;
@@ -44,7 +51,17 @@ async function fixture(t,{risk='standard',maxGoals=8,empty=false,maxRounds=2}={}
       else{const value=ctx.manifest.id==='source-goal'?'source':phase==='repair'?'improved':'defective';await fs.writeFile(root+'/src/value.mjs','export const value="'+value+'";\n');git(root,'add','src/value.mjs');git(root,'commit','-qm','Synthetic '+ctx.operation_id);result.report_pin=await artifact(ctx,phase,{synthetic:true,value});}
       result.candidate_revision=git(root,'rev-parse','HEAD');
     }
+    if(guarded&&['implementation','repair'].includes(phase)){
+      const set=await loadTaskRequirements(root,ctx.task.contract),evidence={path:'src/value.mjs',sha256:(await readTaskFile(root,'src/value.mjs')).bytes_digest,kind:'observation'};
+      if(discovery)result.proposal_report.requirement_assessments=set.active.map(r=>({id:r.id,status:'observed-satisfied',observation:'Synthetic source retains its exported binding',sources:r.sources.map(({path,sha256})=>({path,sha256})),evidence:[evidence],proposal_id:null}));
+      if(set.applicable.length)deliveries.set(ctx.task.id,await artifact(ctx,'requirements-delivery',{schema_version:'workkeel.requirement-outcomes/v1',task_id:ctx.task.id,contract_sha256:ctx.task.contract_sha256,candidate_revision:result.candidate_revision,requirements_sha256:set.sha256,phase:'delivery',actor,requirements:set.applicable.map(r=>({id:r.id,status:'pass',observation:'Synthetic implementation retains export',sources:r.sources.map(({path,sha256})=>({path,sha256})),evidence:[evidence]})),open_findings:[]}));
+    }
     if(phase==='verification'){execFileSync(process.execPath,['--check',root+'/src/value.mjs']);result.candidate_revision=ctx.input.candidate;result.checks=[{id:'syntax',status:'pass'}];const pin=await artifact(ctx,phase,{synthetic:true,candidate:ctx.input.candidate});result.evidence=[pin.path];result.integration_pin=await artifact(ctx,'integration',{schema_version:'workkeel.goal-integration/v1',manifest_sha256:ctx.manifest_sha256,required_components:ctx.input.required_components,components:ctx.input.accepted_components,candidate_set_sha256:executionDigest(ctx.input.accepted_components),integration_candidate:ctx.input.candidate,checks:result.checks});result.evidence.push(result.integration_pin.path);}
+    if(phase==='verification'&&deliveries.has(ctx.task.id))result.evidence.push(deliveries.get(ctx.task.id).path);
+    if(phase==='review'&&guarded){
+      const set=await loadTaskRequirements(root,ctx.task.contract),evidence={path:'src/value.mjs',sha256:(await readTaskFile(root,'src/value.mjs')).bytes_digest,kind:'observation'};
+      if(set.applicable.length){const p=await artifact(ctx,'requirements-review',{schema_version:'workkeel.requirement-outcomes/v1',task_id:ctx.task.id,contract_sha256:ctx.task.contract_sha256,candidate_revision:ctx.input.candidate,requirements_sha256:set.sha256,phase:'review',actor:reviewer,requirements:set.applicable.map(r=>({id:r.id,status:'pass',observation:'Synthetic distinct reviewer sees exported value',sources:r.sources.map(({path,sha256})=>({path,sha256})),evidence:[evidence]})),open_findings:[]});ctx.input.verification.evidence.push(p.path);}
+    }
     if(phase==='review'){const count=reviews.get(ctx.task.id)??0;reviews.set(ctx.task.id,count+1);const proof='.ai-org/artifacts/'+ctx.task.id+'/review-'+ctx.operation_id+'.json',judgment=!discovery&&ctx.manifest.id!=='source-goal'&&count===0?'fail':'pass';const native_request={operation_id:ctx.operation_id,expected_version:ctx.task.version,actor:reviewer,revision:ctx.input.candidate,judgment,summary:judgment==='fail'?'Synthetic actual reviewer rejects defective value':'Synthetic distinct reviewer verifies exact candidate',evidence:[...ctx.input.verification.evidence,proof]};result.authored_request_pin=await artifact(ctx,'review',{schema_version:'workkeel.goal-authored-review/v1',actor:reviewer,thread_id:thread,operation_id:ctx.operation_id,product_access:'read',runtime_selection:ctx.input.model,native_request});await mutateNativeTask(root,ctx.task.id,'review',native_request);}
     receipts.set(ctx.operation_id,result);return result;
   }});
@@ -72,8 +89,21 @@ test('off and unchanged empty discovery are idle without model turns; supported 
   await fs.appendFile(f.root+'/src/value.mjs','// source event\n');assert.equal((await runImprovementCycle(f.root,{adapter:f.adapter})).progressed,true);
 });
 
-test('high-risk suggestions remain proposals and cumulative standing goal budget prevents extra inference',async t=>{
-  const f=await fixture(t,{risk:'high',maxGoals:1});let result;for(let n=0;n<30;n++){result=await runImprovementCycle(f.root,{adapter:f.adapter});if(result.idle==='unchanged-approved-sources')break;}assert.equal(result.manual_proposals,1);assert.equal((await readGoalAdmissions(f.root)).entries.length,1);const before=f.calls.length;await fs.appendFile(f.root+'/src/value.mjs','// changed\n');assert.equal((await runImprovementCycle(f.root,{adapter:f.adapter})).idle,'standing-budget-or-cooldown');assert.equal(f.calls.length,before);
+test('known high-risk findings stop speculative discovery without spending another model turn',async t=>{
+  const f=await fixture(t,{risk:'high',maxGoals:3});let result;for(let n=0;n<30;n++){result=await runImprovementCycle(f.root,{adapter:f.adapter});if(result.idle==='known-findings-need-attention')break;}assert.equal(result.manual_proposals,1);assert.equal(result.idle,'known-findings-need-attention');assert.equal((await readGoalAdmissions(f.root)).entries.length,1);const before=f.calls.length;await fs.appendFile(f.root+'/src/value.mjs','// changed\n');assert.equal((await runImprovementCycle(f.root,{adapter:f.adapter})).idle,'known-findings-need-attention');assert.equal(f.calls.length,before);assert.equal((await readGoalAdmissions(f.root)).entries.length,1);
+});
+
+test('derived admission preserves original decisions for assessment and inherits applicable delivery criteria',async t=>{
+  const f=await fixture(t,{guarded:true}),evidence={path:'src/value.mjs',sha256:(await readTaskFile(f.root,'src/value.mjs')).bytes_digest};
+  const discovery=await admitGoalImprovement(f.root,{goal_id:f.manifest.id,actor,operation_id:'guarded-discovery',expected_version:0},{trigger:{direction:'quality',source_refs:['src/value.mjs']}});
+  const journal=await readGoalAdmissions(f.root),assessment=journal.entries[0].intent.product;
+  assert.ok(assessment.environment.data.policy_refs.includes('docs/requirements.json'));
+  assert.equal((await loadTaskRequirements(f.root,assessment)).active.length,1);
+  assert.equal((await loadTaskRequirements(f.root,assessment)).applicable.length,0);
+  const proposal={id:'guarded-fix',title:'Observed bounded repair',direction:'quality',risk_tier:'standard',expected_benefit:'Retain export while correcting value',acceptance:['Correct value'],evidence:[evidence],scope:{read_paths:['.'],write_paths:['src/value.mjs']},budget:{max_attempts:1,max_runtime_ms:5000,max_cost_usd:null}};
+  await admitGoalImprovement(f.root,{goal_id:f.manifest.id,actor,operation_id:'guarded-implementation',expected_version:journal.version,proposal_id:proposal.id},{proposal});
+  const delivery=(await readGoalAdmissions(f.root)).entries.find(e=>e.kind==='execution').intent.product;
+  assert.ok(delivery.acceptance.criteria.includes('Correct value'));assert.ok(delivery.acceptance.criteria.includes('Preserve the value export binding'));
 });
 
 test('exhausted discovery is explicit on unchanged sources without blocking admitted improvements',async t=>{

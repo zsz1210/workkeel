@@ -5,6 +5,7 @@ import {randomUUID,createHash} from 'node:crypto';
 import {performance} from 'node:perf_hooks';
 import {exactKeys,executionDigest} from './workkeel-execution-policy.mjs';
 import {readTaskFile} from './task-contract.mjs';
+import {assertRequirementAssessment} from './workkeel-requirements.mjs';
 import {readTaskProject,assertActor,assertApprover,safeDirectory,readNativeGit} from './workkeel-project.mjs';
 import {assertTaskExecutionContext,readNativeTask,mutateNativeTask} from './workkeel-tasks.mjs';
 import {withProjectMutationLock} from './project.mjs';
@@ -365,7 +366,14 @@ export async function runNativeGoalStep(target,goalId,{adapter,signal}={}){
         if(authored.schema_version!=='workkeel.goal-authored-review/v1'||!sameActor(authored.actor,result.actor)||authored.thread_id!==result.thread_id||authored.operation_id!==op.id||authored.product_access!=='read'||executionDigest(authored.runtime_selection)!==executionDigest(op.input.model)||executionDigest({action:'review',request:authored.native_request})!==task.history.at(-1).request_sha256){p.last_error='Reviewer relay bytes do not match the native authored judgment';stored.status='unknown';await save(target,current);return {operation:stored,status:'blocked',accepted:false};}
         p.review_proof={actor:result.actor,thread_id:result.thread_id,operation_id:op.id,authored_request_pin:result.authored_request_pin};p.phase=task.review.judgment==='pass'?'close':'rework';
       }else if(op.input.phase==='planning')p.phase='implementation';
-      else if(['implementation','repair'].includes(op.input.phase)){if(!/^[a-f0-9]{40}(?:[a-f0-9]{24})?$/.test(result.candidate_revision??''))fail('host must supply exact committed candidate');p.candidate=result.candidate_revision;p.phase='verification';}
+      else if(['implementation','repair'].includes(op.input.phase)){
+        if(!/^[a-f0-9]{40}(?:[a-f0-9]{24})?$/.test(result.candidate_revision??''))fail('host must supply exact committed candidate');
+        if(component.purpose==='discovery'){
+          const task=await componentTask(current,component),pins=await assertRequirementAssessment(component.root,task.contract,result.proposal_report);
+          result.source_pins=[...new Map([...(result.source_pins??[]),...pins].map(pin=>[pin.path,pin])).values()];
+        }
+        p.candidate=result.candidate_revision;p.phase='verification';
+      }
       else if(op.input.phase==='verification'){
         array(result.checks,c=>{exactKeys(c,['id','status']);id(c.id);if(!['pass','fail'].includes(c.status))fail('invalid actual check result');},1,16);
         if(executionDigest(result.checks.map(c=>c.id).sort())!==executionDigest(component.checks.map(c=>c.id).sort()))fail('mandatory verification checks missing');

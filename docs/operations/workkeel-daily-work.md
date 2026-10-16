@@ -42,6 +42,12 @@ for explicitly scoped evaluation; see [its limits](workkeel-native-dispatch.md#d
 
 ## One brief instead of repeating the full contract
 
+When work has approved supporting decisions, preserve their original sources in a
+[requirement bundle](requirement-fidelity.md) before intake and reference it in the
+new brief. Summaries, current code and old screenshots cannot replace those
+decisions. Applicable criteria must survive derived implementation tasks; discovery
+assesses them without claiming fulfillment. Do not rewrite an existing contract.
+
 For relevant work with reusable prior evidence, use native
 [Learning search and use records](../extensions/workkeel-learning.md). Query the
 task's concrete topic, check applicability, and record a decision only when the

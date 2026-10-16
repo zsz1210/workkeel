@@ -10,6 +10,7 @@ import { executionDigest, exactKeys, EXECUTION_ID, validateExecutionPolicy, sele
 import { validateWorkflow } from "./workkeel-workflow-schema.mjs";
 import { validateExecutionObservation } from "./workkeel-measurements.mjs";
 import { validateTaskMaterial } from "./workkeel-material.mjs";
+import {loadTaskRequirements, requirementInstructions} from './workkeel-requirements.mjs';
 import { captureContinuationState } from "./workkeel-continuation-state.mjs";
 import {validateDispatchCapabilities} from './workkeel-dispatch.mjs';
 import {resolveWorkflowModelRouting, assertWorkflowRuntimeSelection} from './workkeel-model-routing.mjs';
@@ -329,7 +330,9 @@ export async function executeWorkflow(targetInput, request, { adapters = [], sig
         const id = `${node.id}-${visit}-${attempt}`;
         const instruction = input.materials[node.id] ? await validateTaskMaterial(target, input.task.contract,
           input.materials[node.id], input.nodeContracts[node.id].environment.write_paths) : node.input;
-        const nodeInput = { instruction, previous_results: state.results };
+        const requirements = await loadTaskRequirements(target, input.task.contract);
+        if (requirements.documents.length && !input.materials[node.id]) throw new Error('Guarded workflow nodes require prepared decision-aligned material');
+        const nodeInput = { instruction: instruction + (requirements.documents.length ? '\n' + requirementInstructions(requirements) : ''), previous_results: state.results };
         if (Buffer.byteLength(formatJson(nodeInput)) > 262144) throw new Error("Node input exceeds 256 KiB; reduce retained outputs");
         const inputHash = executionDigest(nodeInput);
         const previous = operations.get(id);

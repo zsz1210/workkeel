@@ -253,6 +253,12 @@ export async function createCodexGoalAdapter({hostFactory=createLocalCodexSubscr
   }
   async function finalize(ctx,slot){
     const result=slot.runtime_result,e=effective(ctx),base={status:'completed',operation_id:ctx.operation_id,actor:ctx.input.actor,thread_id:result.conversation_id,runtime_selection:result.runtime_selection,product_access:e.access,usage:result.usage,tool:'codex',model_called:true};
+    const {loadTaskRequirements} = await import('./workkeel-requirements.mjs');
+    const requirements = await loadTaskRequirements(ctx.component.root, ctx.task.contract);
+    const outcomeReport = async (phase, revision, authored) => {
+      exactKeys(authored, ['requirements','open_findings']);
+      return report(ctx, 'requirements-'+phase, {schema_version:'workkeel.requirement-outcomes/v1',task_id:ctx.task.id,contract_sha256:ctx.task.contract_sha256,candidate_revision:revision,requirements_sha256:requirements.sha256,phase,actor:ctx.input.actor,...authored});
+    };
     if((result.status!=='completed'||result.outcome!=='done')&&!authoredFailure(ctx,result)){
       const pin=await report(ctx,'attention',{schema_version:'workkeel.goal-attention/v1',operation_id:ctx.operation_id,phase:ctx.input.phase,thread_id:result.conversation_id,output:result.output,usage:result.usage});
       return {...base,status:'attention',reason:('Actual Codex role reports incomplete work: '+result.output).slice(0,1000),report_pin:pin};
@@ -260,10 +266,14 @@ export async function createCodexGoalAdapter({hostFactory=createLocalCodexSubscr
     if(ctx.input.phase==='review'){
       await visualEvidence(ctx);
       if(ctx.input.previous_threads.includes(result.conversation_id))fail('reviewer must use a distinct actual thread');
-      const authored=JSON.parse(result.output);exactKeys(authored,['native_request']);const request=authored.native_request;
+      const authored=JSON.parse(result.output);exactKeys(authored,['native_request'],['requirement_outcomes']);const request=authored.native_request;
       exactKeys(request,['operation_id','expected_version','actor','revision','judgment','summary','evidence'],['review_attempt_id']);
       if(executionDigest(request.actor)!==executionDigest(ctx.input.actor)||request.operation_id!==ctx.operation_id||request.expected_version!==ctx.input.task_version||request.revision!==ctx.input.candidate||!['pass','fail'].includes(request.judgment)||request.review_attempt_id!==undefined)fail('reviewer authored request differs from exact native gate');
       const proofPath=reportRef(ctx,'review');if(!Array.isArray(request.evidence)||!request.evidence.includes(proofPath))fail('reviewer must explicitly name its authored proof');
+      if (requirements.applicable.length && (request.judgment==='pass' || authored.requirement_outcomes!==undefined)) {
+        if (request.judgment==='pass' && !request.evidence.includes(reportRef(ctx,'requirements-review'))) fail('reviewer must name requirement outcome evidence');
+        await outcomeReport('review', ctx.input.candidate, authored.requirement_outcomes);
+      }
       const pin=await report(ctx,'review',{schema_version:'workkeel.goal-authored-review/v1',actor:ctx.input.actor,thread_id:result.conversation_id,operation_id:ctx.operation_id,runtime_selection:result.runtime_selection,product_access:'read',native_request:request,usage:result.usage,raw_result_sha256:executionDigest(result)});
       // Import the exact bytes authored by this actual registered reviewer
       // thread. The coordinator never selects a judgment or rewrites the request.
@@ -273,11 +283,15 @@ export async function createCodexGoalAdapter({hostFactory=createLocalCodexSubscr
     const pin=await report(ctx,ctx.input.phase,{schema_version:'workkeel.goal-role-result/v1',operation_id:ctx.operation_id,actor:ctx.input.actor,thread_id:result.conversation_id,runtime_selection:result.runtime_selection,product_access:e.access,phase:ctx.input.phase,output:result.output,usage:result.usage});
     if(ctx.input.phase==='planning')return {...base,report_pin:pin};
     if(ctx.component.purpose==='discovery'){
-      const proposal_report=JSON.parse(result.output);exactKeys(proposal_report,['proposals']);if(!Array.isArray(proposal_report.proposals)||proposal_report.proposals.length>32)fail('bounded proposal report required');
+      const proposal_report=JSON.parse(result.output);exactKeys(proposal_report,['proposals'],['requirement_assessments']);if(!Array.isArray(proposal_report.proposals)||proposal_report.proposals.length>32)fail('bounded proposal report required');
       const source_pins=[];for(const proposal of proposal_report.proposals){if(!Array.isArray(proposal.evidence)||!proposal.evidence.length||proposal.evidence.length>32)fail('proposal requires exact evidence');for(const source of proposal.evidence){exactKeys(source,['path','sha256']);if(!ctx.task.contract.environment.read_paths.some(root=>within(source.path,root)))fail('proposal source outside component read authority');const file=await readTaskFile(ctx.component.root,source.path);if(file.bytes_digest!==source.sha256)fail('proposal evidence differs from actual bytes');source_pins.push(source);}}
+      const {assertRequirementAssessment}=await import('./workkeel-requirements.mjs');
+      source_pins.push(...await assertRequirementAssessment(ctx.component.root,ctx.task.contract,proposal_report));
       return {...base,candidate_revision:(await readNativeGit(ctx.component.root,['rev-parse','HEAD'])).trim(),proposal_report,source_pins,report_pin:pin};
     }
-    return {...base,candidate_revision:await commit(ctx,commandRunner,slot.source_pins),report_pin:pin};
+    const candidate_revision = await commit(ctx,commandRunner,slot.source_pins);
+    if (requirements.applicable.length) await outcomeReport('delivery', candidate_revision, JSON.parse(result.output).requirement_outcomes);
+    return {...base,candidate_revision,report_pin:pin};
   }
   async function execute(ctx){
     let modelRequested=false,effectsMayExist=false,slot;
@@ -331,7 +345,13 @@ export async function createCodexGoalAdapter({hostFactory=createLocalCodexSubscr
         ?'Explore permitted source evidence within the approved standing goal and bounds. Return only JSON {"proposals":[{"id":"stable observed-problem slug","title":"bounded observed opportunity","direction":"the approved direction supplied below","risk_tier":"low, standard, high, critical or unknown","expected_benefit":"specific before/after outcome to test","acceptance":["testable criterion"],"evidence":[{"path":"exact local path","sha256":"exact bytes SHA256"}],"scope":{"read_paths":[],"write_paths":[]},"budget":{"max_attempts":1,"max_runtime_ms":1000,"max_cost_usd":null}}]}. Empty proposals are valid. Unknown risk remains unknown. Never invent permission or call a benefit improved before observing results. Proposals do not create or approve tasks. Read-only product access. Approved discovery direction: '+JSON.stringify(discoveryDirection)+'.'
         :'Perform the approved '+ctx.input.phase+' for '+ctx.component.id+'. Read AGENTS.md and WORKKEEL.md and applicable Skills. Preserve allowed paths, exact task authority and existing behavior. Report work or attention honestly. The coordinator owns candidate Git/check/lifecycle operations; do not commit, run coordinator checks, or invent review/acceptance. Goal integration requires every mandatory component: '+JSON.stringify(ctx.input.required_components)+'. Prior exact accepted components: '+JSON.stringify(ctx.input.accepted_components)+'.')+visualInstruction;
     const previous_results={verification:ctx.input.verification??null,delivery:ctx.task.delivery??null,prior_attempt:ctx.task.attempts?.at(-1)??null};
-    const context={target:ctx.component.root,operation_id:ctx.operation_id,run_id:ctx.goal,contract:e.contract,policy:e.policy,selection:e.selection,input:{instruction:instruction+' Read previous_results and its exact evidence paths before repair or review. They are observed results, not new authority.',previous_results},signal:ctx.signal};
+    const {loadTaskRequirements, requirementInstructions} = await import('./workkeel-requirements.mjs');
+    const requirements = await loadTaskRequirements(ctx.component.root, ctx.task.contract);
+    const requirementOutput = requirements.applicable.length && ['implementation','repair','review'].includes(ctx.input.phase)
+      ? '\nAlso return requirement_outcomes: {requirements:[{id,status:"pass|fail|partial|unverified",observation:"actual observation",sources:[{path,sha256}],evidence:[{path,sha256,kind:"observation|check|screenshot"}]}],open_findings:[]}. Use the exact original source pins listed below. Include every applicable requirement. The coordinator binds your authored observations to this task and candidate; never invent observations. '+(ctx.input.phase==='review'?'Include '+JSON.stringify(reportRef(ctx,'requirements-review'))+' in native_request.evidence.':'Return JSON with summary and requirement_outcomes.')+'\n'+JSON.stringify(requirements.applicable.map(r=>({id:r.id,criterion:r.criterion,visual:r.visual,sources:r.sources.map(({path,sha256})=>({path,sha256}))}))) : '';
+    const assessmentOutput=ctx.component.purpose==='discovery'&&ctx.input.phase==='implementation'&&requirements.active.length
+      ? '\nReturn requirement_assessments alongside proposals, one for every active decision: [{id,status:"observed-satisfied|unmet|unverified|not-applicable",observation,sources:[{path,sha256}],evidence:[{path,sha256,kind:"observation|check|screenshot"}],proposal_id:null}]. Identify exact original sources. Observed-satisfied and unmet need actual evidence; unmet or unverified must link proposal_id to a returned proposal (use unknown risk when undecided). Not-applicable needs a concrete scope reason. This is assessment, not delivery acceptance. Original pins: '+JSON.stringify(requirements.active.map(r=>({id:r.id,sources:r.sources.map(({path,sha256})=>({path,sha256}))}))) : '';
+    const context={target:ctx.component.root,operation_id:ctx.operation_id,run_id:ctx.goal,contract:e.contract,policy:e.policy,selection:e.selection,input:{instruction:instruction+' Read previous_results and its exact evidence paths before repair or review. They are observed results, not new authority.\n'+requirementInstructions(requirements)+requirementOutput+assessmentOutput,previous_results},signal:ctx.signal};
     const previous=ctx.input.phase==='review'||executionDigest(ctx.input.previous_model)!==executionDigest(ctx.input.model)?null:ctx.input.previous_threads.at(-1);
     try{
       const result=await (previous?runtime.resume({...context,conversation_id:previous}):runtime.start(context));

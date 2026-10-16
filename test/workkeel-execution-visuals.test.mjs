@@ -13,6 +13,8 @@ import assert from 'node:assert/strict';
 import vm from 'node:vm';
 import {workspaceClient} from '../src/workkeel-workspace-ui.mjs';
 import {renderWorkspaceScene,renderWorkspaceMap} from '../src/workkeel-workspace-scene.mjs';
+import {resolveToolIdentity,toolMark} from '../src/workkeel-tool-identity.mjs';
+import {createHash} from 'node:crypto';
 import {buildExecutionVisual,taskVisualRows,renderExecutionVisual,renderExecutionTimeline,dependencyLayout,renderDependencyDiagram,renderActivityComparison} from '../src/workkeel-execution-visuals.mjs';
 
 const now=Date.parse('2026-01-01T00:02:00Z');
@@ -92,7 +94,7 @@ test('compact scenes keep empty evidence distinct from unknown and recorded zero
     assert.doesNotMatch(empty,/scene-composition|scene-current-metrics|data-flow-node|aria-current="step"/);
   }
   const unknown=renderWorkspaceScene([row('implementation',{tokens:null,tokens_complete:false})]);
-  assert.match(unknown,/<strong aria-label="— tokens">—<\/strong>/);
+  assert.match(unknown,/<strong aria-label="Not reported tokens">Not reported<\/strong>/);
   assert.doesNotMatch(unknown,/aria-label="0 tokens"|aria-current="step"/);
   assert.match(renderWorkspaceScene([row('implementation')]),/<strong aria-label="0 tokens">0<\/strong>/);
   assert.match(renderWorkspaceScene([row('implementation',{tokens:3,tokens_complete:false})]),/<strong aria-label="≥ 3 tokens">≥ 3<\/strong>/);
@@ -127,7 +129,7 @@ test('canonical review and pending component phases inform status without invent
 test('a dispatched goal review awaits its report instead of returning to the queue',()=>{
   const rows=[row('review',{state:'running',actor:null,requested_actor:{agent_id:'reviewer<&'},reported:{model:null},end_at:null,last_observed_at:null,tokens:null,tokens_complete:false,time_complete:false})],options={now,pending_activities:['independent-review']};
   const visual=buildExecutionVisual(rows,options),node=visual.nodes[3];assert.equal(node.state,'stale');assert.equal(visual.current_activity,null);assert.deepEqual(node.actors,[]);assert.equal(node.assigned_actor,'reviewer<&');assert.equal(node.ms,null);assert.equal(node.tokens,null);
-  const html=renderWorkspaceScene(rows,options);assert.match(html,/Dispatched · awaiting report/);assert.match(html,/Assigned: reviewer&lt;&amp;/);assert.doesNotMatch(html,/LATEST LIVE REPORT|Identity not reported/);
+  const html=renderWorkspaceScene(rows,options);assert.match(html,/Awaiting a fresh report/);assert.match(html,/Assigned: reviewer&lt;&amp;/);assert.doesNotMatch(html,/CURRENT ACTIVITY|Agent not reported/);
 });
 test('unrelated undated rows cannot invert known chronology and conflicting undated outcomes remain ambiguous',()=>{
   const newer=row('implementation',{start_at:'2026-01-01T00:00:10Z',state:'completed'}),older=row('implementation',{start_at:'2026-01-01T00:00:05Z',state:'failed'}),undated=row('planning',{start_at:null,end_at:null});
@@ -159,4 +161,25 @@ test('comparison charts preserve zero and unknown, escape prototype names and di
   assert.doesNotMatch(renderExecutionTimeline([row('implementation',{start_at:null,end_at:null})]),/>0 s<\/text>/);
   assert.throws(()=>buildExecutionVisual(Array(1)),/explicit operation/);
   assert.doesNotMatch(renderDependencyDiagram([{id:'truthy',accepted:'false',state:'blocked'}]),/>Accepted<\/text>/);
+});
+test('official product marks follow observed tools, never model or Agent guesses',()=>{
+  for(const [tool,digest]of [['codex','1ecca96720bcb54a6ddb2d4f0604731f9e1633ef9da4d0f8c535d508b207a34a'],['claude-code','7241633e5a39b44a947c7b9a821637f30d6e86716e7a8c847136d91f9c3f6ba1']]){
+    const identity=resolveToolIdentity({tool});
+    assert.equal(identity.known,true);
+    assert.equal(createHash('sha256').update(Buffer.from(identity.asset.split(',')[1],'base64')).digest('hex'),digest);
+    assert.match(toolMark(identity),/data-official-tool/);
+  }
+  for(const record of [{model:'claude-opus',actor:{agent_id:'claude-code'}},{provider:'openai',selected:{model:'codex'}},{tool:'a-new-tool'}]){
+    assert.equal(resolveToolIdentity(record).asset,null);
+  }
+  assert.doesNotMatch(toolMark(resolveToolIdentity({tool:'<script>alert(1)</script>'})),/<script>/);
+  const scene=renderWorkspaceScene([row('implementation',{tool:'codex'}),row('implementation',{tool:'claude-code'})]);
+  assert.match(scene,/Multiple executors/);assert.doesNotMatch(scene,/data-official-tool/);
+});
+test('quiet scene discloses missing phases and draws only supported recorded time order',()=>{
+  const first=row('planning',{tool:'claude-code'}),last=row('repair',{tool:'codex',start_at:'2026-01-01T00:00:20Z',end_at:'2026-01-01T00:00:25Z'});
+  const linked=renderWorkspaceScene([first,last]);assert.match(linked,/class="scene-connector"/);assert.match(linked,/No records:/);assert.doesNotMatch(linked,/class="scene-pending"/);
+  const overlapping=renderWorkspaceScene([first,{...last,start_at:'2026-01-01T00:00:05Z'}]);assert.doesNotMatch(overlapping,/class="scene-connector"/);
+  const unknown=renderWorkspaceScene([{...first,start_at:null},last]);assert.doesNotMatch(unknown,/class="scene-connector"/);
+  const queued=renderWorkspaceScene([first],{pending_activities:['independent-review']});assert.match(queued,/class="scene-pending"/);
 });

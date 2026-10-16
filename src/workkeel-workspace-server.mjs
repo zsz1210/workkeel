@@ -45,7 +45,7 @@ export async function startWorkspaceServer(stateDir,{port=0,readSnapshot=readWor
   const readToken=randomBytes(32).toString('hex'),writeToken=control?randomBytes(32).toString('hex'):null,nonce=randomBytes(24).toString('base64');
   const page=renderWorkspacePage(nonce),observers=new Map(),pending=new Map();let origin,closed=false,lastSnapshot=null;
   const visualAssets=new Map(await Promise.all(['mjs','css'].map(async extension=>['/execution-visuals.'+extension,await fs.readFile(new URL('./workkeel-execution-visuals.'+extension,import.meta.url),'utf8')])));
-  for (const [route,file] of [['/model-rules-ui.mjs','workkeel-model-rules-ui.mjs'],['/workkeel-model-policy-resolution.mjs','workkeel-model-policy-resolution.mjs'],['/workspace-scene.mjs','workkeel-workspace-scene.mjs'],['/workkeel-execution-visuals.mjs','workkeel-execution-visuals.mjs'],['/workspace-product.css','workkeel-workspace-product.css']])
+  for (const [route,file] of [['/model-rules-ui.mjs','workkeel-model-rules-ui.mjs'],['/workkeel-model-policy-resolution.mjs','workkeel-model-policy-resolution.mjs'],['/workspace-scene.mjs','workkeel-workspace-scene.mjs'],['/workkeel-tool-identity.mjs','workkeel-tool-identity.mjs'],['/workkeel-execution-visuals.mjs','workkeel-execution-visuals.mjs'],['/workspace-product.css','workkeel-workspace-product.css']])
     visualAssets.set(route,await fs.readFile(new URL('./'+file,import.meta.url),'utf8'));
   const commandDir=path.join(stateDir,'commands');
   async function executeCommand(kind,command) {
@@ -87,7 +87,7 @@ export async function startWorkspaceServer(stateDir,{port=0,readSnapshot=readWor
     })();pending.set(key,{identity,promise:operation});try{return await operation;}finally{pending.delete(key);}
   }
   const server=http.createServer(async(req,res)=>{
-    const headers={'Cache-Control':'no-store','X-Content-Type-Options':'nosniff','Referrer-Policy':'no-referrer','Content-Security-Policy':`default-src 'none'; script-src 'self' 'nonce-${nonce}'; style-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'`};
+    const headers={'Cache-Control':'no-store','X-Content-Type-Options':'nosniff','Referrer-Policy':'no-referrer','Content-Security-Policy':`default-src 'none'; script-src 'self' 'nonce-${nonce}'; style-src 'self'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'`};
     const send=(status,data,type='application/json; charset=utf-8')=>{const value=typeof data==='string'?data:JSON.stringify(data);if(Buffer.byteLength(value)>8*1024*1024){res.writeHead(503,headers);res.end('Response exceeds workspace limit');return;}res.writeHead(status,{...headers,'Content-Type':type});res.end(value);};
     if(closed||!origin)return send(503,{error:'Workspace is stopping'});
     if(req.headers.host!==new URL(origin).host || req.headers.origin&&req.headers.origin!==origin || req.headers['sec-fetch-site']==='cross-site')return send(403,{error:'Forbidden origin'});

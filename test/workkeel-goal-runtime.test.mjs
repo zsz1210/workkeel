@@ -13,7 +13,7 @@ import {createNativeGoal,readNativeGoal,controlNativeGoal,runNativeGoalStep,crea
 const builder={agent_id:'builder',principal_id:'owner'},reviewer={agent_id:'reviewer',principal_id:'owner'};
 const model={provider:'openai',model:'gpt-6-luna',reasoning:'low',service:'provider-default'};
 const git=(root,...args)=>execFileSync('git',['-C',root,...args],{encoding:'utf8',stdio:['ignore','pipe','pipe']}).trim();
-async function fixture(t,{count=1,maxReworks=2,purpose='execution',release=false,checks=null,modelPolicy=null,roleModels={},browserScript=null}={}){
+async function fixture(t,{count=1,maxReworks=2,purpose='execution',release=false,checks=null,modelPolicy=null,roleModels={},browserScript=null,guarded=false}={}){
   const directory=await fs.realpath(await fs.mkdtemp(path.join(os.tmpdir(),'workkeel-whole-goal-')));t.after(()=>fs.rm(directory,{recursive:true,force:true}));
   const roots=[];
   for(let n=0;n<count;n++){
@@ -30,6 +30,13 @@ async function fixture(t,{count=1,maxReworks=2,purpose='execution',release=false
     const contract={schema_version:'workkeel.task-contract/v1',id,goal:'Exact synthetic component',actor:builder,state:'intake',scope:{include:['src'],exclude:['publication']},dependencies:[],acceptance:{criteria:['Exact synthetic component verified','Whole combination accepted'],evidence:[]},verification:{risk_tier:'standard',separation:'distinct-agent',implementer:null,reviewer:null,candidate_revision:null},handoff:null,environment:{cwd:'.',read_paths:['.'],write_paths:purpose==='discovery'?['.ai-org/artifacts/'+id+'/discovery']:['src'],tools:['codex'],resources:[],network:{mode:'none',hosts:[]},external_actions:[],data:{classification:'internal',model_access:'approved-connection',policy_refs:['docs/approval.md']}},authorization:{approved_by:'owner',approval_ref:'docs/approval.md',operations:['read','write','execute'],expires_at:null},execution:{runtime:{kind:'adapter',adapter_id:'codex-app-server',required_features:['filesystem-sandbox','network-disabled','fixed-model','resume','cancel']},model_connection:{kind:'codex-subscription',model:'gpt-6-luna',effort:'low'}},skills:[],legacy:null};
     if(modelPolicy){contract.execution.model_connection={kind:'policy',policy_ref:'docs/models.json'};contract.environment.data.policy_refs.push('docs/models.json');}
     if(browserScript){contract.environment.tools.push('node','browser');contract.environment.network={mode:'allowlist',hosts:['127.0.0.1']};contract.authorization.operations.push('network');contract.environment.data.policy_refs.push('docs/browser.mjs');}
+    if(guarded){
+      await fs.writeFile(root+'/docs/original.md','Synthetic original: preserve exported value.');
+      const source={path:'docs/original.md',sha256:(await readTaskFile(root,'docs/original.md')).bytes_digest,quote:'preserve exported value'};
+      await fs.writeFile(root+'/docs/requirements.json',JSON.stringify({schema_version:'workkeel.requirements/v1',id:'fixture',requirements:[{id:'R-export',criterion:'Preserve exported value',paths:['src'],sources:[source],superseded_by:null,visual:false}]}));
+      contract.environment.data.policy_refs.push('docs/requirements.json');if(purpose!=='discovery')contract.acceptance.criteria.push('Preserve exported value');
+      git(root,'add','docs/original.md','docs/requirements.json');git(root,'commit','-qm','Pin synthetic original decisions before execution');
+    }
     await createNativeTask(root,contract,{operation_id:'create-component-'+n,expected_version:0,actor:builder});contracts.push(await readNativeTask(root,id));
   }
   const manifest={schema_version:'workkeel.goal/v1',id:'goal-one',title:'All agreed synthetic components',approval_ref:'docs/approval.md',approved_by:builder,expires_at:null,components:roots.map((root,n)=>({id:'component-'+n,project_id:'project-'+n,repo_id:'repo-'+n,root,task_id:contracts[n].id,contract_sha256:contracts[n].contract_sha256,depends_on:n===count-1?roots.slice(0,-1).map((_,k)=>'component-'+k):[],checks:checks??[{id:'syntax',command:'node',args:['--check','src/value.mjs']}],rollback:'Restore the recorded source baseline with a separately governed revert',interface_refs:['src/value.mjs'],purpose})),integration:{component_id:'component-'+(count-1),criteria:['Whole combination accepted']},roles:{implementer:builder,reviewer,approver:builder},models:Object.fromEntries(['planning','implementation','verification','repair','review'].map(phase=>[phase,model])),limits:{max_operations:80,max_reworks:maxReworks,timeout_ms:800000,operation_timeout_ms:10000,max_cost_usd:null},control:{release_parent:release}};
@@ -82,6 +89,19 @@ function protocolHost({events=[],neverComplete=false,reviewAttention=false,rerou
         output=JSON.stringify(authored);
       }
       if(instruction.startsWith('Explore permitted')){const bytes=fs.readFileSync(cwd+'/src/value.mjs');output=JSON.stringify({proposals:[{id:'observed-source-value',title:'Observed source opportunity',direction:'fixture-improvement',risk_tier:'low',expected_benefit:'Test fixed exported value',acceptance:['Value is fixed'],evidence:[{path:'src/value.mjs',sha256:crypto.createHash('sha256').update(bytes).digest('hex')}],scope:{read_paths:['src'],write_paths:['src']},budget:{max_attempts:1,max_runtime_ms:1000,max_cost_usd:null}}]});}
+      if(fs.existsSync(cwd+'/docs/requirements.json')&&['implementation','repair','review'].includes(role)){
+        const requirements=JSON.parse(fs.readFileSync(cwd+'/docs/requirements.json','utf8')).requirements,bytes=fs.readFileSync(cwd+'/src/value.mjs');
+        const evidence={path:'src/value.mjs',sha256:crypto.createHash('sha256').update(bytes).digest('hex'),kind:'observation'};
+        const rows=requirements.map(r=>({id:r.id,status:'pass',observation:'Synthetic protocol observation: value export exists',sources:r.sources.map(({path,sha256})=>({path,sha256})),evidence:[evidence]}));
+        if(instruction.startsWith('Explore permitted')){
+          const parsed=JSON.parse(output);parsed.requirement_assessments=rows.map(row=>({...row,status:'observed-satisfied',proposal_id:null}));output=JSON.stringify(parsed);
+        }else{
+          const parsed=role==='review'?JSON.parse(output):{summary:'Synthetic implementation'};
+          parsed.requirement_outcomes={requirements:rows,open_findings:[]};
+          if(role==='review')parsed.native_request.evidence.push('.ai-org/artifacts/'+context.task.id+'/goal-requirements-review-'+parsed.native_request.operation_id+'.json');
+          output=JSON.stringify(parsed);
+        }
+      }
       const outcome=${reviewAttention}&&role==='review'&&JSON.parse(output).native_request.judgment==='fail'?'attention':'done';
       send({method:'item/completed',params:{threadId:thread,turnId:'fixture-turn',item:{type:'agentMessage',phase:'final_answer',text:JSON.stringify({outcome,output})}}});
       send({method:'thread/tokenUsage/updated',params:{threadId:thread,turnId:'fixture-turn',tokenUsage:{last:{inputTokens:2,outputTokens:1},total:{inputTokens:10,outputTokens:4}}}});
@@ -101,6 +121,19 @@ async function fixtureCommand(ctx,{command,args}){
   return new Promise(resolve=>execFile(command==='node'?process.execPath:'git',args,{cwd:ctx.component.root,timeout:5000,maxBuffer:1024*1024,env:{...process.env,GIT_CONFIG_GLOBAL:'/dev/null',GIT_CONFIG_SYSTEM:'/dev/null'}},(error,stdout,stderr)=>resolve({exit_code:error?.code??0,signal:error?.signal??null,stdout,stderr,output_complete:true})));
 }
 async function stockAdapter(options={}){return createCodexGoalAdapter({hostFactory:async()=>protocolHost(options),commandRunner:fixtureCommand});}
+
+test('stock goal host carries original decisions through repair and distinct authored acceptance',async t=>{
+  const f=await fixture(t,{guarded:true}),events=[],adapter=await stockAdapter({events});
+  for(let n=0;n<35&&!(await readNativeGoal(f.target,f.manifest.id)).accepted;n++)await runNativeGoalStep(f.target,f.manifest.id,{adapter});
+  const goal=await readNativeGoal(f.target,f.manifest.id);
+  if(!goal.accepted)t.diagnostic(JSON.stringify(goal.operations.map(op=>({phase:op.input.phase,status:op.status,first:op.first_result,result:op.result}))));
+  assert.equal(goal.accepted,true,JSON.stringify(goal.components));
+  const task=await readNativeTask(f.target,'WK-component-0');
+  assert.ok(task.delivery.evidence.some(p=>p.path.includes('requirements-delivery')));
+  assert.ok(task.review.evidence.some(p=>p.path.includes('requirements-review')));
+  assert.ok(task.attempts.some(a=>a.review?.judgment==='fail'));
+  for(const turn of events.filter(e=>e.method==='fixture/turn'))assert.match(turn.params.instruction,/preserve exported value/);
+});
 
 for(const boundary of ['adapter-qualification','runtime-qualification','initialize','model/list','thread/start','thread/backgroundTerminals/list'])test('actual stock host blocks stale authority at '+boundary+' and resumes only a proven unstarted operation',async t=>{
   const f=await fixture(t),events=[],original=await fs.readFile(f.target+'/docs/goal.json');let qualifications=0,injected=false;

@@ -1,5 +1,8 @@
 # Check completion evidence before delivery
 
+Use [approved requirement fidelity](requirement-fidelity.md) when original
+decisions must survive derived tasks and block native gates when omitted.
+
 Passing tests is one evidence class. It does not establish that every agreed
 requirement exists or that an interface is understandable. Compare the immutable
 task criteria and approved supporting design with the executable result before

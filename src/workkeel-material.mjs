@@ -19,7 +19,7 @@ const guidance = {
 
 /** A derived navigation packet. It grants no authority and never truncates required documents. */
 export async function prepareTaskMaterial(target, contract, request) {
-  exactKeys(request, ["kind", "instruction", "write_paths", "materials"], ["candidate_revision", "prior_revision", "learning_query"]);
+  exactKeys(request, ["kind", "instruction", "write_paths", "materials"], ["candidate_revision", "prior_revision", "learning_query", "requirements_alignment"]);
   if (!validateTaskContract(contract).contract_complete) throw Error("Material requires a complete current contract");
   if (!WORK_TYPES.includes(request.kind) || !text(request.instruction) || !Array.isArray(request.write_paths) ||
       !Array.isArray(request.materials) || request.materials.length > 64) throw Error("Invalid work type or bounded material request");
@@ -39,6 +39,10 @@ export async function prepareTaskMaterial(target, contract, request) {
     sources.set(ref, { path: ref, use: old?.use === "required" ? "required" : use, purposes: [...new Set([...(old?.purposes ?? []), purpose])] });
   };
   for (const ref of [...contract.environment.data.policy_refs, contract.authorization.approval_ref, ...contract.skills]) add(ref, "required", "contract-required");
+  const {loadTaskRequirements, requirementInstructions, assertRequirementAlignment} = await import('./workkeel-requirements.mjs');
+  const decisions = await loadTaskRequirements(target, contract);
+  assertRequirementAlignment(decisions, request.requirements_alignment);
+  for (const source of decisions.sources) add(source.path, 'required', 'original-decision');
   if(request.learning_query!==undefined){
     const {selectLearningContext}=await import('./workkeel-learning-context.mjs');
     for(const material of (await selectLearningContext(target,contract,{query:request.learning_query})).materials)add(material.path,material.use,material.purpose);
@@ -83,6 +87,7 @@ export async function prepareTaskMaterial(target, contract, request) {
     `Write roots (within the full contract): ${JSON.stringify(request.write_paths)}`,
     ...(request.candidate_revision ? [`Candidate: ${request.candidate_revision}`] : []),
     `Acceptance: ${JSON.stringify(contract.acceptance.criteria)}`,
+    ...(decisions.documents.length ? [requirementInstructions(decisions)] : []),
     "Read required material completely; references can be expanded when relevant. Required nested instructions and matching Skills still apply. Source hashes do not prove reading or test execution.",
     ...(request.learning_query!==undefined ? ["Before handoff, review the bounded task outcome for reusable learning. An explicit no-new-learning judgment is valid. Record found/read/applied/outcome only for actions actually performed; capture or activate nothing outside approved write authority. Versioned Skill evaluation and independent review remain separate from task completion."] : []),
     ...manifest.map(s => `${s.use}: ${JSON.stringify(s.path)} (${s.purposes.join(", ")})`),

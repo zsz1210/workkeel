@@ -52,6 +52,7 @@ export async function runImprovementCycle(target,{adapter,signal}={}){
     try{const result=await admitGoalImprovement(target,{goal_id:source.id,actor:source.manifest.roles.approver,operation_id:'auto-'+executionDigest({source:source.id,proposal:proposal.id}).slice(0,32),expected_version:(await readGoalAdmissions(target)).version,proposal_id:proposal.id},{proposal:bounded});return {...result,progressed:!result.replayed,model_called:false};}
     catch(e){if(exhausted(e))return idle('standing-budget-or-cooldown',{reason:e.message});manual++;}
   }
+  if(manual)return idle('known-findings-need-attention',{manual_proposals:manual});
   if(!policy.discovery?.enabled)return idle('discovery-disabled',{manual_proposals:manual});
   const discoveries=entries.filter(e=>e.kind==='discovery');
   const roundLimit=Math.min(policy.discovery.max_rounds,grant.max_rounds);

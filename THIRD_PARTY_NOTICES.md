@@ -1,5 +1,14 @@
 # Third-party notices
 
+## Product identification marks
+
+The workspace embeds official Codex and Claude Code product icons solely to
+identify the reported execution tool. These marks remain the property of OpenAI
+and Anthropic respectively; Workkeel's MIT license does not license their brands
+or imply endorsement. Images are not recolored or redrawn. Exact source versions,
+byte digests and the single proportional resize are documented in
+[tool identity provenance](docs/concepts/tool-identity.md).
+
 ## Runtime dependencies
 
 The npm lockfile resolves these core runtime packages. They are installed as separate dependencies and are not copied into Workkeel's source files.
