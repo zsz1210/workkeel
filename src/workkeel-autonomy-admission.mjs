@@ -4,6 +4,7 @@ import {randomUUID} from 'node:crypto';
 import {exactKeys,executionDigest} from './workkeel-execution-policy.mjs';
 import {loadTaskRequirements} from './workkeel-requirements.mjs';
 import {readTaskFile,validateTaskContract} from './task-contract.mjs';
+import {checkEvidencePin} from './workkeel-evidence-file.mjs';
 import {readNativeTask,createNativeTask,mutateNativeTask,assertTaskExecutionContext} from './workkeel-tasks.mjs';
 import {assertActor,assertApprover,readTaskProject,readNativeGit,safeDirectory} from './workkeel-project.mjs';
 import {withProjectMutationLock} from './project.mjs';
@@ -141,7 +142,7 @@ export async function admitGoalImprovement(target,request,{proposal=null,trigger
     bounded(proposal.scope.read_paths,relative,1);bounded(proposal.scope.write_paths,relative,1);bounded(proposal.evidence,p=>{exactKeys(p,['path','sha256']);relative(p.path);pin(p.sha256);},1);
     read_paths=proposal.scope.read_paths;write_paths=proposal.scope.write_paths;
     if(read_paths.some(root=>!grant.read_paths.some(base=>under(root,base)))||write_paths.some(root=>!grant.write_paths.some(base=>under(root,base))))fail('proposal exceeds standing scope');
-    for(const p of proposal.evidence){if(!read_paths.some(root=>under(p.path,root)))fail('proposal evidence exceeds its scope');if((await readTaskFile(component.root,p.path)).bytes_digest!==p.sha256)fail('proposal source changed');}
+    for(const p of proposal.evidence)await checkEvidencePin(component.root,read_paths,p);
     integer(proposal.budget.max_attempts,1,10);integer(proposal.budget.max_runtime_ms,1,86400000);if(!cost(proposal.budget.max_cost_usd))fail('invalid proposal budget');
     attempts=Math.min(grant.max_attempts,proposal.budget.max_attempts);max_runtime_ms=Math.min(grant.max_runtime_ms,proposal.budget.max_runtime_ms);max_cost_usd=grant.max_cost_usd===null?proposal.budget.max_cost_usd:proposal.budget.max_cost_usd===null?grant.max_cost_usd:Math.min(grant.max_cost_usd,proposal.budget.max_cost_usd);
     input=structuredClone(proposal);proposalId=proposal.id;problem=executionDigest({direction,title:proposal.title,scope:{read_paths:[...read_paths].sort(),write_paths:[...write_paths].sort()},paths:proposal.evidence.map(p=>p.path).sort()});

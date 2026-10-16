@@ -15,6 +15,8 @@ import {runImprovementCycle} from '../src/workkeel-improvement-cycle.mjs';
 import {createWorkspaceHooks} from '../src/workkeel-workspace-hooks.mjs';
 import {inventoryRetention} from '../src/workkeel-retention.mjs';
 import {loadTaskRequirements} from '../src/workkeel-requirements.mjs';
+import {createHash} from 'node:crypto';
+import {crc32,deflateSync} from 'node:zlib';
 
 const actor={agent_id:'builder',principal_id:'owner'},reviewer={agent_id:'reviewer',principal_id:'owner'};
 const git=(root,...args)=>execFileSync('git',['-C',root,...args],{encoding:'utf8',stdio:['ignore','pipe','pipe']}).trim();
@@ -87,6 +89,34 @@ test('off and unchanged empty discovery are idle without model turns; supported 
   await mutateAutonomy(f.root,'policy',{...f.request,goal_id:f.manifest.id,operation_id:'on',expected_version:(await readAutonomy(f.root)).version,policy:f.policy});
   let result;for(let n=0;n<30;n++){result=await runImprovementCycle(f.root,{adapter:f.adapter});assert.notEqual(result.idle,'derived-goal-needs-attention','newly accepted discovery must settle directly to its real idle state');if(result.idle==='unchanged-approved-sources')break;}assert.equal(result.idle,'unchanged-approved-sources');const count=f.calls.length;await runImprovementCycle(f.root,{adapter:f.adapter});assert.equal(f.calls.length,count);
   await fs.appendFile(f.root+'/src/value.mjs','// source event\n');assert.equal((await runImprovementCycle(f.root,{adapter:f.adapter})).progressed,true);
+});
+
+test('PNG-backed proposals admit once and reject stale evidence without spending another reservation',async t=>{
+  const f=await fixture(t),chunk=(type,bytes)=>{const out=Buffer.alloc(bytes.length+12);out.writeUInt32BE(bytes.length);out.write(type,4);bytes.copy(out,8);out.writeUInt32BE(crc32(out.subarray(4,-4)),out.length-4);return out;};
+  const header=Buffer.alloc(13);header.writeUInt32BE(1);header.writeUInt32BE(1,4);header[8]=8;header[9]=6;
+  const bytes=Buffer.concat([Buffer.from([137,80,78,71,13,10,26,10]),chunk('IHDR',header),chunk('IDAT',deflateSync(Buffer.alloc(5))),chunk('IEND',Buffer.alloc(0))]);
+  const pin={path:'.ai-org/artifacts/observed.png',sha256:createHash('sha256').update(bytes).digest('hex')};await fs.writeFile(f.root+'/'+pin.path,bytes);
+  const proposal={id:'screenshot-finding',title:'Fix an observed bounded issue',direction:'quality',risk_tier:'low',expected_benefit:'The visible issue is resolved',acceptance:['Screenshot is legible'],evidence:[pin],scope:{read_paths:['.'],write_paths:['src']},budget:{max_attempts:1,max_runtime_ms:10000,max_cost_usd:null}};
+  const request={goal_id:f.manifest.id,actor,operation_id:'admit-png',expected_version:0,proposal_id:proposal.id};
+  const admitted=await admitGoalImprovement(f.root,request,{proposal});assert.ok(admitted.goal_id);assert.equal((await readGoalAdmissions(f.root)).entries.length,1);
+  assert.equal((await admitGoalImprovement(f.root,request,{proposal})).replayed,true);
+  await fs.writeFile(f.root+'/'+pin.path,Buffer.from('changed screenshot'));
+  await assert.rejects(admitGoalImprovement(f.root,{...request,operation_id:'another-png',expected_version:(await readGoalAdmissions(f.root)).version,proposal_id:'another-png'},{proposal:{...proposal,id:'another-png'}}),/digest mismatch/);
+  assert.equal((await readGoalAdmissions(f.root)).entries.length,1);
+});
+
+test('unresolved derived results remain visible while service listens and clear only after exact reconciliation',async t=>{
+  const f=await fixture(t),reason='Synthetic screenshot result collection failed';let held=null,recover=false,executions=0;
+  const adapter=createTrustedGoalAdapter({id:'held-result',assertCapabilities:f.adapter.assertCapabilities,cancel:f.adapter.cancel,execute:async ctx=>{executions++;held=await f.adapter.execute(ctx);return {status:'unknown',reason,model_called:true};},reconcile:async()=>recover?held:{status:'unknown',reason}});
+  let failed;for(let n=0;n<8;n++){failed=await runImprovementCycle(f.root,{adapter});if(failed.idle==='derived-goal-needs-attention')break;}
+  assert.equal(failed.idle,'derived-goal-needs-attention');assert.equal(failed.reason,reason);assert.equal(failed.phase,'planning');
+  const hooks=createWorkspaceHooks(),project={id:'fixture',task_root:f.root};
+  const view=await hooks.autonomy.read({project,actor});assert.equal(view.state,'needs-reconciliation');assert.equal(view.needs_attention.length,1);assert.equal(view.needs_attention[0].reason,reason);assert.equal(view.needs_attention[0].goal_id,failed.goal_id);
+  const before=await readNativeGoal(f.root,failed.goal_id),count=executions;
+  const again=await runImprovementCycle(f.root,{adapter});assert.equal(again.idle,'derived-goal-needs-attention');assert.equal(executions,count);
+  recover=true;const resumed=await runImprovementCycle(f.root,{adapter});assert.equal(resumed.operation.id,failed.operation.id);assert.equal(resumed.operation.status,'completed');assert.equal(executions,count);
+  const after=await readNativeGoal(f.root,failed.goal_id);assert.equal(after.operations.length,before.operations.length);assert.equal(after.reserved_ms,before.reserved_ms);assert.deepEqual(resumed.operation.first_result,failed.operation.first_result);
+  const clear=await hooks.autonomy.read({project,actor});assert.deepEqual(clear.needs_attention,[]);
 });
 
 test('known high-risk findings stop speculative discovery without spending another model turn',async t=>{

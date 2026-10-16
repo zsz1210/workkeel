@@ -103,6 +103,23 @@ test('autonomy live status explains unchanged inputs, pending checks and stale o
  assert.equal(writes,0);assert.deepEqual(errors,[]);
 });
 
+test('autonomy exposes blocked result collection even when service listens and goal detail is unavailable', {skip:process.env.WORKKEEL_WORKSPACE_BROWSER!=='1'},async t=>{
+ const {chromium}=await import('playwright-core'),{state,repo}=await setup(t);let recovered=false;
+ const reason='Screenshot evidence could not be collected';
+ const service=await startWorkspaceServer(state,{hooks:{autonomy:{read:async()=>({version:0,enabled:true,state:recovered?'idle':'needs-reconciliation',policy:{enabled:true,admission:{enabled:true,goal_id:'approved'}},available_goals:[{id:'approved',title:'Approved desktop scope',authority_current:true,grant:{enabled:true}}],service:{state:'running-in-this-host',activity:'listening',errors:[],observed_at:new Date().toISOString(),last_step:{idle:null,goal_id:'discovery-four',progressed:false}},jobs:[],admissions:recovered?[]:[{id:'four',goal_id:'discovery-four',root:repo,kind:'discovery',status:'created'}],needs_attention:recovered?[]:[{goal_id:'discovery-four',root:repo,operation_id:'collect-result',phase:'implementation',reason}],proposals:[]})}}});
+ const browser=await chromium.launch({channel:'chrome',headless:true});t.after(async()=>{await browser.close();await service.close();});
+ const page=await browser.newPage({viewport:{width:1440,height:1000},colorScheme:'dark',reducedMotion:'reduce'});page.setDefaultTimeout(8000);const errors=[];page.on('pageerror',e=>errors.push(e.message));
+ await page.addInitScript(()=>localStorage.setItem('workkeel-workspace-theme','dark'));
+ await page.goto(service.url);await page.goto(service.origin+'/?view=autonomy&project=alpha');await page.locator('[data-autonomy-state=blocked]').waitFor();
+ assert.equal(await page.getByRole('heading',{name:'Improvement needs attention',exact:true}).isVisible(),true);
+ await page.getByRole('button',{name:'View what needs attention',exact:true}).click();assert.equal(await page.getByText(reason,{exact:true}).isVisible(),true);
+ assert.equal(await page.locator('[data-autonomy-state=waiting]').count(),0);assert.equal(await page.locator('[data-control="autonomy.start-service"]').count(),0);
+ const evidence=process.env.WORKKEEL_WORKSPACE_EVIDENCE_DIR;if(evidence)await fs.mkdir(evidence,{recursive:true});
+ await page.getByRole('button',{name:'繁體中文',exact:true}).click();await page.getByRole('heading',{name:'改善工作需要處理',exact:true}).waitFor();
+ for(const width of [1440,1280]){await page.setViewportSize({width,height:1000});await page.evaluate(async()=>{window.scrollTo(0,0);await document.fonts.ready;await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));});assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);if(evidence)await page.screenshot({path:path.join(evidence,'autonomy-result-blocked-'+width+'.png'),fullPage:false});}
+ recovered=true;await page.reload();await page.locator('[data-autonomy-state=waiting]').waitFor();assert.equal(await page.getByText(reason,{exact:true}).count(),0);assert.deepEqual(errors,[]);
+});
+
 test('a late autonomy response preserves focused read-only disclosure', {skip:process.env.WORKKEEL_WORKSPACE_BROWSER!=='1'},async t=>{
  const {chromium}=await import('playwright-core'),{state}=await setup(t);let reads=0,release,notify;
  const pending=new Promise(resolve=>notify=resolve),gate=new Promise(resolve=>release=resolve);

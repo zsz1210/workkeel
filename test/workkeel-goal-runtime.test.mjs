@@ -3,6 +3,9 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import os from 'node:os';
+import {createHash} from 'node:crypto';
+import {crc32,deflateSync} from 'node:zlib';
+import {checkEvidencePin} from '../src/workkeel-evidence-file.mjs';
 import {execFileSync,execFile} from 'node:child_process';
 import {initializeTaskProject} from '../src/workkeel-project.mjs';
 import {createNativeTask,readNativeTask,mutateNativeTask} from '../src/workkeel-tasks.mjs';
@@ -57,7 +60,7 @@ async function fixture(t,{count=1,maxReworks=2,purpose='execution',release=false
 import {createCodexGoalAdapter} from '../src/workkeel-goal-runtime.mjs';
 import {createCodexProcessHost} from '../src/workkeel-codex-runtime.mjs';
 // Actual child-process JSON-RPC; agents/model/permissions are offline fixtures.
-function protocolHost({events=[],neverComplete=false,reviewAttention=false,reroute=false,efforts=['low'],models=['gpt-6-luna'],onQualify=async()=>{},onResponse=async()=>{}}={}){
+function protocolHost({events=[],proposalEvidence=[],neverComplete=false,reviewAttention=false,reroute=false,efforts=['low'],models=['gpt-6-luna'],onQualify=async()=>{},onResponse=async()=>{}}={}){
   const source=`import readline from 'node:readline';import fs from 'node:fs';import crypto from 'node:crypto';
   const send=x=>process.stdout.write(JSON.stringify(x)+'\\n'),reply=(id,result)=>send({id,result});let thread,cwd;
   readline.createInterface({input:process.stdin}).on('line',line=>{
@@ -88,7 +91,7 @@ function protocolHost({events=[],neverComplete=false,reviewAttention=false,rerou
         authored.native_request.summary='Distinct synthetic protocol reviewer checked observed fixed value';
         output=JSON.stringify(authored);
       }
-      if(instruction.startsWith('Explore permitted')){const bytes=fs.readFileSync(cwd+'/src/value.mjs');output=JSON.stringify({proposals:[{id:'observed-source-value',title:'Observed source opportunity',direction:'fixture-improvement',risk_tier:'low',expected_benefit:'Test fixed exported value',acceptance:['Value is fixed'],evidence:[{path:'src/value.mjs',sha256:crypto.createHash('sha256').update(bytes).digest('hex')}],scope:{read_paths:['src'],write_paths:['src']},budget:{max_attempts:1,max_runtime_ms:1000,max_cost_usd:null}}]});}
+      if(instruction.startsWith('Explore permitted')){const bytes=fs.readFileSync(cwd+'/src/value.mjs');output=JSON.stringify({proposals:[{id:'observed-source-value',title:'Observed source opportunity',direction:'fixture-improvement',risk_tier:'low',expected_benefit:'Test fixed exported value',acceptance:['Value is fixed'],evidence:[{path:'src/value.mjs',sha256:crypto.createHash('sha256').update(bytes).digest('hex')},...${JSON.stringify(proposalEvidence)}],scope:{read_paths:['src'],write_paths:['src']},budget:{max_attempts:1,max_runtime_ms:1000,max_cost_usd:null}}]});}
       if(fs.existsSync(cwd+'/docs/requirements.json')&&['implementation','repair','review'].includes(role)){
         const requirements=JSON.parse(fs.readFileSync(cwd+'/docs/requirements.json','utf8')).requirements,bytes=fs.readFileSync(cwd+'/src/value.mjs');
         const evidence={path:'src/value.mjs',sha256:crypto.createHash('sha256').update(bytes).digest('hex'),kind:'observation'};
@@ -279,6 +282,40 @@ test('readonly discovery exposes pinned benefit proposal only after actual nativ
   const f=await fixture(t,{purpose:'discovery'}),events=[],adapter=await stockAdapter({events});await fs.writeFile(f.target+'/src/value.mjs','export const value="fixed";\n');git(f.target,'add','src/value.mjs');git(f.target,'commit','-qm','Synthetic observed source');
   const accepted=await finish(f,adapter),reports=accepted.completed_discovery_reports;assert.equal(reports.length,1);assert.equal(reports[0].proposal_report.proposals[0].risk_tier,'low');assert.equal(reports[0].proposal_report.proposals[0].expected_benefit,'Test fixed exported value');
   assert.ok(events.filter(e=>e.method==='fixture/turn').every(e=>e.params.role!=='implementation'));assert.equal(await fs.readFile(f.target+'/src/value.mjs','utf8'),'export const value="fixed";\n');
+});
+
+function screenshotBytes(){
+  const chunk=(type,bytes)=>{const out=Buffer.alloc(bytes.length+12);out.writeUInt32BE(bytes.length);out.write(type,4);bytes.copy(out,8);out.writeUInt32BE(crc32(out.subarray(4,-4)),out.length-4);return out;};
+  const header=Buffer.alloc(13);header.writeUInt32BE(1);header.writeUInt32BE(1,4);header[8]=8;header[9]=6;
+  return Buffer.concat([Buffer.from([137,80,78,71,13,10,26,10]),chunk('IHDR',header),chunk('IDAT',deflateSync(Buffer.alloc(5))),chunk('IEND',Buffer.alloc(0))]);
+}
+test('PNG discovery result recovers from retained output without a new turn and remains current after acceptance',async t=>{
+  const f=await fixture(t,{purpose:'discovery'}),bytes=screenshotBytes(),ref='src/screen.png',pin={path:ref,sha256:createHash('sha256').update(bytes).digest('hex')};
+  await fs.writeFile(f.target+'/src/value.mjs','export const value="fixed";\n');await fs.writeFile(f.target+'/'+ref,bytes);git(f.target,'add','src');git(f.target,'commit','-qm','Synthetic screenshot baseline');
+  await assert.rejects(readTaskFile(f.target,ref),/UTF-8/,'contracts still require strict text');
+  const events=[],adapter=await stockAdapter({events,proposalEvidence:[pin]});
+  for(let n=0;n<4;n++){const g=await readNativeGoal(f.target,f.manifest.id);if(g.components[0].phase==='implementation')break;await runNativeGoalStep(f.target,f.manifest.id,{adapter});}
+  await fs.writeFile(f.target+'/'+ref,Buffer.from('changed evidence'));
+  const failed=await runNativeGoalStep(f.target,f.manifest.id,{adapter});assert.equal(failed.operation.status,'unknown');assert.match(failed.operation.result.reason,/digest mismatch/);
+  const before=await readNativeGoal(f.target,f.manifest.id),turns=events.filter(e=>e.method==='fixture/turn').length,slot=JSON.parse((await readTaskFile(f.target,'.ai-org/goals/'+f.manifest.id+'/runtime/'+failed.operation.id+'/slot.json')).content).value;
+  await fs.writeFile(f.target+'/'+ref,bytes);
+  const recovered=await runNativeGoalStep(f.target,f.manifest.id,{adapter});assert.equal(recovered.operation.id,failed.operation.id);assert.equal(recovered.operation.status,'completed');assert.deepEqual(recovered.operation.first_result,failed.operation.first_result);
+  assert.equal(events.filter(e=>e.method==='fixture/turn').length,turns);assert.deepEqual(recovered.operation.result.usage,slot.runtime_result.usage,'preserve actual recorded usage, including unknown fields');
+  const after=await readNativeGoal(f.target,f.manifest.id);assert.equal(after.reserved_ms,before.reserved_ms);assert.equal(after.operations.length,before.operations.length);
+  const accepted=await finish(f,adapter);assert.equal(accepted.completed_discovery_reports.length,1);assert.ok(accepted.completed_discovery_reports[0].source_pins.some(p=>p.path===ref));
+  await fs.writeFile(f.target+'/'+ref,Buffer.from('stale picture'));assert.equal((await readNativeGoal(f.target,f.manifest.id)).completed_discovery_reports.length,0);
+});
+
+test('proposal evidence rejects malformed, oversized, escaped, linked and changed bytes',async t=>{
+  const f=await fixture(t),bytes=screenshotBytes(),hash=b=>createHash('sha256').update(b).digest('hex'),ref='src/proof.png';
+  const check=async b=>{await fs.writeFile(f.target+'/'+ref,b);return checkEvidencePin(f.target,['src'],{path:ref,sha256:hash(b)});};
+  assert.equal(await check(bytes),true);
+  for(const bad of [Buffer.alloc(0),bytes.subarray(0,-1),Buffer.alloc(1024*1024+1)])await assert.rejects(check(bad));
+  await fs.writeFile(f.target+'/'+ref,bytes);
+  await assert.rejects(checkEvidencePin(f.target,['docs'],{path:ref,sha256:hash(bytes)}),/outside task read/);
+  await assert.rejects(checkEvidencePin(f.target,['.'],{path:'src/../src/proof.png',sha256:hash(bytes)}),/Invalid evidence/);
+  await assert.rejects(checkEvidencePin(f.target,['src'],{path:ref,sha256:'0'.repeat(64)}),/digest mismatch/);
+  await fs.symlink(f.target+'/'+ref,f.target+'/src/link.png');await assert.rejects(checkEvidencePin(f.target,['src'],{path:'src/link.png',sha256:hash(bytes)}),/literal/);
 });
 
 

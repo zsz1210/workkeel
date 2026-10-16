@@ -15,6 +15,7 @@ import {resolveModelPolicy} from './workkeel-model-policy.mjs';
 import {readTaskProject,assertActor,safeDirectory,readNativeGit} from './workkeel-project.mjs';
 import {readNativeTask,mutateNativeTask,assertTaskExecutionContext} from './workkeel-tasks.mjs';
 import {readTaskFile} from './task-contract.mjs';
+import {checkEvidencePin} from './workkeel-evidence-file.mjs';
 import {durableAtomicCreate,durableAtomicWrite,formatJson} from './files.mjs';
 import {assertScreenshotPNG,withOwnedBrowser} from './workkeel-browser-check.mjs';
 
@@ -284,7 +285,7 @@ export async function createCodexGoalAdapter({hostFactory=createLocalCodexSubscr
     if(ctx.input.phase==='planning')return {...base,report_pin:pin};
     if(ctx.component.purpose==='discovery'){
       const proposal_report=JSON.parse(result.output);exactKeys(proposal_report,['proposals'],['requirement_assessments']);if(!Array.isArray(proposal_report.proposals)||proposal_report.proposals.length>32)fail('bounded proposal report required');
-      const source_pins=[];for(const proposal of proposal_report.proposals){if(!Array.isArray(proposal.evidence)||!proposal.evidence.length||proposal.evidence.length>32)fail('proposal requires exact evidence');for(const source of proposal.evidence){exactKeys(source,['path','sha256']);if(!ctx.task.contract.environment.read_paths.some(root=>within(source.path,root)))fail('proposal source outside component read authority');const file=await readTaskFile(ctx.component.root,source.path);if(file.bytes_digest!==source.sha256)fail('proposal evidence differs from actual bytes');source_pins.push(source);}}
+      const source_pins=[];for(const proposal of proposal_report.proposals){if(!Array.isArray(proposal.evidence)||!proposal.evidence.length||proposal.evidence.length>32)fail('proposal requires exact evidence');for(const source of proposal.evidence){exactKeys(source,['path','sha256']);await checkEvidencePin(ctx.component.root,ctx.task.contract.environment.read_paths,source);source_pins.push(source);}}
       const {assertRequirementAssessment}=await import('./workkeel-requirements.mjs');
       source_pins.push(...await assertRequirementAssessment(ctx.component.root,ctx.task.contract,proposal_report));
       return {...base,candidate_revision:(await readNativeGit(ctx.component.root,['rev-parse','HEAD'])).trim(),proposal_report,source_pins,report_pin:pin};

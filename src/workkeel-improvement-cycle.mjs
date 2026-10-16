@@ -30,7 +30,10 @@ export async function runImprovementCycle(target,{adapter,signal}={}){
     if(goal.state==='done'&&goal.integration)continue;
     if(['done','paused','cancelled','cancel-requested'].includes(goal.state)){waiting??=goal;continue;}
     const result=await runNativeGoalStep(entry.intent.root,goal.id,{adapter,signal});
-    if(result.operation)return {...result,goal_id:goal.id,goal_root:entry.intent.root,progressed:result.operation.status==='completed'};
+    if(result.operation){
+      const attention=['unknown','attention'].includes(result.operation.status);
+      return {...result,...(attention?{idle:'derived-goal-needs-attention',reason:result.operation.result?.reason??'The last operation could not be confirmed',phase:result.operation.input?.phase??null}:{}),goal_id:goal.id,goal_root:entry.intent.root,progressed:result.operation.status==='completed'};
+    }
     if(result.accepted){
       if(entry.kind==='discovery')await recordGoalDiscovery(target,{goal_root:entry.intent.root,goal_id:goal.id});
       continue;

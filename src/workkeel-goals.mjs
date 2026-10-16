@@ -5,6 +5,7 @@ import {randomUUID,createHash} from 'node:crypto';
 import {performance} from 'node:perf_hooks';
 import {exactKeys,executionDigest} from './workkeel-execution-policy.mjs';
 import {readTaskFile} from './task-contract.mjs';
+import {checkEvidencePin} from './workkeel-evidence-file.mjs';
 import {assertRequirementAssessment} from './workkeel-requirements.mjs';
 import {readTaskProject,assertActor,assertApprover,safeDirectory,readNativeGit} from './workkeel-project.mjs';
 import {assertTaskExecutionContext,readNativeTask,mutateNativeTask} from './workkeel-tasks.mjs';
@@ -68,7 +69,7 @@ async function stateAt(target,goalId){
 async function save(target,s){s.version++;const content=formatJson({value:s,sha256:executionDigest(s)});if(Buffer.byteLength(content)>1024*1024)fail('goal state limit');const dir=await safeDirectory(target,ROOT+'/'+s.id,{create:true});await durableAtomicWrite(path.join(dir,'state.json'),content);return s;}
 async function ignore(target){const dir=await safeDirectory(target,ROOT,{create:true});try{if((await readTaskFile(target,ROOT+'/.gitignore')).content!=='*\n')fail('goal ignore policy changed');}catch(e){if(e.code!=='ENOENT')throw e;await durableAtomicCreate(path.join(dir,'.gitignore'),'*\n');}}
 async function rootIdentity(root){if(await fs.realpath(root)!==root)fail('repository root identity changed');await readTaskProject(root);const stat=await fs.stat(root);return {root,dev:stat.dev,ino:stat.ino};}
-async function freshPin(target,pin){return (await readTaskFile(target,pin.path)).bytes_digest===pin.sha256;}
+async function freshPin(target,pin){try{return await checkEvidencePin(target,['.'],pin);}catch(error){if(error.message==='Evidence digest mismatch')return false;throw error;}}
 async function standing(target,s,m,{stop=false}={}){
   const project=await readTaskProject(target);assertApprover(project.policy,m.roles.approver);
   if(stop)return;
