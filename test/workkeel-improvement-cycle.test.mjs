@@ -116,7 +116,7 @@ test('unresolved derived results remain visible while service listens and clear 
   const again=await runImprovementCycle(f.root,{adapter});assert.equal(again.idle,'derived-goal-needs-attention');assert.equal(executions,count);
   recover=true;const resumed=await runImprovementCycle(f.root,{adapter});assert.equal(resumed.operation.id,failed.operation.id);assert.equal(resumed.operation.status,'completed');assert.equal(executions,count);
   const after=await readNativeGoal(f.root,failed.goal_id);assert.equal(after.operations.length,before.operations.length);assert.equal(after.reserved_ms,before.reserved_ms);assert.deepEqual(resumed.operation.first_result,failed.operation.first_result);
-  const clear=await hooks.autonomy.read({project,actor});assert.deepEqual(clear.needs_attention,[]);
+  const clear=await hooks.autonomy.read({project,actor});assert.deepEqual(clear.needs_attention,[]);assert.equal(clear.state,'execution-recorded');
 });
 
 test('known high-risk findings stop speculative discovery without spending another model turn',async t=>{
