@@ -285,5 +285,7 @@ the moving signals while preserving the running label and active border.
 
 The map keeps recorded time and tokens alongside each activity. Missing values
 stay unknown, partial totals use `≥`, and selected models remain distinct from
-reported models. Activity details and workflow history remain available; detailed
-autonomy configuration stays in the conversation-defined plan.
+reported models. Historical autonomous work keeps its map collapsed until you
+choose **View execution map**, so a previous result does not dominate the current
+status. Activity details and workflow history remain available; detailed autonomy
+configuration stays in the conversation-defined plan.
