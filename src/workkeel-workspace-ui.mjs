@@ -524,7 +524,7 @@ function autonomyView(projectId){
  ready:[t('Start the service when you want it to look for eligible work.','準備好讓它接續安排工作時，再啟動服務。'),action],
  paused:[t('Resume when you want new execution to continue.','要接續安排新的執行時，再選擇恢復。'),action],
  recorded:[t('Open the work for its latest confirmed phase and result.','開啟工作，查看最後確認的階段與結果。'),open(admitted.some(item=>item&&['running','recovery-required','blocked'].includes(item.state))?'autonomy-work':'autonomy-jobs',t('View current work','查看目前工作'))],
- review:[t('Inspect the result before accepting the improvement.','先審查並驗收成果，再視為改善完成。'),open('autonomy-work',t('View results to review','查看待驗收成果'))],
+ review:[t('Inspect the result before accepting the improvement.','先審查並驗收成果，再視為改善完成。'),open(journey.current?'autonomy-work':'autonomy-jobs',t('View results to review','查看待驗收成果'))],
  'baseline-review':[t('Ask your agent to finish acceptance of the starting goal.','請 Agent 先完成基準目標的驗收。'),open('autonomy-settings',t('View the connected goal','查看已連接目標'))],
  limited:[t('Review results and limits before authorizing another cycle.','先看本輪成果與限制，再決定下一輪範圍。'),open('autonomy-settings',t('Review cycle limits','查看本輪限制'))],
  checking:[t('The page updates automatically. Open dispatched work for its execution details.','畫面會自動更新，已派出的任務可在下方查看執行詳情。'),action],
