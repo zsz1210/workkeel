@@ -44,6 +44,11 @@ export function codexVersionAtLeast(actual, minimum = QUALIFIED_CODEX_VERSION) {
 const disabled = ["apps", "plugins", "remote_plugin", "hooks", "browser_use", "browser_use_external", "browser_use_full_cdp_access",
   "computer_use", "image_generation", "multi_agent", "multi_agent_v2", "memories", "skill_mcp_dependency_install", "skill_search",
   "shell_snapshot", "workspace_dependencies", "tool_suggest", "auth_elicitation", "goals", "in_app_local_automation"];
+const sourceReviewDisabled=["shell_tool","unified_exec","view_image","sleep_tool","code_mode_host","in_app_browser","in_app_chat","realtime_conversation","request_permissions_tool"];
+export function assertCodexSourceReviewControls(config){
+  const failed=sourceReviewDisabled.filter(name=>config.features?.[name]!==false);
+  if(failed.length)throw Error(`Codex source review tools are not disabled: ${failed.join(", ")}`);
+}
 const cleanEnvironment = () => Object.fromEntries(["PATH", "HOME", "USER", "LOGNAME", "TMPDIR", "CODEX_HOME"]
   .filter(name => process.env[name] !== undefined).map(name => [name, process.env[name]]));
 
@@ -125,15 +130,18 @@ function assertControls(config, target) {
 }
 
 /** Uses existing ChatGPT login; never reads/copies credentials or rewrites global config. */
-export async function createLocalCodexSubscriptionHost(targetInput, { command = "codex" } = {}) {
+export async function createLocalCodexSubscriptionHost(targetInput, { command = "codex", sourceReview = false } = {}) {
+  if(typeof sourceReview!=="boolean")throw Error("Source review mode must be explicit");
   const target = await safeDirectory(targetInput, ".");
   const env = cleanEnvironment();
   const version = (await exec(command, ["--version"], { env, timeout: 5000 })).stdout.trim();
   if (!codexVersionAtLeast(version) || process.platform !== "darwin") throw new Error("Codex version/platform needs host qualification before automatic execution");
+  if(sourceReview&&!codexVersionAtLeast(version,"codex-cli 0.162.0-alpha.17.2"))throw Error("Codex source review requires the qualified environment-disabling protocol version");
   const settings = [...disabled.map(name => `features.${name}=false`), "web_search=\"disabled\"", "analytics.enabled=false",
     "shell_environment_policy.inherit=\"none\"", "shell_environment_policy.set={}", "shell_environment_policy.include_only=[]", "shell_environment_policy.experimental_use_profile=false",
     "project_doc_max_bytes=0", "instructions=\"\"", "developer_instructions=\"\"", "features.skip_host_skill_discovery=true", "allow_login_shell=false",
     `projects={${JSON.stringify(target)}={trust_level=\"untrusted\"}}`, "approval_policy=\"never\"", "sandbox_mode=\"read-only\""];
+  if(sourceReview)settings.push(...sourceReviewDisabled.map(name=>`features.${name}=false`));
   const args = () => ["app-server", "--stdio", ...settings.flatMap(setting => ["-c", setting])];
   const probe = createJsonRpcProcess(command, args(), { cwd: target, env });
   let skillPolicy;
@@ -150,13 +158,14 @@ export async function createLocalCodexSubscriptionHost(targetInput, { command = 
       if (!/^[A-Za-z0-9_-]+$/.test(name)) throw new Error("Codex MCP name requires a separately reviewed host profile");
       settings.push(`mcp_servers.${name}.enabled=false`);
     }
-    skillPolicy = await codexSkillPolicy(probe, target);
+    skillPolicy = sourceReview ? {disabledPaths:(await skillCatalogue(probe,target)).map(s=>s.path),enabledPaths:[]} : await codexSkillPolicy(probe, target);
     // alpha.16.3 requires exact SKILL.md paths, not containing directories.
     // Check the resulting catalogue on the actual dispatch connection as well.
     settings.push(`skills.config=[${skillPolicy.disabledPaths.map(file => `{path=${JSON.stringify(file)},enabled=false}`).join(",")}]`);
   } finally { await probe.close(); }
   const assertConnected = async (rpc, context) => {
     const { config } = await rpc.request("config/read", { cwd: target, includeLayers: false }); assertControls(config, target);
+    if(sourceReview)assertCodexSourceReviewControls(config);
     await assertCodexSkills(rpc, target, skillPolicy);
     const account = await rpc.request("account/read", { refreshToken: false });
     if (account.account?.type !== "chatgpt") throw new Error("Existing ChatGPT subscription login is required; Workkeel will not change accounts");
@@ -165,6 +174,10 @@ export async function createLocalCodexSubscriptionHost(targetInput, { command = 
     if (!model?.supportedReasoningEfforts.some(e => e.reasoningEffort === context.selection.connection.effort)) throw new Error("Requested subscription model/effort is not currently available");
   };
   return {
+    ...(sourceReview?{assertSourceReview:async(rpc)=>{
+      const {config}=await rpc.request("config/read",{cwd:target,includeLayers:false});assertControls(config,target);assertCodexSourceReviewControls(config);
+      if((await skillCatalogue(rpc,target)).some(skill=>skill.enabled))throw Error("Source review cannot discover enabled Skills");
+    }}:{}),
     assertCompatible: async ({ target: requested, contract, selection }) => {
       if (await safeDirectory(requested, ".") !== target || selection.connection.kind !== "codex-subscription" ||
           contract.environment.tools.length !== 1 || contract.environment.tools[0] !== "codex" ||
@@ -178,5 +191,5 @@ export async function createLocalCodexSubscriptionHost(targetInput, { command = 
 }
 
 export async function createLocalCodexSubscriptionRuntime(target, options) {
-  return createCodexRuntime(await createLocalCodexSubscriptionHost(target, options));
+  return createCodexRuntime(await createLocalCodexSubscriptionHost(target, options),{sourceReview:options?.sourceReview??false});
 }

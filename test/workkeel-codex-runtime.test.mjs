@@ -28,7 +28,7 @@ function fixtureHost({ reroute = false, earlyReroute = false, approval = false, 
       if(m.method==='account/read') reply(m.id,{account:{type:${JSON.stringify(account)}}});
       if(m.method==='model/list') reply(m.id,{data:${available ? "[{model:'gpt-6-luna',supportedReasoningEfforts:[{reasoningEffort:'low'}]}]" : "[]"}});
       if(m.method==='thread/start'||m.method==='thread/resume') {
-        send({method:'fixture/started',params:{}});
+        send({method:'fixture/started',params:m.params});
         if(m.method==='thread/start'&&m.params.allowProviderModelFallback!==false) process.exit(4);
         if(m.params.config.web_search!=='disabled'||m.params.approvalPolicy!=='never') process.exit(2);
         const profile=m.params.config.permissions[m.params.permissions];
@@ -57,7 +57,7 @@ function fixtureHost({ reroute = false, earlyReroute = false, approval = false, 
     env: { PATH: process.env.PATH }, assertCompatible: async () => {} });
   const connect = host.connect;
   host.connect = options => connect({ ...options, onNotification: message => {
-    if (message.method === "fixture/started") onStart();
+    if (message.method === "fixture/started") onStart(message.params);
     else if (message.method === "fixture/turn") onTurn(message.params);
     else if (message.method === "fixture/interrupt") onInterrupt();
     else { options.onNotification(message); if (message.method === "turn/started") onStarted(); }
@@ -83,6 +83,61 @@ test("Codex start/resume uses a real local JSON-RPC process, pinned model and re
   for (const name of ["workkeel.lock", "workkeelw.mjs", "TEMPLE.md", "temple.lock", "templew.mjs", "approval.md"]) {
     assert.equal(rootWrites.filesystem[path.join(await fs.realpath(c.target), name)], "read", name);
   }
+});
+
+async function reviewContext(t){const c=await context(t);c.contract.environment.write_paths=[];c.contract.environment.network={mode:'none',hosts:[]};c.contract.environment.resources=[];c.contract.skills=[];return c;}
+test('source review preserves requested output and disables environments on thread and turn',async t=>{
+ const c=await reviewContext(t);let thread,turn,probed=0;
+ const host=fixtureHost({onStart:p=>thread=p,onTurn:p=>turn=p});host.assertSourceReview=async()=>{probed++;};
+ const runtime=createCodexRuntime(host,{sourceReview:true});const result=await runtime.start(c);
+ assert.equal(result.status,'completed');assert.equal(probed,1);assert.deepEqual(thread.environments,[]);assert.deepEqual(turn.environments,[]);assert.deepEqual(thread.dynamicTools,[]);assert.deepEqual(thread.selectedCapabilityRoots,[]);
+ assert.match(thread.developerInstructions,/Review only the source/);assert.match(thread.developerInstructions,/exact requested answer format/);assert.doesNotMatch(thread.developerInstructions,/Read applicable WORKKEEL/);
+ assert.deepEqual(JSON.parse(turn.input[0].text).work,c.input);assert.equal(result.usage.input_tokens,10);
+ await assert.rejects(runtime.resume({...c,conversation_id:result.conversation_id}),/fresh conversation/);
+});
+test('source review qualification and conflicting scope fail before inference',async t=>{
+ const c=await reviewContext(t);let calls=0;
+ assert.throws(()=>createCodexRuntime(fixtureHost(),{sourceReview:true}),/qualified/);
+ assert.throws(()=>createCodexRuntime(fixtureHost(),{sourceReview:'yes'}),/explicit/);
+ const host=fixtureHost({onTurn:()=>calls++});host.assertSourceReview=async()=>{throw Error('tools not disabled');};
+ await assert.rejects(createCodexRuntime(host,{sourceReview:true}).start(c),/tools not disabled/);assert.equal(calls,0);
+ host.assertSourceReview=async()=>{};
+ for(const change of [x=>x.contract.environment.write_paths=['src'],x=>x.contract.skills=['required.md'],x=>x.contract.environment.network.mode='allowlist',x=>x.input.instruction='',x=>x.conversation_id='prior']){
+  const invalid=structuredClone(c);change(invalid);await assert.rejects(createCodexRuntime(host,{sourceReview:true}).start(invalid),/Source review/);
+ }
+ assert.equal(calls,0);
+});
+test('source review rejects early or completed-only tool and unknown operations',async t=>{
+ const c=await reviewContext(t);
+ for(const operation of [{method:'item/started',type:'commandExecution'},{method:'item/completed',type:'mcpToolCall'},{method:'item/started',type:'newTool'}]){
+  const host=fixtureHost(),connect=host.connect;host.assertSourceReview=async()=>{};
+  host.connect=options=>connect({...options,onNotification:m=>{if(m.method==='turn/started')options.onNotification({method:operation.method,params:{item:{type:operation.type}}});options.onNotification(m);}});
+  await assert.rejects(createCodexRuntime(host,{sourceReview:true}).start(c),/tool or unknown/);
+ }
+});
+
+test('source review cannot succeed when a violation arrives during terminal cleanup',async t=>{
+ for(const kind of ['commandExecution','unknownTool','reroute','request','protocol']){
+  const c=await reviewContext(t),host=fixtureHost(),connect=host.connect;
+  host.assertSourceReview=async()=>{};
+  host.connect=async options=>{
+   const rpc=await connect(options),request=rpc.request.bind(rpc);let completed=false,injected=false;
+   rpc.request=async(method,params,...rest)=>{
+    const result=await request(method,params,...rest);
+    if(method==='turn/start')completed=true;
+    if(method==='thread/backgroundTerminals/clean'&&completed&&!injected){
+     injected=true;
+     if(kind==='protocol')options.onProtocolError();
+     else if(kind==='request')await options.onRequest({id:99,method:'item/commandExecution/requestApproval',params:{}});
+     else if(kind==='reroute')options.onNotification({method:'model/rerouted',params:{toModel:'unapproved'}});
+     else options.onNotification({method:'item/completed',params:{threadId:'thread-one',turnId:'turn-one',item:{id:'late',type:kind}}});
+    }
+    return result;
+   };
+   return rpc;
+  };
+  await assert.rejects(createCodexRuntime(host,{sourceReview:true}).start(c),/tool or unknown|pinned model|operator attention|invalid protocol/);
+ }
 });
 
 test('layered subscription routing sends and confirms the exact default service mode on start and resume',async t=>{

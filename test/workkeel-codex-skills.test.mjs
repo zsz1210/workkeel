@@ -3,8 +3,14 @@ import assert from "node:assert/strict";
 import fs from "node:fs/promises";
 import path from "node:path";
 import os from "node:os";
-import { codexSkillPolicy, assertCodexSkills } from "../src/workkeel-codex-host.mjs";
+import { codexSkillPolicy, assertCodexSkills, assertCodexSourceReviewControls } from "../src/workkeel-codex-host.mjs";
 import { codexPermissionsForContract } from "../src/workkeel-codex-runtime.mjs";
+
+test('source-review tool overrides require confirmed false values, not absence or strings',()=>{
+ const names=['shell_tool','unified_exec','view_image','sleep_tool','code_mode_host','in_app_browser','in_app_chat','realtime_conversation','request_permissions_tool'];
+ const features=Object.fromEntries(names.map(n=>[n,false]));assertCodexSourceReviewControls({features});
+ for(const name of names)for(const value of [true,undefined,'false'])assert.throws(()=>assertCodexSourceReviewControls({features:{...features,[name]:value}}),/not disabled/);
+});
 
 async function fixture(t) {
   const temp = await fs.realpath(await fs.mkdtemp(path.join(os.tmpdir(), "workkeel-skills-")));

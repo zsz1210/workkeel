@@ -4,6 +4,28 @@ The main conversation keeps the user's selected model. Newly delegated operation
 get explicit selections, bounded scopes and generated execution IDs. Nicknames are
 optional. Registered actors remain accountability keys, separate from models.
 
+## Supplied-source review
+
+Trusted embedding code can opt into
+`createLocalCodexSubscriptionRuntime(target, { sourceReview: true })` when the
+coordinator has supplied the complete source packet and applicable requirements.
+This is separate from repository review, which may need file-reading tools. It
+does not become the default for every review activity.
+
+This mode requires a fresh conversation, no write roots, named Skills, external
+resources or tool networking. The local host checks the installed protocol version,
+disables executable/image/browser tool features and Skill discovery, and the
+runtime sends empty environment/capability lists. Effective configuration must
+confirm restrictions before inference. Unexpected tool or unknown operation events
+fail the review. Permissions, model identity, expiry and usage checks still apply.
+
+The model receives the supplied packet without instructions to discover repository
+files or append lifecycle reporting fields. The requested answer format is retained
+inside the normal runtime result's `output`; the coordinator records checks, Skill
+use, provenance and acceptance separately. Missing source context needs attention,
+not an inferred clean review. Resume and combinations with repository-role contracts
+are rejected. Existing ordinary coding callers retain their behavior.
+
 ## Project policy
 
 Save the reviewed policy and include its path in a new task brief's
