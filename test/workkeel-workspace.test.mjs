@@ -614,6 +614,26 @@ test('capability server separates reads/control, preserves observer resources an
   assert.equal(replay.replayed,true);assert.equal(executed,1);
 });
 
+test('a duplicate command arriving after reservation shares the pending host result',async t=>{
+  const {state}=await setup(t);let executed=0,entered,release;
+  const started=new Promise(resolve=>{entered=resolve;}),gate=new Promise(resolve=>{release=resolve;});
+  const service=await startWorkspaceServer(state,{control:{actor:{agent_id:'owner-agent',principal_id:'owner'},actions:['policy.save']},hooks:{policy:{execute:async()=>{executed++;entered();await gate;return {saved:true};}}}});
+  t.after(()=>{release();return service.close();});
+  const [read,write]=new URL(service.url).hash.slice(1).split('/'),headers={Authorization:'Bearer '+write,Origin:service.origin,'Content-Type':'application/json'};
+  const command={project_id:'alpha',action:'policy.save',expectedVersion:0,expectedRegistryVersion:2,idempotencyKey:'held-operation',payload:{policy:{}}};
+  const invoke=payload=>fetch(service.origin+'/api/policy',{method:'PUT',headers,body:JSON.stringify(payload??command)}).then(async response=>({status:response.status,body:await response.json()}));
+  const first=invoke();await started;
+  const receipt=await fetch(service.origin+'/api/command?id=held-operation',{headers:{Authorization:'Bearer '+read,'X-Workkeel-Control':'Bearer '+write}}).then(response=>response.json());
+  assert.equal(receipt.status,'submitted','the reservation already exists before the duplicate arrives');
+  const second=invoke();
+  const conflict=await invoke({...command,payload:{policy:{changed:true}}});assert.equal(conflict.status,409);
+  // Keep the actual handler blocked while a late duplicate has time to read its
+  // durable reservation. It must await the host, not return submitted as success.
+  const early=await Promise.race([second.then(()=>true),new Promise(resolve=>setTimeout(()=>resolve(false),100))]);
+  release();const responses=await Promise.all([first,second]);
+  assert.equal(early,false);assert.equal(executed,1);assert.ok(responses.every(response=>response.status===200&&response.body.status==='confirmed'));
+});
+
 test('unknown host outcomes are durable and symlinked command receipts are rejected',async t=>{
   const {state}=await setup(t);let calls=0;
   const service=await startWorkspaceServer(state,{control:{actor:{agent_id:'a',principal_id:'p'},actions:['autonomy.pause']},hooks:{autonomy:{execute:async()=>{calls++;throw Error('Synthetic lost host response');}}}});t.after(()=>service.close());

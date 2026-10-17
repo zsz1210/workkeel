@@ -54,13 +54,15 @@ export async function startWorkspaceServer(stateDir,{port=0,readSnapshot=readWor
     const project=(await readWorkspace(stateDir)).projects.find(p=>p.id===command.project_id);
     if(kind!=='workspace'&&!project)throw Error('Select a registered project');
     const identity=commandHash({kind,command,actor:control.actor}),key=command.idempotencyKey;
-    await fs.mkdir(commandDir,{mode:0o700}).catch(e=>{if(e.code!=='EEXIST')throw e;});
-    if((await fs.lstat(commandDir)).isSymbolicLink())throw Error('Unsafe command store');
-    const file=path.join(commandDir,key+'.json');
-    const existing=await readReceipt(file);
-    if(existing){const record=existing;if(record.request_digest!==identity){const e=Error('Idempotency key binds a different command');e.code='CONFLICT';throw e;}return {...record,replayed:true};}
     if(pending.has(key)){const prior=pending.get(key);if(prior.identity!==identity){const e=Error('Idempotency key binds a different command');e.code='CONFLICT';throw e;}return prior.promise;}
     const operation=(async()=>{
+      // Coalesce in this host before reading a receipt that may still be reserved
+      // or replaced by the first request. Durable receipts govern restart recovery.
+      await fs.mkdir(commandDir,{mode:0o700}).catch(e=>{if(e.code!=='EEXIST')throw e;});
+      if((await fs.lstat(commandDir)).isSymbolicLink())throw Error('Unsafe command store');
+      const file=path.join(commandDir,key+'.json');
+      const existing=await readReceipt(file);
+      if(existing){if(existing.request_digest!==identity){const e=Error('Idempotency key binds a different command');e.code='CONFLICT';throw e;}return {...existing,replayed:true};}
       const registry=await readWorkspace(stateDir);
       if(command.expectedRegistryVersion!==registry.version){const e=Error('Workspace changed; reload before sending a command');e.code='CONFLICT';throw e;}
       const request={schema_version:'workkeel.workspace-command/v1',request_digest:identity,idempotency_key:key,action:command.action,actor:control.actor,status:'submitted',result:null};
