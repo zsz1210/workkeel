@@ -12,12 +12,23 @@ test('reviews retain component-specific verdicts without promoting one pass to w
 import assert from 'node:assert/strict';
 import vm from 'node:vm';
 import {workspaceClient} from '../src/workkeel-workspace-ui.mjs';
-import {renderWorkspaceScene,renderWorkspaceMap} from '../src/workkeel-workspace-scene.mjs';
+import {renderWorkspaceScene,renderWorkspaceMap,renderWorkspaceMetric,workspaceGlyph} from '../src/workkeel-workspace-scene.mjs';
 import {resolveToolIdentity,toolMark} from '../src/workkeel-tool-identity.mjs';
 import {createHash} from 'node:crypto';
 import {buildExecutionVisual,taskVisualRows,renderExecutionVisual,renderExecutionTimeline,dependencyLayout,renderDependencyDiagram,renderActivityComparison} from '../src/workkeel-execution-visuals.mjs';
 
 const now=Date.parse('2026-01-01T00:02:00Z');
+test('visual summaries distinguish bounded allowance from completion and missing data from zero',()=>{
+ const render=(used,total)=>renderWorkspaceMetric({icon:'rounds',value:used,label:'Rounds used or reserved',used,total});
+ assert.match(render(0,5),/aria-valuenow="0"/);assert.match(render(5,5),/data-exhausted="true"/);
+ for(const [used,total] of [[null,5],[2,null],[0,0],[6,5],[-1,5],[2,Infinity],[2,'5']])assert.doesNotMatch(render(used,total),/role="meter"/);
+ assert.match(renderWorkspaceMetric({value:0,label:'Reported tokens'}),/<strong>0<\/strong>/);
+ assert.match(renderWorkspaceMetric({value:null,label:'Reported tokens'}),/<strong>—<\/strong>/);
+ assert.doesNotMatch(renderWorkspaceMetric({value:'<img>',label:'<script>',note:'<svg>'}),/<img>|<script>|<svg>/);
+ const scene=renderWorkspaceScene([{activity_kind:'implementation',state:'completed',tokens:1234567,tokens_complete:false,reported_ms:null}],{now});
+ assert.match(scene,/≥ 1\.2M tokens/);assert.match(scene,/aria-label="Reported tokens: ≥ 1,234,567 tokens"/);
+ assert.match(scene,/aria-label="Recorded time: Time not reported"/);assert.doesNotMatch(scene,/signal-packet/);
+});
 test('autonomy guidance follows usable standing authority without changing settings task gates',()=>{
   // Run the emitted client's real notice, goal selection and permission helpers.
   const block=(start,end)=>{const from=workspaceClient.indexOf(start),to=workspaceClient.indexOf(end,from);assert.ok(from>=0&&to>from);return workspaceClient.slice(from,to);};
@@ -74,7 +85,7 @@ test('paused autonomy guidance follows Resume capability in both languages witho
       jobs:[{id:'old-failure',reason:'Retained synthetic failure',status:'failed'}]}};
   const render=(lang,overrides={})=>vm.runInNewContext(code,{...base,...overrides,lang,document:{hidden:false},
     route:()=>({view:'autonomy',project:'project'}),escape:value=>String(value??''),
-    link:(view,project,task)=>'?'+new URLSearchParams({view,project,...(task?{task}:{})}),renderWorkspaceScene,toolMark,resolveToolIdentity});
+    link:(view,project,task)=>'?'+new URLSearchParams({view,project,...(task?{task}:{})}),renderWorkspaceScene,renderWorkspaceMetric,workspaceGlyph,toolMark,resolveToolIdentity});
   for(const lang of ['en','zh-TW']){
     const zh=lang==='zh-TW',html=render(lang);
     const resumeLabel=zh?'恢復新的執行':'Resume new execution';

@@ -138,8 +138,8 @@ header{height:60px;background:var(--canvas);padding:0 36px}.header-actions{flex-
 .signal-origin-state{font-size:11px;color:var(--muted);padding:3px 8px}
 .signal-scene[data-live=true] .signal-origin .brand-mark{border-color:var(--muted)}
 .signal-scene[data-live=true] .signal-origin-state{color:var(--text)}
-.signal-wires{height:100%;width:100%;overflow:visible;fill:none;stroke-linejoin:round;stroke-linecap:round}.signal-wire{stroke:var(--line);stroke-width:1;vector-effect:non-scaling-stroke}.signal-wire[data-live=true]{stroke:var(--muted)}.signal-packet{fill:var(--text);animation:execution-signal 2.8s linear infinite}
-@keyframes execution-signal{0%{transform:translateX(-50px);opacity:0}12%{opacity:1}88%{opacity:1}100%{transform:translateX(0);opacity:0}}
+.signal-wires{height:100%;width:100%;overflow:visible;fill:none;stroke-linejoin:round;stroke-linecap:round}.signal-wire{stroke:var(--line);stroke-width:1;vector-effect:non-scaling-stroke}.signal-wire[data-live=true]{stroke:var(--accent);opacity:.4}.signal-packet{fill:none;stroke:var(--accent);stroke-width:2.5;stroke-dasharray:3 97;vector-effect:non-scaling-stroke;animation:execution-signal 2.8s linear infinite}
+@keyframes execution-signal{from{stroke-dashoffset:100}to{stroke-dashoffset:0}}
 .signal-lane.ev-node:after{display:none}.journey-current>.signal-scene{padding:16px 0 0!important}
 .journey-current>.journey-flow-record{grid-column:1/-1;font-size:11px;color:var(--muted)}.journey-flow-record summary{cursor:pointer;padding:4px 0}.journey-flow-record .journey-stages{margin-top:16px}.autonomy-journey .journey-work{margin-top:24px}
 .journey-history-map>.signal-scene{margin:14px 0 0;padding:12px 0 0;border:0;background:transparent}
@@ -158,3 +158,28 @@ header{height:60px;background:var(--canvas);padding:0 36px}.header-actions{flex-
 @media(max-width:1250px){.signal-target{grid-template-columns:minmax(125px,1fr) minmax(135px,1fr) 12px;gap:8px}.signal-model{grid-column:1;grid-row:2;padding-left:38px;font-size:10px;margin-top:-13px}.signal-identity{align-self:start}.signal-result{grid-column:2;grid-row:1/3}.signal-detail{grid-column:3;grid-row:1/3}.signal-target{grid-template-rows:1fr 12px}.signal-identity>span{gap:2px}.signal-identity small{display:none}}
 @media(max-width:760px){.signal-scene{padding:18px 14px}.signal-composition,.journey-current>.signal-scene .signal-composition{grid-template-columns:minmax(0,1fr)}.signal-origin{display:none}.signal-wires{display:none}.signal-heading{align-items:flex-start;flex-direction:column;gap:8px}.signal-target{grid-template-columns:minmax(115px,1fr) minmax(130px,1fr) 12px}.signal-lane[data-live=true]{border-left:3px solid var(--text)}}
 @media(prefers-reduced-motion:reduce){.signal-packet{display:none;animation:none}.signal-wire[data-live=true]{stroke:var(--text)}}
+/* Visual vocabulary: symbols support visible labels; counts never imply live work. */
+.visual-metric,.work-facts>.visual-metric,.journey-totals>.visual-metric{display:flex;align-items:center;gap:14px;min-width:0}
+.metric-symbol,.metric-ring{width:44px;height:44px;flex:none;display:grid;place-items:center;color:var(--accent);position:relative}
+.metric-symbol{background:var(--soft);border-radius:14px}
+.metric-symbol>.product-icon,.metric-ring>.product-icon{width:19px;height:19px}
+.metric-ring>svg:not(.product-icon){position:absolute;inset:0;width:44px;height:44px;fill:none;stroke-width:2.5;transform:rotate(-90deg)}
+.metric-ring-track{stroke:var(--line)}.metric-ring-fill{stroke:currentColor;stroke-linecap:round}
+.visual-metric[data-exhausted=true] .metric-ring{color:var(--warn)}
+.metric-copy{display:grid;gap:3px;min-width:0}.metric-copy strong{line-height:1.3}.metric-copy>span,.metric-copy>small{font-size:11px;color:var(--muted);overflow-wrap:anywhere}.metric-copy>small{color:var(--warn)}
+.task-key-metrics>.visual-metric,.metrics>.visual-metric{display:flex;align-items:center;gap:12px}.task-key-metrics .metric-copy>span,.metrics .metric-copy>span{margin:0}.metrics .metric-copy strong{font-size:24px}.metrics>.visual-metric{padding:10px 0}.task-key-metrics .metric-symbol{width:36px;height:36px;border-radius:12px}
+.autonomy-now h2{display:flex;align-items:center;gap:12px}.autonomy-state-symbol{display:grid;place-items:center;flex:none;width:38px;height:38px;background:var(--soft);color:var(--accent);border-radius:12px}.autonomy-state-symbol .product-icon{width:19px;height:19px}
+[data-autonomy-state=blocked] .autonomy-state-symbol,[data-autonomy-state=limited] .autonomy-state-symbol{color:var(--warn);background:var(--warning)}
+.status-explanation{margin:8px 0 0 50px;font-size:12px;color:var(--muted)}.status-explanation summary{cursor:pointer;width:fit-content;padding:4px 0}.status-explanation p{margin:8px 0 12px!important;max-width:620px}
+.autonomy-journey .journey-plan{margin-bottom:14px}.journey-plan>div{display:flex;align-items:baseline;flex-wrap:wrap;gap:6px 14px}.journey-plan h2{font-size:16px;margin:0}
+.autonomy-journey .journey-summary{padding:16px 22px;margin-top:14px}.journey-summary .autonomy-now>.eyebrow{display:none}.journey-summary .autonomy-now h2{font-size:18px;margin-top:0}
+.journey-summary .autonomy-next p{margin:5px 0 10px;font-size:12px}.journey-summary .journey-controls{margin-top:12px}
+.journey-current>.signal-scene .signal-heading{margin-bottom:12px}.journey-current>.signal-scene .signal-composition{margin-bottom:16px}.journey-current:has(>.signal-scene){padding-top:16px;padding-bottom:16px}
+.signal-measures{display:flex;align-items:center;gap:14px;color:var(--muted);font-size:11px;font-variant-numeric:tabular-nums}
+.signal-measure{display:inline-flex;align-items:center;gap:5px;white-space:nowrap}.signal-measure .product-icon{width:13px;height:13px;opacity:.85}
+.signal-state .product-icon{width:13px;height:13px;flex:none}.signal-lane[data-live=true] .signal-state{color:var(--accent)}
+.signal-lane[data-live=true]{border-color:color-mix(in srgb,var(--accent) 45%,var(--line));background:color-mix(in srgb,var(--accent) 5%,var(--canvas))}
+.signal-scene[data-live=true] .signal-origin .brand-mark{border-color:var(--accent);color:var(--accent);box-shadow:0 0 28px color-mix(in srgb,var(--accent) 9%,transparent)}
+@media(hover:hover) and (pointer:fine){.signal-target:is(button){transition:background 160ms ease-out}.signal-target:is(button):hover .signal-detail{color:var(--accent)}}
+@media(max-width:760px){.status-explanation{margin-left:0}.signal-measures{gap:8px}.work-facts>.visual-metric{gap:9px}}
+@media(prefers-reduced-motion:reduce){.signal-target:is(button){transition:none}}

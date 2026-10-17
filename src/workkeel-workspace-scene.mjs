@@ -3,6 +3,14 @@ import {resolveToolIdentity,toolMark} from './workkeel-tool-identity.mjs';
 const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const paths={plan:'M5 5h14v14H5z M8 9h8 M8 13h5',build:'m8 5-6 7 6 7m8-14 6 7-6 7m-3-16-2 18',verify:'m5 12 4 4L19 6',review:'M12 3 3 12l9 9 9-9z M9 12h6',repair:'M20 7v5h-5 M4 17v-5h5 M5 8a8 8 0 0 1 13-3l2 7 M4 12l2 7a8 8 0 0 0 13-3',repo:'m12 3 9 5v9l-9 5-9-5V8z M3 8l9 5 9-5 M12 13v9'};
 export const workspaceGlyph=name=>'<svg class="product-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="'+(paths[name]||paths.repo)+'"/></svg>';
+Object.assign(paths,{clock:'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18 M12 7v5l3 2',tokens:'m12 3 8 4v10l-8 4-8-4V7z M4 7l8 4 8-4 M12 11v10',rounds:'M19 8a8 8 0 1 0 1 8 M19 3v5h-5',records:'M6 3h12v18H6z M9 7h6 M9 12h6 M9 17h4',pause:'M8 5v14 M16 5v14',attention:'m12 3 10 18H2z M12 9v5 M12 17v1',arrow:'M5 12h14 M14 7l5 5-5 5'});
+
+/** A number is always labelled; the optional ring represents a known bounded count. */
+export function renderWorkspaceMetric({icon='records',value,label,used=null,total=null,note=''}) {
+  const bounded=Number.isSafeInteger(used)&&Number.isSafeInteger(total)&&total>0&&used>=0&&used<=total;
+  const mark=bounded?'<span class="metric-ring" role="meter" aria-label="'+esc(label)+'" aria-valuemin="0" aria-valuemax="'+total+'" aria-valuenow="'+used+'"><svg viewBox="0 0 44 44" aria-hidden="true"><circle class="metric-ring-track" cx="22" cy="22" r="18"/><circle class="metric-ring-fill" cx="22" cy="22" r="18" pathLength="100" stroke-dasharray="'+(used/total*100)+' 100"/></svg>'+workspaceGlyph(icon)+'</span>':'<span class="metric-symbol">'+workspaceGlyph(icon)+'</span>';
+  return '<div class="visual-metric"'+(bounded?' data-exhausted="'+(used===total)+'"':'')+'>'+mark+'<div class="metric-copy"><strong>'+esc(value??'—')+'</strong><span>'+esc(label)+'</span>'+(note?'<small>'+esc(note)+'</small>':'')+'</div></div>';
+}
 const activityIcon={planning:'plan',implementation:'build',verification:'verify','independent-review':'review',repair:'repair'};
 
 /** A work-to-activity map, not a model router or an asserted handoff chain. */
@@ -26,11 +34,13 @@ export function renderWorkspaceScene(rows,{language='en',title=null,interactive=
   const wires=nodes.map((node,i)=>{
     const y=i*84+37,direction=Math.sign(y-mid),bend=Math.min(10,Math.abs(y-mid)/2);
     const d=direction?'M 0 '+mid+' H '+(36-bend)+' Q 36 '+mid+' 36 '+(mid+direction*bend)+' V '+(y-direction*bend)+' Q 36 '+y+' '+(36+bend)+' '+y+' H 100':'M 0 '+mid+' H 100';
-    return '<path class="signal-wire" data-live="'+live(node)+'" d="'+d+'"/>'+(live(node)?'<g class="signal-packet"><circle cx="96" cy="'+y+'" r="1.7"/></g>':'');
+    return '<path class="signal-wire" data-live="'+live(node)+'" d="'+d+'"/>'+(live(node)?'<path class="signal-packet" d="'+d+'" pathLength="100"/>':'');
   }).join('');
   const lanes=nodes.map(node=>{
     const tool=product(node),actor=node.actors.join(' · ')||(node.assigned_actor?t('Assigned: ','已指派：')+node.assigned_actor:t('Agent not reported','Agent 未回報'));
-    const content='<span class="signal-identity">'+toolMark(tool)+'<span><strong>'+esc(executionLabel(node.activity,language))+'</strong><small title="'+esc(actor)+'">'+esc(tool.label)+'</small></span></span><span class="signal-model" title="'+esc(model(node))+'">'+esc(model(node))+'</span><span class="signal-result"><span class="signal-state"><i aria-hidden="true"></i>'+esc(state(node))+'</span><small>'+esc(time(node))+'<span aria-hidden="true"> · </span>'+esc(tokens(node))+'</small></span>'+(interactive?'<span class="signal-detail" aria-hidden="true">↗</span>':'');
+    const compactTokens=(node.tokens===null?'—':(node.tokens_complete?'':'≥ ')+new Intl.NumberFormat('en-US',{notation:'compact',maximumFractionDigits:1}).format(node.tokens))+' tokens';
+    const metric=(icon,value,label)=>'<span class="signal-measure" aria-label="'+esc(label)+'" title="'+esc(label)+'">'+workspaceGlyph(icon)+'<span aria-hidden="true">'+esc(value)+'</span></span>';
+    const content='<span class="signal-identity">'+toolMark(tool)+'<span><strong>'+esc(executionLabel(node.activity,language))+'</strong><small title="'+esc(actor)+'">'+esc(tool.label)+'</small></span></span><span class="signal-model" title="'+esc(model(node))+'">'+esc(model(node))+'</span><span class="signal-result"><span class="signal-state">'+workspaceGlyph(['failed','blocked'].includes(node.state)?'attention':['completed','review-passed'].includes(node.state)?'verify':node.state==='reported-running'?'build':'clock')+esc(state(node))+'</span><span class="signal-measures">'+metric('clock',node.ms===null?'—':time(node),t('Recorded time: ','已記錄耗時：')+time(node))+metric('tokens',compactTokens,t('Reported tokens: ','已回報 Token：')+tokens(node))+'</span></span>'+(interactive?'<span class="signal-detail" aria-hidden="true">↗</span>':'');
     const target=interactive?'<button class="signal-target" data-flow-node="'+node.activity+'">'+content+'</button>':'<div class="signal-target">'+content+'</div>';
     return '<div class="signal-lane ev-node'+(node===focus?' scene-current':node.attempts&&!live(node)?' scene-history':'')+'" data-state="'+node.state+'" data-live="'+live(node)+'" data-recorded="'+!!node.attempts+'"'+(live(node)?' aria-current="step"':'')+'>'+target+'</div>';
   }).join('');
