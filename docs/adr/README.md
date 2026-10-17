@@ -100,5 +100,6 @@ change this source checkout's [native instructions](../../AGENTS.md).
 - [ADR-0085: Native workspace, bounded autonomy and versioned Skill learning](0085-native-workspace-bounded-autonomy-and-skill-learning.md)
 - [ADR-0086: Compact execution views and explicit completion evidence](0086-compact-execution-and-completion-evidence.md)
 - [ADR-0087: Coordinator-owned browser verification](0087-coordinator-owned-browser-verification.md)
+- [ADR-0088: Explicit structured source-review protocol](0088-structured-source-review-protocol.md)
 
 An ADR is an Architecture Decision Record. It preserves the context, decision, rationale, and consequences of an important technical or organizational choice so that later Agents do not have to infer why it was made from chat memory.

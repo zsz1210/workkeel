@@ -65,6 +65,7 @@ export async function recordDeliveryCheck(target,input,{observeEnvironment}={}) 
     } catch {contextError='task-context-or-files-changed';}
     const changed=after?input.files.filter(p=>before[p]!==after[p]):input.files;
     if(!measured.execution_started&&!startBlocked)measured.instrument_error??='command-start-unconfirmed';
+    if(measured.execution_started&&!Number.isInteger(measured.exit_code))measured.instrument_error??='command-exit-unconfirmed';
     const status=startBlocked?'blocked':measured.instrument_error||measured.timed_out||!measured.process_exit_confirmed||measured.surviving_descendants?'instrument-failure':
       contextError||changed.length?'invalidated':measured.exit_code===0?'pass':'fail';
     const footer=`\nSTDOUT\n${measured.stdout}\nSTDERR\n${measured.stderr}\nExit code: ${measured.exit_code??'unknown'}\nStatus: ${status}\nExecution started: ${measured.execution_started}\nCompleted: ${new Date().toISOString()}\nContext error: ${contextError??'none'}\nChanged files: ${JSON.stringify(changed)}\nInstrument error: ${measured.instrument_error??'none'}\nTimed out: ${measured.timed_out}\nProcess exit confirmed: ${measured.process_exit_confirmed}\n`;

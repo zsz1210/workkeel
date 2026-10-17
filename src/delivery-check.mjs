@@ -22,7 +22,7 @@ function boundedText(chunks) {
 export async function runSupervisedCommand(command, { timeout_ms, output_limit_bytes, hooks = {} }) {
   const result = { execution_started: false, process_exit_confirmed: true, exit_code: null, stdout: "", stderr: "", timed_out: false, surviving_descendants: false, instrument_error: null };
   if (process.platform === "win32") return { ...result, instrument_error: "unsupported-platform-descendant-cleanup" };
-  let child, pid, bytes = 0, overflow = false, startError = null;
+  let child, pid, bytes = 0, overflow = false, startError = null, commandResult = null, protocolError = null;
   const chunks = [], errors = [], signalErrors = [];
   const alive = () => { if (!pid) return false; try { process.kill(-pid, 0); return true; } catch (e) { return e.code !== "ESRCH"; } };
   const kill = () => { if (pid) try { process.kill(-pid, "SIGKILL"); } catch (e) { if (e.code !== "ESRCH") signalErrors.push(e.code); } };
@@ -43,6 +43,14 @@ export async function runSupervisedCommand(command, { timeout_ms, output_limit_b
     child.on("message", message => {
       if (message?.action === "command-started") result.execution_started = true;
       if (message?.action === "command-start-failed") startError = `command-spawn-${message.code}`;
+      if (message?.action === "command-completed") {
+        const code = message.exit_code, signal = message.signal;
+        if (commandResult || !result.execution_started ||
+            !(Number.isInteger(code) && code >= 0 && code <= 255 && signal === null ||
+              code === null && typeof signal === "string" && /^SIG[A-Z0-9]+$/.test(signal))) {
+          protocolError = "invalid-command-result"; kill();
+        } else commandResult = { code, signal };
+      }
     });
     child.once("exit", code => { result.surviving_descendants = code === 0 && !result.timed_out && alive(); kill(); });
     child.once("close", code => finish({ code }));
@@ -54,10 +62,13 @@ export async function runSupervisedCommand(command, { timeout_ms, output_limit_b
   });
   kill();
   const deadline = Date.now() + 2000; while (alive() && Date.now() < deadline) await sleep(10);
-  Object.assign(result, { process_group_id: pid ?? null, process_exit_confirmed: !alive(), exit_code: exit.code,
+  Object.assign(result, { process_group_id: pid ?? null, process_exit_confirmed: !alive(), exit_code: commandResult ? commandResult.code : result.execution_started ? null : exit.code,
     stdout: boundedText(chunks), stderr: boundedText(errors),
-    instrument_error: exit.error ?? startError ?? (overflow ? "output-limit" : null), termination_signal_errors: signalErrors });
-  if (!result.execution_started && result.exit_code === 0) result.instrument_error ??= "command-start-unconfirmed";
+    instrument_error: exit.error ?? startError ?? protocolError ?? (overflow ? "output-limit" : null), termination_signal_errors: signalErrors });
+  if (!result.execution_started) result.instrument_error ??= "command-start-unconfirmed";
+  else if (!commandResult) result.instrument_error ??= "command-exit-unconfirmed";
+  else if (commandResult.signal) result.instrument_error ??= `command-terminated-${commandResult.signal}`;
+  else if (exit.code !== commandResult.code) result.instrument_error ??= "supervisor-exit-mismatch";
   if (!result.process_exit_confirmed) result.instrument_error = "unconfirmed-process-close";
   return result;
 }

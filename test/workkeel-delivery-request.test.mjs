@@ -189,6 +189,27 @@ test('record-check does not report a supervisor startup failure as a RED test',a
   } finally {childProcess.spawn=spawn;syncBuiltinESMExports();}
 });
 
+test('record-check preserves an interrupted supervisor as unknown execution, not a RED test',async t=>{
+  const f=await checkFixture(t),spawn=childProcess.spawn;let acknowledged=false,pid;
+  await fs.writeFile(f.root+'/src/check.test.mjs','await new Promise(resolve=>setTimeout(resolve,30000));\n');
+  childProcess.spawn=function(executable,args,options) {
+    const child=spawn.call(this,executable,args,options);
+    if(args[0]?.endsWith('/delivery-check-worker.mjs'))child.on('message',message=>{
+      if(message?.action==='command-started'){acknowledged=true;pid=child.pid;process.kill(pid,'SIGKILL');}
+    });
+    return child;
+  };
+  syncBuiltinESMExports();
+  try {
+    const result=await f.check('interrupted-supervisor');
+    assert.equal(acknowledged,true);assert.equal(result.execution_started,true);assert.equal(result.exit_code,null);
+    assert.equal(result.status,'instrument-failure');assert.equal(result.instrument_error,'command-exit-unconfirmed');
+    assert.equal(result.process_exit_confirmed,true);assert.throws(()=>process.kill(-pid,0),error=>error.code==='ESRCH');
+    assert.match(await fs.readFile(f.root+'/'+result.log_ref,'utf8'),/Exit code: unknown\nStatus: instrument-failure/);
+    assert.equal((await f.read()).state,'build');
+  } finally {childProcess.spawn=spawn;syncBuiltinESMExports();}
+});
+
 test('record-check invalidates a passing command that changes its declared inputs',async t=>{
   const f=await checkFixture(t);
   await fs.writeFile(f.root+'/src/check.test.mjs',"import fs from 'node:fs';fs.writeFileSync('src/a.txt','changed by test');\n");

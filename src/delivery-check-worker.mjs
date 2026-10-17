@@ -20,23 +20,34 @@ if (["--supervise", "--command-supervise"].includes(process.argv[2])) {
       : message.confined
       ? spawn(message.confined.command, message.confined.args, { env: message.confined.env, stdio: ["ignore", "inherit", "inherit"] })
       : spawn(process.execPath, ["--test", "--test-reporter=tap", `--test-timeout=${timeout}`, ...tests], { stdio: ["ignore", "inherit", "inherit"] });
-    let spawnReported = !commandMode, completedCode = null;
-    const complete = code => { if (!spawnReported) { completedCode = code; return; } clearTimeout(timer); process.exit(code); };
+    let spawnReported = !commandMode, pendingResult = null, finalizing = false;
+    const complete = (code, signal = null, report = commandMode) => {
+      if (!spawnReported) { pendingResult = { code, signal, report }; return; }
+      if (finalizing) return;
+      finalizing = true; clearTimeout(timer);
+      // The supervisor's exit is not the command's result. Confirm the latter
+      // over IPC before exiting, including a signal's absent numeric exit code.
+      if (report) process.send({ action: "command-completed", exit_code: code, signal }, error => {
+        if (error) return terminate();
+        process.exit(code ?? 1);
+      });
+      else process.exit(code ?? 1);
+    };
     child.once("spawn", () => {
       if (!commandMode) return;
       process.send({ action: "command-started" }, error => {
         if (error) return terminate();
         spawnReported = true;
-        if (completedCode !== null) complete(completedCode);
+        if (pendingResult) complete(pendingResult.code, pendingResult.signal, pendingResult.report);
       });
     });
     child.once("error", error => {
       if (!commandMode) { spawnReported = true; complete(2); return; }
       process.send({ action: "command-start-failed", code: error.code ?? "unknown" }, sendError => {
         if (sendError) return terminate();
-        spawnReported = true; complete(2);
+        spawnReported = true; complete(2, null, false);
       });
     });
-    child.once("exit", code => complete(code ?? 1));
+    child.once("exit", (code, signal) => complete(code, signal));
   });
 }

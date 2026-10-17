@@ -655,7 +655,11 @@ Logs are created exclusively under `.ai-org/artifacts/<task>/<name>.log`. Use
 separate names for `red-test`, `green-test` and any `candidate-test`; old evidence
 is never overwritten. Include every retained log in handoff evidence. A failed
 test returns a nonzero CLI status; that is expected for a genuine RED run. A
-timeout, output overflow or failed cleanup is an instrumentation failure. Changed
+timeout, output overflow or failed cleanup is an instrumentation failure. The
+supervisor must also confirm the command's actual terminal result over IPC.
+A missing result, signal termination or supervisor/result disagreement is an
+instrumentation failure, even if a process exited. An absent exit code is never
+converted to a failing test. Changed
 declared files or task context invalidate the result. A log ending with only its
 running header has no completed result. Preserve it and use a new name if an
 authorized retry is needed.
@@ -679,6 +683,51 @@ requirement. A receipt is evidence for the recorded command and listed inputs;
 it does not prove the whole task or grant acceptance. Private comparison runs
 are outside this public source repository.
 
+
+### Optional Claude supplied-source review protocol
+
+For an already authorized source-only review host, `src/workkeel-claude-review.mjs`
+exports `prepareClaudeSourceReview`. It prepares arguments and parses results;
+it does not launch Claude, initialize an integration or change routing. The
+[qualification decision](../adr/0088-structured-source-review-protocol.md) pins
+Claude Code 2.1.287 and describes its external-license boundary.
+
+```js
+const protocol = prepareClaudeSourceReview({
+  files: { 'src/example.mjs': 'export const value = 1;\n' },
+  version: installedVersion,
+  model: approvedAlias,
+  expected_model: approvedResolvedModel,
+  reasoning: approvedReasoning,
+  session_id: freshSessionUuid
+});
+// Approved host: launch the qualified executable with protocol.args (shell:false),
+// feed only the approved packet on stdin, retain raw stdout/stderr, and supervise it.
+const result = protocol.parse(rawStdout, {
+  exit_code: actualExitCode,
+  timed_out: deadlineExceeded,
+  process_exit_confirmed: ownedProcessGroupExited,
+  execution_started: commandStartupConfirmed,
+  instrument_error: supervisionError, // explicitly null only when supervision succeeded
+  surviving_descendants: ownedDescendantsRemain
+});
+```
+
+The native schema is sent with `--json-schema`; only `structured_output` is used
+for findings. The `result` prose field is never scraped. Local validation rejects
+unknown files, invalid line ranges, extra fields and empty descriptions. A fresh
+session, explicit model/effort and disabled tools/customizations are part of the
+prepared arguments. The host must use an isolated working directory and enforce
+the actual task scope; metadata and flags alone are not a sandbox.
+
+Check `status === 'completed'` before using findings. Errors, missing structured
+output, model/session mismatches, timeouts, supervision errors and unconfirmed
+startup or cleanup return no
+findings, while preserving available usage. Input includes noncached input plus
+cache reads and creation exactly once; reasoning is a subset of output. Missing
+optional counters remain null and conflicting reasoning counts carry warnings.
+Keep raw failure records. A successful protocol result is neither independent
+acceptance nor evidence that all defects were found.
 
 ### Next improvement boundary
 
