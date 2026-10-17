@@ -99,7 +99,7 @@ async function readEnvelope(target, ref) {
 // later attempt inherits that same identity, and each attempt's policy and
 // selection must equal the validated approved dispatch ticket.
 async function validateAttempt(target, value, n, item, previous) {
-  strict(value, ATTEMPT_KEYS);
+  strict(value, ATTEMPT_KEYS, ["execution_scope"]);
   check(value.schema_version === "workkeel.review-attempt/v1" && value.sequence === n && value.task_id === item.id &&
     value.delivery_claim_id === item.delivery.claim_id && value.revision === item.delivery.revision &&
     value.contract_sha256 === item.contract_sha256 && value.policy_sha256 === item.policy_sha256 &&
@@ -149,6 +149,11 @@ async function validateAttempt(target, value, n, item, previous) {
     ticket.node.activity_kind === "review" && ticket.policy_ref === value.policy_ref &&
     executionDigest({ provider: ticket.selected.provider, model: ticket.selected.model, reasoning: ticket.selected.reasoning }) ===
     executionDigest(value.selected), "attempt selection differs from the approved review dispatch");
+  if (value.execution_scope !== undefined) {
+    strict(value.execution_scope, ["read_paths", "write_paths"]);
+    check(executionDigest(value.execution_scope) === executionDigest({ read_paths: ticket.node.read_paths, write_paths: [] }),
+      "attempt execution scope differs from the approved review dispatch");
+  }
 }
 function validateResult(value, attempt) {
   strict(value, RESULT_KEYS);
@@ -241,7 +246,7 @@ async function retainedRecoveryChains(target) {
       for (let n = 1; names.includes(attemptName(n)); n++) {
         check(n <= MAX_REVIEW_RECOVERY_ATTEMPTS, "chain exceeds the attempt bound");
         const attempt = await readEnvelope(target, `${ref}/${attemptName(n)}`), v = attempt.value;
-        strict(v, ATTEMPT_KEYS); id(v.attempt_id, "attempt ID"); source(v.source, "attempt source");
+        strict(v, ATTEMPT_KEYS, ["execution_scope"]); id(v.attempt_id, "attempt ID"); source(v.source, "attempt source");
         check(v.schema_version === "workkeel.review-attempt/v1" && v.task_id === taskId && v.delivery_claim_id === claimId &&
           v.sequence === n && v.previous_attempt_sha256 === (attempts.at(-1)?.sha256 ?? null), "invalid retained recovery chain");
         let result = null;
@@ -287,7 +292,11 @@ export async function liveReviewRecoveryReservations(target) {
     const item = { ...task, delivery };
     for (let n = 0; n < attempts.length; n++) await validateAttempt(target, attempts[n].value, n + 1, item, attempts[n - 1] ?? null);
     const ticket = await readDispatchTicket(target, head.value.dispatch_execution_id);
-    live.push({ id: head.value.attempt_id, sha256: head.sha256, node: { ...ticket.node, write_paths: [] } });
+    // Old attempts were launched with the full task read contract. Until their
+    // host confirms a stop, reserve that broader scope rather than pretending
+    // the new launch restriction retroactively applied to an existing process.
+    live.push({ id: head.value.attempt_id, sha256: head.sha256, node: { ...ticket.node,
+      read_paths: head.value.execution_scope?.read_paths ?? item.contract.environment.read_paths, write_paths: [] } });
   }
   return live;
 }
@@ -500,6 +509,7 @@ export async function recoverInterruptedReview(targetInput, input, { host } = {}
         approval_ref: item.contract.authorization.approval_ref, authorization_expires_at: item.contract.authorization.expires_at,
         predecessor, predecessor_runtime: "confirmed-stopped", previous_attempt_sha256: chain.head?.sha256 ?? null,
         dispatch_execution_id: predecessor.dispatch_execution_id, policy_ref: request.policy_ref, selected,
+        execution_scope: { read_paths: [...ticket.node.read_paths], write_paths: [] },
         source: structuredClone(request.source), preflight: { host_id: receipt.host_id, probed_host: receipt.probed_host,
           probe_sha256: receipt.probe_sha256, checked_at: receipt.checked_at, product_access: "read", tests: "role" },
         created_at: new Date().toISOString(), authority: "review-only", implementation_authority: false, acceptance: "not-performed" };

@@ -236,6 +236,26 @@ test('stop confirmation rechecks exact bytes after its await and snapshots calle
   const stopped=await confirmReviewRecoveryStopped(f.root,request,{host:observing.host});
   assert.deepEqual(stopped.actor,frozen.actor);assert.equal(stopped.attempt_sha256,frozen.attempt_sha256);
 });
+
+test('legacy unresolved recovery keeps its broad read scope; new scope pins cannot be broadened',async t=>{
+  const f=await fixture(t),other=await otherDispatch(f);
+  await recoverInterruptedReview(f.root,await f.request(),{host:reviewHost({result:{malformed:true}}).host});
+  assert.equal((await other.bind()).collection_closed,false,'new pinned src-only recovery permits a docs writer');
+  const g=await fixture(t),writer=await otherDispatch(g);
+  const result=await recoverInterruptedReview(g.root,await g.request(),{host:reviewHost({result:{malformed:true}}).host});
+  // Synthesize the retained pre-upgrade schema, preserving both integrity pins.
+  await rehashAttemptAndResult(g,1,v=>{delete v.execution_scope;},()=>{});
+  await readReviewRecovery(g.root,g.id);
+  await assert.rejects(writer.bind(),/host-dispatch-scope-conflict/);
+  const [attempt]=(await readReviewRecovery(g.root,g.id)).attempts;
+  await confirmReviewRecoveryStopped(g.root,{operation_id:'legacy-stopped',task_id:g.id,attempt_id:result.attempt_id,attempt_sha256:attempt.sha256,actor:g.actor},
+    {host:reviewHost().host});
+  assert.equal((await writer.bind()).collection_closed,false);
+  const h=await fixture(t);
+  await recoverInterruptedReview(h.root,await h.request(),{host:reviewHost().host});
+  await rehashAttemptAndResult(h,1,v=>{v.execution_scope.read_paths=['src','docs'];},()=>{});
+  await assert.rejects(readReviewRecovery(h.root,h.id),/execution scope differs/);
+});
 // Jointly rewrites an attempt and its result, recomputing both envelopes and the
 // result's attempt file digest, so only independent authority can expose it.
 const rehashAttemptAndResult=async(f,n,editAttempt,editResult)=>{

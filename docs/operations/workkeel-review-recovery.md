@@ -140,6 +140,12 @@ after its trusted host confirms that predecessor stopped. Completed historical
 records retain their source IDs but do not occupy capacity or require their old
 model policy to remain current.
 
+New attempts pin their narrowed `execution_scope` against the original ticket.
+An unresolved older attempt without that field keeps the full original task
+read scope reserved: the new sandbox restriction cannot retroactively change a
+process already launched by the old version. Its host must confirm it stopped
+before that broader reservation can be released or replaced.
+
 For an unresolved process that will not be retried, including a cancelled task,
 the original approving actor can explicitly record a stop observation:
 
