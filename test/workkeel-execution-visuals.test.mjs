@@ -94,7 +94,7 @@ test('paused autonomy guidance follows Resume capability in both languages witho
     const summary=html.match(/<div class="autonomy-now">[\s\S]*?<div class="journey-controls">/)[0];
     const next=html.match(/<div class="autonomy-next">[\s\S]*?<\/div>/)[0];
     assert.match(html,/data-autonomy-state="paused"/);
-    assert.ok(summary.includes(resumeLabel));assert.ok(next.includes(resumeLabel));
+    assert.ok(summary.includes(resumeLabel));assert.ok(next.includes(zh?'既有工作未取消。':'Existing work is not cancelled.'));
     assert.equal((html.match(/data-control="autonomy.resume"/g)||[]).length,1);
     assert.ok(html.includes('data-control="autonomy.resume">'+resumeLabel+'</button>'));
     assert.ok(!html.includes(unavailable));assert.ok(!html.includes(checkConnection));
@@ -155,7 +155,7 @@ test('product landscape preserves invalid dependencies, safe links and component
 });
 const row=(activity,extra={})=>({activity_kind:activity,state:'completed',actor:{agent_id:'builder',principal_id:'owner'},reported:{model:'actual-model'},start_at:'2026-01-01T00:00:00Z',end_at:'2026-01-01T00:00:10Z',tokens:0,tokens_complete:true,time_complete:true,...extra});
 test('compact scenes keep empty evidence distinct from unknown and recorded zero tokens',()=>{
-  for(const [language,message]of [['en','Waiting for execution evidence'],['zh-TW','等待執行證據']]){
+  for(const [language,message]of [['en','No execution reports'],['zh-TW','尚無執行回報']]){
     const empty=renderWorkspaceScene([],{language});
     assert.match(empty,/scene-empty/);assert.ok(empty.includes(message));
     assert.doesNotMatch(empty,/scene-composition|scene-current-metrics|data-flow-node|aria-current="step"/);
