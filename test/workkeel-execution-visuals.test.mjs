@@ -141,7 +141,8 @@ test('task dependency navigation preserves project-local identity and leaves mis
   const multi=render();
   assert.match(multi,/href="\?view=task&amp;project=alpha&amp;task=WK-same"/);
   assert.match(multi,/href="\?view=task&amp;project=beta&amp;task=WK-same"/);
-  assert.match(multi,/missing:WK-lost/);
+  assert.match(multi,/<strong title="WK-lost">WK-lost<\/strong>/);
+  assert.match(multi,/State not confirmed/);
   assert.equal((multi.match(/<a href=/g)||[]).length,2,'only the two resolved tasks are navigation targets');
 });
 test('product landscape preserves invalid dependencies, safe links and component-only acceptance',()=>{
