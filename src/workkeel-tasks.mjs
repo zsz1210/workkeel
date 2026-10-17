@@ -44,6 +44,23 @@ async function evidence(target, refs) {
 async function assertPins(target, pins) {
   for (const pin of pins) if ((await readTaskFile(target, pin.path)).digest !== pin.sha256) throw new Error("Referenced approval, policy or evidence changed; preserve this attempt and obtain fresh authorization");
 }
+function retainedReworkEvidence(item) {
+  return item.attempts.some(a => a.rework_mode === "evidence-only")
+    ? item.attempts.filter(a => a.kind === "rejected").flatMap(a => [...a.delivery.evidence, ...a.review.evidence]) : [];
+}
+async function evidenceRework(target, item, revision, pins) {
+  const rejected = item.attempts.filter(a => a.kind === "rejected"), latest = rejected.at(-1);
+  if (latest?.rework_mode === "evidence-only") {
+    if (revision !== latest.delivery.revision) throw new Error("Evidence-only rework must preserve the rejected source revision");
+    const previous = rejected.flatMap(a => [...a.delivery.evidence, ...a.review.evidence]);
+    await assertPins(target, previous);
+    const hashes = new Set(previous.map(p => p.sha256));
+    if (!pins.some(p => !hashes.has(p.sha256))) throw new Error("Evidence-only rework requires new evidence content, not renamed or reordered prior evidence");
+    return { rejected_review_sha256: digest(latest.review), previous_evidence_sha256: digest(previous) };
+  }
+  if (rejected.some(a => a.delivery.revision === revision)) throw new Error("Rework requires a fresh candidate, not the rejected revision");
+  return null;
+}
 async function assertLegacyPin(target, pin) {
   if (await readLegacyDigest(target, pin.path) !== pin.sha256) throw Error("Retained legacy history changed; inspect the original evidence");
 }
@@ -127,6 +144,7 @@ async function dependencies(target, item, seen = new Set()) {
     if (dependency.state !== "done" || !dependency.delivery || dependency.review?.judgment !== "pass" ||
         dependency.closeout?.revision !== dependency.delivery.revision) throw new Error("Dependencies must be accepted native tasks; legacy terminal labels are not new grants");
     await assertPins(target, [...dependency.authority_pins, ...dependency.delivery.evidence, ...dependency.review.evidence, ...dependency.closeout.evidence]);
+    await assertPins(target, retainedReworkEvidence(dependency));
     await dependencies(target, dependency, branch);
     if (item.base_revision) await git(target, ["merge-base", "--is-ancestor", dependency.delivery.revision, item.base_revision]);
     pins.push({ id, version: dependency.version, revision: dependency.delivery.revision, record_sha256: bodyHash(dependency) });
@@ -138,6 +156,7 @@ async function context(target, item, project) {
   if (item.policy_sha256 !== digest(project.policy)) throw new Error("Task policy changed after approval");
   assertContractPolicy(item.contract, project.policy);
   await assertPins(target, item.authority_pins);
+  await assertPins(target, retainedReworkEvidence(item));
   await loadTaskRequirements(target, item.contract, {requiredRefs: project.policy.requirements_refs ?? []});
   await safeDirectory(target, item.contract.environment.cwd);
 }
@@ -219,7 +238,7 @@ export async function createNativeTask(targetInput, contract, request, { expecte
 async function administrativeFile(target, item, file, action, request) {
   if (file === fileRef(item.id)) return true;
   if (!file.startsWith(`.ai-org/artifacts/${item.id}/`) || !/\.(?:md|txt|log|json)$/.test(file)) return false;
-  const refs = [...(item.delivery?.evidence ?? []), ...(item.review?.evidence ?? []), ...(item.closeout?.evidence ?? [])].map(p => p.path);
+  const refs = [...(item.delivery?.evidence ?? []), ...(item.review?.evidence ?? []), ...(item.closeout?.evidence ?? []), ...retainedReworkEvidence(item)].map(p => p.path);
   if (refs.includes(file) || request?.evidence?.includes(file)) return true;
   if (!file.endsWith(".json")) return false;
   let document;
@@ -332,7 +351,7 @@ const FIELDS = {
   claim: ["base_revision"], release: ["claim_id", "summary"],
   handoff: ["claim_id", "revision", "summary", "evidence", "unresolved"],
   review: ["revision", "judgment", "summary", "evidence", "review_attempt_id"],
-  rework: ["summary"], close: ["revision", "summary", "rollback", "evidence"], cancel: ["summary", "evidence"]
+  rework: ["summary", "mode"], close: ["revision", "summary", "rollback", "evidence"], cancel: ["summary", "evidence"]
 };
 export async function mutateNativeTask(targetInput, id, action, request) {
   if (!Object.hasOwn(FIELDS, action)) throw new Error("Unknown task operation");
@@ -368,11 +387,12 @@ export async function mutateNativeTask(targetInput, id, action, request) {
       } else {
         if (!Array.isArray(request.unresolved) || request.unresolved.length) throw new Error("Resolve outstanding issues before delivery");
         await assertRequirementOutcomes(target, item, request, 'delivery');
-        if (item.attempts.some(a => a.kind === "rejected" && a.delivery.revision === request.revision)) throw new Error("Rework requires a fresh candidate, not the rejected revision");
+        const pins = await evidence(target, request.evidence);
+        const evidenceOnly = await evidenceRework(target, item, request.revision, pins);
         await assertCandidate(target, item, request.revision, { handoff: true, action, request });
         await dependencies(target, item);
         item.delivery = { revision: request.revision, summary: request.summary, implementer: request.actor,
-          claim_id: item.claim.id, evidence: await evidence(target, request.evidence) };
+          claim_id: item.claim.id, evidence: pins, ...(evidenceOnly ? { evidence_rework: evidenceOnly } : {}) };
         item.claim = null; item.state = "test";
       }
     } else if (action === "review") {
@@ -399,8 +419,11 @@ export async function mutateNativeTask(targetInput, id, action, request) {
       if (request.judgment === "pass") item.state = "release_gate";
     } else if (action === "rework") {
       assertApprover(project.policy, request.actor); assertText(request.summary);
+      if (request.mode !== undefined && !["source", "evidence-only"].includes(request.mode)) throw new Error("Unknown rework mode");
       if (item.state !== "test" || item.review?.judgment !== "fail") throw new Error("Rework requires a failed review and preserves the same approved contract");
-      item.attempts.push({ kind: "rejected", base_revision: item.base_revision, delivery: item.delivery, review: item.review, summary: request.summary });
+      if (request.mode === "evidence-only") await assertPins(target, [...item.delivery.evidence, ...item.review.evidence]);
+      item.attempts.push({ kind: "rejected", base_revision: item.base_revision, delivery: item.delivery, review: item.review, summary: request.summary,
+        ...(request.mode ? { rework_mode: request.mode } : {}) });
       item.delivery = null; item.review = null; item.claim = null; item.state = "intake"; item.dependency_pins = null;
     } else if (action === "close") {
       assertApprover(project.policy, request.actor);
@@ -442,6 +465,7 @@ export async function diagnoseTaskProject(target) {
       const item = await readNativeTask(target, summary.id);
       try {
         await assertPins(target, item.authority_pins);
+        await assertPins(target, retainedReworkEvidence(item));
         // Expiry does not invalidate a completed historical acceptance.
         if (!TERMINAL.has(item.state)) await context(target, item, project);
         if (item.delivery) await assertPins(target, item.delivery.evidence);

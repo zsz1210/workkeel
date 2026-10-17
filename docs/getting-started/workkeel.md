@@ -190,9 +190,18 @@ changing parameters under that ID is rejected. No claim is silently stolen.
 | `release` | `claim_id`, `summary` | Owner returns work to intake, without acceptance |
 | `handoff` | `claim_id`, `revision`, `summary`, `evidence` (paths), `unresolved: []` | Exact current commit descends from base; changed paths fit write roots; no tracked or untracked product drift |
 | `review` | `revision`, `judgment: "pass"` or `"fail"`, `summary`, `evidence` | Distinct reviewer; exact delivered candidate and unchanged evidence |
-| `rework` | `summary` | Approver; retain failure, same contract, new candidate and review |
+| `rework` | `summary`, optional `mode` | Approver; retain failure, same contract, new candidate and review; explicit `evidence-only` keeps source unchanged |
 | `close` | `revision`, `summary`, `rollback`, `evidence` | Approver; independent pass; local acceptance only |
 | `cancel` | `summary`, `evidence` | Approver; preserve history, grant no further work |
+
+For a report-only correction after a failed review, an approver can use
+`"mode": "evidence-only"` in the rework request. Omission or `"source"` keeps
+the default fresh-source requirement. Evidence-only rework requires the same
+rejected commit and new evidence content, with all prior rejected delivery/review
+files preserved. A renamed copy of old evidence is insufficient. Claim again,
+append corrected evidence at new paths, hand off and obtain a fresh distinct
+review. A changed source revision is rejected in this mode; do not use it for
+unresolved code defects. See [ADR-0089](../adr/0089-evidence-rework-and-process-drain.md).
 
 For example, after creation returns version 1, prepare `claim.json`:
 

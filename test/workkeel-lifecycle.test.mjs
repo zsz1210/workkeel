@@ -146,6 +146,51 @@ test("failed review preserves its attempt, requires fresh candidate and invalida
   const item = await readNativeTask(root, "WK-one"); assert.equal(item.review, null); assert.equal(item.attempts[0].review.judgment, "fail");
 });
 
+test('explicit evidence-only rework preserves source and rejected pins, and requires new content plus fresh distinct review',async t=>{
+  const root=await fixture(t),{revision,ref}=await deliver(root);
+  const failed=request(3,reviewer,{revision,judgment:'fail',summary:'Evidence omits a known counter',evidence:[ref]});
+  await mutateNativeTask(root,'WK-one','review',failed);
+  await assert.rejects(mutateNativeTask(root,'WK-one','rework',request(4,reviewer,{mode:'evidence-only',summary:'No authority'})),/approving Principal/);
+  await mutateNativeTask(root,'WK-one','rework',request(4,developer,{mode:'evidence-only',summary:'Correct the evidence only'}));
+  const claim=await mutateNativeTask(root,'WK-one','claim',request(5,developer,{base_revision:revision}));
+  const handoff=evidence=>request(6,developer,{claim_id:claim.claim.id,revision,summary:'Corrected evidence',evidence,unresolved:[]});
+  const before=await fs.readFile(root+'/.ai-org/work-items/WK-one.json');
+  await assert.rejects(mutateNativeTask(root,'WK-one','handoff',handoff([ref])),/new evidence content/);
+  const renamed='.ai-org/artifacts/WK-one/renamed.md';await write(root,renamed,await fs.readFile(root+'/'+ref,'utf8'));
+  await assert.rejects(mutateNativeTask(root,'WK-one','handoff',handoff([renamed,ref])),/new evidence content/);
+  await fs.unlink(root+'/'+renamed);
+  assert.deepEqual(await fs.readFile(root+'/.ai-org/work-items/WK-one.json'),before);
+  const corrected='.ai-org/artifacts/WK-one/corrected.md';await write(root,corrected,'Corrected counter, original failure retained.');
+  const original=await fs.readFile(root+'/'+ref);await write(root,ref,'Rewritten rejected evidence');
+  await assert.rejects(mutateNativeTask(root,'WK-one','handoff',handoff([corrected])),/changed/);await fs.writeFile(root+'/'+ref,original);
+  await mutateNativeTask(root,'WK-one','handoff',handoff([corrected]));
+  assert.equal((await mutateNativeTask(root,'WK-one','review',failed)).replayed,true);
+  assert.equal((await readNativeTask(root,'WK-one')).review,null);
+  await assert.rejects(mutateNativeTask(root,'WK-one','review',request(3,reviewer,{operation_id:'stale-new-review',revision,judgment:'pass',summary:'Stale',evidence:[corrected]})),/Stale/);
+  await assert.rejects(mutateNativeTask(root,'WK-one','review',request(7,developer,{revision,judgment:'pass',summary:'Self',evidence:[corrected]})),/separation/);
+  await write(root,ref,'Tampered after new handoff');
+  assert.equal((await diagnoseTaskProject(root)).valid,false);
+  await assert.rejects(mutateNativeTask(root,'WK-one','review',request(7,reviewer,{revision,judgment:'pass',summary:'Not valid',evidence:[corrected]})),/changed/);
+  await fs.writeFile(root+'/'+ref,original);
+  await mutateNativeTask(root,'WK-one','review',request(7,reviewer,{revision,judgment:'pass',summary:'Correction independently checked',evidence:[corrected]}));
+  await mutateNativeTask(root,'WK-one','close',request(8,developer,{revision,summary:'Evidence accepted',rollback:'Preserve all versions',evidence:[corrected]}));
+  const item=await readNativeTask(root,'WK-one');assert.equal(item.state,'done');assert.equal(item.attempts[0].review.judgment,'fail');
+  assert.equal(item.attempts[0].rework_mode,'evidence-only');assert.match(item.delivery.evidence_rework.rejected_review_sha256,/^[a-f0-9]{64}$/);
+  assert.equal(git(root,'rev-parse','HEAD'),revision);assert.equal((await diagnoseTaskProject(root)).valid,true);
+  await write(root,ref,'Tampered after acceptance');assert.equal((await diagnoseTaskProject(root)).valid,false);
+});
+
+test('evidence-only rework cannot deliver a changed source revision',async t=>{
+  const root=await fixture(t),{revision,ref}=await deliver(root);
+  await mutateNativeTask(root,'WK-one','review',request(3,reviewer,{revision,judgment:'fail',summary:'Evidence defect',evidence:[ref]}));
+  await assert.rejects(mutateNativeTask(root,'WK-one','rework',request(4,developer,{mode:'anything',summary:'Unknown mode'})),/rework mode/);
+  await mutateNativeTask(root,'WK-one','rework',request(4,developer,{mode:'evidence-only',summary:'Only evidence'}));
+  const claim=await mutateNativeTask(root,'WK-one','claim',request(5,developer,{base_revision:revision}));
+  await write(root,'src/cart.mjs','export const total = 3;\n');git(root,'add','src');git(root,'commit','-qm','changed source');
+  const corrected='.ai-org/artifacts/WK-one/corrected.md';await write(root,corrected,'New evidence');
+  await assert.rejects(mutateNativeTask(root,'WK-one','handoff',request(6,developer,{claim_id:claim.claim.id,revision:git(root,'rev-parse','HEAD'),summary:'Changed',evidence:[corrected],unresolved:[]})),/preserve the rejected source/);
+});
+
 test("initialization and mode routing preserve existing files and reject legacy writers", async t => {
   const root = await fixture(t);
   const before = await fs.readFile(path.join(root, "workkeel.lock"));

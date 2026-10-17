@@ -8,6 +8,11 @@ import { ensure, safeFile, recordPath } from "./delivery-ledger.mjs";
 import { confinedCheckCommand } from "./confined-check.mjs";
 const exec = promisify(execFile);
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
+// A direct child's exit precedes the exit of helpers it has already shut down.
+// Allow a small, bounded natural drain; never extend the command deadline.
+async function drainProcessGroup(alive, deadline) {
+  while (alive() && Date.now() < deadline) await sleep(Math.min(10, deadline - Date.now()));
+}
 function boundedText(chunks) {
   const buffer = Buffer.concat(chunks), decoded = buffer.toString("utf8");
   // Invalid/truncated UTF-8 can expand on decoding. Keep persisted output within
@@ -22,7 +27,8 @@ function boundedText(chunks) {
 export async function runSupervisedCommand(command, { timeout_ms, output_limit_bytes, hooks = {} }) {
   const result = { execution_started: false, process_exit_confirmed: true, exit_code: null, stdout: "", stderr: "", timed_out: false, surviving_descendants: false, instrument_error: null };
   if (process.platform === "win32") return { ...result, instrument_error: "unsupported-platform-descendant-cleanup" };
-  let child, pid, bytes = 0, overflow = false, startError = null, commandResult = null, protocolError = null;
+  let child, pid, bytes = 0, overflow = false, startError = null, commandResult = null, protocolError = null, exitCleanup;
+  const commandDeadline = Date.now() + timeout_ms;
   const chunks = [], errors = [], signalErrors = [];
   const alive = () => { if (!pid) return false; try { process.kill(-pid, 0); return true; } catch (e) { return e.code !== "ESRCH"; } };
   const kill = () => { if (pid) try { process.kill(-pid, "SIGKILL"); } catch (e) { if (e.code !== "ESRCH") signalErrors.push(e.code); } };
@@ -52,7 +58,14 @@ export async function runSupervisedCommand(command, { timeout_ms, output_limit_b
         } else commandResult = { code, signal };
       }
     });
-    child.once("exit", code => { result.surviving_descendants = code === 0 && !result.timed_out && alive(); kill(); });
+    child.once("exit", code => {
+      exitCleanup = (async () => {
+        if (code === 0 && !result.timed_out && !overflow && commandResult?.code === 0 && !protocolError)
+          await drainProcessGroup(alive, Math.min(commandDeadline, Date.now() + 500));
+        result.surviving_descendants = code === 0 && !result.timed_out && alive();
+        if (alive()) kill();
+      })();
+    });
     child.once("close", code => finish({ code }));
     Promise.resolve().then(() => hooks.started?.({ process_group_id: pid })).then(() => {
       if (!settled && child.connected) {
@@ -60,7 +73,8 @@ export async function runSupervisedCommand(command, { timeout_ms, output_limit_b
       }
     }).catch(error => { kill(); finish({ code: null, error: error.message }); });
   });
-  kill();
+  await exitCleanup;
+  if (alive()) kill();
   const deadline = Date.now() + 2000; while (alive() && Date.now() < deadline) await sleep(10);
   Object.assign(result, { process_group_id: pid ?? null, process_exit_confirmed: !alive(), exit_code: commandResult ? commandResult.code : result.execution_started ? null : exit.code,
     stdout: boundedText(chunks), stderr: boundedText(errors),
@@ -69,6 +83,7 @@ export async function runSupervisedCommand(command, { timeout_ms, output_limit_b
   else if (!commandResult) result.instrument_error ??= "command-exit-unconfirmed";
   else if (commandResult.signal) result.instrument_error ??= `command-terminated-${commandResult.signal}`;
   else if (exit.code !== commandResult.code) result.instrument_error ??= "supervisor-exit-mismatch";
+  if (signalErrors.length) result.instrument_error ??= "process-group-signal-failed";
   if (!result.process_exit_confirmed) result.instrument_error = "unconfirmed-process-close";
   return result;
 }
@@ -123,7 +138,7 @@ export async function runLocalChecks(root, id, plan, hooks = {}) {
     return { accepted: false, status: "instrument-failure", instrument_error: error.message, execution_started: false, process_exit_confirmed: true, temporary: null, temporary_removed: true, elapsed_ms: Date.now() - started };
   }
   const name = path.basename(temporary), result = { accepted: false, status: "running", temporary: name, temporary_removed: false, process_exit_confirmed: false };
-  let child, pid, timedOut = false, overflow = false;
+  let child, pid, timedOut = false, overflow = false, exitCleanup;
   const signalErrors = [], chunks = [], errors = []; let bytes = 0;
   const alive = () => { if (!pid) return false; try { process.kill(-pid, 0); return true; } catch (e) { return e.code !== "ESRCH"; } };
   const kill = () => { if (pid) try { process.kill(-pid, "SIGKILL"); } catch (e) { if (e.code !== "ESRCH") signalErrors.push(e.code); } };
@@ -133,6 +148,7 @@ export async function runLocalChecks(root, id, plan, hooks = {}) {
     const env = { ...process.env, TMPDIR: temporary, TMP: temporary, TEMP: temporary }; delete env.NODE_TEST_CONTEXT;
     const confined = plan.check_policy === "confined-node" ? await confinedCheckCommand(root, temporary, plan.tests, plan.test_timeout_ms) : null;
     result.execution_boundary = confined?.boundary ?? { adapter: "trusted-local", parent_agent_confined: false };
+    const commandDeadline = Date.now() + plan.test_timeout_ms;
     const exit = await new Promise(resolve => {
       child = spawn(process.execPath, [fileURLToPath(new URL("./delivery-check-worker.mjs", import.meta.url)), "--supervise", String(plan.test_timeout_ms), ...plan.tests], { cwd: root, env, detached: true, stdio: ["ignore", "pipe", "pipe", "ipc"] }); pid = child.pid;
       let settled = false;
@@ -141,12 +157,21 @@ export async function runLocalChecks(root, id, plan, hooks = {}) {
       const watchdog = setTimeout(() => { kill(); child.stdout.destroy(); child.stderr.destroy(); child.unref(); finish({ code: null, error: "unconfirmed-process-close" }); }, plan.test_timeout_ms + 3000);
       for (const [stream, output] of [[child.stdout, chunks], [child.stderr, errors]]) stream.on("data", chunk => { bytes += chunk.length; if (bytes <= 128 * 1024) output.push(chunk); else { overflow = true; kill(); } });
       child.once("error", e => finish({ code: null, error: e.code ?? "spawn-failed" }));
-      child.once("exit", code => { result.surviving_descendants = code === 0 && !timedOut && alive(); kill(); });
+      child.once("exit", code => {
+        exitCleanup = (async () => {
+          if (code === 0 && !timedOut && !overflow)
+            await drainProcessGroup(alive, Math.min(commandDeadline, Date.now() + 500));
+          result.surviving_descendants = code === 0 && !timedOut && alive();
+          if (alive()) kill();
+        })();
+      });
       child.once("close", code => finish({ code }));
       Promise.resolve().then(() => hooks.started?.({ process_group_id: pid, temporary: name })).then(() => {
         if (!settled && child.connected) child.send({ action: "start", ...(confined ? { confined } : {}) }, error => { if (error) { kill(); finish({ code: null, error: error.message }); } });
       }).catch(error => { kill(); finish({ code: null, error: error.message }); });
     });
+    await exitCleanup;
+    if (alive()) kill();
     const deadline = Date.now() + 2000; while (alive() && Date.now() < deadline) await sleep(10);
     result.process_exit_confirmed = !alive(); result.process_group_id = pid ?? null;
     ensure(result.process_exit_confirmed, "Test process exit unconfirmed; preserve temporary area");
@@ -155,7 +180,7 @@ export async function runLocalChecks(root, id, plan, hooks = {}) {
     Object.assign(result, { exit_code: exit.code, stdout, stderr, timed_out: timedOut || /testTimeoutFailure|test timed out/.test(stdout),
       tests: Number(stdout.match(/^# tests (\d+)/m)?.[1] ?? 0), cancelled: Number(stdout.match(/^# cancelled (\d+)/m)?.[1] ?? 0),
       residue: await residue(temporary), workspace_changes: [...new Set([...Object.keys(before.records), ...Object.keys(after.records)])].filter(p => JSON.stringify(before.records[p]) !== JSON.stringify(after.records[p])),
-      snapshot_digest: after.digest, instrument_error: exit.error ?? (overflow ? "output-limit" : null), termination_signal_errors: signalErrors });
+      snapshot_digest: after.digest, instrument_error: exit.error ?? (overflow ? "output-limit" : signalErrors.length ? "process-group-signal-failed" : null), termination_signal_errors: signalErrors });
     if (confined && result.tests === 0) result.instrument_error ??= "confined-runtime-did-not-report-tests";
     result.status = result.instrument_error ? "instrument-failure" : "completed";
     result.accepted = result.status === "completed" && result.exit_code === 0 && result.tests > 0 && !result.cancelled && !result.timed_out && !result.surviving_descendants && !result.residue.length && !result.workspace_changes.length;

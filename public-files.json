@@ -120,6 +120,7 @@
     "docs/adr/0086-compact-execution-and-completion-evidence.md",
     "docs/adr/0087-coordinator-owned-browser-verification.md",
     "docs/adr/0088-structured-source-review-protocol.md",
+    "docs/adr/0089-evidence-rework-and-process-drain.md",
     "docs/adr/README.md",
     "docs/assets/README.md",
     "docs/assets/temple-delivery-path.en-mobile.mmd",
