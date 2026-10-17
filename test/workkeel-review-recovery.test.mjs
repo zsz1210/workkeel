@@ -15,7 +15,7 @@ import {readNativeTask,mutateNativeTask} from '../src/workkeel-tasks.mjs';
 import {prepareDispatchTicket,bindDispatchTicket} from '../src/workkeel-dispatch.mjs';
 import {bindHostUsage,reportHostUsage,closeHostUsage,inspectHostBinding} from '../src/workkeel-host-usage.mjs';
 import {createTrustedRoleHost} from '../src/workkeel-role-preflight.mjs';
-import {recoverInterruptedReview,readReviewRecovery} from '../src/workkeel-review-recovery.mjs';
+import {recoverInterruptedReview,readReviewRecovery,confirmReviewRecoveryStopped} from '../src/workkeel-review-recovery.mjs';
 
 const policy=()=>({schema_version:'workkeel.dispatch-policy/v1',models:[
   {alias:'small',provider:'local-provider',model:'small-model',reasoning:null,data_classes:['public','internal']},
@@ -36,7 +36,7 @@ function reviewHost({state='stopped',result=completed,probeResult=probe()}={}) {
 const lockPath=root=>path.join(os.tmpdir(),`temple-mutation-${sha256(path.resolve(root)).slice(0,20)}.lock`);
 const until=async check=>{for(let i=0;i<400&&!check();i++)await new Promise(r=>setTimeout(r,5));assert.ok(check());};
 
-async function fixture(t,{expiresAt=null,closeBinding=true,beforeHandoff=null}={}) {
+async function fixture(t,{expiresAt=null,closeBinding=true,beforeHandoff=null,parallelism=2}={}) {
   const root=await fs.realpath(await fs.mkdtemp(path.join(os.tmpdir(),'workkeel-review-recovery-')));t.after(()=>fs.rm(root,{recursive:true,force:true}));
   const git=(...args)=>execFileSync('git',['-C',root,...args],{encoding:'utf8',stdio:['ignore','pipe','pipe']}).trim();
   git('init','-q');git('config','user.name','Fixture');git('config','user.email','fixture@example.invalid');
@@ -45,7 +45,7 @@ async function fixture(t,{expiresAt=null,closeBinding=true,beforeHandoff=null}={
   await fs.mkdir(root+'/docs');await fs.mkdir(root+'/src');
   await fs.writeFile(root+'/docs/approval.md','Approved synthetic review recovery fixture, no live model execution.');
   await fs.writeFile(root+'/docs/check.md','Synthetic focused check output.');
-  await fs.writeFile(root+'/docs/dispatch.json',JSON.stringify(policy()));await fs.writeFile(root+'/src/a.mjs','export const a = 1;\n');
+  await fs.writeFile(root+'/docs/dispatch.json',JSON.stringify({...policy(),parallelism}));await fs.writeFile(root+'/src/a.mjs','export const a = 1;\n');
   git('add','.');git('commit','-qm','Fixture');
   const brief={schema_version:'workkeel.task-brief/v1',id:'WK-recovery',goal:'Synthetic review recovery',actor,acceptance:['Reviewed candidate'],
     environment:{cwd:'.',read_paths:['src','docs'],write_paths:['src'],tools:['node','shell'],resources:[],network:{mode:'none',hosts:[]},external_actions:[],
@@ -79,11 +79,11 @@ async function fixture(t,{expiresAt=null,closeBinding=true,beforeHandoff=null}={
 const review=(f,overrides={})=>({operation_id:'review',expected_version:3,actor:f.reviewer,revision:f.revision,judgment:'pass',summary:'Independent synthetic review',evidence:['docs/check.md'],...overrides});
 const close=f=>({operation_id:'close',expected_version:4,actor:f.actor,revision:f.revision,summary:'Accepted',rollback:'Revert the synthetic commit',evidence:['docs/check.md']});
 // A second claimed task in the same project, sharing its lock and source inventory.
-async function secondTask(f) {
+async function secondTask(f,{roots=['docs']}={}) {
   // Keep the delivered candidate's product tree clean while the second task exists.
-  await fs.mkdir(f.root+'/.git/info',{recursive:true});await fs.appendFile(f.root+'/.git/info/exclude','\n/.ai-org/work-items/WK-other.json\n');
+  await fs.mkdir(f.root+'/.git/info',{recursive:true});await fs.appendFile(f.root+'/.git/info/exclude','\n/.ai-org/work-items/WK-other.json\n/.ai-org/artifacts/WK-other/\n');
   const brief={schema_version:'workkeel.task-brief/v1',id:'WK-other',goal:'Second synthetic task',actor:f.actor,acceptance:['Done'],
-    environment:{cwd:'.',read_paths:['docs'],write_paths:['docs'],tools:['node','shell'],resources:[],network:{mode:'none',hosts:[]},external_actions:[],
+    environment:{cwd:'.',read_paths:roots,write_paths:roots,tools:['node','shell'],resources:[],network:{mode:'none',hosts:[]},external_actions:[],
       data:{classification:'internal',model_access:'approved-connection',policy_refs:['docs/approval.md','docs/dispatch.json']}},
     authorization:{approved_by:'owner',approval_ref:'docs/approval.md',operations:['read','write','execute'],expires_at:null}};
   const preview=await previewTaskIntake(f.root,brief);await applyTaskIntake(f.root,brief,preview.fingerprint);
@@ -95,6 +95,147 @@ const rehashResult=async(f,change)=>{
   const file=`${f.root}/.ai-org/review-recovery/${f.id}/${f.claimId}/attempt-001-result.json`,envelope=JSON.parse(await fs.readFile(file,'utf8'));
   Object.assign(envelope.value,change);envelope.sha256=executionDigest(envelope.value);await fs.writeFile(file,JSON.stringify(envelope));
 };
+
+async function otherDispatch(f,{roots=['docs']}={}) {
+  await secondTask(f,{roots});
+  const task=await readNativeTask(f.root,'WK-other');
+  const ticket=await prepareDispatchTicket(f.root,{operation_id:'other-dispatch',task_id:task.id,actor:f.actor,claim_id:task.claim.id,
+    contract_sha256:task.contract_sha256,policy_ref:'docs/dispatch.json',route:{alias:'careful'},
+    node:{id:'writer',activity_kind:'implementation',depends_on:[],read_paths:roots,write_paths:roots},
+    capabilities:{host:'fixture-host',models:[{provider:model.provider,model:model.model,reasoning:[model.reasoning]}]}});
+  return {ticket,bind:()=>bindDispatchTicket(f.root,{execution_id:ticket.execution_id,
+    source:{kind:'host-report',thread_id:'other-dispatch-thread',turn_id:'other-dispatch-turn'},sample_kind:'fixture'})};
+}
+
+test('recovery launch enforces the original dispatch read roots without changing task authority',async t=>{
+  const f=await fixture(t),before=await fs.readFile(f.root+'/.ai-org/work-items/'+f.id+'.json');
+  const {host,calls}=reviewHost({result:spec=>{
+    const flags=['--permission',...spec.contract.environment.read_paths.map(ref=>'--allow-fs-read='+path.join(f.root,ref))];
+    const read=ref=>execFileSync(process.execPath,[...flags,'-e',`process.stdout.write(require('node:fs').readFileSync(${JSON.stringify(path.join(f.root,ref))},'utf8'))`],{encoding:'utf8',stdio:['ignore','pipe','pipe']});
+    assert.match(read('src/a.mjs'),/export const a/);
+    assert.throws(()=>read('docs/check.md'),error=>error.status===1&&/ERR_ACCESS_DENIED/.test(error.stderr));
+    assert.deepEqual(spec.contract.environment.write_paths,[]);
+    assert.deepEqual(spec.dispatch.node.read_paths,['src']);
+    return completed;
+  }});
+  const result=await recoverInterruptedReview(f.root,await f.request(),{host});
+  assert.equal(result.status,'completed');
+  assert.deepEqual(calls.specs[0].contract.environment.read_paths,['src']);
+  assert.deepEqual(await fs.readFile(f.root+'/.ai-org/work-items/'+f.id+'.json'),before);
+});
+
+test('recovery and dispatch share capacity and scope checks in both start orders',async t=>{
+  for(const {parallelism,roots,error} of [{parallelism:1,roots:['docs'],error:/host-dispatch-parallelism/},
+    {parallelism:2,roots:['src'],error:/host-dispatch-scope-conflict/}]) {
+    const f=await fixture(t,{parallelism}),other=await otherDispatch(f,{roots}),blocked=reviewHost();
+    await other.bind();
+    await assert.rejects(recoverInterruptedReview(f.root,await f.request(),{host:blocked.host}),error);
+    assert.equal(blocked.calls.launch,0);
+    const g=await fixture(t,{parallelism}),next=await otherDispatch(g,{roots});let release;
+    const pending=new Promise(resolve=>{release=resolve;}),slow=reviewHost({result:()=>pending});
+    const running=recoverInterruptedReview(g.root,await g.request(),{host:slow.host});
+    await until(()=>slow.calls.launch===1);
+    try { await assert.rejects(next.bind(),error); } finally { release(completed);await running; }
+    assert.equal((await next.bind()).collection_closed,false,'valid terminal recovery releases its slot');
+  }
+});
+
+test('disjoint recovery and writer can use separate slots and a racing last-slot reservation has one winner',async t=>{
+  const f=await fixture(t),other=await otherDispatch(f);await other.bind();
+  assert.equal((await recoverInterruptedReview(f.root,await f.request(),{host:reviewHost().host})).status,'completed');
+  const g=await fixture(t,{parallelism:1}),next=await otherDispatch(g);
+  let releaseProbe,releaseRun,probeEntered=false,rejected=false;
+  const probeGate=new Promise(resolve=>{releaseProbe=resolve;}),runGate=new Promise(resolve=>{releaseRun=resolve;});
+  const slow=reviewHost({state:async()=>{probeEntered=true;await probeGate;return 'stopped';},result:()=>runGate});
+  const running=recoverInterruptedReview(g.root,await g.request(),{host:slow.host}).catch(e=>{rejected=true;throw e;});
+  const settled=Promise.allSettled([running]); // Observe rejection immediately.
+  await until(()=>probeEntered);
+  const binding=next.bind();releaseProbe();
+  const bound=await Promise.allSettled([binding]);await until(()=>rejected||slow.calls.launch===1);
+  releaseRun(completed);const recovered=await settled;
+  assert.equal([...bound,...recovered].filter(x=>x.status==='fulfilled').length,1);
+  assert.match([...bound,...recovered].find(x=>x.status==='rejected').reason.message,/host-dispatch-parallelism/);
+});
+
+test('unknown and cancelled recovery reservations need an exact trusted stopped observation',async t=>{
+  for(const cancel of [false,true]) {
+    const f=await fixture(t,{parallelism:1}),other=await otherDispatch(f);let release;
+    const pending=new Promise(resolve=>{release=resolve;}),slow=reviewHost({result:()=>pending});
+    const running=recoverInterruptedReview(f.root,await f.request(),{host:slow.host});
+    const settled=Promise.allSettled([running]);await until(()=>slow.calls.launch===1);
+    const [attempt]=(await readReviewRecovery(f.root,f.id)).attempts;
+    if(cancel)await mutateNativeTask(f.root,f.id,'cancel',{operation_id:'cancel',expected_version:3,actor:f.actor,summary:'Stop',evidence:['docs/check.md']});
+    release({malformed:true});await settled;
+    const before=await fs.readFile(f.root+'/.ai-org/work-items/'+f.id+'.json');
+    await assert.rejects(other.bind(),/host-dispatch-parallelism/);
+    const request={operation_id:'confirm-stopped',task_id:f.id,attempt_id:attempt.attempt_id,attempt_sha256:attempt.sha256,actor:f.actor};
+    for(const state of ['active','unknown',new Error('unknown')])
+      await assert.rejects(confirmReviewRecoveryStopped(f.root,request,{host:reviewHost({state}).host}),/active|unknown/);
+    await assert.rejects(other.bind(),/host-dispatch-parallelism/);
+    await assert.rejects(confirmReviewRecoveryStopped(f.root,{...request,attempt_sha256:'0'.repeat(64)},{host:reviewHost().host}),/stale/);
+    await assert.rejects(confirmReviewRecoveryStopped(f.root,{...request,actor:f.reviewer},{host:reviewHost().host}),/original approving actor/);
+    const wrongHost=createTrustedRoleHost({id:'wrong-host',probe:async()=>probe(),runtimeState:async()=>({state:'stopped'})});
+    await assert.rejects(confirmReviewRecoveryStopped(f.root,request,{host:wrongHost}),/original runtime host/);
+    const observer=reviewHost(),stopped=await confirmReviewRecoveryStopped(f.root,request,{host:observer.host});
+    assert.equal(stopped.authority,'observation-only');assert.equal(observer.calls.launch,0);
+    assert.equal((await confirmReviewRecoveryStopped(f.root,request,{host:observer.host})).replayed,true);
+    assert.equal(observer.calls.runtimeState,1);
+    await assert.rejects(confirmReviewRecoveryStopped(f.root,{...request,operation_id:'other-stop'},{host:observer.host}),/different input/);
+    assert.deepEqual(await fs.readFile(f.root+'/.ai-org/work-items/'+f.id+'.json'),before);
+    const marker=f.root+'/.ai-org/review-recovery-stops/'+attempt.attempt_id+'.json',bytes=await fs.readFile(marker);
+    const forged=JSON.parse(bytes);forged.value.attempt_sha256='0'.repeat(64);forged.sha256=executionDigest(forged.value);
+    await fs.writeFile(marker,JSON.stringify(forged));await assert.rejects(other.bind(),/stopped observation/);
+    await fs.writeFile(marker,bytes);
+    assert.equal((await other.bind()).collection_closed,false);
+  }
+});
+
+test('unknown recovery can be replaced in one slot only after predecessor stop confirmation',async t=>{
+  const f=await fixture(t,{parallelism:1});
+  const one=await recoverInterruptedReview(f.root,await f.request(),{host:reviewHost({result:{malformed:true}}).host});
+  const request=await f.request({operation_id:'recover-2',predecessor:{kind:'review-attempt',id:one.attempt_id,sha256:one.attempt_sha256},
+    source:{thread_id:'retry-thread-2',turn_id:'retry-turn-2'}});
+  const active=reviewHost({state:'active'});
+  await assert.rejects(recoverInterruptedReview(f.root,request,{host:active.host}),/active/);assert.equal(active.calls.launch,0);
+  assert.equal((await recoverInterruptedReview(f.root,request,{host:reviewHost().host})).status,'completed');
+});
+
+test('two different recovery tasks compete for the same execution slot',async t=>{
+  const f=await fixture(t,{parallelism:1});await secondTask(f);
+  await fs.appendFile(f.root+'/.git/info/exclude','\n/.ai-org/artifacts/WK-recovery/\n/.ai-org/work-items/WK-recovery.json\n');
+  const other=await readNativeTask(f.root,'WK-other');
+  const ticket=await prepareDispatchTicket(f.root,{operation_id:'other-review',task_id:other.id,actor:f.actor,claim_id:other.claim.id,
+    contract_sha256:other.contract_sha256,policy_ref:'docs/dispatch.json',route:{alias:'careful'},
+    node:{id:'other-review',activity_kind:'review',depends_on:[],read_paths:['docs'],write_paths:[]},
+    capabilities:{host:'fixture-host',models:[{provider:model.provider,model:model.model,reasoning:[model.reasoning]}]}});
+  await bindDispatchTicket(f.root,{execution_id:ticket.execution_id,source:{kind:'host-report',thread_id:'other-first-thread',turn_id:'other-first-turn'},sample_kind:'fixture'});
+  await mutateNativeTask(f.root,other.id,'handoff',{operation_id:'other-handoff',expected_version:2,actor:f.actor,claim_id:other.claim.id,
+    revision:f.revision,summary:'Synthetic review',evidence:['docs/check.md'],unresolved:[]});
+  await closeHostUsage(f.root,{binding_id:ticket.execution_id,actor:f.actor,status:'stopped'});
+  const request=await f.request({operation_id:'other-recover',task_id:other.id,expected_version:3,source:{thread_id:'other-retry-thread',turn_id:'other-retry-turn'},
+    predecessor:{kind:'host-binding',id:ticket.execution_id,sha256:(await inspectHostBinding(f.root,ticket.execution_id)).file_sha256}});
+  let release;const pending=new Promise(resolve=>{release=resolve;}),slow=reviewHost({result:()=>pending});
+  const running=recoverInterruptedReview(f.root,await f.request(),{host:slow.host});await until(()=>slow.calls.launch===1);
+  const blocked=reviewHost();
+  try { await assert.rejects(recoverInterruptedReview(f.root,request,{host:blocked.host}),/host-dispatch-parallelism/); }
+  finally { release(completed);await running; }
+  assert.equal(blocked.calls.launch,0);
+  assert.equal((await recoverInterruptedReview(f.root,request,{host:blocked.host})).status,'completed');
+});
+
+test('stop confirmation rechecks exact bytes after its await and snapshots caller input',async t=>{
+  const f=await fixture(t,{parallelism:1}),one=await recoverInterruptedReview(f.root,await f.request(),
+    {host:reviewHost({result:()=>{throw Error('unconfirmed launch');}}).host});
+  const request={operation_id:'stop-after-await',task_id:f.id,attempt_id:one.attempt_id,attempt_sha256:one.attempt_sha256,actor:f.actor};
+  const file=f.root+'/.ai-org/review-recovery/'+f.id+'/'+f.claimId+'/attempt-001.json',bytes=await fs.readFile(file);
+  const changed=reviewHost({state:async()=>{await fs.appendFile(file,' ');return 'stopped';}});
+  await assert.rejects(confirmReviewRecoveryStopped(f.root,request,{host:changed.host}),/stale|result does not match its attempt/);
+  assert.equal(existsSync(f.root+'/.ai-org/review-recovery-stops'),false);
+  await fs.writeFile(file,bytes);
+  const frozen=structuredClone(request),observing=reviewHost({state:async()=>{request.actor.agent_id='changed';request.attempt_sha256='0'.repeat(64);return 'stopped';}});
+  const stopped=await confirmReviewRecoveryStopped(f.root,request,{host:observing.host});
+  assert.deepEqual(stopped.actor,frozen.actor);assert.equal(stopped.attempt_sha256,frozen.attempt_sha256);
+});
 // Jointly rewrites an attempt and its result, recomputing both envelopes and the
 // result's attempt file digest, so only independent authority can expose it.
 const rehashAttemptAndResult=async(f,n,editAttempt,editResult)=>{

@@ -5,10 +5,10 @@ import { performance } from "node:perf_hooks";
 import { durableAtomicCreate, formatJson } from "./files.mjs";
 import { withProjectMutationLock } from "./project.mjs";
 import { readTaskFile } from "./task-contract.mjs";
-import { safeDirectory, existsEntry } from "./workkeel-project.mjs";
+import { safeDirectory, existsEntry, readTaskProject, assertApprover } from "./workkeel-project.mjs";
 import { exactKeys, executionDigest } from "./workkeel-execution-policy.mjs";
 import { assertReviewRecoveryContext, readNativeTask } from "./workkeel-tasks.mjs";
-import { inspectHostBinding, openTaskHostBindings, retainedHostSources, withHostSourceReservation } from "./workkeel-host-usage.mjs";
+import { inspectHostBinding, openTaskHostBindings, retainedHostSources, withHostSourceReservation, assertHostDispatchAdmission } from "./workkeel-host-usage.mjs";
 import { readDispatchTicket } from "./workkeel-dispatch.mjs";
 import { assertTrustedRoleHost, runRolePreflight } from "./workkeel-role-preflight.mjs";
 
@@ -16,6 +16,7 @@ import { assertTrustedRoleHost, runRolePreflight } from "./workkeel-role-preflig
 // delivered candidate. Each attempt is an immutable, review-only record; none
 // revives the implementation claim, authors a verdict or accepts the task.
 const ROOT = ".ai-org/review-recovery";
+const STOPS = ".ai-org/review-recovery-stops";
 const ID = /^[A-Za-z0-9][A-Za-z0-9._-]{0,95}$/;
 const SHA = /^[a-f0-9]{64}$/;
 const REVISION = /^(?:[a-f0-9]{40}|[a-f0-9]{64})$/;
@@ -223,6 +224,116 @@ export async function retainedReviewRecoverySources(target) {
   return out;
 }
 
+// Read retained chains independently of the current delivery. A cancelled or
+// reworked task can still own a running process. Historical terminal records
+// are not reauthorized against today's model policy.
+async function retainedRecoveryChains(target) {
+  if (!await existsEntry(target, ROOT)) return [];
+  const chains = [], temporary = name => /^\.temple-durable-[A-Za-z0-9-]+$/.test(name);
+  for (const taskId of await fs.readdir(await safeDirectory(target, ROOT))) {
+    if (taskId === ".gitignore" || temporary(taskId)) continue;
+    id(taskId, "recovery task");
+    for (const claimId of await fs.readdir(await safeDirectory(target, `${ROOT}/${taskId}`))) {
+      if (temporary(claimId)) continue;
+      id(claimId, "recovery claim");
+      const ref = `${ROOT}/${taskId}/${claimId}`, names = (await fs.readdir(await safeDirectory(target, ref))).filter(name => !temporary(name));
+      const attempts = [];
+      for (let n = 1; names.includes(attemptName(n)); n++) {
+        check(n <= MAX_REVIEW_RECOVERY_ATTEMPTS, "chain exceeds the attempt bound");
+        const attempt = await readEnvelope(target, `${ref}/${attemptName(n)}`), v = attempt.value;
+        strict(v, ATTEMPT_KEYS); id(v.attempt_id, "attempt ID"); source(v.source, "attempt source");
+        check(v.schema_version === "workkeel.review-attempt/v1" && v.task_id === taskId && v.delivery_claim_id === claimId &&
+          v.sequence === n && v.previous_attempt_sha256 === (attempts.at(-1)?.sha256 ?? null), "invalid retained recovery chain");
+        let result = null;
+        if (names.includes(resultName(n))) {
+          result = await readEnvelope(target, `${ref}/${resultName(n)}`);
+          validateResult(result.value, attempt);
+        }
+        attempts.push({ ...attempt, result });
+      }
+      check(names.length === attempts.length + attempts.filter(a => a.result).length, "unexpected file in recovery chain");
+      if (attempts.length) chains.push({ taskId, claimId, attempts, head: attempts.at(-1) });
+    }
+  }
+  return chains;
+}
+const stoppedRef = attempt => `${STOPS}/${attempt.value.attempt_id}.json`;
+async function stoppedObservation(target, attempt) {
+  if (!await existsEntry(target, stoppedRef(attempt))) return null;
+  const record = await readEnvelope(target, stoppedRef(attempt)), v = record.value;
+  strict(v, ["schema_version", "operation_id", "request_sha256", "task_id", "attempt_id", "attempt_sha256",
+    "source", "actor", "host_id", "observed_at", "state", "authority", "acceptance"]);
+  id(v.operation_id, "stop operation"); actor(v.actor, "stop actor");
+  check(v.schema_version === "workkeel.review-recovery-stopped/v1" && SHA.test(v.request_sha256 ?? "") &&
+    v.request_sha256 === executionDigest({ operation_id: v.operation_id, task_id: v.task_id, attempt_id: v.attempt_id,
+      attempt_sha256: v.attempt_sha256, actor: v.actor }) &&
+    v.task_id === attempt.value.task_id && v.attempt_id === attempt.value.attempt_id && v.attempt_sha256 === attempt.sha256 &&
+    executionDigest(v.source) === executionDigest(attempt.value.source) && sameActor(v.actor, attempt.value.approved_by) &&
+    v.host_id === attempt.value.preflight.host_id && time(v.observed_at) && v.state === "stopped" &&
+    v.authority === "observation-only" && v.acceptance === "not-performed", "stopped observation differs from its attempt");
+  return record;
+}
+const terminalRecovery = attempt => attempt.result && !["launch-unconfirmed", "invalid-host-result"].includes(attempt.result.value.error);
+
+/** Live read-only recovery scopes; called under the shared host writer lock. */
+export async function liveReviewRecoveryReservations(target) {
+  const live = [];
+  for (const chain of await retainedRecoveryChains(target)) {
+    const { head, attempts } = chain;
+    if (await stoppedObservation(target, head) || terminalRecovery(head)) continue;
+    const task = await readNativeTask(target, chain.taskId);
+    const delivery = [task.delivery, ...task.attempts.map(a => a.delivery)].find(d => d?.claim_id === chain.claimId);
+    check(delivery, "unresolved recovery has no retained delivery");
+    const item = { ...task, delivery };
+    for (let n = 0; n < attempts.length; n++) await validateAttempt(target, attempts[n].value, n + 1, item, attempts[n - 1] ?? null);
+    const ticket = await readDispatchTicket(target, head.value.dispatch_execution_id);
+    live.push({ id: head.value.attempt_id, sha256: head.sha256, node: { ...ticket.node, write_paths: [] } });
+  }
+  return live;
+}
+
+/**
+ * Explicit trusted-host observation, including after cancellation/expiry.
+ * Releases only capacity; never launches work, edits an attempt, or grants a
+ * verdict. The original approving actor and original runtime host must agree.
+ */
+export async function confirmReviewRecoveryStopped(targetInput, input, { host } = {}) {
+  const request = structuredClone(input);
+  strict(request, ["operation_id", "task_id", "attempt_id", "attempt_sha256", "actor"]);
+  for (const key of ["operation_id", "task_id", "attempt_id"]) id(request[key], key);
+  actor(request.actor, "stop actor"); check(SHA.test(request.attempt_sha256 ?? ""), "invalid attempt digest");
+  deepFreeze(request); assertTrustedRoleHost(host, ["runtimeState"]);
+  const target = await fs.realpath(targetInput), requestSha = executionDigest(request);
+  const inspect = async () => {
+    assertApprover((await readTaskProject(target)).policy, request.actor);
+    const chain = (await retainedRecoveryChains(target)).find(c => c.taskId === request.task_id &&
+      c.attempts.some(a => a.value.attempt_id === request.attempt_id));
+    const attempt = chain?.attempts.find(a => a.value.attempt_id === request.attempt_id);
+    check(attempt?.sha256 === request.attempt_sha256, "stale or unknown stop attempt");
+    check(sameActor(request.actor, attempt.value.approved_by), "stop actor differs from original approving actor");
+    check(host.id === attempt.value.preflight.host_id, "stop host differs from original runtime host");
+    const prior = await stoppedObservation(target, attempt);
+    if (prior) check(prior.value.request_sha256 === requestSha, "stop operation already recorded with different input");
+    return { attempt, prior };
+  };
+  const initial = await withProjectMutationLock(target, () => withHostSourceReservation(target, inspect));
+  if (initial.prior) return { ...initial.prior.value, replayed: true };
+  await confirmStopped(host, { id: request.task_id }, { kind: "review-attempt", id: request.attempt_id, source: initial.attempt.value.source });
+  return withProjectMutationLock(target, () => withHostSourceReservation(target, async () => {
+    const { attempt, prior } = await inspect();
+    if (prior) return { ...prior.value, replayed: true };
+    const root = await safeDirectory(target, STOPS, { create: true });
+    if (!await existsEntry(target, `${STOPS}/.gitignore`)) await durableAtomicCreate(path.join(root, ".gitignore"), "*\n");
+    check((await readTaskFile(target, `${STOPS}/.gitignore`)).content === "*\n", "store ignore policy changed");
+    const value = { schema_version: "workkeel.review-recovery-stopped/v1", operation_id: request.operation_id,
+      request_sha256: requestSha, task_id: request.task_id, attempt_id: request.attempt_id, attempt_sha256: attempt.sha256,
+      source: { ...attempt.value.source }, actor: { ...request.actor }, host_id: host.id, observed_at: new Date().toISOString(),
+      state: "stopped", authority: "observation-only", acceptance: "not-performed" };
+    await durableAtomicCreate(path.join(root, request.attempt_id + ".json"), formatJson({ value, sha256: executionDigest(value) }));
+    return { ...value, replayed: false };
+  }));
+}
+
 /** Observation for composing the next explicit request. Grants nothing. */
 export async function readReviewRecovery(targetInput, taskId) {
   id(taskId, "task ID");
@@ -342,7 +453,9 @@ async function writeResult(target, item, attempt, value) {
   // The persisted validator runs before exclusive creation, never after it.
   validateResult(result, attempt);
   const dir = await safeDirectory(target, chainRef(item));
-  await durableAtomicCreate(path.join(dir, resultName(attempt.value.sequence)), formatJson({ value: result, sha256: executionDigest(result) }));
+  // Ordinary dispatch reads recovery reservations under this same lock.
+  await withHostSourceReservation(target, () =>
+    durableAtomicCreate(path.join(dir, resultName(attempt.value.sequence)), formatJson({ value: result, sha256: executionDigest(result) })));
   return readReviewRecoveryChain(target, item);
 }
 
@@ -370,12 +483,14 @@ export async function recoverInterruptedReview(targetInput, input, { host } = {}
     // Both source stores share the host writer lock (order: project, then
     // host), so the source check and exclusive attempt creation are atomic
     // against ordinary binding too. It is released before launch.
-    const { item, selected, created } = await withHostSourceReservation(target, async () => {
+    const { item, selected, created, ticket } = await withHostSourceReservation(target, async () => {
       // Revalidate after the awaited probes: expiry, cancellation, pin or evidence
       // drift and a concurrent retry each win over this request.
-      const { item, chain, predecessor, selected } = await prepare(target, request);
+      const { item, chain, predecessor, selected, ticket } = await prepare(target, request);
       if (executionDigest(item) !== executionDigest(probed.item) || predecessor.id !== probed.predecessor.id ||
           predecessor.sha256 !== probed.predecessor.sha256) fail("task or predecessor changed during host probes");
+      await assertHostDispatchAdmission(target, { ...ticket, node: { ...ticket.node, write_paths: [] } },
+        { stoppedRecoverySha256: chain.head?.sha256 ?? null });
       const sequence = chain.attempts.length + 1;
       const value = { schema_version: "workkeel.review-attempt/v1", attempt_id: `review-attempt-${randomUUID()}`, sequence,
         operation_id: request.operation_id, request_sha256: requestSha, task_id: item.id, task_version: item.version,
@@ -396,7 +511,7 @@ export async function recoverInterruptedReview(targetInput, input, { host } = {}
       await durableAtomicCreate(path.join(dir, attemptName(sequence)), formatJson({ value, sha256: executionDigest(value) }));
       const created = (await readReviewRecoveryChain(target, item)).head;
       if (created?.value.attempt_id !== value.attempt_id) fail("attempt reservation was not retained");
-      return { item, selected, created };
+      return { item, selected, created, ticket };
     });
     // Final launch boundary, the last await before invocation. Task mutations
     // need this lock, but pinned files and the clock can still move; an
@@ -412,9 +527,13 @@ export async function recoverInterruptedReview(targetInput, input, { host } = {}
         usage: { input_tokens: 0, output_tokens: 0 }, runtime_model: null, reasoning: null, output: null, duration_ms: 0, duration_basis: "not launched" });
       fail(`${blocked.message}; the reserved attempt was not launched`);
     }
-    const spec = Object.freeze({ task_id: item.id, revision: created.value.revision, attempt_id: created.value.attempt_id,
+    const contract = structuredClone(item.contract);
+    contract.environment.read_paths = [...ticket.node.read_paths];
+    contract.environment.write_paths = [];
+    const spec = deepFreeze({ task_id: item.id, revision: created.value.revision, attempt_id: created.value.attempt_id,
       reviewer: Object.freeze({ ...created.value.reviewer }), model: Object.freeze({ ...selected }), source: Object.freeze({ ...created.value.source }),
-      product_access: "read", tests: "role", contract: structuredClone(item.contract), evidence: structuredClone(created.value.delivery_evidence) });
+      product_access: "read", tests: "role", contract, dispatch: { execution_id: ticket.execution_id,
+        node: { ...structuredClone(ticket.node), write_paths: [] } }, evidence: structuredClone(created.value.delivery_evidence) });
     // Invoked, not awaited: the lock is released before the model runs.
     const started = performance.now();
     const launching = (async () => host.launch(spec))().then(raw => ({ raw, failed: false }), () => ({ raw: undefined, failed: true }));

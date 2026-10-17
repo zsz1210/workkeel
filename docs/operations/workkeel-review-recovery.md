@@ -103,6 +103,13 @@ const result = await recoverInterruptedReview("/work/example-project", request, 
 - `launch` starts the fresh reviewer with product read-only access and returns
   `status`, `usage`, `runtime_model`, `reasoning` and `output`.
 
+The launch specification contains a frozen execution contract whose
+`environment.read_paths` are exactly the original dispatch node's read roots
+and whose `environment.write_paths` are empty. Its `dispatch` carries the
+original execution ID and the same read-only node. Hosts must enforce these
+roots; the broader canonical task contract is unchanged and does not expand
+the retry's access. Delivery evidence remains pinned separately.
+
 The request is copied and validated before the first await; later changes to the
 caller's object do not affect the reservation, the launch or the replay digest.
 The source thread and turn must be fresh across the whole workspace: no retained
@@ -116,6 +123,44 @@ reservation phase (order: project, then host), rechecks both stores and creates
 the attempt, then releases it before launch. Concurrent claims on one source
 therefore have exactly one winner. Neither lock is held while the model runs.
 Pre-probe checks and binding readiness are observations, not reservations.
+
+Ordinary dispatch and recovery also share execution capacity and read/write
+conflict checks under that writer lock. A pending recovery consumes one slot
+and reserves its original read roots, whether it starts before or after another
+dispatch. Disjoint work may run within the policy's parallelism limit. The
+checks repeat after host probes, before an attempt is durably reserved.
+Result publication uses the same lock, so an admission cannot read a partially
+published result.
+
+Valid terminal host results and `not-launched` outcomes release the slot.
+Missing results, `launch-unconfirmed`, `invalid-host-result`, task cancellation
+and authorization expiry do not prove that a process stopped. Those attempts
+keep their reservation. A retry may replace its predecessor's reservation only
+after its trusted host confirms that predecessor stopped. Completed historical
+records retain their source IDs but do not occupy capacity or require their old
+model policy to remain current.
+
+For an unresolved process that will not be retried, including a cancelled task,
+the original approving actor can explicitly record a stop observation:
+
+```js
+const stopped = await confirmReviewRecoveryStopped("/work/example-project", {
+  operation_id: "confirm-review-stopped",
+  task_id: "WK-example",
+  attempt_id: "<exact attempt ID>",
+  attempt_sha256: "<exact attempt file SHA-256>",
+  actor: { agent_id: "coordinator", principal_id: "owner" }
+}, { host });
+```
+
+The actor must still be a registered approving Principal's Agent. The trusted
+host must match the attempt's original host ID and return exactly
+`{ state: "stopped" }` for that attempt and source. The API rechecks authority
+and exact bytes after the probe. It never launches work or edits the task,
+attempt or result; it releases only that process reservation. Identical replay
+does not probe again. A changed request or mismatched observation is rejected.
+Observations are immutable, Git-ignored records under
+`.ai-org/review-recovery-stops/<attempt ID>.json`. Source IDs remain reserved.
 
 Later retries name the chain head: `{ "kind": "review-attempt", "id": ..., "sha256": ... }`
 with the current `expected_chain_sha256` from `readReviewRecovery`. A chain holds
@@ -146,6 +191,8 @@ them differs afterwards, including a rewritten, rehashed or deleted result.
 | Fourth attempt | Rejected; preserve evidence and obtain a new decision |
 | Attempt or result with unknown fields, invalid status or negative measurements | Chain read rejected, even with a matching envelope digest |
 | Reused thread or turn from any binding or recovery attempt | Rejected; nothing recorded or launched |
+| Shared execution limit reached or conflicting active scope | Rejected before launch; recovery and ordinary dispatch use the same gate |
+| Unknown runtime or cancelled task without a terminal result | Capacity remains reserved until explicit trusted stop confirmation |
 | Blank, multi-line or malformed reported model or effort | Recorded as `interrupted` with `invalid-host-result` and unknown usage; retry remains possible |
 | Completed result whose model or effort differs from the pinned selection | Chain read, review and close rejected, even when rehashed |
 | Attempt selection, policy reference or dispatch identity rewritten together with its result | Chain read, review and close rejected, even when both are rehashed |

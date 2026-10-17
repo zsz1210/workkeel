@@ -420,13 +420,35 @@ async function bindingInventory(target,request,{bindingId,task,ticket}) {
     for(const used of await retainedReviewRecoverySources(target))
       if(used.thread_id===request.source.thread_id||used.turn_id===request.source.turn_id)fail('host-source-used-by-review-recovery');
     if(openBindings>=LIMITS.openBindings)fail('host-open-inventory-bound');
-    if(ticket){
-      const overlaps=(a,b)=>a==='.'||b==='.'||a===b||a.startsWith(b+'/')||b.startsWith(a+'/');
-      const active=dispatchBindings.filter(({binding})=>['active','paused','error'].includes(binding.status)&&!binding.collection_closed);
-      if(active.length>=ticket.policy_parallelism)fail('host-dispatch-parallelism');
-      for(const {ticket:other,binding} of active)if(ticket.node.write_paths.some(a=>[...other.node.read_paths,...other.node.write_paths].some(b=>overlaps(a,b)))||ticket.node.read_paths.some(a=>other.node.write_paths.some(b=>overlaps(a,b))))fail('host-dispatch-scope-conflict',{binding_id:binding.binding_id});
-      for(const dependency of ticket.node.depends_on)if(!dispatchBindings.some(({binding,ticket:other})=>other.task_id===ticket.task_id&&other.claim_id===ticket.claim_id&&other.node.id===dependency&&binding.status==='completed'))fail('host-dispatch-dependency',{dependency_id:dependency});
+    if(ticket)await assertHostDispatchAdmission(target,ticket,{dispatchBindings});
+}
+
+/**
+ * Shared execution admission. Reservation callers hold the host writer lock
+ * through creation of either the binding or recovery attempt. Readiness alone
+ * grants no slot. Only recovery may exclude its freshly confirmed predecessor.
+ */
+export async function assertHostDispatchAdmission(target,ticket,{dispatchBindings,stoppedRecoverySha256=null}={}) {
+  if(!dispatchBindings) {
+    dispatchBindings=[];
+    const {readDispatchTicket}=await import('./workkeel-dispatch.mjs');
+    for(const entry of await existsEntry(target,ROOT)?await names(target):[]) {
+      const binding=await load(target,entry);
+      if(binding.dispatch&&(!binding.collection_closed||(binding.task_id===ticket.task_id&&binding.claim_id===ticket.claim_id))) {
+        dispatchBindings.push({binding,ticket:await readDispatchTicket(target,binding.dispatch.execution_id)});
+      }
     }
+  }
+  const {liveReviewRecoveryReservations}=await import('./workkeel-review-recovery.mjs');
+  const active=dispatchBindings.filter(({binding})=>['active','paused','error'].includes(binding.status)&&!binding.collection_closed)
+    .map(({binding,ticket:other})=>({node:other.node,id:binding.binding_id}));
+  active.push(...(await liveReviewRecoveryReservations(target)).filter(entry=>entry.sha256!==stoppedRecoverySha256));
+  if(active.length>=ticket.policy_parallelism)fail('host-dispatch-parallelism');
+  const overlaps=(a,b)=>a==='.'||b==='.'||a===b||a.startsWith(b+'/')||b.startsWith(a+'/');
+  for(const other of active)if(ticket.node.write_paths.some(a=>[...other.node.read_paths,...other.node.write_paths].some(b=>overlaps(a,b)))||
+    ticket.node.read_paths.some(a=>other.node.write_paths.some(b=>overlaps(a,b))))fail('host-dispatch-scope-conflict',{binding_id:other.id});
+  for(const dependency of ticket.node.depends_on)if(!dispatchBindings.some(({binding,ticket:other})=>other.task_id===ticket.task_id&&
+    other.claim_id===ticket.claim_id&&other.node.id===dependency&&binding.status==='completed'))fail('host-dispatch-dependency',{dependency_id:dependency});
 }
 
 /** Observation only: no source scan, lock, store creation, or binding reservation. */
