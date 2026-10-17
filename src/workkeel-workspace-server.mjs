@@ -111,7 +111,8 @@ export async function startWorkspaceServer(stateDir,{port=0,readSnapshot=readWor
         for(const project of snapshot.projects)if(project.read_status!=='available') {
           const previous=lastSnapshot?.projects.find(p=>p.id===project.id);
           if(previous?.last_confirmed_at){project.last_confirmed_at=previous.last_confirmed_at;project.last_known_goal=previous.goal??previous.last_known_goal??null;
-            const oldTasks=lastSnapshot.tasks.filter(task=>task.project_id===project.id);
+            const failedRoots=project.task_roots?.filter(root=>root.read_status==='unavailable').map(root=>root.root);
+            const oldTasks=lastSnapshot.tasks.filter(task=>task.project_id===project.id&&(!failedRoots?.length||failedRoots.includes(task.task_root)));
             for(const task of oldTasks)if(!snapshot.tasks.some(t=>t.key===task.key))snapshot.tasks.push({...task,read_status:'stale',last_confirmed_at:previous.last_confirmed_at});
           }
         }
@@ -124,9 +125,18 @@ export async function startWorkspaceServer(stateDir,{port=0,readSnapshot=readWor
       if(req.method==='GET'&&route.pathname==='/api/observer') {
         const id=route.searchParams.get('project'),project=(await readWorkspace(stateDir)).projects.find(p=>p.id===id);
         if(!project)return send(404,{error:'Project not found'});
-        if(project.observer_url)return send(200,{url:project.observer_url});
-        if(!observers.has(id))observers.set(id,Promise.resolve(observerFactory(project.task_root)));
-        try{return send(200,{url:(await observers.get(id)).url});}catch(error){observers.delete(id);throw error;}
+        const reference=route.searchParams.get('task');let root=project.task_root,taskId=null;
+        if(reference){
+          const matches=(await readSnapshot(stateDir)).tasks.filter(task=>task.project_id===id&&(task.reference_id??task.id)===reference);
+          if(matches.length!==1||matches[0].read_status!=='available')return send(404,{error:'Task source is unavailable'});
+          const task=matches[0];root=task.task_root;taskId=task.id;
+          if(root!==project.task_root&&!project.repositories.some(repo=>repo.path===root&&repo.scope==='.'))return send(403,{error:'Complete history requires a registered whole-repository scope'});
+        }
+        const key=JSON.stringify([id,root]);
+        const observerURL=value=>{const url=new URL(value);if(taskId){url.searchParams.set('view','task');url.searchParams.set('task',taskId);url.searchParams.set('tab','documents');}return url.href;};
+        if(root===project.task_root&&project.observer_url)return send(200,{url:observerURL(project.observer_url)});
+        if(!observers.has(key))observers.set(key,Promise.resolve(observerFactory(root)));
+        try{return send(200,{url:observerURL((await observers.get(key)).url)});}catch(error){observers.delete(key);throw error;}
       }
       const kind=route.pathname.slice('/api/'.length);
       if(['policy','learning','autonomy','retention','goals'].includes(kind)) {

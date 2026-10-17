@@ -129,13 +129,13 @@ export function workspaceWorkSummary(tasks, rows=[]) {
   const events=[];
   for(const task of current)for(const [index,event] of (task.timeline??[]).entries()) {
     if(!Number.isFinite(Date.parse(event.at)))continue;
-    events.push({id:task.key+':lifecycle:'+index,kind:'lifecycle',task_id:task.id,task_key:task.key,project_id:task.project_id,title:task.title,at:event.at,action:event.action,actor:event.actor??null,summary:event.reason??null,outcome:event.outcome??null});
+    events.push({id:task.key+':lifecycle:'+index,kind:'lifecycle',task_id:task.id,task_reference_id:task.reference_id??task.id,task_key:task.key,project_id:task.project_id,title:task.title,at:event.at,action:event.action,actor:event.actor??null,summary:event.reason??null,outcome:event.outcome??null});
   }
   for(const row of rows) {
     if(row.read_status!=='available')continue;
     const at=row.end_at??row.last_observed_at??row.start_at;
     if(!Number.isFinite(Date.parse(at)))continue;
-    events.push({id:row.key,kind:'execution',task_key:row.task_key,task_id:byKey.get(row.task_key)?.id??null,project_id:row.project_id,title:row.task_title,at,action:row.activity_kind,state:row.state,actor:row.actor,summary:row.display_label,model:row.reported?.model??null,requested_model:row.requested?.model??null,tokens:row.tokens,tokens_complete:row.tokens_complete,reported_ms:row.reported_ms});
+    events.push({id:row.key,kind:'execution',task_key:row.task_key,task_id:byKey.get(row.task_key)?.id??null,task_reference_id:byKey.get(row.task_key)?.reference_id??byKey.get(row.task_key)?.id??null,project_id:row.project_id,title:row.task_title,at,action:row.activity_kind,state:row.state,actor:row.actor,summary:row.display_label,model:row.reported?.model??null,requested_model:row.requested?.model??null,tokens:row.tokens,tokens_complete:row.tokens_complete,reported_ms:row.reported_ms});
   }
   events.sort((a,b)=>Date.parse(b.at)-Date.parse(a.at)||a.id.localeCompare(b.id));
   const accepted=current.filter(task=>task.quality?.locally_accepted===true);
@@ -146,7 +146,7 @@ export function workspaceWorkSummary(tasks, rows=[]) {
     recorded_operations:rows.length,tasks_with_operations:new Set(rows.map(row=>row.task_key)).size,
     measured_time:rows.filter(row=>Number.isFinite(row.reported_ms)).length,reported_tokens:rows.filter(row=>Number.isFinite(row.tokens)).length,measured_tokens:rows.filter(row=>row.tokens_complete).length,
     activity:events.slice(0,12),activity_total:events.length,
-    outcomes:delivered.slice(0,4).map(task=>({task_id:task.id,task_key:task.key,project_id:task.project_id,title:task.title,at:task.updated_at,task_state:task.task_state,accepted:task.quality?.locally_accepted===true,summary:task.delivery.summary??null,review:task.review?.summary??null,review_judgment:task.quality?.review_judgment??null}))};
+    outcomes:delivered.slice(0,4).map(task=>({task_id:task.id,task_reference_id:task.reference_id??task.id,task_key:task.key,project_id:task.project_id,title:task.title,at:task.updated_at,task_state:task.task_state,accepted:task.quality?.locally_accepted===true,summary:task.delivery.summary??null,review:task.review?.summary??null,review_judgment:task.quality?.review_judgment??null}))};
 }
 export function workspaceAutonomySummary(value) {
   const jobs=(value.jobs??[]).filter(job=>job.origin==='improvement');
@@ -203,8 +203,8 @@ export function projectWorkspaceGoals(entries,registry,ownerId,{goalRoot=null,sn
       const {project:owner,repo,status:registration}=componentRegistration(registry,c);
       const paths=c.scope_paths;
       const scope=repo&&(repo.scope==='.'||Array.isArray(paths)&&paths.length>0&&paths.every(p=>within(path.join(c.root,p),path.join(repo.path,repo.scope))));
-      const taskKey=owner?rootedKey(owner,c.root,c.task_id):null,task_view_available=!!owner&&owner.task_root===c.root&&snapshotTasks.some(t=>t.key===taskKey&&t.task_root===c.root);
-      return {id:c.id,task_id:c.task_id,project_id:owner?.id??null,repo_id:c.repo_id,root:c.root,key:taskKey,task_view_available,scope_status:registration!=='registered'?registration:scope?'registered':'scope-unconfirmed',read_status:c.read_status,state:c.state??null,accepted:c.accepted===true,candidate_revision:c.candidate_revision??null,review_judgment:c.read_status==='available'&&c.review?.revision===c.candidate_revision?c.review?.judgment??null:null,reviews:c.read_status==='available'?c.reviews??[]:[],depends_on:c.depends_on??[],phase:c.progress?.phase??null,reason:c.reason??c.progress?.last_error??null,interfaces:c.fact?.interface_pins??[],task_version:c.task_version??null};
+      const taskKey=owner?rootedKey(owner,c.root,c.task_id):null,task_view_available=!!owner&&snapshotTasks.some(t=>t.key===taskKey&&t.task_root===c.root);
+      return {id:c.id,task_id:c.task_id,task_reference_id:owner&&c.root!==owner.task_root?rootReference(c.root,c.task_id):c.task_id,project_id:owner?.id??null,repo_id:c.repo_id,root:c.root,key:taskKey,task_view_available,scope_status:registration!=='registered'?registration:scope?'registered':'scope-unconfirmed',read_status:c.read_status,state:c.state??null,accepted:c.accepted===true,candidate_revision:c.candidate_revision??null,review_judgment:c.read_status==='available'&&c.review?.revision===c.candidate_revision?c.review?.judgment??null:null,reviews:c.read_status==='available'?c.reviews??[]:[],depends_on:c.depends_on??[],phase:c.progress?.phase??null,reason:c.reason??c.progress?.last_error??null,interfaces:c.fact?.interface_pins??[],task_version:c.task_version??null};
     });
     const visible=sourceRegistered&&components.length>0&&components.every(c=>c.scope_status==='registered'&&c.read_status==='available');
     const acceptance=goal.accepted===true&&goal.whole_acceptance==='accepted'&&!!goal.integration&&visible&&components.every(c=>c.accepted)&&goal.authority_status==='current'?'accepted':goal.whole_acceptance==='stale'||goal.integration&&!goal.accepted?'stale':visible?'not-accepted':'unavailable';
@@ -233,7 +233,7 @@ export function workspaceRecordedSummary(rows){
   return {execution_ms:intervals.length?total:null,execution_complete:rows.length>0&&intervals.length===rows.length,time_basis:'recorded-wall-interval-union',tokens:known.length?known.reduce((sum,row)=>sum+row.tokens,0):null,tokens_complete:rows.length>0&&rows.every(row=>row.tokens_complete),reported_ms:times.length?times.reduce((sum,row)=>sum+row.reported_ms,0):null,operation_count:rows.length};
 }
 export function projectWorkspaceExecution(snapshot,{project_id,task_id,limit=30,offset=0}={}) {
-  const key=workspaceTaskKey(project_id,task_id),task=snapshot.tasks.find(t=>t.key===key);
+  const fallbackKey=workspaceTaskKey(project_id,task_id),matches=snapshot.tasks.filter(t=>t.project_id===project_id&&(t.reference_id??t.id)===task_id),task=matches.length===1?matches[0]:null,key=task?.key??fallbackKey;
   if(!task)return {available:false,read_status:'unavailable',task_key:key,operations:{items:[],total:null,next_offset:null},summary:null};
   const rows=workspaceExecutionRows([task],(snapshot.goals??[]).map(goal=>({...goal,operations:goal.operations.filter(row=>row.task_key===key)})));
   return {available:true,authority:'observation-only',task_key:key,lifecycle_state:task.task_state,read_status:task.read_status,operations:queryPage(rows,{limit,offset}),summary:{...executionSummary({...task,id:key}),...workspaceRecordedSummary(rows)},activity_kinds:[...new Set(rows.map(row=>row.activity_kind??'unreported'))],reported_actor_count:new Set(rows.filter(row=>row.actor).map(row=>JSON.stringify(row.actor))).size,identity_coverage:{reported:rows.filter(row=>row.actor).length,total:rows.length},read_at:snapshot.read_at};
@@ -274,27 +274,37 @@ export function projectWorkspaceAttention(tasks,projects,goals=[]) {
 export async function readWorkspaceSnapshot(stateDir,{snapshotReader=readMonitorSnapshot,autonomyReader=readAutonomy,goalReader=listNativeGoals,now=new Date()}={}) {
   const registry=await readWorkspace(stateDir),projects=[],tasks=[],goals=[];
   for(const registered of registry.projects) {
-    try {
-      if(await fs.realpath(registered.task_root)!==registered.task_root)fail('Task root identity changed');
-      for(const repo of registered.repositories)if(await fs.realpath(repo.path)!==repo.path || !within(await fs.realpath(path.join(repo.path,repo.scope)),repo.path))fail('Repository identity changed');
-      const snapshot=await snapshotReader(registered.task_root,{maxTasks:2000});
-      if(!snapshot || !Array.isArray(snapshot.tasks) || snapshot.tasks.length>2000 || tasks.length+snapshot.tasks.length>10000)fail('Workspace task projection limit reached');
-      const ids=new Set();
-      for(const item of snapshot.tasks) {
-        const id=item.id??item.task_id;if(ids.has(id))fail('Duplicate canonical task ID');ids.add(id);
-        const key=workspaceTaskKey(registered.id,id);
-        let dependencyRefs=item.dependencies??[],dependencyPins=item.dependency_pins??null;
-        if(snapshotReader===readMonitorSnapshot&&item.read_status==='available') {
-          const source=await readNativeTask(registered.task_root,id);
-          if(source.version!==item.version)fail('Canonical task changed while projecting its dependencies');
-          dependencyRefs=source.contract.dependencies;dependencyPins=source.dependency_pins;
+    const taskRoots=[];let primary=null,legacy=0;
+    for(const root of new Set([registered.task_root,...registered.repositories.map(repo=>repo.path)])){
+      const repos=registered.repositories.filter(repo=>repo.path===root),primaryRoot=root===registered.task_root;
+      try{
+        if(await fs.realpath(root)!==root)fail('Task root identity changed');
+        for(const repo of repos)if(!within(await fs.realpath(path.join(root,repo.scope)),root))fail('Repository identity changed');
+        // A registered source repository need not own native task state. A broken
+        // or unsupported lock is an error, not an empty repository.
+        if(!primaryRoot)try{await fs.lstat(path.join(root,'workkeel.lock'));}catch(error){if(error.code!=='ENOENT')throw error;taskRoots.push({root,repo_ids:repos.map(repo=>repo.id),read_status:'not-initialized',task_count:0});continue;}
+        const snapshot=await snapshotReader(root,{maxTasks:2000});
+        if(!snapshot||!Array.isArray(snapshot.tasks)||snapshot.tasks.length>2000)fail('Workspace task projection limit reached');
+        const batch=[],ids=new Set(),wholeScope=primaryRoot||repos.some(repo=>repo.scope==='.');
+        for(const item of snapshot.tasks){
+          const id=item.id??item.task_id;if(ids.has(id))fail('Duplicate canonical task ID');ids.add(id);
+          let dependencyRefs=item.dependencies??[],dependencyPins=item.dependency_pins??null,paths=item.scope_paths??null;
+          if(snapshotReader===readMonitorSnapshot&&item.read_status==='available'){
+            const source=await readNativeTask(root,id);if(source.version!==item.version)fail('Canonical task changed while projecting its dependencies');
+            dependencyRefs=source.contract.dependencies;dependencyPins=source.dependency_pins;paths=[...source.contract.environment.read_paths,...source.contract.environment.write_paths];
+          }
+          if(!wholeScope&&(!Array.isArray(paths)||!paths.length||!paths.every(ref=>repos.some(repo=>within(path.join(root,ref),path.join(root,repo.scope))))))continue;
+          batch.push({...item,id,reference_id:primaryRoot?id:rootReference(root,id),key:rootedKey(registered,root,id),project_id:registered.id,task_root:root,repo_id:repos.length===1?repos[0].id:null,observer_available:wholeScope,dependencies:dependencyRefs.map(ref=>rootedKey(registered,root,ref)),dependency_pins:dependencyPins,execution:executionSummary(item)});
         }
-        tasks.push({...item,id,key,project_id:registered.id,task_root:registered.task_root,dependencies:dependencyRefs.map(ref=>workspaceTaskKey(registered.id,ref)),dependency_pins:dependencyPins,execution:executionSummary(item)});
-      }
-      const scoped=tasks.filter(task=>task.project_id===registered.id),active=scoped.filter(task=>!['done','cancelled'].includes(task.task_state));
-      let autonomy;try{autonomy=workspaceAutonomySummary(await autonomyReader(registered.task_root));}catch{autonomy={enabled:null,state:'unknown',last_updated:null,read_status:'unavailable',live_activity:'unconfirmed'};}
-      projects.push({...registered,read_status:'available',complete:snapshot.complete===true&&autonomy.read_status==='available',autonomy,last_confirmed_at:snapshot.read_at??now.toISOString(),task_count:scoped.length,active_count:active.length,goal:active[0]?.goal??active[0]?.title??null,legacy_tasks_excluded:snapshot.legacy_tasks_excluded??0,source:snapshot.project??null});
-    }catch {for(let i=tasks.length-1;i>=0;i--)if(tasks[i].project_id===registered.id)tasks.splice(i,1);projects.push({...registered,read_status:'unavailable',complete:false,last_confirmed_at:null,task_count:null,active_count:null,goal:null});}
+        if(tasks.length+batch.length>10000)fail('Workspace task projection limit reached');
+        tasks.push(...batch);legacy+=snapshot.legacy_tasks_excluded??0;if(primaryRoot)primary=snapshot;
+        taskRoots.push({root,repo_ids:repos.map(repo=>repo.id),read_status:'available',complete:snapshot.complete===true,task_count:batch.length,last_confirmed_at:snapshot.read_at??now.toISOString()});
+      }catch(error){taskRoots.push({root,repo_ids:repos.map(repo=>repo.id),read_status:'unavailable',task_count:null,reason:error.message});}
+    }
+    const references=new Map();for(const task of tasks.filter(task=>task.project_id===registered.id)){if(references.has(task.reference_id))fail('Task route reference is ambiguous');references.set(task.reference_id,task.key);}
+    const scoped=tasks.filter(task=>task.project_id===registered.id),active=scoped.filter(task=>!['done','cancelled'].includes(task.task_state)),healthy=taskRoots.filter(root=>root.read_status==='available'),unavailable=taskRoots.some(root=>root.read_status==='unavailable');
+    let autonomy;try{autonomy=workspaceAutonomySummary(await autonomyReader(registered.task_root));}catch{autonomy={enabled:null,state:'unknown',last_updated:null,read_status:'unavailable',live_activity:'unconfirmed'};}
+    projects.push({...registered,read_status:unavailable?(healthy.length?'partial':'unavailable'):'available',complete:!unavailable&&healthy.every(root=>root.complete)&&autonomy.read_status==='available',autonomy,task_roots:taskRoots,last_confirmed_at:healthy.map(root=>root.last_confirmed_at).sort().at(0)??null,task_count:healthy.length?scoped.length:null,active_count:healthy.length?active.length:null,goal:active[0]?.goal??active[0]?.title??null,legacy_tasks_excluded:legacy,source:primary?.project??null});
     const projected=projects.at(-1),projectGoals=[],goalRoots=[];
     for(const goalRoot of new Set([registered.task_root,...registered.repositories.map(r=>r.path)])){
       try{
@@ -304,7 +314,7 @@ export async function readWorkspaceSnapshot(stateDir,{snapshotReader=readMonitor
         const items=projectWorkspaceGoals(entries,registry,registered.id,{goalRoot,snapshotTasks:tasks});projectGoals.push(...items);goalRoots.push({root:goalRoot,read_status:items.some(g=>g.read_status!=='available')?'partial':'available',goal_count:items.length});
       }catch(error){goalRoots.push({root:goalRoot,read_status:'unavailable',goal_count:null,reason:error.message});}
     }
-    const references=new Map();for(const goal of projectGoals){const prior=references.get(goal.reference_id);if(prior){for(const conflicting of [prior,goal])Object.assign(conflicting,{read_status:'unavailable',accepted:false,acceptance:'unavailable',reason:'Goal route reference is ambiguous'});}references.set(goal.reference_id,goal);}
+    const goalReferences=new Map();for(const goal of projectGoals){const prior=goalReferences.get(goal.reference_id);if(prior){for(const conflicting of [prior,goal])Object.assign(conflicting,{read_status:'unavailable',accepted:false,acceptance:'unavailable',reason:'Goal route reference is ambiguous'});}goalReferences.set(goal.reference_id,goal);}
     goals.push(...projectGoals);const activeGoal=projectGoals.find(g=>!['done','cancelled'].includes(g.state)),derived=projectGoals.filter(g=>g.derived_from);
     const goalReadStatus=goalRoots.every(r=>r.read_status==='available')&&projectGoals.every(g=>g.read_status==='available')?'available':goalRoots.every(r=>r.read_status==='unavailable')?'unavailable':'partial';
     Object.assign(projected,{complete:projected.complete&&goalReadStatus==='available',goal_read_status:goalReadStatus,goal_roots:goalRoots,goal_count:projectGoals.length,goal_summary:activeGoal?{key:activeGoal.key,state:activeGoal.state,requires_recovery:activeGoal.requires_recovery,reason:activeGoal.reason,read_status:activeGoal.read_status,acceptance:activeGoal.acceptance,authority_status:activeGoal.authority_status}:null,goal:activeGoal?.title??projected.goal});
@@ -321,7 +331,7 @@ export async function readWorkspaceSnapshot(stateDir,{snapshotReader=readMonitor
   for(const project of projects)project.work=workspaceWorkSummary(tasks.filter(task=>task.project_id===project.id),rows.filter(row=>row.project_id===project.id));
   return {schema_version:'workkeel.workspace-snapshot/v1',authority:'observation-only',model_calls:0,read_at:now.toISOString(),registry_version:registry.version,id:registry.id,name:registry.name,complete:projects.every(p=>p.complete),projects,tasks,attention,shared_scopes:sharing,
     work:workspaceWorkSummary(tasks,rows),
-    goals,recent_deliveries:tasks.filter(t=>t.delivery).sort((a,b)=>String(b.updated_at??'').localeCompare(String(a.updated_at??''))).slice(0,12).map(t=>({key:t.key,project_id:t.project_id,title:t.title,candidate_revision:t.candidate_revision,accepted:t.quality?.locally_accepted===true,merged:'unreported',published:'unreported',deployed:'unreported',updated_at:t.updated_at})),
+    goals,recent_deliveries:tasks.filter(t=>t.delivery).sort((a,b)=>String(b.updated_at??'').localeCompare(String(a.updated_at??''))).slice(0,12).map(t=>({key:t.key,reference_id:t.reference_id??t.id,project_id:t.project_id,title:t.title,candidate_revision:t.candidate_revision,accepted:t.quality?.locally_accepted===true,merged:'unreported',published:'unreported',deployed:'unreported',updated_at:t.updated_at})),
     usage:aggregateRows(rows.map(row=>({...row,total:'all'})),'total')[0]??null,usage_coverage:{recorded_operations:rows.length,total_tasks:tasks.length,tasks_with_operations:new Set(rows.map(row=>row.task_id)).size,scope:'recorded-operations-only',unobserved_host_conversation:'not-measured'}};
 }
 
@@ -332,16 +342,25 @@ export async function inspectWorkspaceIntegration(snapshot,{components,evidence=
   const seen=new Set(),results=[];
   for(const item of components) {
     keys(item,['project_id','task_id','repo_id','candidate_revision']);
-    const key=workspaceTaskKey(item.project_id,item.task_id),identity=JSON.stringify([key,item.repo_id]);
+    const identity=JSON.stringify([workspaceTaskKey(item.project_id,item.task_id),item.repo_id]);
     if(seen.has(identity)||!identifier(item.repo_id)||!revision(item.candidate_revision))fail('Invalid or duplicate integration component');seen.add(identity);
-    const project=snapshot.projects.find(p=>p.id===item.project_id),task=snapshot.tasks.find(t=>t.key===key),repo=project?.repositories.find(r=>r.id===item.repo_id);
-    let status=!project||!repo?'scope-unregistered':project.read_status!=='available'||!task||task.read_status!=='available'?'unavailable':task.candidate_revision!==item.candidate_revision?'candidate-changed':task.quality?.evidence_current!==true?'evidence-unverified':task.quality?.locally_accepted!==true?'not-accepted':'accepted';
+    const project=snapshot.projects.find(p=>p.id===item.project_id),repo=project?.repositories.find(r=>r.id===item.repo_id),rootStatus=project?.task_roots?.find(source=>source.root===repo?.path);
+    const ownsTasks=repo&&(repo.path===project.task_root||(rootStatus&&rootStatus.read_status!=='not-initialized')||snapshot.tasks.some(task=>task.project_id===project.id&&task.task_root===repo.path));
+    const root=ownsTasks?repo.path:project?.task_root,matches=snapshot.tasks.filter(task=>task.project_id===item.project_id&&task.id===item.task_id&&(task.task_root??project?.task_root)===root),task=matches.length===1?matches[0]:null,key=project&&root?rootedKey(project,root,item.task_id):workspaceTaskKey(item.project_id,item.task_id);
+    let status=!project||!repo?'scope-unregistered':project.read_status==='unavailable'||rootStatus?.read_status==='unavailable'||!task||task.read_status!=='available'?'unavailable':task.candidate_revision!==item.candidate_revision?'candidate-changed':task.quality?.evidence_current!==true?'evidence-unverified':task.quality?.locally_accepted!==true?'not-accepted':'accepted';
     if(status==='accepted')try{
-      const current=await readTaskSummary(project.task_root,item.task_id);
-      if(current.candidate_revision!==item.candidate_revision)status='candidate-changed';
-      else if(current.quality.evidence_current!==true)status='evidence-unverified';
-      else if(current.quality.locally_accepted!==true)status='not-accepted';
-      else if((await readNativeGit(repo.path,['rev-parse','--verify',item.candidate_revision+'^{commit}'])).trim()!==item.candidate_revision)status='candidate-unavailable';
+      if(await fs.realpath(root)!==root||await fs.realpath(repo.path)!==repo.path)fail('Repository identity changed');
+      const current=await readTaskSummary(root,item.task_id);
+      if(repo.scope!=='.'){
+        const source=await readNativeTask(root,item.task_id),paths=[...source.contract.environment.read_paths,...source.contract.environment.write_paths];
+        if(root!==repo.path||!paths.length||!paths.every(ref=>within(path.join(root,ref),path.join(repo.path,repo.scope))))status='scope-unconfirmed';
+      }
+      if(status==='accepted'){
+        if(current.candidate_revision!==item.candidate_revision)status='candidate-changed';
+        else if(current.quality.evidence_current!==true)status='evidence-unverified';
+        else if(current.quality.locally_accepted!==true)status='not-accepted';
+        else if((await readNativeGit(repo.path,['rev-parse','--verify',item.candidate_revision+'^{commit}'])).trim()!==item.candidate_revision)status='candidate-unavailable';
+      }
     }catch{status='candidate-unavailable';}
     results.push({...item,key,status});
   }

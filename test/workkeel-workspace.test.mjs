@@ -132,6 +132,18 @@ test('a late autonomy response preserves focused read-only disclosure', {skip:pr
  assert.equal(await input.evaluate(node=>node===document.activeElement),true);assert.equal(await page.locator('#autonomy-settings').getAttribute('open'),'');assert.match(await page.locator('[data-autonomy-freshness]').innerText(),/Refreshes every 15 seconds/);
 });
 
+test('clearing the project selector immediately removes old controls and ignores a late response', {skip:process.env.WORKKEEL_WORKSPACE_BROWSER!=='1'},async t=>{
+  const {chromium}=await import('playwright-core'),{state,repo}=await setup(t);await registerWorkspaceProject(state,projectInput(repo,'beta'),{expectedVersion:2});
+  let release,requested;const gate=new Promise(resolve=>release=resolve),pending=new Promise(resolve=>requested=resolve);
+  const service=await startWorkspaceServer(state,{hooks:{retention:{read:async({project})=>{if(project.id==='beta'){requested();await gate;}return {version:0,stored_bytes:4096,archive_bytes:0,release_bytes:0,actions:[]};}}}});
+  const browser=await chromium.launch({channel:'chrome',headless:true});t.after(async()=>{release();await browser.close();await service.close();});const page=await browser.newPage();page.setDefaultTimeout(8000);
+  await page.goto(service.url);await page.goto(service.origin+'/?view=storage&project=alpha');await page.getByText('4.0 KiB',{exact:true}).waitFor();
+  await page.locator('#project-picker').selectOption('beta');await pending;await page.getByText('Measuring selected storage…',{exact:true}).waitFor();assert.equal(await page.getByText('4.0 KiB',{exact:true}).count(),0);
+  await page.locator('#project-picker').selectOption('');await page.getByText('Choose a project to measure its stored records.',{exact:true}).waitFor();assert.equal(await page.getByText('4.0 KiB',{exact:true}).count(),0);release();
+  await page.getByRole('button',{name:'Refresh',exact:true}).click();assert.equal(await page.getByText('4.0 KiB',{exact:true}).count(),0);assert.equal(new URL(page.url()).searchParams.has('project'),false);
+  await page.goBack();await page.getByText('4.0 KiB',{exact:true}).waitFor();assert.equal(new URL(page.url()).searchParams.get('project'),'beta');
+});
+
 test('workspace browser module parses before deployment',()=>{new vm.Script('async function parseOnly(){'+workspaceClient+'}');});
 
 test('autonomy holds pending and unresolved controls across observation refreshes', {skip:process.env.WORKKEEL_WORKSPACE_BROWSER!=='1'},async t=>{
@@ -406,6 +418,49 @@ test('snapshot reads only explicit repository roots, isolates root failure and r
   const partial=await readWorkspaceSnapshot(state,{goalReader:async root=>{if(root===repo)throw Error('Synthetic primary goal inventory failure');return [raw];}});assert.equal(partial.projects[0].goal_read_status,'partial');assert.equal(partial.goals[0].root,foreign);assert.equal(partial.projects[0].goal_roots[0].goal_count,null);assert.equal(partial.model_calls,0);
 });
 
+test('multi-repo tasks keep exact routes, local dependencies and usage while isolating unreadable roots',async t=>{
+  const {state,repo}=await setup(t),foreign=await fs.realpath(await createMonitorFixture());t.after(()=>fs.rm(foreign,{recursive:true,force:true}));
+  await removeWorkspaceProject(state,'alpha',{expectedVersion:2});await registerWorkspaceProject(state,{id:'alpha',name:'Multi-repo',task_root:repo,repositories:[{id:'api',path:repo},{id:'web',path:foreign}]},{expectedVersion:3});
+  const native=await readWorkspaceSnapshot(state);assert.ok(native.tasks.some(task=>task.task_root===foreign));assert.equal(native.tasks.length,new Set(native.tasks.map(task=>task.key)).size);
+  let unavailable=false;
+  const snapshotReader=async root=>{if(unavailable&&root===foreign)throw Error('Synthetic repository offline');return {complete:true,tasks:[{...syntheticExecutionView().tasks[0],id:'WK-same',title:root===foreign?'Web task':'API task',dependencies:['WK-before']},{id:'WK-before',title:'Prerequisite',read_status:'available',task_state:'done',quality:{locally_accepted:true},runs:[]}],read_at:'2026-01-01T00:00:00Z'};};
+  const snapshot=await readWorkspaceSnapshot(state,{snapshotReader}),api=snapshot.tasks.find(task=>task.task_root===repo&&task.id==='WK-same'),web=snapshot.tasks.find(task=>task.task_root===foreign&&task.id==='WK-same');
+  assert.equal(snapshot.tasks.length,4);assert.notEqual(api.reference_id,web.reference_id);assert.notEqual(api.key,web.key);assert.match(web.reference_id,/^repo-[a-f0-9]{64}$/);assert.equal(api.reference_id,'WK-same');
+  assert.equal(snapshot.tasks.find(task=>task.key===web.dependencies[0]).task_root,foreign);assert.equal(snapshot.tasks.find(task=>task.key===api.dependencies[0]).task_root,repo);
+  assert.equal(projectWorkspaceExecution(snapshot,{project_id:'alpha',task_id:web.reference_id}).task_key,web.key);assert.equal(projectWorkspaceExecution(snapshot,{project_id:'alpha',task_id:'WK-same'}).task_key,api.key);
+  assert.equal(projectWorkspaceAnalysis(snapshot).coverage.recorded_operations,6);
+  unavailable=true;const partial=await readWorkspaceSnapshot(state,{snapshotReader});assert.equal(partial.projects[0].read_status,'partial');assert.equal(partial.projects[0].complete,false);assert.ok(partial.tasks.every(task=>task.task_root===repo));assert.equal(partial.projects[0].task_roots.find(root=>root.root===foreign).read_status,'unavailable');
+});
+
+test('a scoped repository exposes only contained tasks and cannot open its unscoped history',async t=>{
+  const {state,repo}=await setup(t),foreign=await fs.realpath(await createMonitorFixture());t.after(()=>fs.rm(foreign,{recursive:true,force:true}));await fs.mkdir(path.join(foreign,'ui'));
+  await removeWorkspaceProject(state,'alpha',{expectedVersion:2});await registerWorkspaceProject(state,{id:'alpha',name:'Scoped',task_root:repo,repositories:[{id:'api',path:repo},{id:'ui',path:foreign,scope:'ui'}]},{expectedVersion:3});
+  const readSnapshot=directory=>readWorkspaceSnapshot(directory,{snapshotReader:async root=>({complete:true,tasks:root===repo?[]:[{id:'WK-visible',title:'Scoped task',task_state:'build',read_status:'available',scope_paths:['ui/view.mjs']},{id:'WK-private',title:'Outside scope',task_state:'build',read_status:'available',scope_paths:['private']},{id:'WK-unknown',title:'Unknown scope',read_status:'unavailable'}]})});
+  const snapshot=await readSnapshot(state);assert.deepEqual(snapshot.tasks.map(task=>task.id),['WK-visible']);assert.equal(snapshot.tasks[0].observer_available,false);
+  let opened=0;const service=await startWorkspaceServer(state,{readSnapshot,observerFactory:async()=>{opened++;throw Error('Must not open');}});t.after(()=>service.close());
+  const token=new URL(service.url).hash.slice(1).split('/')[0];const response=await fetch(service.origin+'/api/observer?'+new URLSearchParams({project:'alpha',task:snapshot.tasks[0].reference_id}),{headers:{Authorization:'Bearer '+token}});assert.equal(response.status,403);assert.equal(opened,0);
+});
+
+test('configured observer evidence links target the exact task and retain the private capability',async t=>{
+  const {state,repo}=await setup(t);await removeWorkspaceProject(state,'alpha',{expectedVersion:2});await registerWorkspaceProject(state,{...projectInput(repo,'alpha'),observer_url:'http://127.0.0.1:12345/?view=board#'+'a'.repeat(64)},{expectedVersion:3});
+  const task=(await readWorkspaceSnapshot(state)).tasks[0],service=await startWorkspaceServer(state,{observerFactory:async()=>{throw Error('Configured viewer must be reused');}});t.after(()=>service.close());
+  const headers={Authorization:'Bearer '+new URL(service.url).hash.slice(1)},result=await fetch(service.origin+'/api/observer?'+new URLSearchParams({project:'alpha',task:task.reference_id}),{headers}).then(response=>response.json()),url=new URL(result.url);
+  assert.equal(url.searchParams.get('view'),'task');assert.equal(url.searchParams.get('task'),task.id);assert.equal(url.searchParams.get('tab'),'documents');assert.equal(url.hash,'#'+'a'.repeat(64));
+});
+
+test('multi-repo browser reaches the matching task, dependency, usage and complete evidence', {skip:process.env.WORKKEEL_WORKSPACE_BROWSER!=='1'},async t=>{
+  const {chromium}=await import('playwright-core'),{state,repo}=await setup(t),foreign=await fs.realpath(await createMonitorFixture());t.after(()=>fs.rm(foreign,{recursive:true,force:true}));
+  await removeWorkspaceProject(state,'alpha',{expectedVersion:2});await registerWorkspaceProject(state,{id:'alpha',name:'Commerce',task_root:repo,repositories:[{id:'api',path:repo},{id:'web',path:foreign}]},{expectedVersion:3});
+  const snapshotReader=async root=>({complete:true,tasks:[{...syntheticExecutionView().tasks[0],id:'WK-same',title:root===foreign?'Storefront checkout':'Checkout API',dependencies:['WK-before']},{id:'WK-before',title:root===foreign?'Storefront foundation':'API foundation',task_state:'done',read_status:'available',quality:{locally_accepted:true},runs:[]}]});
+  const opened=[],readSnapshot=directory=>readWorkspaceSnapshot(directory,{snapshotReader});const service=await startWorkspaceServer(state,{readSnapshot,observerFactory:async root=>{opened.push(root);return {url:'http://127.0.0.1:1/#synthetic',close:async()=>{}};}});
+  const browser=await chromium.launch({channel:'chrome',headless:true});t.after(async()=>{await browser.close();await service.close();});const page=await browser.newPage({viewport:{width:1440,height:1000},reducedMotion:'reduce'});page.setDefaultTimeout(8000);const errors=[];page.on('pageerror',error=>errors.push(error.message));
+  await page.goto(service.url);await page.goto(service.origin+'/?view=work&project=alpha');await page.getByRole('link',{name:'Storefront checkout',exact:true}).waitFor();await captureDesktop(page,'functional-multirepo-tasks-dark.png');await page.getByRole('link',{name:'Storefront checkout',exact:true}).click();await page.getByRole('heading',{name:'Storefront checkout',exact:true}).waitFor();assert.match(await page.locator('.page-heading').innerText(),/Commerce \/ web/);assert.match(new URL(page.url()).searchParams.get('task'),/^repo-/);
+  await page.getByRole('tab',{name:'Execution',exact:true}).click();await page.getByText('reported-model',{exact:false}).first().waitFor();assert.equal(await page.getByText('Execution records are unavailable.',{exact:true}).count(),0);
+  await captureDesktop(page,'functional-foreign-execution-dark.png');await page.getByRole('tab',{name:'Dependencies',exact:true}).click();assert.deepEqual(await page.locator('.constellation-target strong').allTextContents(),['Storefront checkout','Storefront foundation']);assert.equal(await page.locator('.workspace-map').getByText(/alpha:repo:/).count(),0);await captureDesktop(page,'functional-foreign-dependencies-dark.png');await page.getByRole('link',{name:/Storefront foundation/}).click();await page.getByRole('heading',{name:'Storefront foundation',exact:true}).waitFor();
+  const snapshot=await readSnapshot(state),web=snapshot.tasks.find(task=>task.title==='Storefront checkout');await page.goto(service.origin+'/?view=task&project=alpha&task='+web.reference_id);await page.getByRole('tab',{name:'Evidence',exact:true}).click();
+  const result=page.waitForResponse(response=>new URL(response.url()).pathname==='/api/observer');await page.getByRole('button',{name:'Open complete evidence and history',exact:false}).click();const response=await result;assert.equal(response.status(),200);assert.deepEqual(opened,[foreign]);const detail=await fetch(service.origin+'/api/observer?'+new URLSearchParams({project:'alpha',task:web.reference_id}),{headers:{Authorization:'Bearer '+new URL(service.url).hash.slice(1).split('/')[0]}}).then(response=>response.json());assert.equal(new URL(detail.url).searchParams.get('task'),'WK-same');assert.equal(new URL(detail.url).searchParams.get('view'),'task');assert.deepEqual(errors,[]);
+});
+
 test('execution projects recorded activities, actual identity reports and separate requested/selected/reported dimensions',()=>{
   const view=syntheticExecutionView(),rows=workspaceExecutionRows(view.tasks);
   assert.equal(rows.length,3);assert.deepEqual(rows.map(row=>row.activity_kind).sort(),['implementation','review','verification']);
@@ -520,6 +575,17 @@ test('exact repository integration requires accepted components and pinned candi
   await fs.appendFile(path.join(repo,'docs','integration.json'),' ');
   assert.equal((await inspectWorkspaceIntegration(view,{components,evidence})).evidence_status,'changed');
   await assert.rejects(inspectWorkspaceIntegration(view,{components:[...components,...components]}),/duplicate/);
+});
+
+test('integration inspection rereads the selected repository when task IDs repeat',async t=>{
+  const {state,repo}=await setup(t,{extended:true}),foreign=await fs.realpath(await createMonitorFixture({extended:true}));t.after(()=>fs.rm(foreign,{recursive:true,force:true}));
+  await removeWorkspaceProject(state,'alpha',{expectedVersion:2});await registerWorkspaceProject(state,{id:'alpha',name:'Multi-repo delivery',task_root:repo,repositories:[{id:'api',path:repo},{id:'web',path:foreign}]},{expectedVersion:3});
+  const snapshot=await readWorkspaceSnapshot(state),web=snapshot.tasks.find(task=>task.task_root===foreign&&task.id==='WK-accepted'),api=snapshot.tasks.find(task=>task.task_root===repo&&task.id===web.id);
+  // A different primary candidate must not affect the explicitly selected web task.
+  api.candidate_revision='0'.repeat(40);api.quality.locally_accepted=false;
+  const input={components:[{project_id:'alpha',repo_id:'web',task_id:web.id,candidate_revision:web.candidate_revision}]};
+  const result=await inspectWorkspaceIntegration(snapshot,input);assert.equal(result.components[0].status,'accepted');assert.equal(result.components[0].key,web.key);assert.equal(result.acceptance_granted,false);
+  snapshot.tasks=snapshot.tasks.filter(task=>task.key!==web.key);assert.equal((await inspectWorkspaceIntegration(snapshot,input)).components[0].status,'unavailable');
 });
 
 test('capability server separates reads/control, preserves observer resources and deduplicates durable requests',async t=>{
@@ -679,11 +745,26 @@ test('actual browser reviews exact storage plan, archives without deletion, and 
   const browser=await chromium.launch({channel:'chrome',headless:true});t.after(()=>browser.close());const page=await browser.newPage({viewport:{width:1440,height:900}});const errors=[];page.on('pageerror',error=>errors.push(error.message));
   await page.goto(service.url);await page.getByRole('link',{name:'Model rules',exact:true}).click();await page.getByRole('button',{name:'Switch project',exact:true}).click();await page.locator('[data-project-select=alpha]').click();
   assert.equal(reads,0);await page.getByRole('link',{name:'Records & storage',exact:true}).click();await page.getByRole('heading',{name:'Records & storage',exact:true}).waitFor();await page.getByText('4.0 KiB',{exact:true}).waitFor();assert.equal(reads,1);await page.getByText('Execution measurements',{exact:true}).waitFor();await page.getByRole('heading',{name:'Protected task & acceptance evidence',exact:true}).waitFor();await page.getByText('8.0 KiB',{exact:true}).waitFor();await page.getByText('2 configured evidence roots',{exact:true}).waitFor();assert.equal(await page.getByText('Currently stored',{exact:true}).count(),0);
-  assert.equal(await page.getByText('0 B',{exact:true}).count(),1);await page.getByRole('button',{name:'Create a verified archive',exact:true}).click();await page.getByText('Host confirmed the request.',{exact:false}).waitFor();assert.equal(archives,1);
-  await page.goto(service.origin+'/?view=overview');await page.getByRole('heading',{name:'Your workspace',exact:true}).waitFor();assert.equal(reads,1);
+  assert.equal(await page.getByText('0 B',{exact:true}).count(),1);await page.getByRole('button',{name:'Create a verified archive',exact:true}).click();await page.getByText('Host confirmed the request.',{exact:false}).waitFor();assert.equal(archives,1);assert.equal(reads,2);
+  await page.goto(service.origin+'/?view=overview');await page.getByRole('heading',{name:'Your workspace',exact:true}).waitFor();assert.equal(reads,2);
   await removeWorkspaceProject(state,'alpha',{expectedVersion:2});await page.getByRole('button',{name:'Refresh',exact:true}).click();await page.getByRole('link',{name:/Register a project/}).click();await page.getByRole('heading',{name:'Register a project',exact:true}).waitFor();
   await page.locator('[name="name"]').fill('Explicit synthetic project');await page.locator('[name="id"]').fill('explicit');await page.locator('[name="task_root"]').fill(repo);await page.locator('[name="repo-path-0"]').fill(repo);
-  await page.getByRole('button',{name:'Register project',exact:true}).click();await page.getByText('Host confirmed the request.',{exact:false}).waitFor();assert.equal((await readWorkspace(state)).projects[0].id,'explicit');assert.deepEqual(errors,[]);
+  await page.getByRole('button',{name:'Register project',exact:true}).click();await page.getByRole('heading',{name:'Explicit synthetic project',exact:true}).waitFor();assert.equal(new URL(page.url()).searchParams.get('project'),'explicit');assert.equal((await readWorkspace(state)).projects[0].id,'explicit');assert.deepEqual(errors,[]);
+});
+
+test('confirmed registration waits for an overlapping snapshot and then opens the new project', {skip:process.env.WORKKEEL_WORKSPACE_BROWSER!=='1'},async t=>{
+  const {chromium}=await import('playwright-core'),{state,repo}=await setup(t);
+  const service=await startWorkspaceServer(state,{control:{actor:{agent_id:'synthetic',principal_id:'owner'},actions:['workspace.register']}});t.after(()=>service.close());
+  const browser=await chromium.launch({channel:'chrome',headless:true});t.after(()=>browser.close());const page=await browser.newPage({viewport:{width:1440,height:900}});page.setDefaultTimeout(8000);
+  await page.goto(service.url);await page.getByRole('heading',{name:'Your workspace',exact:true}).waitFor();await page.goto(service.origin+'/?view=register');await page.getByRole('heading',{name:'Register a project',exact:true}).waitFor();
+  await page.locator('[name="name"]').fill('New project');await page.locator('[name="id"]').fill('new-project');await page.locator('[name="task_root"]').fill(repo);await page.locator('[name="repo-path-0"]').fill(repo);
+  let release,started;const held=new Promise(resolve=>release=resolve),ready=new Promise(resolve=>started=resolve);let snapshots=0;
+  await page.route('**/api/workspace',async route=>{if(route.request().method()!=='GET')return route.continue();snapshots++;const response=await route.fetch();if(snapshots===1){started();await held;}await route.fulfill({response});});t.after(()=>release());
+  await page.getByRole('button',{name:'Refresh',exact:true}).click();await ready;
+  const confirmation=page.waitForResponse(response=>response.request().method()==='POST'&&new URL(response.url()).pathname==='/api/workspace');
+  await page.getByRole('button',{name:'Register project',exact:true}).click();await confirmation;assert.equal(await page.getByRole('button',{name:'Register project',exact:true}).isDisabled(),true);
+  release();await page.getByRole('heading',{name:'New project',exact:true}).waitFor();assert.equal(new URL(page.url()).searchParams.get('project'),'new-project');assert.ok(snapshots>=2);assert.equal((await readWorkspace(state)).projects.filter(project=>project.id==='new-project').length,1);
+  await captureDesktop(page,'functional-registration-complete-dark.png');
 });
 
 test('actual browser displays synthetic recorded execution, bounded analysis and unconfirmed host cancellation', {skip:process.env.WORKKEEL_WORKSPACE_BROWSER!=='1'},async t=>{
@@ -801,9 +882,9 @@ test('task dependency landscape navigates the exact project and keeps missing de
   await page.goto(service.url);await page.waitForFunction(()=>document.getElementById('connection')?.textContent.startsWith('Connected locally'));
   await page.goto(service.origin+'/?'+new URLSearchParams({view:'task',project:'alpha',task:sourceId}));
   await page.getByRole('tab',{name:'Dependencies',exact:true}).click();
-  const missing=page.locator('.constellation-node').filter({has:page.locator('strong[title="missing:WK-unavailable"]')});
+  const missing=page.locator('.constellation-node').filter({has:page.locator('strong[title="WK-unavailable"]')});
   assert.equal(await missing.locator('a').count(),0);
-  const link=page.locator('.workspace-map a').filter({hasText:'beta:'+targetId});
+  const link=page.locator('.workspace-map a').filter({hasText:'Synthetic dependency task'});
   assert.equal(await link.locator('small').innerText(),'Independent review');
   await page.getByRole('button',{name:'繁體中文',exact:true}).click();
   assert.equal(await link.locator('small').innerText(),'獨立審查');
@@ -862,7 +943,9 @@ test('single-project multi-repo browser separates duplicate goal routes and perm
   const service=await startWorkspaceServer(state,{readSnapshot:directory=>readWorkspaceSnapshot(directory,{goalReader:async root=>root===repo?[primary]:root===library?[foreign]:[]}),control:{actor:{agent_id:'synthetic',principal_id:'owner'},actions:['goals.start','goals.pause','goals.cancel','goals.resume','goals.recover']},hooks:{goals:{read:async()=>({version:0,entries:[primary,foreign],candidates:[],services:[{goal_id:primary.id,root:repo,repo_id:'api',state:'not-confirmed-in-this-host',errors:[]},{goal_id:foreign.id,root:library,repo_id:'library',state:'not-confirmed-in-this-host',errors:[]}]}),execute:async request=>{
     const goal=request.payload.repo_id==='api'?primary:foreign;assert.equal(request.payload.goal_id,primary.id);assert.ok(['api','library'].includes(request.payload.repo_id));assert.equal(request.expectedVersion,goal.version);commands.push([request.action,request.payload.repo_id]);if(request.action==='goals.cancel')goal.state=goal.status='cancel-requested';goal.version++;return {recorded:true};
   }}}});t.after(()=>service.close());const browser=await chromium.launch({channel:'chrome',headless:true});t.after(()=>browser.close());const page=await browser.newPage({viewport:{width:1440,height:900}});const errors=[];page.on('pageerror',error=>errors.push(error.message));await page.goto(service.url);await page.waitForFunction(()=>document.getElementById('connection')?.textContent.startsWith('Connected locally'));await page.goto(service.origin+'/?view=project&project=single');await page.getByRole('link',{name:'Library-root delivery',exact:true}).first().waitFor();const primaryLink=await page.getByRole('link',{name:'Primary-root delivery',exact:true}).first().getAttribute('href'),foreignLink=await page.getByRole('link',{name:'Library-root delivery',exact:true}).first().getAttribute('href');assert.notEqual(primaryLink,foreignLink);
-  await page.getByRole('link',{name:'Primary-root delivery',exact:true}).first().click();await page.getByRole('button',{name:'Start delivery service',exact:true}).click();await page.getByText('Goal control recorded.',{exact:true}).waitFor();await page.getByRole('tab',{name:'Components & dependencies',exact:true}).click();await page.getByText('Repository scope & exact candidates',{exact:true}).click();assert.equal(await page.locator('.dependency-list > li').count(),3);assert.equal(await page.locator('.dependency-list a').count(),1);
+  await page.getByRole('link',{name:'Primary-root delivery',exact:true}).first().click();await page.getByRole('button',{name:'Start delivery service',exact:true}).click();await page.getByText('Goal control recorded.',{exact:true}).waitFor();await page.getByRole('tab',{name:'Components & dependencies',exact:true}).click();await page.getByText('Repository scope & exact candidates',{exact:true}).click();assert.equal(await page.locator('.dependency-list > li').count(),3);
+  const componentLinks=await page.locator('.dependency-list a').evaluateAll(links=>links.map(link=>link.getAttribute('href')));assert.equal(componentLinks.length,3);assert.equal(new Set(componentLinks).size,3);
+  const snapshot=await readWorkspaceSnapshot(state);for(const root of [repo,library,integration]){const task=snapshot.tasks.find(task=>task.task_root===root&&task.id===taskId);assert.ok(componentLinks.some(href=>new URL(href,service.origin).searchParams.get('task')===task.reference_id));}
   await page.goto(service.origin+'/'+foreignLink);await page.getByRole('heading',{name:'Library-root delivery',exact:true}).waitFor();await page.getByRole('button',{name:'Start delivery service',exact:true}).click();await page.getByText('Goal control recorded.',{exact:true}).waitFor();assert.deepEqual(commands,[['goals.start','api'],['goals.start','library']]);
   foreign.authority_status='unavailable';foreign.mandatory_components[1].read_status='unavailable';foreign.mandatory_components[1].reason='Synthetic component authority drift';await page.getByRole('button',{name:'Refresh',exact:true}).click();await page.getByText('Required scope or evidence unavailable',{exact:true}).waitFor();assert.equal(await page.getByRole('button',{name:'Start delivery service',exact:true}).isDisabled(),true);await page.getByText('More actions',{exact:true}).click();assert.equal(await page.getByRole('button',{name:'Pause delivery',exact:true}).isDisabled(),false);assert.equal(await page.getByRole('button',{name:'Request cancellation',exact:true}).isDisabled(),false);
   await page.getByRole('button',{name:'Request cancellation',exact:true}).click();await page.getByText('Cancellation requested. Check its recorded confirmation before treating work as stopped.',{exact:true}).waitFor();assert.deepEqual(commands.at(-1),['goals.cancel','library']);assert.equal(foreign.status,'cancel-requested');assert.equal(await page.getByText('Stopped',{exact:true}).count(),0);

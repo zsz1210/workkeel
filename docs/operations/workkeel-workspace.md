@@ -6,6 +6,16 @@ not another writable copy of task acceptance. Its overview prioritizes required
 decisions, project progress and recent deliveries. Task details provide execution,
 dependencies and evidence when needed.
 
+The task directory includes native tasks from every explicitly registered repository,
+as well as the project's canonical task root. Equal task IDs in different repositories
+have distinct links; task details, dependency links, usage and evidence keep the
+original repository identity. A source repository without native Workkeel state adds
+no tasks. An unreadable repository is reported separately while healthy repositories
+remain visible. A directory-scoped registration includes only tasks whose recorded
+read and write paths are fully contained in its registered scopes; it cannot open an
+unrestricted repository history viewer. Model-policy editing still uses the canonical
+project task root and does not grant authority over other repositories.
+
 The task list puts tasks first and shows registered delivery goals below them.
 Search matches task titles and identifiers; status filters show the matching and
 total task counts. Search, filters and pages stay in the local URL, so reload and
@@ -31,8 +41,8 @@ independent review and repair. A completed review execution can still have a
 recorded FAIL. Goal views retain each component's actual review verdict and the
 rejected review operations; one component's PASS never clears another's FAIL.
 Current verdicts are bound to their reviewed candidate, rather than inferred from
-task phase. Repository labels and dependency state are plain text, while exact
-root-local task keys remain available for keyboard inspection.
+task phase. Dependency nodes show task names with repository labels and recorded
+state; root-local identities remain in the routes and source records.
 These activities do not imply five separate Agents.
 Each node uses recorded executors, models, time and tokens; select a node for its
 records. Exact identifiers, source details and acceptance evidence are disclosed
@@ -109,6 +119,11 @@ the foreground server with Ctrl-C; a workspace page remaining open is not proof
 that an executor is alive. Original project history, documents, Skills and learning
 remain accessible through the project observer.
 
+When registering through the desktop interface, confirmation opens the registered
+project immediately. An unconfirmed request stays on the form for inspection;
+submitting does not imply that registration succeeded. Clearing a project selection
+clears the previous project's data and controls before another project is loaded.
+
 ## Controlled actions
 
 The default viewer has observation access. To enable specific actions, supply a
@@ -134,9 +149,10 @@ the read or control capability link.
 
 ## Repository integration
 
-A task key contains its project identifier, so equal task IDs in different projects
-remain distinct. Integration inspection uses exact component candidate revisions
-and corresponding native acceptance. Individual component completion does not
+A task key contains its project and task-root identifiers, so equal task IDs across
+projects or repositories remain distinct. Integration inspection selects the named
+repository's task root and rereads its exact candidate and native acceptance.
+Individual component completion does not
 accept the composed feature. Missing records or changed versions remain incomplete.
 
 For execution use an approved [whole-goal manifest](workkeel-goals.md), whose
