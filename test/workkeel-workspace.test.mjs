@@ -714,6 +714,23 @@ test('actual browser narrows only approved model catalog and rejects disabling a
   await page.getByRole('button',{name:'Project defaults',exact:true}).click();await page.getByText('Allowed models',{exact:false}).click();await page.locator('[name="allowed-model"][value="synthetic-b"]').check();await page.getByRole('button',{name:'Save draft',exact:true}).click();await page.locator('.mr-version').filter({hasText:'draft v2'}).waitFor();assert.equal(drafts,2);assert.equal(policy.models.length,2);
 });
 
+test('compact activity usage exposes exact partial, zero and unknown values through keyboard and touch details', {skip:process.env.WORKKEEL_WORKSPACE_BROWSER!=='1'},async t=>{
+ const {chromium}=await import('playwright-core'),{state,repo}=await setup(t);
+ const operations=[['planning',0,true],['implementation',1234567,false],['verification',null,false]].map(([activity_kind,tokens,tokens_complete])=>({activity_kind,tokens,tokens_complete,state:'completed',tool:'codex',actor:{agent_id:'synthetic'},reported_ms:1000,time_complete:true,reported:{model:'synthetic-model'}}));
+ const service=await startWorkspaceServer(state,{readSnapshot:async directory=>({...await readWorkspaceSnapshot(directory),goals:[{id:'precise',root:repo,project_id:'alpha',read_status:'available',title:'Precision fixture',state:'running',accepted:false,operations}]})});t.after(()=>service.close());
+ const browser=await chromium.launch({channel:'chrome',headless:true});t.after(()=>browser.close());
+ for(const touch of [false,true]){
+  const page=await browser.newPage({viewport:{width:1280,height:1000},hasTouch:touch});await page.goto(service.url);await page.goto(service.origin+'/?view=goal&project=alpha&task=precise');
+  assert.match(await page.locator('[data-flow-node="implementation"]').innerText(),/≥ 1\.2M tokens/);
+  for(const [activity,exact] of [['implementation','Reported tokens: ≥ 1,234,567 · partial'],['planning','Reported tokens: 0'],['verification','Reported tokens: Unknown']]){
+   const row=page.locator('[data-flow-node="'+activity+'"]');if(touch)await row.tap();else{await row.focus();await page.keyboard.press('Enter');}
+   await page.locator('.flow-inspector').waitFor();assert.equal(await page.locator('.flow-exact-tokens').innerText(),exact);assert.equal(await page.locator('.flow-exact-tokens').isVisible(),true);
+   await page.locator('[data-flow-close]').click();assert.equal(await row.evaluate(el=>document.activeElement===el),true);
+  }
+  assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);await page.close();
+ }
+});
+
 test('autonomy plan is read-only and conversation handoff survives clipboard denial', {skip:process.env.WORKKEEL_WORKSPACE_BROWSER!=='1'},async t=>{
  const {chromium}=await import('playwright-core'),{state}=await setup(t);let writes=0;
  const service=await startWorkspaceServer(state,{control:{actor:{agent_id:'synthetic',principal_id:'owner'},actions:['autonomy.policy']},hooks:{autonomy:{read:async()=>({version:0,enabled:false,policy:{enabled:false,directions:[],max_jobs:20},available_goals:[],jobs:[],proposals:[],admissions:[]}),execute:async()=>{writes++;throw Error('Unexpected write');}}}});t.after(()=>service.close());
