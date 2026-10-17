@@ -241,7 +241,7 @@ test('autonomy next steps preserve controls, reveal detail and recover from unkn
  assert.equal(await page.getByRole('button',{name:'Pause new execution',exact:true}).isEnabled(),true);await page.getByRole('button',{name:'Pause new execution',exact:true}).click();await page.getByText('Host confirmed the request. Reload to inspect effective canonical state.',{exact:true}).waitFor();assert.deepEqual(writes,['autonomy.pause']);
  phase='legacy-review';await page.reload();await page.locator('[data-autonomy-state=review]').waitFor();await page.getByRole('button',{name:'View results to review',exact:true}).click();assert.equal(await page.locator('#autonomy-jobs>summary').evaluate(node=>node===document.activeElement),true);assert.equal(await page.getByRole('heading',{name:'Synthetic result to review',exact:true}).isVisible(),true);
  phase='paused';await page.reload();await page.locator('[data-autonomy-state=paused]').waitFor();assert.equal(await page.getByRole('button',{name:'Resume new execution',exact:true}).isEnabled(),true);
- assert.equal(await page.locator('.autonomy-next').getByText('Choose “Resume new execution” when you want to continue.',{exact:true}).isVisible(),true);
+ assert.equal(await page.locator('.autonomy-next').getByText('Existing work is not cancelled.',{exact:true}).isVisible(),true);
  const readOnly=await browser.newPage({viewport:{width:1440,height:1000},colorScheme:'dark',reducedMotion:'reduce'});readOnly.on('pageerror',error=>errors.push(error.message));
  await readOnly.addInitScript(()=>localStorage.setItem('workkeel-workspace-theme','dark'));
  await readOnly.goto(service.origin+'/?view=autonomy&project=alpha#'+new URL(service.url).hash.slice(1).split('/')[0]);await readOnly.locator('[data-autonomy-state=paused]').waitFor();
