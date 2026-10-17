@@ -369,7 +369,9 @@ failures in its existing bounded repair/attention path.
 
 The local Codex subscription host limits its automatic Skill catalogue to readable,
 regular files physically inside the project, excluding private workflow execution
-state and symlink paths. It preserves existing disabled Skills. Exact Skill file
+state and symlink paths. It preserves explicitly disabled Skill paths even when
+their files are absent from initial discovery; a returning file must remain
+disabled. Malformed or conflicting configured entries block dispatch. Exact Skill file
 paths are disabled through process-local configuration; user configuration is never
 rewritten. A fresh catalogue check before thread start rejects discovery errors,
 ignored overrides, missing or disabled previously enabled project Skills, or newly

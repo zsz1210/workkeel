@@ -91,15 +91,33 @@ async function activeVersionedSkills(target,skills){
   const view=await listNativeSkillLifecycle(target);
   return new Set(view.active.map(skill=>path.join(target,skill.entrypoint.path)));
 }
-export async function codexSkillPolicy(rpc, target) {
-  const disabledPaths = [], enabledPaths = [];
-  const skills=await skillCatalogue(rpc,target),activeVersions=await activeVersionedSkills(target,skills);
+function configuredSkillDisables(entries) {
+  if (!Array.isArray(entries)) throw new Error("Invalid configured Skill overrides");
+  const paths = new Set(), disabled = new Set();
+  for (const entry of entries) {
+    if (!entry || typeof entry.path !== "string" || entry.path.includes("\0") ||
+        !path.isAbsolute(entry.path) || path.normalize(entry.path) !== entry.path ||
+        typeof entry.enabled !== "boolean" || paths.has(entry.path)) {
+      throw new Error("Invalid or ambiguous configured Skill overrides");
+    }
+    paths.add(entry.path);
+    if (!entry.enabled) disabled.add(entry.path);
+  }
+  return disabled;
+}
+
+export async function codexSkillPolicy(rpc, target, {configuredSkills = [], sourceReview = false} = {}) {
+  if (typeof sourceReview !== "boolean") throw new Error("Source review mode must be explicit");
+  // Snapshot inherited disables before awaiting discovery. A temporarily missing
+  // file is still disabled when it returns; discovery cannot grant it permission.
+  const disabledPaths = configuredSkillDisables(configuredSkills), enabledPaths = [];
+  const skills=await skillCatalogue(rpc,target),activeVersions=sourceReview?new Set():await activeVersionedSkills(target,skills);
   for (const skill of skills) {
     // Replacing the config array must retain existing disabled project Skills.
-    if (!skill.enabled || !await readableProjectSkill(target, skill.path) || versionedSkill(target,skill.path)&&!activeVersions.has(skill.path)) disabledPaths.push(skill.path);
+    if (sourceReview || disabledPaths.has(skill.path) || !skill.enabled || !await readableProjectSkill(target, skill.path) || versionedSkill(target,skill.path)&&!activeVersions.has(skill.path)) disabledPaths.add(skill.path);
     else enabledPaths.push(skill.path);
   }
-  return { disabledPaths, enabledPaths };
+  return { disabledPaths:[...disabledPaths], enabledPaths };
 }
 
 export async function assertCodexSkills(rpc, target, { disabledPaths, enabledPaths }) {
@@ -158,7 +176,7 @@ export async function createLocalCodexSubscriptionHost(targetInput, { command = 
       if (!/^[A-Za-z0-9_-]+$/.test(name)) throw new Error("Codex MCP name requires a separately reviewed host profile");
       settings.push(`mcp_servers.${name}.enabled=false`);
     }
-    skillPolicy = sourceReview ? {disabledPaths:(await skillCatalogue(probe,target)).map(s=>s.path),enabledPaths:[]} : await codexSkillPolicy(probe, target);
+    skillPolicy = await codexSkillPolicy(probe, target, {configuredSkills:config.skills?.config, sourceReview});
     // alpha.16.3 requires exact SKILL.md paths, not containing directories.
     // Check the resulting catalogue on the actual dispatch connection as well.
     settings.push(`skills.config=[${skillPolicy.disabledPaths.map(file => `{path=${JSON.stringify(file)},enabled=false}`).join(",")}]`);
