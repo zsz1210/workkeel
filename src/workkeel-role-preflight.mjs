@@ -102,6 +102,10 @@ function validateProbe(result, role) {
  * but must not start a model turn. The receipt is an observation, not authority.
  */
 export async function runRolePreflight({ role, host, context = {} }) {
+  // All checks and the receipt must describe the same request across the probe
+  // await. The host receives its own copy below, never this private snapshot.
+  role = structuredClone(role);
+  context = structuredClone(context);
   validateRoleContract(role);
   assertTrustedRoleHost(host);
   strict(context, [], ["approved_tools", "coordinator_checks"]);
