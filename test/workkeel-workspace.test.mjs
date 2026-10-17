@@ -632,6 +632,7 @@ test('a duplicate command arriving after reservation shares the pending host res
   const early=await Promise.race([second.then(()=>true),new Promise(resolve=>setTimeout(()=>resolve(false),100))]);
   release();const responses=await Promise.all([first,second]);
   assert.equal(early,false);assert.equal(executed,1);assert.ok(responses.every(response=>response.status===200&&response.body.status==='confirmed'));
+  assert.deepEqual(responses[1].body,responses[0].body,'the duplicate shares the exact pending result, not a later durable replay');
 });
 
 test('unknown host outcomes are durable and symlinked command receipts are rejected',async t=>{
