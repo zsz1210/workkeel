@@ -414,7 +414,7 @@ try{
     await page.getByRole('button',{name:'已驗證',exact:true}).click();assert.equal(await page.locator('.learning-row').count(),1);
     await page.getByRole('button',{name:'全部',exact:true}).click();assert.equal(await page.locator('.learning-row').count(),4);
     assert.ok((await page.locator('.segments').first().boundingBox()).width<=120);
-    await page.locator('.learning-row').nth(2).click();assert.match(await page.locator('#detail-content').innerText(),/還有 4 個階段尚未記錄完成/);
+    await page.locator('.learning-row').nth(2).click();{const detail=await page.locator('#detail-content').innerText();assert.match(detail,/已採用/);assert.match(detail,/轉為 Skill 的條件/);}
     await page.keyboard.press('Escape');
    }
    if(name==='settings'){
