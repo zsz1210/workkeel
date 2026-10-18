@@ -6,6 +6,7 @@ import { execFileSync, spawn, spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import test from "node:test";
 import { readNativeTask } from "../src/workkeel-tasks.mjs";
+import { runLifecycleFromFlags, runCreateFromFlags } from "../src/workkeel-cli-flags.mjs";
 
 const cli = fileURLToPath(new URL("../bin/workkeel.mjs", import.meta.url));
 const git = (root, ...args) => execFileSync("git", ["-C", root, ...args], { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }).trim();
@@ -176,14 +177,15 @@ test("a different failed command never disturbs the replay of an earlier success
   assert.equal(workkeel(root, ...claimA).replayed, false);
   fails(root, "task", "claim", "--id", "WK-0001", "--actor", "builder", "--base", git(root, "rev-parse", "HEAD"));
   assert.equal(workkeel(root, ...claimA).replayed, true);
-  // Identical commands racing each other settle on one request and one operation.
+  // Identical commands in separate processes both succeed with one task between them.
   const racing = ["task", "new", "--goal", "Race", "--acceptance", "One task", "--write", "docs", "--actor", "builder"];
   const results = await Promise.all([0, 1].map(() => new Promise(resolve => {
     const child = spawn(process.execPath, [cli, ...racing], { cwd: root });
-    let out = ""; child.stdout.on("data", chunk => { out += chunk; }); child.on("close", code => resolve({ code, out }));
+    let out = "", err = ""; child.stdout.on("data", chunk => { out += chunk; }); child.stderr.on("data", chunk => { err += chunk; });
+    child.on("close", code => resolve({ code, out, err }));
   })));
-  const ids = results.filter(r => r.code === 0).map(r => JSON.parse(r.out).id);
-  assert.ok(ids.length >= 1); assert.equal(new Set(ids).size, 1);
+  for (const result of results) assert.equal(result.code, 0, result.out + result.err);
+  assert.equal(new Set(results.map(result => JSON.parse(result.out).id)).size, 1);
   assert.equal((await fs.readdir(path.join(root, ".ai-org/work-items"))).length, 2);
 });
 
@@ -197,4 +199,54 @@ test("the order of repeated set-like flags does not create a second task", async
   const reordered = workkeel(root, "task", "new", "--goal", "Ordered", "--acceptance", "First", "--acceptance", "Second", "--write", "docs", "--actor", "builder");
   const other = workkeel(root, "task", "new", "--goal", "Ordered", "--acceptance", "Second", "--acceptance", "First", "--write", "docs", "--actor", "builder");
   assert.notEqual(other.id, reordered.id);
+});
+
+const claimOptions = { "--id": "WK-0001", "--actor": "builder" };
+const barrier = count => { let arrived = 0, open; const ready = new Promise(resolve => { open = resolve; });
+  return async () => { arrived += 1; if (arrived === count) open(); await ready; }; };
+
+test("a command that read a stale task snapshot still replays the claim that succeeded", async t => {
+  const root = await solo(t);
+  workkeel(root, "task", "new", "--goal", "Tidy", "--acceptance", "Tidy", "--write", "docs", "--actor", "builder");
+  workkeel(root, "task", "claim", "--id", "WK-0001", "--actor", "builder");
+  // A reads v2 and pauses; meanwhile the task is released (v3) and claimed again by the same command (v4).
+  const result = await runLifecycleFromFlags(root, "WK-0001", "claim", claimOptions, { afterSnapshot: async item => {
+    assert.equal(item.version, 2);
+    workkeel(root, "task", "release", "--id", "WK-0001", "--actor", "builder", "--summary", "Pause");
+    workkeel(root, "task", "claim", "--id", "WK-0001", "--actor", "builder");
+  } });
+  assert.equal(result.state, "build");
+  const after = workkeel(root, "task", "claim", "--id", "WK-0001", "--actor", "builder");
+  assert.equal(after.replayed, true); assert.equal(after.version, 4);
+  const item = await readNativeTask(root, "WK-0001");
+  assert.deepEqual(item.history.map(event => event.action), ["create", "claim", "release", "claim"]);
+
+  // A snapshot taken before the first claim resends that claim instead of creating a failing one.
+  const fresh = await solo(t);
+  workkeel(fresh, "task", "new", "--goal", "Tidy", "--acceptance", "Tidy", "--write", "docs", "--actor", "builder");
+  const replayed = await runLifecycleFromFlags(fresh, "WK-0001", "claim", claimOptions, { afterSnapshot: async () => {
+    workkeel(fresh, "task", "claim", "--id", "WK-0001", "--actor", "builder");
+  } });
+  assert.equal(replayed.replayed, true);
+  assert.equal(workkeel(fresh, "task", "claim", "--id", "WK-0001", "--actor", "builder").replayed, true);
+  assert.equal((await readNativeTask(fresh, "WK-0001")).history.length, 2);
+});
+
+test("identical commands forced to overlap both succeed with exactly one operation", async t => {
+  const root = await solo(t);
+  const createOptions = { "--goal": "Race", "--acceptance": ["One task"], "--write": ["docs"], "--actor": "builder" };
+  const createGate = barrier(2);
+  const created = await Promise.all([0, 1].map(() => runCreateFromFlags(root, createOptions, { beforeMutation: createGate })));
+  assert.deepEqual(created.map(result => result.id), ["WK-0001", "WK-0001"]);
+  assert.deepEqual(created.map(result => result.replayed).sort(), [false, true]);
+  assert.equal((await readNativeTask(root, "WK-0001")).history.length, 1);
+  // A second claim attempt after a release: both contenders adopt one new attempt.
+  workkeel(root, "task", "claim", "--id", "WK-0001", "--actor", "builder");
+  workkeel(root, "task", "release", "--id", "WK-0001", "--actor", "builder", "--summary", "Pause");
+  const claimGate = barrier(2);
+  const claimed = await Promise.all([0, 1].map(() => runLifecycleFromFlags(root, "WK-0001", "claim", claimOptions, { beforeMutation: claimGate })));
+  assert.deepEqual(claimed.map(result => result.replayed).sort(), [false, true]);
+  const item = await readNativeTask(root, "WK-0001");
+  assert.deepEqual(item.history.map(event => event.action), ["create", "claim", "release", "claim"]);
+  assert.notEqual(item.history[1].operation_id, item.history[3].operation_id);
 });

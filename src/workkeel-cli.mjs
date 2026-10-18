@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import { TEMPLATE_VERSION } from "./workkeel-version.mjs";
 import { readTaskContractInput } from "./task-contract.mjs";
 import { initializeTaskProject, existsEntry, readTaskProject, soloPolicy, updateProjectPolicy } from "./workkeel-project.mjs";
-import { parseCommandLine, resolveActor, lifecycleRequestFromFlags, draftFromFlags } from "./workkeel-cli-flags.mjs";
+import { parseCommandLine, resolveActor, runLifecycleFromFlags, runCreateFromFlags } from "./workkeel-cli-flags.mjs";
 import { createNativeTask, mutateNativeTask, readNativeTask, listTaskItems, diagnoseTaskProject } from "./workkeel-tasks.mjs";
 import { planTaskRuntime } from "./workkeel-runtime.mjs";
 import { previewInstructions, applyInstructions, readStartGuide } from "./workkeel-onboarding.mjs";
@@ -220,8 +220,7 @@ export async function workkeelMain(args) {
     } else if (action === "show") { allow(options, ["--id"]); output = await readNativeTask(target, required(options, "--id")); }
     else if (action === "new" || action === "create" && !options["--source"]) {
       allow(options, ["--goal", "--acceptance", "--write", "--read", "--include", "--exclude", "--risk", "--id", "--actor", "--approval"]);
-      const { draft, request } = await draftFromFlags(target, options);
-      output = await createNativeTask(target, draft, request);
+      output = await runCreateFromFlags(target, options);
     } else if (options["--request"]) {
       // Integration form: an exact request document, unchanged.
       allow(options, action === "create" ? ["--source", "--request"] : ["--id", "--request"]);
@@ -235,7 +234,7 @@ export async function workkeelMain(args) {
     } else {
       allow(options, ["--id", "--actor", "--revision", "--base", "--claim", "--summary", "--evidence", "--judgment", "--rollback", "--unresolved", "--mode", "--expect", "--attempt"]);
       const id = required(options, "--id");
-      output = await mutateNativeTask(target, id, action, await lifecycleRequestFromFlags(target, id, action, options));
+      output = await runLifecycleFromFlags(target, id, action, options);
     }
   } else if (command === "context" && action === "prepare") {
     allow(options, ["--id", "--request"]);

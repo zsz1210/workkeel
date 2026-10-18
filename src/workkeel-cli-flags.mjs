@@ -3,7 +3,7 @@ import path from "node:path";
 import { createHash } from "node:crypto";
 import { parseArgs } from "node:util";
 import { readNativeGit, readLocalActor, readTaskProject } from "./workkeel-project.mjs";
-import { readNativeTask, listTaskItems } from "./workkeel-tasks.mjs";
+import { readNativeTask, listTaskItems, mutateNativeTask, createNativeTask } from "./workkeel-tasks.mjs";
 import { durableAtomicCreate } from "./files.mjs";
 
 const GROUPS = ["task", "usage", "dispatch", "intake", "runtime", "instructions", "workflow", "headroom", "skills", "context",
@@ -75,9 +75,14 @@ async function attempts(dir) {
   try { return (await fs.readdir(dir)).filter(name => /^\d+\.json$/.test(name)).map(name => Number(name.slice(0, -5))).sort((a, b) => a - b); }
   catch (error) { if (error.code === "ENOENT") return []; throw error; }
 }
-async function latestAttempt(dir) {
-  const numbers = await attempts(dir);
-  return numbers.length ? { number: numbers.at(-1), value: await readSaved(path.join(dir, `${numbers.at(-1)}.json`)) } : null;
+async function savedAttempts(dir, key) {
+  const result = [];
+  for (const number of await attempts(dir)) {
+    const value = await readSaved(path.join(dir, `${number}.json`));
+    if (value?.key !== key) throw new Error(`Saved CLI request ${dir}/${number}.json belongs to another command; remove it`);
+    result.push({ number, value });
+  }
+  return result;
 }
 async function saveAttempt(dir, number, value) {
   await fs.mkdir(dir, { recursive: true });
@@ -85,16 +90,37 @@ async function saveAttempt(dir, number, value) {
   catch (error) { if (error.code !== "EEXIST") throw error; return readSaved(path.join(dir, `${number}.json`)); }
 }
 
-/** Builds a lifecycle request from flags. The operation ID is derived, so a retried command replays safely. */
-export async function lifecycleRequestFromFlags(target, id, action, options) {
-  const project = await readTaskProject(target), item = await readNativeTask(target, id);
-  const key = commandKey(action, id, options), dir = await savedRequestPath(target, id, key.slice(0, 32));
-  const latest = await latestAttempt(dir);
-  if (latest) {
-    // Same command again: replay it if it was the latest operation, or resend it if it never landed.
-    const saved = latest.value, event = item.history.find(entry => entry.operation_id === saved.request.operation_id);
-    if (event ? event.sequence === item.version : saved.request.expected_version === item.version) return saved.request;
+/**
+ * Runs a lifecycle operation from flags. Every saved attempt of this exact
+ * command is considered, not just the newest, so a stale or failed attempt never
+ * hides the one that succeeded. If the task moved on while this command was
+ * preparing, it reads the task again and reselects instead of failing.
+ */
+export async function runLifecycleFromFlags(target, id, action, options, hooks = {}) {
+  for (let round = 0; ; round += 1) {
+    const item = await readNativeTask(target, id);
+    await hooks.afterSnapshot?.(item);
+    const request = await lifecycleRequestFromFlags(target, id, action, options, item);
+    await hooks.beforeMutation?.(request);
+    try { return await mutateNativeTask(target, id, action, request); }
+    catch (error) {
+      if (round >= 3 || (await readNativeTask(target, id)).version === item.version) throw error;
+    }
   }
+}
+
+/** Selects or creates the saved request for this command against one task snapshot. */
+export async function lifecycleRequestFromFlags(target, id, action, options, snapshot = null) {
+  const project = await readTaskProject(target), item = snapshot ?? await readNativeTask(target, id);
+  const key = commandKey(action, id, options), dir = await savedRequestPath(target, id, key.slice(0, 32));
+  const saved = await savedAttempts(dir, key);
+  // Replay the attempt that is the task's latest operation; otherwise resend one that never landed.
+  const latestEvent = item.history.at(-1)?.operation_id;
+  const replay = saved.find(entry => entry.value.request.operation_id === latestEvent);
+  if (replay) return replay.value.request;
+  const pending = saved.find(entry => entry.value.request.expected_version === item.version &&
+    !item.history.some(event => event.operation_id === entry.value.request.operation_id));
+  if (pending) return pending.value.request;
   const expected = version(options, item);
   const request = { operation_id: `cli-${action}-${expected + 1}-${key.slice(0, 16)}`, expected_version: expected, actor: await resolveActor(target, project, options["--actor"]) };
   const summary = () => { if (!options["--summary"]) throw new Error(`task ${action} needs --summary`); return options["--summary"]; };
@@ -110,7 +136,7 @@ export async function lifecycleRequestFromFlags(target, id, action, options) {
     rollback: options["--rollback"], evidence: evidence() });
   else if (action === "cancel") Object.assign(request, { summary: summary(), evidence: evidence() });
   else throw new Error("Unknown task operation");
-  return (await saveAttempt(dir, (latest?.number ?? 0) + 1, { key, request })).request;
+  return (await saveAttempt(dir, (saved.at(-1)?.number ?? 0) + 1, { key, request })).request;
 }
 
 /** A short task draft from flags; createNativeTask records every default explicitly. */
@@ -120,7 +146,7 @@ export async function draftFromFlags(target, options) {
   const key = commandKey("create", null, options), dir = await savedRequestPath(target, "create", key.slice(0, 32));
   // An identical task new always resends its original task ID and request; the
   // task store decides whether that is a replay. It never allocates a second task.
-  const saved = (await latestAttempt(dir))?.value;
+  const saved = (await savedAttempts(dir, key)).at(0)?.value;
   if (saved) return { draft: saved.draft, request: saved.request };
   let id = options["--id"];
   if (!id) {
@@ -137,4 +163,11 @@ export async function draftFromFlags(target, options) {
   const request = { operation_id: `cli-create-${hash({ id, key }).slice(0, 24)}`, expected_version: 0, actor };
   const kept = await saveAttempt(dir, 1, { key, draft, request });
   return { draft: kept.draft, request: kept.request };
+}
+
+/** Creates a task from flags; an identical command always resends its first saved request. */
+export async function runCreateFromFlags(target, options, hooks = {}) {
+  const { draft, request } = await draftFromFlags(target, options);
+  await hooks.beforeMutation?.(request);
+  return createNativeTask(target, draft, request);
 }
