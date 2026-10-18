@@ -6,7 +6,7 @@ import { execFileSync, spawn, spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import test from "node:test";
 import { readNativeTask } from "../src/workkeel-tasks.mjs";
-import { runLifecycleFromFlags, runCreateFromFlags } from "../src/workkeel-cli-flags.mjs";
+import { runLifecycleFromFlags, runCreateFromFlags, lifecycleRequestFromFlags } from "../src/workkeel-cli-flags.mjs";
 
 const cli = fileURLToPath(new URL("../bin/workkeel.mjs", import.meta.url));
 const git = (root, ...args) => execFileSync("git", ["-C", root, ...args], { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }).trim();
@@ -295,4 +295,104 @@ test("a retried command stops instead of moving to a new candidate or claim", as
   await assert.rejects(release, /first targeted claim_id/);
   const afterRelease = await readNativeTask(releasing, "WK-0001");
   assert.equal(afterRelease.state, "build"); assert.notEqual(afterRelease.claim.id, firstClaim);
+});
+
+// Target binding matrix: every state-changing command x every way its target can change.
+const ID = "WK-0001", B = "builder", R = "reviewer";
+const head = root => git(root, "rev-parse", "HEAD");
+async function record(root, ref, text) {
+  await fs.mkdir(path.join(root, path.dirname(ref)), { recursive: true }); await fs.writeFile(path.join(root, ref), text);
+}
+const commitRecords = (root, note) => { git(root, "add", ".ai-org"); git(root, "commit", "-qm", note); };
+async function deliver(root, note) {
+  await fs.appendFile(path.join(root, "docs/guide.md"), `${note}\n`); git(root, "commit", "-qam", note);
+  const ref = `.ai-org/artifacts/${ID}/${note}.md`; await record(root, ref, `${note}\n`);
+  workkeel(root, "task", "handoff", "--id", ID, "--actor", B, "--summary", note, "--evidence", ref); commitRecords(root, `record ${note}`);
+}
+async function judge(root, judgment, note) {
+  const ref = `.ai-org/artifacts/${ID}/${note}.md`; await record(root, ref, `${note}\n`);
+  workkeel(root, "task", "review", "--id", ID, "--actor", R, "--judgment", judgment, "--summary", note, "--evidence", ref); commitRecords(root, `record ${note}`);
+}
+const states = {
+  claimed: async root => { workkeel(root, "task", "new", "--goal", "Tidy", "--acceptance", "Tidy", "--write", "docs", "--actor", B); workkeel(root, "task", "claim", "--id", ID, "--actor", B); },
+  delivered: async root => { await states.claimed(root); await deliver(root, "candidate-a"); },
+  failed: async root => { await states.delivered(root); await judge(root, "fail", "fail-a"); }
+};
+const retargets = {
+  // Another flow releases and claims again, so the claim changes.
+  newClaim: async root => { workkeel(root, "task", "release", "--id", ID, "--actor", B, "--summary", "Pause");
+    workkeel(root, "task", "claim", "--id", ID, "--actor", B, "--base", head(root)); },
+  // The delivered candidate A fails, is reworked and replaced by B.
+  newCandidate: async root => { await judge(root, "fail", "fail-a"); workkeel(root, "task", "rework", "--id", ID, "--actor", B, "--summary", "Fix A");
+    workkeel(root, "task", "claim", "--id", ID, "--actor", B, "--base", head(root)); await deliver(root, "candidate-b"); },
+  // From failed A: another rework, B delivered and failed too.
+  newFailedCandidate: async root => { workkeel(root, "task", "rework", "--id", ID, "--actor", B, "--summary", "Other rework");
+    workkeel(root, "task", "claim", "--id", ID, "--actor", B, "--base", head(root)); await deliver(root, "candidate-b"); await judge(root, "fail", "fail-b"); },
+  // A fails; B is delivered and passes, reaching the release gate.
+  newPassedCandidate: async root => { await retargets.newCandidate(root); await judge(root, "pass", "pass-b"); }
+};
+const commands = {
+  release: { "--id": ID, "--actor": B, "--summary": "Stop" },
+  handoff: { "--id": ID, "--actor": B, "--summary": "Done", "--evidence": [`.ai-org/artifacts/${ID}/done.md`] },
+  review: { "--id": ID, "--actor": R, "--judgment": "pass", "--summary": "Looks right", "--evidence": [`.ai-org/artifacts/${ID}/ok.md`] },
+  rework: { "--id": ID, "--actor": B, "--summary": "Address the failure" },
+  close: { "--id": ID, "--actor": B, "--summary": "Accepted", "--rollback": "Revert", "--evidence": [`.ai-org/artifacts/${ID}/ok.md`] }
+};
+// A leftover attempt from before binding existed: same command, aimed at the new target, never sent.
+async function leaveRetargetedAttempt(root, action, first, { legacy }) {
+  const base = path.join(root, ".git/workkeel/cli-operations", ID);
+  for (const dir of await fs.readdir(base)) {
+    const saved = await readSaved(path.join(base, dir, "1.json"));
+    if (saved?.request.operation_id !== first.operation_id) continue;
+    const item = await readNativeTask(root, ID), request = { ...saved.request, operation_id: `${saved.request.operation_id}-old`, expected_version: item.version };
+    if ("claim_id" in request) request.claim_id = item.claim?.id;
+    if ("revision" in request) request.revision = action === "handoff" ? head(root) : item.delivery.revision;
+    const value = { key: saved.key, request };
+    if (!legacy) value.target = action === "rework" ? { revision: item.delivery.revision } : Object.fromEntries(Object.entries(request).filter(([k]) => ["claim_id", "revision"].includes(k)));
+    await fs.writeFile(path.join(base, dir, "2.json"), JSON.stringify(value));
+    return;
+  }
+  throw new Error("first attempt not found");
+}
+const readSaved = async file => JSON.parse(await fs.readFile(file, "utf8"));
+const matrix = [
+  ["release", "claimed", "newClaim", "new"], ["release", "claimed", "newClaim", "pending"], ["release", "claimed", "newClaim", "legacy"],
+  ["handoff", "claimed", "newClaim", "new"], ["handoff", "claimed", "newClaim", "pending"], ["handoff", "claimed", "newClaim", "legacy"],
+  ["review", "delivered", "newCandidate", "new"], ["review", "delivered", "newCandidate", "pending"], ["review", "delivered", "newCandidate", "legacy"],
+  ["rework", "failed", "newFailedCandidate", "new"], ["rework", "failed", "newFailedCandidate", "pending"], ["rework", "failed", "newFailedCandidate", "legacy"],
+  ["close", "delivered", "newPassedCandidate", "pending"], ["close", "delivered", "newPassedCandidate", "legacy"]
+];
+for (const [action, state, retarget, kind] of matrix) {
+  test(`target binding: ${action} stops when its target changes (${retarget}, ${kind} attempt)`, async t => {
+    const root = await solo(t);
+    await states[state](root);
+    if (action === "handoff") { await fs.appendFile(path.join(root, "docs/guide.md"), "Work\n"); git(root, "commit", "-qam", "work"); }
+    const before = await readNativeTask(root, ID);
+    let run;
+    if (kind === "new") {
+      let moved = false;
+      run = runLifecycleFromFlags(root, ID, action, commands[action], { beforeMutation: async () => { if (!moved) { moved = true; await retargets[retarget](root); } } });
+    } else {
+      const first = await lifecycleRequestFromFlags(root, ID, action, commands[action]);
+      await retargets[retarget](root);
+      await leaveRetargetedAttempt(root, action, first, { legacy: kind === "legacy" });
+      run = runLifecycleFromFlags(root, ID, action, commands[action]);
+    }
+    await assert.rejects(run, kind === "legacy" && action === "rework" ? /no recorded target/ : /first targeted/);
+    const after = await readNativeTask(root, ID);
+    assert.ok(after.version > before.version, "the target really changed");
+    assert.ok(!after.history.some(event => event.operation_id.startsWith(`cli-${action}-`) && event.summary === commands[action]["--summary"]),
+      `${action} was never applied to the new target`);
+  });
+}
+
+test("target binding: claim, cancel and create bind only the task", async t => {
+  const root = await solo(t);
+  await states.claimed(root);
+  workkeel(root, "task", "release", "--id", ID, "--actor", B, "--summary", "Pause");
+  // The same claim command later makes a fresh claim; its base revision is deliberately not bound.
+  assert.equal(workkeel(root, "task", "claim", "--id", ID, "--actor", B).replayed, false);
+  await record(root, `.ai-org/artifacts/${ID}/cancel.md`, "No longer needed\n");
+  const cancel = ["task", "cancel", "--id", ID, "--actor", B, "--summary", "Stop", "--evidence", `.ai-org/artifacts/${ID}/cancel.md`];
+  assert.equal(workkeel(root, ...cancel).state, "cancelled"); assert.equal(workkeel(root, ...cancel).replayed, true);
 });

@@ -109,8 +109,28 @@ export async function runLifecycleFromFlags(target, id, action, options, hooks =
   }
 }
 
-// The object a lifecycle command acts on; a retry must never move to another one.
-const TARGET_FIELDS = { release: ["claim_id"], handoff: ["claim_id", "revision"], review: ["revision"], close: ["revision"] };
+// The object each state-changing command acts on. A command binds it on its first
+// attempt; every later attempt, new or left pending, must aim at the same one.
+// claim, cancel and create act on the task itself (its ID is part of the command
+// key); claim deliberately does not bind its base revision.
+const TARGET_FIELDS = { claim: [], cancel: [], release: ["claim_id"], handoff: ["claim_id", "revision"],
+  review: ["revision"], close: ["revision"], rework: ["revision"] };
+/** The target a request would act on now. Rework acts on the failed candidate, which its request does not name. */
+function currentTarget(action, item, request) {
+  return Object.fromEntries(TARGET_FIELDS[action].map(field =>
+    [field, action === "rework" ? item.delivery?.revision ?? null : request[field] ?? null]));
+}
+/** The target recorded with a saved attempt; attempts saved before binding existed are refused when unknowable. */
+function recordedTarget(action, value) {
+  if (value.target) return value.target;
+  const fields = TARGET_FIELDS[action];
+  if (fields.every(field => field in value.request)) return Object.fromEntries(fields.map(field => [field, value.request[field]]));
+  throw new Error(`A saved ${action} request has no recorded target; remove .git/workkeel/cli-operations for this task or pass explicit flags`);
+}
+function assertSameTarget(action, first, next) {
+  for (const field of TARGET_FIELDS[action]) if (first && first[field] !== next[field])
+    throw new Error(`This command first targeted ${field} ${first[field]}, but it would now act on ${next[field] ?? "none"}; rerun with an explicit --${field === "claim_id" ? "claim" : "revision"} for the new target`);
+}
 
 /** Selects or creates the saved request for this command against one task snapshot. */
 export async function lifecycleRequestFromFlags(target, id, action, options, snapshot = null) {
@@ -121,9 +141,12 @@ export async function lifecycleRequestFromFlags(target, id, action, options, sna
   const latestEvent = item.history.at(-1)?.operation_id;
   const replay = saved.find(entry => entry.value.request.operation_id === latestEvent);
   if (replay) return replay.value.request;
+  if (!TARGET_FIELDS[action]) throw new Error("Unknown task operation");
+  const firstTarget = saved[0] ? recordedTarget(action, saved[0].value) : null;
   const pending = saved.find(entry => entry.value.request.expected_version === item.version &&
     !item.history.some(event => event.operation_id === entry.value.request.operation_id));
-  if (pending) return pending.value.request;
+  // A request that never landed is resent only if it still aims at the first target.
+  if (pending) { assertSameTarget(action, firstTarget, recordedTarget(action, pending.value)); return pending.value.request; }
   const expected = version(options, item);
   const request = { operation_id: `cli-${action}-${expected + 1}-${key.slice(0, 16)}`, expected_version: expected, actor: await resolveActor(target, project, options["--actor"]) };
   const summary = () => { if (!options["--summary"]) throw new Error(`task ${action} needs --summary`); return options["--summary"]; };
@@ -142,10 +165,9 @@ export async function lifecycleRequestFromFlags(target, id, action, options, sna
   // A command keeps the claim and candidate its first attempt targeted. If a later
   // attempt would derive a different one, stop rather than apply this judgment,
   // summary or evidence to another target.
-  const first = saved[0]?.value.request;
-  for (const field of TARGET_FIELDS[action] ?? []) if (first && first[field] !== request[field])
-    throw new Error(`This command first targeted ${field} ${first[field]}, but the task now has ${request[field] ?? "none"}; rerun with an explicit --${field === "claim_id" ? "claim" : "revision"} for the new target`);
-  return (await saveAttempt(dir, (saved.at(-1)?.number ?? 0) + 1, { key, request })).request;
+  const aim = currentTarget(action, item, request);
+  assertSameTarget(action, firstTarget, aim);
+  return (await saveAttempt(dir, (saved.at(-1)?.number ?? 0) + 1, { key, request, target: aim })).request;
 }
 
 /** A short task draft from flags; createNativeTask records every default explicitly. */
