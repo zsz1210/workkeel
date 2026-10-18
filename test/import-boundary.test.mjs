@@ -82,6 +82,28 @@ test("string and template escapes decode exactly as JavaScript evaluates them", 
   assert.throws(() => dynamicImports('import("unterminated\n")'), /Unterminated/);
 });
 
+test("an ambiguous slash after a closing brace fails the check with its position", async t => {
+  const root = await fixture(t, { "bin/workkeel.mjs": entry, "src/workkeel-cli.mjs": 'const ok = 1;\na = {} / 2; import("./project.mjs"); b = c / d;\n' });
+  assert.deepEqual(checkImportBoundary(root).errors, [
+    'src/workkeel-cli.mjs: cannot be checked (Ambiguous "/" after "}" at line 2, column 8: it may be division or the start of a regular expression; wrap the expression in parentheses or move the regular expression to its own statement)'
+  ]);
+  assert.throws(() => dynamicImports("function f() {}\n/x/.test(y);\n"), /Ambiguous "\/" after "}" at line 2, column 1/);
+});
+
+test("slashes after parentheses, increments and property keywords are resolved, not guessed", () => {
+  const cases = {
+    'n = (a + b) / 2 / c; import("./a.mjs");': ["./a.mjs"],
+    'if (x) /"/.test(s); import("./b.mjs");': ["./b.mjs"],
+    'while (x) /\'/.test(s); import("./c.mjs");': ["./c.mjs"],
+    'i++ / 2; import("./d.mjs") / 1;': ["./d.mjs"],
+    'j-- / 2 / import("./e.mjs");': ["./e.mjs"],
+    'o.return / 2; import("./f.mjs") / 1;': ["./f.mjs"],
+    'o?.typeof / 2; import("./g.mjs") / 1;': ["./g.mjs"],
+    'f(if_ = 1) / 2; import("./h.mjs");': ["./h.mjs"]
+  };
+  for (const [source, expected] of Object.entries(cases)) assert.deepEqual(dynamicImports(source), expected, source);
+});
+
 test("a method named import is conservatively treated as a computed import", async t => {
   const root = await fixture(t, { "bin/workkeel.mjs": entry, "src/workkeel-cli.mjs": "export const loader = { import(name) { return name; } };\n" });
   assert.deepEqual(checkImportBoundary(root).errors, ["src/workkeel-cli.mjs: computed import() cannot be checked"]);
@@ -114,5 +136,5 @@ test("native modules the CLI entry does not reach are still checked", async t =>
 
 test("a native module that does not parse fails the check", async t => {
   const root = await fixture(t, { "bin/workkeel.mjs": entry, "src/workkeel-cli.mjs": "import {;\n" });
-  assert.match(checkImportBoundary(root).errors[0], /^src\/workkeel-cli\.mjs: cannot be parsed as a module/);
+  assert.match(checkImportBoundary(root).errors[0], /^src\/workkeel-cli\.mjs: cannot be checked/);
 });

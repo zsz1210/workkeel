@@ -68,15 +68,24 @@ const REGEX_AFTER_WORD = new Set(["return", "typeof", "instanceof", "in", "of", 
 
 /** Tokenizes JavaScript just enough to find `import(...)` calls outside comments, strings and regexes. */
 export function tokenize(source) {
-  const tokens = [], modes = [];
+  const tokens = [], modes = [], parens = [];
   let index = source.startsWith("#!") ? source.indexOf("\n") + 1 || source.length : 0;
   const previous = () => tokens.at(-1);
+  const location = () => {
+    const before = source.slice(0, index), line = before.split("\n").length;
+    return `line ${line}, column ${index - before.lastIndexOf("\n")}`;
+  };
+  // Decides whether "/" starts a regular expression. Where the tokens cannot
+  // tell (after a closing brace: block end or object literal), fail rather
+  // than guess, because a wrong guess can hide an import() call.
   const regexAllowed = () => {
     const token = previous();
     if (!token) return true;
-    if (token.type === "word") return REGEX_AFTER_WORD.has(token.value);
-    if (token.type === "punct") return ![")", "]", "}"].includes(token.value);
-    return false;
+    if (token.type === "word") return !token.property && REGEX_AFTER_WORD.has(token.value);
+    if (token.type !== "punct") return false;
+    if (token.value === ")") return token.closesHead;
+    if (token.value === "}") throw new Error(`Ambiguous "/" after "}" at ${location()}: it may be division or the start of a regular expression; wrap the expression in parentheses or move the regular expression to its own statement`);
+    return !["]", "++", "--"].includes(token.value);
   };
   // Reads template characters until the closing backtick or a substitution.
   const template = () => {
@@ -124,6 +133,13 @@ export function tokenize(source) {
     }
     if (char === "{") { modes.push("brace"); tokens.push({ type: "punct", value: char }); index += 1; continue; }
     if (char === "}") { modes.pop(); tokens.push({ type: "punct", value: char }); index += 1; continue; }
+    if (char === "(") {
+      const before = previous();
+      parens.push(before?.type === "word" && !before.property && ["if", "while", "for", "with"].includes(before.value));
+      tokens.push({ type: "punct", value: char }); index += 1; continue;
+    }
+    if (char === ")") { tokens.push({ type: "punct", value: char, closesHead: parens.pop() ?? false }); index += 1; continue; }
+    if ((char === "+" || char === "-") && next === char) { tokens.push({ type: "punct", value: char + char }); index += 2; continue; }
     if (char === "/" && regexAllowed()) {
       let inClass = false; index += 1;
       while (index < source.length) {
@@ -140,7 +156,11 @@ export function tokenize(source) {
       tokens.push({ type: "regex" }); continue;
     }
     const word = /^[\p{ID_Start}$_\\][\p{ID_Continue}$‌‍]*/u.exec(source.slice(index, index + 256));
-    if (word) { tokens.push({ type: "word", value: word[0] }); index += word[0].length; continue; }
+    if (word) {
+      const before = previous();
+      tokens.push({ type: "word", value: word[0], property: before?.type === "punct" && [".", "?."].includes(before.value) });
+      index += word[0].length; continue;
+    }
     const number = /^(?:\.\d|\d)[\w.]*/.exec(source.slice(index, index + 256));
     if (number) { tokens.push({ type: "number" }); index += number[0].length; continue; }
     if (char === "?" && next === "." && !/\d/.test(source[index + 2] ?? "")) { tokens.push({ type: "punct", value: "?." }); index += 2; continue; }
@@ -207,7 +227,7 @@ export function checkImportBoundary(target = root, entries = nativeEntries(targe
     const parsed = Object.keys(sources).length ? readImportsBatch(sources) : {};
     frontier = [];
     for (const [file, { imports, error }] of Object.entries(parsed)) {
-      if (error) errors.push(`${file}: cannot be parsed as a module (${error})`);
+      if (error) errors.push(`${file}: cannot be checked (${error})`);
       for (const item of imports) {
         if (item.specifier === null) {
           if (isNative(file)) errors.push(`${file}: computed import() cannot be checked`);
