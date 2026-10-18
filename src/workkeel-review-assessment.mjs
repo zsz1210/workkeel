@@ -4,6 +4,7 @@ import { formatJson, sha256 } from './files.mjs';
 import { readTaskFile, validateTaskContract } from './task-contract.mjs';
 import { readTaskProject, assertActor, safeDirectory, readNativeGit } from './workkeel-project.mjs';
 import { readNativeTask, inspectTaskCandidate } from './workkeel-tasks.mjs';
+import { elevatedRisk, isTeamPolicy, taskRisk } from './workkeel-risk.mjs';
 
 const hash = value => sha256(formatJson(value));
 const text = { type: 'string', minLength: 1, maxLength: 2000, pattern: '\\S' };
@@ -139,11 +140,12 @@ export async function assessNativeTask(targetInput, id, input = {}) {
     } catch (error) { issue('impact-authority-unresolved', error.message); }
   }
   if (impact.value === 'unknown') { missing.push('approved irreversible-impact assessment'); issue('irreversible-impact-unknown', 'Native v1 does not encode irreversible impact; do not infer it from diff size or network scope.'); }
-  const assurance = ['high', 'critical'].includes(contract.verification.risk_tier) ||
-    contract.environment.data.classification === 'sensitive' || impact.value === 'material';
-  if (assurance) issue('established-assurance-required', 'High risk, sensitive data or material irreversible impact requires the established assurance workflow.', false);
-  const separation = project.policy.review_separation === 'distinct-principal' || contract.verification.separation === 'distinct-principal'
-    ? 'distinct-principal' : 'distinct-agent';
+  // Delivery escalation counts: the effective tier, not the contract's declared one.
+  const risk = taskRisk(item), elevated = elevatedRisk(risk);
+  const assurance = elevated || contract.environment.data.classification === 'sensitive' || impact.value === 'material';
+  if (assurance) issue('elevated-review-required', 'High or critical risk, sensitive data or material irreversible impact requires elevated review: a reviewer Agent from another model family with its own review report, and close by the approving Principal.', false);
+  const separation = project.policy.review_separation === 'distinct-principal' || contract.verification.separation === 'distinct-principal' ||
+    elevated && isTeamPolicy(project.policy) ? 'distinct-principal' : 'distinct-agent';
   if (!['distinct-agent', 'distinct-principal'].includes(contract.verification.separation) ||
       project.policy.review_separation === 'distinct-principal' && contract.verification.separation !== 'distinct-principal')
     issue('review-floor-unresolved', 'The task must meet the current project review separation.');
@@ -237,10 +239,11 @@ export async function assessNativeTask(targetInput, id, input = {}) {
   return {
     schema_version: 'workkeel.review-assessment/v1', authority: 'observation-only', mutation_status: 'no-write',
     execution_authorized: false, task_id: id, task_version: item.version,
-    route: blocked ? 'blocked' : assurance ? 'established-assurance' : 'focused-independent-review',
-    current_review_floor: { separation, independent_judgment_required: true, mechanical_owner_acceptance: 'unsupported-in-v1' },
+    route: blocked ? 'blocked' : assurance ? 'elevated-independent-review' : 'focused-independent-review',
+    current_review_floor: { separation, independent_judgment_required: true, mechanical_owner_acceptance: 'unsupported-in-v1',
+      distinct_model_family_required: elevated, review_report_required: elevated, approving_principal_closes: elevated },
     repository_observed: { dimensions: observedDimensions, head_revision: head, base_revision: item.base_revision,
-      risk_tier: contract.verification.risk_tier, data_classification: contract.environment.data.classification,
+      risk_tier: risk, declared_risk_tier: contract.verification.risk_tier, data_classification: contract.environment.data.classification,
       dependencies, changes, candidate_inspection: inspection },
     declarations: { irreversible_impact: impact, current_measurement_environment: input.current ?? null, blockers: input.blockers ?? [] },
     reasons, missing_facts: missing, coverage, measurements,

@@ -8,7 +8,7 @@ export const elevatedRisk = tier => rank(tier) >= rank("high");
 export const isTeamPolicy = policy => policy.principals.length > 1;
 const under = (file, root) => root === "." || file === root || file.startsWith(`${root}/`);
 // Dotfiles count: `deploy/**` must cover `deploy/.env`.
-const OPTIONS = { dot: true };
+const OPTIONS = { dot: true, windows: false };
 
 export function validRiskPattern(pattern) {
   return typeof pattern === "string" && pattern.length > 0 && pattern.length <= 256 && pattern.trim() === pattern &&
@@ -41,11 +41,22 @@ export function contractRiskFloor(policy, contract) {
   const floor = roots.length ? maxRisk(...roots.map(root => rootRisk(rules, root))) : "low";
   return contract.environment.data.classification === "sensitive" ? maxRisk(floor, "high") : floor;
 }
-/** Tier implied by the files a candidate actually changed. */
-export function candidateRisk(policy, files) {
+/** Tier implied by the files a candidate actually changed. Administrative records
+ * have no default tier but never escape an explicit risk_paths entry. */
+export function candidateRisk(policy, files, administrative = []) {
   const rules = matchers(policy), scored = files.map(file => ({ file, tier: fileRisk(rules, file) }));
+  for (const file of administrative) {
+    const hits = rules.filter(rule => rule.test(file)).map(rule => rule.tier);
+    if (hits.length) scored.push({ file, tier: maxRisk(...hits) });
+  }
   const tier = scored.length ? maxRisk(...scored.map(s => s.tier)) : "low";
   return { tier, paths: scored.filter(s => s.tier === tier).map(s => s.file).slice(0, 32) };
+}
+
+/** The contract tier, raised by any escalation of a current or rejected delivery. */
+export function taskRisk(item) {
+  const deliveries = [item.delivery, ...item.attempts.filter(a => a.kind === "rejected").map(a => a.delivery)];
+  return maxRisk(item.contract.verification.risk_tier, ...deliveries.map(d => d?.risk?.tier ?? "low"));
 }
 
 /** Authority rules that depend on risk and are checked on every task operation. */

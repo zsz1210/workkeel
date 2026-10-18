@@ -94,7 +94,7 @@ test('actual diff and v1 stricter review floor survive, with a byte-for-byte no-
   assert.deepEqual(await snapshot(root), before);
 });
 
-test('unknown impact remains unresolved; pinned material impact selects established assurance; prose never waives review', async t => {
+test('unknown impact remains unresolved; pinned material impact selects elevated review; prose never waives review', async t => {
   const ordinary = await fixture(t, { prose: true });
   const unknown = await assessNativeTask(ordinary.root, 'WK-one');
   assert.equal(unknown.route, 'blocked');
@@ -103,7 +103,7 @@ test('unknown impact remains unresolved; pinned material impact selects establis
   assert.equal(prose.route, 'focused-independent-review');
   assert(prose.reasons.some(r => r.code === 'prose-semantics-unresolved'));
   const material = await fixture(t, { impact: 'material' });
-  assert.equal((await assessNativeTask(material.root, 'WK-one', input())).route, 'established-assurance');
+  assert.equal((await assessNativeTask(material.root, 'WK-one', input())).route, 'elevated-independent-review');
   await write(ordinary.root, 'unapproved.json', { schema_version: 'workkeel.review-impact/v1', task_id: 'WK-one', approved_by: 'owner', irreversible_impact: 'none' });
   assert.equal((await assessNativeTask(ordinary.root, 'WK-one', input({ impact_ref: 'unapproved.json' }))).route, 'blocked');
 });

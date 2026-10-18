@@ -6,7 +6,7 @@ import { withProjectMutationLock } from "./workkeel-lock.mjs";
 import { readTaskContractInput, readTaskFile, validateTaskContract } from "./task-contract.mjs";
 import { assertActor, assertApprover, readTaskProject, safeDirectory, existsEntry, readLegacyDigest, readNativeGit } from "./workkeel-project.mjs";
 import {loadTaskRequirements, assertRequirementOutcomes} from './workkeel-requirements.mjs';
-import { assertIndependentApproval, assertTaskRisk, candidateRisk, elevatedRisk, isTeamPolicy, maxRisk } from "./workkeel-risk.mjs";
+import { assertIndependentApproval, assertTaskRisk, candidateRisk, elevatedRisk, isTeamPolicy, maxRisk, taskRisk } from "./workkeel-risk.mjs";
 
 const ID = /^[A-Za-z0-9][A-Za-z0-9._-]{0,95}$/;
 const SHA = /^(?:[a-f0-9]{40}|[a-f0-9]{64})$/;
@@ -19,8 +19,7 @@ const sameActor = (a, b) => a?.agent_id === b?.agent_id && a?.principal_id === b
 const digest = value => sha256(formatJson(value));
 const bodyHash = item => digest(Object.fromEntries(Object.entries(item).filter(([key]) => key !== "history")));
 const initiator = item => item.history[0]?.actor ?? null;
-/** The contract tier, raised by any escalation recorded when the candidate was delivered. */
-const effectiveRisk = item => maxRisk(item.contract.verification.risk_tier, item.delivery?.risk?.tier ?? "low");
+const effectiveRisk = taskRisk;
 const under = (file, root) => root === "." || file === root || file.startsWith(`${root}/`);
 function assertKeys(value, keys) {
   if (!value || typeof value !== "object" || Array.isArray(value) || Object.keys(value).some(k => !keys.includes(k))) throw new Error("Unknown request fields are not permitted");
@@ -276,13 +275,10 @@ async function candidateFiles(target, item, revision, { handoff = false, action 
   await exactRevision(target, revision);
   await git(target, ["merge-base", "--is-ancestor", item.base_revision, revision]);
   if (handoff && (await git(target, ["rev-parse", "HEAD"])).trim() !== revision) throw new Error("Handoff candidate must be the current commit");
-  const issues = [], administrative = [], product = [];
-  const changed = (await git(target, ["diff", "--no-renames", "--name-only", "-z", item.base_revision, revision, "--"])).split("\0").filter(Boolean);
-  for (const file of changed) {
-    if (await administrativeFile(target, item, file, action, request)) continue;
-    product.push(file);
-    if (!item.contract.environment.write_paths.some(root => under(file, root))) issues.push({path:file, code:'outside-write-scope', next_action:'Preserve the candidate; obtain approval for the actual scope before a new delivery.'});
-  }
+  const issues = [], administrative = [];
+  const { product } = await changedFiles(target, item, item.base_revision, revision, action, request);
+  for (const file of product) if (!item.contract.environment.write_paths.some(root => under(file, root)))
+    issues.push({path:file, code:'outside-write-scope', next_action:'Preserve the candidate; obtain approval for the actual scope before a new delivery.'});
   const drift = [...(await git(target, ["diff", "--no-renames", "--name-only", "-z", revision, "--"])).split("\0"),
     ...(await git(target, ["ls-files", "--others", "--exclude-standard", "-z"])).split("\0")].filter(Boolean);
   for (const file of new Set(drift)) {
@@ -300,12 +296,26 @@ async function candidateFiles(target, item, revision, { handoff = false, action 
       issues.push({path:file, code:'tracked-artifact-changed', next_action:'Keep the recorded candidate evidence immutable; save later observations in a new file.'});
     else administrative.push(file);
   }
-  return {issues, administrative, product};
+  return {issues, administrative};
+}
+/** Committed changes split into product files and this task's administrative records. */
+async function changedFiles(target, item, from, revision, action, request) {
+  const product = [], administrative = [];
+  for (const file of (await git(target, ["diff", "--no-renames", "--name-only", "-z", from, revision, "--"])).split("\0").filter(Boolean))
+    (await administrativeFile(target, item, file, action, request) ? administrative : product).push(file);
+  return { product, administrative };
+}
+/** Risk spans every change since the first claim that was never accepted, so a
+ * rejected or released attempt cannot hide its paths behind a newer claim base. */
+async function deliveryRisk(target, item, policy, revision, action, request) {
+  const first = item.attempts[0]?.base_revision ?? item.base_revision;
+  const from = first === item.base_revision ? first : (await git(target, ["merge-base", first, revision])).trim();
+  const span = await changedFiles(target, item, from, revision, action, request);
+  return candidateRisk(policy, span.product, span.administrative);
 }
 async function assertCandidate(target, item, revision, options = {}) {
-  const out = await candidateFiles(target,item,revision,options);
-  if (out.issues.length) throw new Error(`${CANDIDATE_MESSAGES[out.issues[0].code]}: ${JSON.stringify(out.issues[0].path)}`);
-  return out.product;
+  const {issues} = await candidateFiles(target,item,revision,options);
+  if (issues.length) throw new Error(`${CANDIDATE_MESSAGES[issues[0].code]}: ${JSON.stringify(issues[0].path)}`);
 }
 
 /** Read-only file diagnostics, not a rehearsal of authority, review or acceptance. */
@@ -357,6 +367,20 @@ export async function assertReviewRecoveryContext(target, id, { approver, review
   await assertDelivery(target, item, "review", null);
   return item;
 }
+/** Elevated review needs the reviewer's own record of this exact candidate,
+ * not a renamed copy of anything the implementer delivered. */
+async function assertReviewReport(target, item, request) {
+  const delivered = new Set([item.delivery, ...item.attempts.map(a => a.delivery)].flatMap(d => d?.evidence ?? []).map(p => p.sha256));
+  for (const ref of request.evidence) {
+    if (!ref.endsWith(".json")) continue;
+    let file, report;
+    try { file = await readTaskFile(target, ref); report = JSON.parse(file.content); } catch { continue; }
+    if (!delivered.has(file.digest) && report?.schema_version === "workkeel.review-report/v1" && report.task_id === item.id &&
+        report.stage === "review" && report.revision === request.revision && report.judgment === request.judgment &&
+        sameActor(report.reviewer, request.actor) && typeof report.summary === "string" && report.summary.trim()) return;
+  }
+  throw new Error("High-risk review requires the reviewer's own workkeel.review-report/v1 evidence naming this task, candidate, reviewer and judgment");
+}
 /** High and critical acceptance is the approving Principal's own act, never the implementer's. */
 async function assertElevatedClose(target, item, policy, actor) {
   const tier = effectiveRisk(item);
@@ -366,10 +390,12 @@ async function assertElevatedClose(target, item, policy, actor) {
   if (isTeamPolicy(policy) && actor.principal_id === item.delivery.implementer.principal_id) throw new Error("High-risk team close cannot be performed by the implementer's Principal");
   if (tier !== "critical") return;
   if (!item.delivery.rollback) throw new Error("Critical close requires the rollback plan delivered at handoff");
-  const ref = item.contract.authorization.approval_ref;
-  if (!(await git(target, ["ls-tree", "--name-only", item.delivery.revision, "--", `:(literal)${ref}`])).trim() ||
-      (await git(target, ["diff", "--no-renames", "--name-only", "-z", item.delivery.revision, "--", `:(literal)${ref}`])).trim())
-    throw new Error("Critical close requires the approval record committed unchanged in the candidate");
+  // Compare the candidate's own blob with the pinned approval; worktree state and
+  // index flags such as skip-worktree cannot stand in for the committed record.
+  const ref = item.contract.authorization.approval_ref, pin = item.authority_pins.find(p => p.path === ref);
+  let blob = null;
+  try { blob = (await readNativeGit(target, ["cat-file", "blob", `${item.delivery.revision}:${ref}`])).replace(/^\uFEFF/, ""); } catch {}
+  if (blob === null || !pin || sha256(blob) !== pin.sha256) throw new Error("Critical close requires the approval record committed in the candidate with its approved content");
 }
 async function recoveryChain(target, item) {
   const { readReviewRecoveryChain } = await import("./workkeel-review-recovery.mjs");
@@ -418,13 +444,15 @@ export async function mutateNativeTask(targetInput, id, action, request) {
         await assertRequirementOutcomes(target, item, request, 'delivery');
         const pins = await evidence(target, request.evidence);
         const evidenceOnly = await evidenceRework(target, item, request.revision, pins);
-        const changed = await assertCandidate(target, item, request.revision, { handoff: true, action, request });
+        await assertCandidate(target, item, request.revision, { handoff: true, action, request });
         await dependencies(target, item);
         // Actually changed paths can raise, never lower, the approved tier.
-        const declared = item.contract.verification.risk_tier, observed = candidateRisk(project.policy, changed);
+        const declared = item.contract.verification.risk_tier, observed = await deliveryRisk(target, item, project.policy, request.revision, action, request);
         const tier = maxRisk(declared, observed.tier);
-        if (tier === "critical") assertText(request.rollback);
-        else if (request.rollback !== undefined) assertText(request.rollback);
+        if (request.rollback !== undefined || tier === "critical") {
+          try { assertText(request.rollback); }
+          catch { throw new Error(`Critical handoff.rollback must state bounded nonempty rollback steps${tier === declared ? "" : ` (escalated from ${declared})`}`); }
+        }
         item.delivery = { revision: request.revision, summary: request.summary, implementer: request.actor,
           claim_id: item.claim.id, evidence: pins, ...(evidenceOnly ? { evidence_rework: evidenceOnly } : {}),
           ...(request.rollback !== undefined ? { rollback: request.rollback } : {}),
@@ -443,9 +471,8 @@ export async function mutateNativeTask(targetInput, id, action, request) {
       if (attempt && (attempt.result?.value.status !== "completed" || !sameActor(attempt.value.reviewer, request.actor) ||
           attempt.value.revision !== request.revision)) throw new Error("Review recovery attempt is not completed by this reviewer for this candidate");
       await assertDelivery(target, item, action, request); assertText(request.summary);
+      if (elevatedRisk(effectiveRisk(item))) await assertReviewReport(target, item, request);
       if (request.judgment === 'pass') {
-        const delivered = new Set(item.delivery.evidence.map(p => p.path));
-        if (elevatedRisk(effectiveRisk(item)) && !request.evidence.some(ref => !delivered.has(ref))) throw new Error("High-risk review requires the reviewer's own review report as evidence");
         await assertRequirementOutcomes(target, item, {revision:item.delivery.revision,actor:item.delivery.implementer,evidence:item.delivery.evidence.map(p=>p.path)}, 'delivery');
         await assertRequirementOutcomes(target, item, request, 'review');
       }

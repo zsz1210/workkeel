@@ -20,7 +20,8 @@ const exec = promisify(execFile);
 /** Bounded native Git observation. Never inherit executable Git configuration
  * from the caller's environment or run repository hooks/content converters. */
 export async function readNativeGit(target, args, { maxBuffer = 4 * 1024 * 1024 } = {}) {
-  if (!["rev-parse", "merge-base", "diff", "ls-files", "ls-tree"].includes(args[0])) throw Error("Unsupported native Git read");
+  if (!["rev-parse", "merge-base", "diff", "ls-files", "ls-tree"].includes(args[0]) &&
+      !(args[0] === "cat-file" && args.length === 3 && args[1] === "blob")) throw Error("Unsupported native Git read");
   const env = {
     GIT_CONFIG_GLOBAL: os.devNull, GIT_CONFIG_SYSTEM: os.devNull, GIT_CONFIG_NOSYSTEM: "1",
     GIT_NO_LAZY_FETCH: "1", GIT_NO_REPLACE_OBJECTS: "1", GIT_OPTIONAL_LOCKS: "0",

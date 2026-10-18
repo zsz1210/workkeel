@@ -11,9 +11,11 @@ repository migration does not republish old tags, archives or npm versions.
   `risk_paths` globs and data classification set a minimum tier that authors can
   only raise; a candidate that changes riskier paths is escalated at handoff.
   High and critical review needs another registered model family and the
-  reviewer's own report; in teams, a different Principal reviews and the
+  reviewer's own `workkeel.review-report/v1` record of the exact candidate;
+  rejected or released attempts keep their risk; in teams, a different Principal reviews and the
   approving Principal is neither the implementer nor the initiator. Critical
-  work also needs a delivered rollback plan and a committed approval record.
+  work also needs a delivered rollback plan and the approved record committed in
+  the candidate. Review assessment and model routing use the effective tier.
 
 - Adds a desktop workspace for registered projects and repositories, controlled
   model settings, exact-version integration checks and detailed recorded execution.

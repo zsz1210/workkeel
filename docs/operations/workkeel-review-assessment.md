@@ -173,7 +173,7 @@ revision and `current` or `historical` candidate status. Criterion
 green coverage as failed. Optional `blockers` records further declared unresolved
 defects. The assessor cannot detect undisclosed failures.
 
-Routes are `blocked`, `established-assurance` or `focused-independent-review`.
+Routes are `blocked`, `elevated-independent-review` or `focused-independent-review`.
 The current task/project separation floor is always included. Mechanical owner
 acceptance remains unsupported in v1. No result authorizes execution or release.
 

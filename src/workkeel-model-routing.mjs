@@ -3,6 +3,7 @@ import {exactKeys, executionDigest, selectNodeModel} from './workkeel-execution-
 import {readModelPolicy, selectModelPolicy, validateModelSnapshot} from './workkeel-model-policy.mjs';
 import {assertApprover, readTaskProject, safeDirectory} from './workkeel-project.mjs';
 import {readNativeTask} from './workkeel-tasks.mjs';
+import {maxRisk, taskRisk} from './workkeel-risk.mjs';
 import {readTaskFile} from './task-contract.mjs';
 import {durableAtomicCreate, formatJson} from './files.mjs';
 
@@ -67,7 +68,7 @@ export async function resolveDispatchModelRouting(target, task, authority, {mode
   }
   const snapshot = selectModelPolicy(policy, {task: task.id, node: node.id, activity: node.activity_kind,
     ...(pin.context?.role ? {role: pin.context.role} : {}), authority: {allowed_models: allowedModels,
-      data_class: task.contract.environment.data.classification, risk_tier: route.risk === 'high' ? 'high' : task.contract.verification.risk_tier,
+      data_class: task.contract.environment.data.classification, risk_tier: maxRisk(taskRisk(task), route.risk === 'high' ? 'high' : 'low'),
       min_quality: authority.model_policy.min_quality}, host_models: hostModels});
   const selected = snapshot.selected;
   const matches = approved.filter(a => a.provider === selected.provider && a.model === selected.model &&
@@ -127,7 +128,7 @@ export async function resolveWorkflowModelRouting(target, task, authority, {mode
   const role = context?.role ?? pin.context?.role;
   const snapshot = selectModelPolicy(policy, {task: task.id, node: node.id, activity: context?.activity ?? node.id, ...(role ? {role} : {}),
     authority: {allowed_models: policy.models.filter(m => approved.some(a => a.entry.routing.provider === m.provider && a.entry.routing.model === m.model)).map(m => m.id),
-      data_class: task.contract.environment.data.classification, risk_tier: task.contract.verification.risk_tier, min_quality: authority.model_policy.min_quality}, host_models: hostModels});
+      data_class: task.contract.environment.data.classification, risk_tier: taskRisk(task), min_quality: authority.model_policy.min_quality}, host_models: hostModels});
   const tuple = Object.fromEntries(['provider', 'model', 'reasoning', 'service'].map(key => [key, snapshot.selected[key]]));
   const matches = approved.filter(a => a.entry.routing.provider === tuple.provider && a.entry.routing.model === tuple.model &&
     a.entry.routing.reasoning_efforts.includes(tuple.reasoning) && a.entry.routing.service_tiers.includes(tuple.service));
