@@ -9,7 +9,7 @@ const optional = new Set([
   "control-plane-private-viewer", "github-control-plane", "local-observer-service", "optional-console-collector"
 ].map((name) => `test/${name}.test.mjs`));
 export const fastFiles = [
-  "ci-scope", "doc-links", "evidence-git", "model", "npm-release-workflow", "publication-audit", "publication-boundary",
+  "ci-scope", "doc-links", "evidence-git", "import-boundary", "model", "npm-release-workflow", "publication-audit", "publication-boundary",
   "release-package", "skill-policy", "specifications", "test-groups", "workkeel-visuals"
 ].map((name) => `test/${name}.test.mjs`);
 export const dailyFiles = [...new Set([...fastFiles, ...[

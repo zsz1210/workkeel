@@ -1,7 +1,7 @@
 import { codexModelConnectionParams } from "./workkeel-runtime.mjs";
 import { validateRuntimeResult, exactKeys } from "./workkeel-execution-policy.mjs";
 import { safeDirectory } from "./workkeel-project.mjs";
-import { createJsonRpcProcess } from "./codex-app-server-provider.mjs";
+import { createJsonRpcProcess } from "./workkeel-json-rpc.mjs";
 import path from "node:path";
 import fs from "node:fs/promises";
 import crypto from "node:crypto";

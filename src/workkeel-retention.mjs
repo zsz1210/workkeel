@@ -4,7 +4,7 @@ import path from 'node:path';
 import {gzip, gunzip} from 'node:zlib';
 import {promisify} from 'node:util';
 import {durableAtomicCreate, formatJson, sha256} from './files.mjs';
-import {withProjectMutationLock} from './project.mjs';
+import {withProjectMutationLock} from './workkeel-lock.mjs';
 import {safeDirectory} from './workkeel-project.mjs';
 import {assertTaskExecutionContext} from './workkeel-tasks.mjs';
 

@@ -5,7 +5,7 @@ import { promisify } from "node:util";
 import { durableAtomicCreate, durableAtomicWrite, formatJson, sha256 } from "./files.mjs";
 import { readTaskProject, existsEntry } from "./workkeel-project.mjs";
 import { readTaskFile, readTaskContractInput } from "./task-contract.mjs";
-import { withProjectMutationLock } from "./project.mjs";
+import { withProjectMutationLock } from "./workkeel-lock.mjs";
 
 const exec = promisify(execFile);
 

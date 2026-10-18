@@ -7,7 +7,7 @@ import {readNativeTask,validateNativeTaskSnapshot} from '../src/workkeel-tasks.m
 import {executionDigest} from '../src/workkeel-execution-policy.mjs';
 import {safeDirectory,existsEntry} from '../src/workkeel-project.mjs';
 import {readTaskFile} from '../src/task-contract.mjs';
-import {withProjectMutationLock} from '../src/project.mjs';
+import {withProjectMutationLock} from '../src/workkeel-lock.mjs';
 import {durableAtomicCreate} from '../src/files.mjs';
 
 export async function recoverClaimProof(root,taskId,revision,{apply=false}={}) {

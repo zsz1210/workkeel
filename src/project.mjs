@@ -1,9 +1,9 @@
 import fs from "node:fs/promises";
-import os from "node:os";
 import path from "node:path";
 import { atomicCreate, atomicWrite, formatJson, pathExists, readJson, sha256 } from "./files.mjs";
 import { nextStateForItem } from "./workflow.mjs";
 import { assertNoPendingLeanDelivery } from "./lean-delivery-state.mjs";
+import { withProjectMutationLock as withNativeMutationLock } from "./workkeel-lock.mjs";
 
 export async function loadProjectContext(target) {
   const lockPath = path.join(target, "temple.lock");
@@ -148,43 +148,14 @@ export function uniqueStrings(values) {
   return [...new Set((values ?? []).map((value) => String(value).trim()).filter(Boolean))];
 }
 
-function wait(milliseconds) {
-  return new Promise((resolve) => setTimeout(resolve, milliseconds));
-}
-
 export async function withProjectMutationLock(target, operation, { leanDeliveryOperation = null, reconciliationRecovery = false } = {}) {
-  const lockPath = path.join(os.tmpdir(), `temple-mutation-${sha256(path.resolve(target)).slice(0, 20)}.lock`);
-  let handle = null;
-  for (let attempt = 0; attempt < 40; attempt += 1) {
-    try {
-      handle = await fs.open(lockPath, "wx");
-      await handle.writeFile(`${JSON.stringify({ pid: process.pid, created_at: new Date().toISOString() })}\n`);
-      break;
-    } catch (error) {
-      if (error.code !== "EEXIST") throw error;
-      const stat = await fs.stat(lockPath).catch(() => null);
-      if (stat && Date.now() - stat.mtimeMs > 300_000) {
-        await fs.unlink(lockPath).catch(() => {});
-        continue;
-      }
-      await wait(50);
-    }
-  }
-  if (!handle) {
-    throw new Error(`Another Temple mutation is still active: ${lockPath}`);
-  }
-
-  try {
+  // Shares the native lock file so Temple and Workkeel writers exclude each other.
+  return withNativeMutationLock(target, async () => {
     await assertNoPendingLeanDelivery(target, leanDeliveryOperation);
     if (!reconciliationRecovery) {
       const { assertNoPendingReconciliation } = await import("./reconciliation.mjs");
       await assertNoPendingReconciliation(target);
     }
-    return await operation();
-  } finally {
-    await handle.close();
-    await fs.unlink(lockPath).catch((error) => {
-      if (error.code !== "ENOENT") throw error;
-    });
-  }
+    return operation();
+  });
 }

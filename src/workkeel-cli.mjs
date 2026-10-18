@@ -1,5 +1,5 @@
 import path from "node:path";
-import { TEMPLATE_VERSION } from "./constants.mjs";
+import { TEMPLATE_VERSION } from "./workkeel-version.mjs";
 import { readTaskContractInput } from "./task-contract.mjs";
 import { initializeTaskProject, previewLegacyMigration, existsEntry } from "./workkeel-project.mjs";
 import { createNativeTask, mutateNativeTask, readNativeTask, listTaskItems, diagnoseTaskProject } from "./workkeel-tasks.mjs";

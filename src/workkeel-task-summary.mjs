@@ -4,7 +4,7 @@ import path from 'node:path';
 import { readNativeTask } from './workkeel-tasks.mjs';
 import { readTaskProject, assertActor, safeDirectory, existsEntry } from './workkeel-project.mjs';
 import { readTaskContractInput, readTaskFile } from './task-contract.mjs';
-import { withProjectMutationLock } from './project.mjs';
+import { withProjectMutationLock } from './workkeel-lock.mjs';
 import { durableAtomicCreate } from './files.mjs';
 import { executionDigest, exactKeys } from './workkeel-execution-policy.mjs';
 import { projectTaskTiming } from './workkeel-task-timing.mjs';

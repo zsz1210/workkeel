@@ -5,7 +5,7 @@ import {createHash} from 'node:crypto';
 import {readTaskFile, readTaskContractInput} from './task-contract.mjs';
 import {readNativeTask, listTaskItems} from './workkeel-tasks.mjs';
 import {safeDirectory, existsEntry, readTaskProject} from './workkeel-project.mjs';
-import {validateLearningIndex, validateSkillProposal} from './learning.mjs';
+import {validateLearningIndex, validateSkillProposal} from './workkeel-learning-schema.mjs';
 import {validateExecutionPolicy} from './workkeel-execution-policy.mjs';
 import {listNativeLearning} from './workkeel-learning.mjs';
 

@@ -1,7 +1,7 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import {durableAtomicCreate, durableAtomicWrite, formatJson, sha256} from './files.mjs';
-import {withProjectMutationLock} from './project.mjs';
+import {withProjectMutationLock} from './workkeel-lock.mjs';
 import {assertApprover, readTaskProject, safeDirectory} from './workkeel-project.mjs';
 import {assertTaskExecutionContext} from './workkeel-tasks.mjs';
 import {readTaskContractInput, readTaskFile} from './task-contract.mjs';

@@ -4,7 +4,7 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
-import { createJsonRpcProcess } from "../src/codex-app-server-provider.mjs";
+import { createJsonRpcProcess } from "../src/workkeel-json-rpc.mjs";
 
 const fixture = `
   const readline = require('node:readline');

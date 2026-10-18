@@ -4,7 +4,7 @@ import {randomUUID} from 'node:crypto';
 import {exactKeys, boundedInteger, executionDigest} from './workkeel-execution-policy.mjs';
 import {assertTaskExecutionContext, readNativeTask, validateNativeTaskSnapshot} from './workkeel-tasks.mjs';
 import {safeDirectory, existsEntry} from './workkeel-project.mjs';
-import {withProjectMutationLock} from './project.mjs';
+import {withProjectMutationLock} from './workkeel-lock.mjs';
 import {durableAtomicCreate, formatJson} from './files.mjs';
 import {readTaskFile, readTaskContractInput} from './task-contract.mjs';
 import {validateModelPolicyPin, validateRoutingDimensions, resolveDispatchModelRouting, assertRoutingAcknowledgement, recordRoutingBinding} from './workkeel-model-routing.mjs';

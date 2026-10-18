@@ -9,7 +9,7 @@ import {checkEvidencePin} from './workkeel-evidence-file.mjs';
 import {assertRequirementAssessment} from './workkeel-requirements.mjs';
 import {readTaskProject,assertActor,assertApprover,safeDirectory,readNativeGit} from './workkeel-project.mjs';
 import {assertTaskExecutionContext,readNativeTask,mutateNativeTask} from './workkeel-tasks.mjs';
-import {withProjectMutationLock} from './project.mjs';
+import {withProjectMutationLock} from './workkeel-lock.mjs';
 import {durableAtomicCreate,durableAtomicWrite,formatJson} from './files.mjs';
 
 const ROOT='.ai-org/goals',SCHEMA='workkeel.goal/v1',trustedAdapters=new WeakSet();

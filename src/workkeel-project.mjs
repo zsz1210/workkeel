@@ -8,9 +8,9 @@ import { promisify } from "node:util";
 import { fileURLToPath } from "node:url";
 import Ajv from "ajv";
 import { assertSafeTarget, durableAtomicCreate, formatJson, sha256 } from "./files.mjs";
-import { withProjectMutationLock } from "./project.mjs";
+import { withProjectMutationLock } from "./workkeel-lock.mjs";
 import { readTaskContractInput, readTaskFile } from "./task-contract.mjs";
-import { PACKAGE_NAME, TEMPLATE_VERSION } from "./constants.mjs";
+import { PACKAGE_NAME, TEMPLATE_VERSION } from "./workkeel-version.mjs";
 
 export const WORKKEEL_PACKAGE = PACKAGE_NAME;
 export const TASK_PROJECT_SCHEMA = "workkeel.project/v1";

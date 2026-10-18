@@ -2,8 +2,8 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
 import { performance } from "node:perf_hooks";
-import { durableAtomicCreate, formatJson } from "./files.mjs";
-import { withProjectMutationLock } from "./project.mjs";
+import { DURABLE_TEMPORARY_NAME, durableAtomicCreate, formatJson } from "./files.mjs";
+import { withProjectMutationLock } from "./workkeel-lock.mjs";
 import { readTaskFile } from "./task-contract.mjs";
 import { safeDirectory, existsEntry, readTaskProject, assertApprover } from "./workkeel-project.mjs";
 import { exactKeys, executionDigest } from "./workkeel-execution-policy.mjs";
@@ -186,7 +186,7 @@ function validateResult(value, attempt) {
 export async function readReviewRecoveryChain(target, item) {
   if (!item.delivery || !await existsEntry(target, `${ROOT}/${item.id}/${item.delivery.claim_id}`)) return { attempts: [], head: null, sha256: null };
   const ref = chainRef(item), dir = await safeDirectory(target, ref);
-  const names = (await fs.readdir(dir)).filter(name => !/^\.temple-durable-[A-Za-z0-9-]+$/.test(name));
+  const names = (await fs.readdir(dir)).filter(name => !DURABLE_TEMPORARY_NAME.test(name));
   const attempts = [];
   for (let n = 1; names.includes(attemptName(n)); n++) {
     if (n > MAX_REVIEW_RECOVERY_ATTEMPTS) fail("chain exceeds the attempt bound");
@@ -211,7 +211,7 @@ export async function readReviewRecoveryChain(target, item) {
  */
 export async function retainedReviewRecoverySources(target) {
   if (!await existsEntry(target, ROOT)) return [];
-  const temporary = name => /^\.temple-durable-[A-Za-z0-9-]+$/.test(name), out = [];
+  const temporary = name => DURABLE_TEMPORARY_NAME.test(name), out = [];
   for (const task of await fs.readdir(await safeDirectory(target, ROOT))) {
     if (task === ".gitignore" || temporary(task)) continue;
     id(task, "recovery store entry");
@@ -234,7 +234,7 @@ export async function retainedReviewRecoverySources(target) {
 // are not reauthorized against today's model policy.
 async function retainedRecoveryChains(target) {
   if (!await existsEntry(target, ROOT)) return [];
-  const chains = [], temporary = name => /^\.temple-durable-[A-Za-z0-9-]+$/.test(name);
+  const chains = [], temporary = name => DURABLE_TEMPORARY_NAME.test(name);
   for (const taskId of await fs.readdir(await safeDirectory(target, ROOT))) {
     if (taskId === ".gitignore" || temporary(taskId)) continue;
     id(taskId, "recovery task");

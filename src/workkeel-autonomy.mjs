@@ -5,7 +5,7 @@ import {exactKeys,executionDigest} from './workkeel-execution-policy.mjs';
 import {assertTaskExecutionContext,readNativeTask} from './workkeel-tasks.mjs';
 import {assertActor,assertApprover,readTaskProject,safeDirectory} from './workkeel-project.mjs';
 import {readTaskFile} from './task-contract.mjs';
-import {withProjectMutationLock} from './project.mjs';
+import {withProjectMutationLock} from './workkeel-lock.mjs';
 import {durableAtomicWrite,durableAtomicCreate,formatJson} from './files.mjs';
 
 const ROOT='.ai-org/autonomy',REF=ROOT+'/state.json';

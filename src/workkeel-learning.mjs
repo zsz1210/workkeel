@@ -4,7 +4,7 @@ import {exactKeys, executionDigest} from './workkeel-execution-policy.mjs';
 import {assertTaskExecutionContext} from './workkeel-tasks.mjs';
 import {readTaskFile} from './task-contract.mjs';
 import {safeDirectory} from './workkeel-project.mjs';
-import {withProjectMutationLock} from './project.mjs';
+import {withProjectMutationLock} from './workkeel-lock.mjs';
 import {durableAtomicCreate, formatJson} from './files.mjs';
 
 const ROOT='.ai-org/learning/native', MAX=1000;

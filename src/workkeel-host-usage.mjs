@@ -3,7 +3,7 @@ import {constants} from 'node:fs';
 import path from 'node:path';
 import {createHash,randomUUID} from 'node:crypto';
 import {hostname} from 'node:os';
-import {durableAtomicCreate, durableAtomicWrite, formatJson} from './files.mjs';
+import {DURABLE_TEMPORARY_NAME, durableAtomicCreate, durableAtomicWrite, formatJson} from './files.mjs';
 import {safeDirectory, existsEntry, readTaskProject, assertActor} from './workkeel-project.mjs';
 import {assertTaskExecutionContext, readNativeTask} from './workkeel-tasks.mjs';
 import {executionDigest} from './workkeel-execution-policy.mjs';
@@ -112,7 +112,7 @@ async function lock(target,fn) {
     const out=[],entries=await fs.opendir(dir);let count=0;
     for await(const entry of entries) {
       if(++count>128)fail('host-lock-inventory-bound');
-      if(/^\.temple-durable-[A-Za-z0-9-]+$/.test(entry.name))continue;
+      if(DURABLE_TEMPORARY_NAME.test(entry.name))continue;
       if(!/^claim-[a-f0-9-]{36}\.json$/.test(entry.name)||!entry.isFile()||entry.isSymbolicLink())fail('host-writer-busy');
       let bytes;try{bytes=await readFile(path.join(dir,entry.name),1024);}catch(e){if(e.code==='ENOENT')continue;throw e;}
       const candidate=JSON.parse(bytes);object(candidate,['pid','host','token','choosing','ticket']);

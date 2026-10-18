@@ -2,7 +2,7 @@ import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import fs from "node:fs/promises";
 import path from "node:path";
-import { createJsonRpcProcess } from "./codex-app-server-provider.mjs";
+import { createJsonRpcProcess } from "./workkeel-json-rpc.mjs";
 import { createCodexRuntime, codexPermissionProfileArgs } from "./workkeel-codex-runtime.mjs";
 import { safeDirectory } from "./workkeel-project.mjs";
 import {listNativeSkillLifecycle} from './workkeel-learning-lifecycle.mjs';

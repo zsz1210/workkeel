@@ -2,7 +2,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import crypto from "node:crypto";
 import { durableAtomicCreate, durableAtomicWrite, formatJson, sha256 } from "./files.mjs";
-import { withProjectMutationLock } from "./project.mjs";
+import { withProjectMutationLock } from "./workkeel-lock.mjs";
 import { readTaskContractInput, readTaskFile, validateTaskContract } from "./task-contract.mjs";
 import { assertActor, assertApprover, readTaskProject, safeDirectory, existsEntry, readLegacyDigest, readNativeGit } from "./workkeel-project.mjs";
 import {loadTaskRequirements, assertRequirementOutcomes} from './workkeel-requirements.mjs';

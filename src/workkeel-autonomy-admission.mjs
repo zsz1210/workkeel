@@ -7,7 +7,7 @@ import {readTaskFile,validateTaskContract} from './task-contract.mjs';
 import {checkEvidencePin} from './workkeel-evidence-file.mjs';
 import {readNativeTask,createNativeTask,mutateNativeTask,assertTaskExecutionContext} from './workkeel-tasks.mjs';
 import {assertActor,assertApprover,readTaskProject,readNativeGit,safeDirectory} from './workkeel-project.mjs';
-import {withProjectMutationLock} from './project.mjs';
+import {withProjectMutationLock} from './workkeel-lock.mjs';
 import {durableAtomicCreate,durableAtomicWrite,formatJson,sha256} from './files.mjs';
 
 const ROOT='.ai-org/autonomy/admissions',STATE=ROOT+'/state.json';

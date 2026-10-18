@@ -4,7 +4,7 @@ import {exactKeys, executionDigest} from './workkeel-execution-policy.mjs';
 import {assertTaskExecutionContext} from './workkeel-tasks.mjs';
 import {assertApprover, readTaskProject, safeDirectory} from './workkeel-project.mjs';
 import {readTaskFile} from './task-contract.mjs';
-import {withProjectMutationLock} from './project.mjs';
+import {withProjectMutationLock} from './workkeel-lock.mjs';
 import {durableAtomicCreate, formatJson, sha256} from './files.mjs';
 import {listNativeLearning} from './workkeel-learning.mjs';
 
