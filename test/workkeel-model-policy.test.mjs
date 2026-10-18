@@ -237,3 +237,15 @@ test('expired task authorization cannot persist a new model policy', async t => 
   } finally { Date.now = originalNow; }
   assert.equal((await readModelPolicy(f.root, policy().id)).version, 0);
 });
+
+test('critical authority is a real tier: only models approved for it are eligible, never a silent high', () => {
+  const p = policy();
+  p.models[0] = model('one', 'codex', {risk_tiers: ['low', 'standard', 'high', 'critical'], auto_efforts: {low: 'low', standard: 'high', high: 'max', critical: 'max'}});
+  validateModelPolicy(p);
+  const c = context(p); c.authority.risk_tier = 'critical';
+  const selected = selectModelPolicy(p, c);
+  assert.equal(selected.selected.id, 'one'); assert.equal(selected.selected.reasoning, 'max');
+  assert(selected.rejected.some(r => r.id === 'two' && r.reasons.includes('risk-boundary')));
+  const missing = policy(); missing.models[0].risk_tiers.push('critical');
+  assert.throws(() => validateModelPolicy(missing), /critical/);
+});

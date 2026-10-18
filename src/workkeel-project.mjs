@@ -19,7 +19,7 @@ const exec = promisify(execFile);
 
 /** Bounded native Git observation. Never inherit executable Git configuration
  * from the caller's environment or run repository hooks/content converters. */
-export async function readNativeGit(target, args, { maxBuffer = 4 * 1024 * 1024 } = {}) {
+export async function readNativeGit(target, args, { maxBuffer = 4 * 1024 * 1024, encoding = "utf8" } = {}) {
   if (!["rev-parse", "merge-base", "diff", "ls-files", "ls-tree"].includes(args[0]) &&
       !(args[0] === "cat-file" && args.length === 3 && args[1] === "blob")) throw Error("Unsupported native Git read");
   const env = {
@@ -33,8 +33,8 @@ export async function readNativeGit(target, args, { maxBuffer = 4 * 1024 * 1024 
   const config = ["-c", "core.fsmonitor=false", "-c", `core.hooksPath=${os.devNull}`,
     "-c", "credential.helper=", "-c", "core.askPass=", "-c", "protocol.allow=never",
     "-c", "protocol.file.allow=never", "-c", "gc.auto=0", "-c", "maintenance.auto=false"];
-  const run = async command => (await exec("git", ["--no-pager", ...config, "-C", target, ...command], {
-    encoding: "utf8", timeout: 10000, maxBuffer, env
+  const run = async (command, output = "utf8") => (await exec("git", ["--no-pager", ...config, "-C", target, ...command], {
+    encoding: output, timeout: 10000, maxBuffer, env
   })).stdout;
   if (args[0] === "diff") {
     // Turning a clean filter off would compare different bytes and could hide
@@ -47,7 +47,7 @@ export async function readNativeGit(target, args, { maxBuffer = 4 * 1024 * 1024 
       throw Error("Native Git observation cannot safely inspect submodule worktrees");
     args = ["diff", "--no-ext-diff", "--no-textconv", ...args.slice(1)];
   }
-  return run(args);
+  return run(args, encoding);
 }
 
 async function assertGitRoot(target) {

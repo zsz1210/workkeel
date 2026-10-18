@@ -3,6 +3,7 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { execFileSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import test from "node:test";
 import { initializeTaskProject } from "../src/workkeel-project.mjs";
 import { createNativeTask, mutateNativeTask, readNativeTask, listTaskItems, diagnoseTaskProject } from "../src/workkeel-tasks.mjs";
@@ -135,7 +136,9 @@ test("a low task whose candidate touches a high path is escalated at handoff", a
   await low.result;
   const item = await readNativeTask(root, "WK-escalate");
   assert.equal(item.contract.verification.risk_tier, "low");
-  assert.deepEqual(item.delivery.risk, { tier: "high", escalated_from: "low", paths: ["src/auth/token.mjs"] });
+  const { basis, ...risk } = item.delivery.risk;
+  assert.deepEqual(risk, { tier: "high", escalated_from: "low", paths: ["src/auth/token.mjs"], compared_from: item.base_revision });
+  assert.match(basis, /since the first unaccepted claim base.*other work merged/);
   assert.deepEqual(Object.fromEntries(Object.entries((await listTaskItems(root)).find(i => i.id === "WK-escalate")).filter(([k]) => k.startsWith("risk"))),
     { risk_tier: "high", risk_escalated: true });
   const assessment = await assessNativeTask(root, "WK-escalate");
@@ -244,4 +247,54 @@ test("critical close reads the approval blob committed in the candidate", async 
   await critical.result;
   await review(hidden, "WK-hidden", critical.revision, reviewer);
   await assert.rejects(close(hidden, "WK-hidden", critical.revision, lead, [".ai-org/artifacts/WK-hidden/review-reviewer-3.json"]), /approval record committed/);
+});
+
+test("the validated review report is the exact evidence that gets pinned", async t => {
+  const root = await fixture(t);
+  const high = await deliver(root, "WK-swap", { tier: "high", write: ["src/auth"], approvedBy: "lead" }, "src/auth/token.mjs");
+  await high.result;
+  const ref = ".ai-org/artifacts/WK-swap/review-reviewer-3.json", absolute = path.join(await fs.realpath(root), ref);
+  const valid = report("WK-swap", high.revision, reviewer), delivered = await fs.readFile(path.join(root, high.ref));
+  await write(root, ref, valid);
+  // Swap the report for delivered evidence as soon as it has been opened once.
+  let opens = 0; const open = fs.open;
+  t.mock.method(fs, "open", async (file, ...rest) => {
+    if (file === absolute && ++opens === 2) await fs.writeFile(absolute, delivered);
+    return open.call(fs, file, ...rest);
+  });
+  try { await mutateNativeTask(root, "WK-swap", "review", request(3, reviewer, { revision: high.revision, judgment: "pass", summary: "Reviewed", evidence: [ref] })); }
+  catch { /* refusing the swapped file is also safe */ }
+  t.mock.restoreAll();
+  const pinned = (await readNativeTask(root, "WK-swap")).review?.evidence ?? [];
+  assert.equal(pinned.length, 1);
+  assert.equal(pinned[0].sha256, createHash("sha256").update(valid).digest("hex"));
+});
+
+test("a re-delivery after a critical escalation still needs a rollback", async t => {
+  const policy = teamPolicy(); policy.risk_paths = { ...riskPaths, critical: [...riskPaths.critical, "src/infra/**"] };
+  const root = await fixture(t, policy);
+  const first = await deliver(root, "WK-withdrawn", { tier: "low", write: ["src"] }, "src/infra/net.mjs", { rollback: "Revert the infra commit" });
+  await first.result;
+  await review(root, "WK-withdrawn", first.revision, reviewer, { judgment: "fail" });
+  await mutateNativeTask(root, "WK-withdrawn", "rework", request(4, builder, { summary: "Drop the infra change" }));
+  git(root, "add", ".ai-org"); git(root, "commit", "-qm", "record rejected attempt");
+  const claimed = await mutateNativeTask(root, "WK-withdrawn", "claim", request(5, builder, { base_revision: git(root, "rev-parse", "HEAD") }));
+  git(root, "rm", "-q", "src/infra/net.mjs"); git(root, "commit", "-qm", "withdraw infra");
+  const revision = git(root, "rev-parse", "HEAD"), ref = ".ai-org/artifacts/WK-withdrawn/retry.md"; await write(root, ref, "Retry\n");
+  const handoff = request(6, builder, { claim_id: claimed.claim.id, revision, summary: "Retry", evidence: [ref], unresolved: [] });
+  await assert.rejects(mutateNativeTask(root, "WK-withdrawn", "handoff", handoff), /critical handoff\.rollback/i);
+  await mutateNativeTask(root, "WK-withdrawn", "handoff", { ...handoff, operation_id: "withdrawn-rollback", rollback: "Nothing left to revert" });
+  const risk = (await readNativeTask(root, "WK-withdrawn")).delivery.risk;
+  assert.equal(risk.tier, "critical"); assert.equal(risk.retained_from_attempts, "critical");
+});
+
+test("critical approval blobs compare exact bytes, not a lenient decoding", async t => {
+  const replacement = Buffer.from("Approved � deploy\n"), invalid = Buffer.concat([Buffer.from("Approved "), Buffer.from([0xff]), Buffer.from(" deploy\n")]);
+  const root = await fixture(t, teamPolicy(), dir => fs.writeFile(path.join(dir, "docs/approval.md"), invalid));
+  git(root, "update-index", "--skip-worktree", "docs/approval.md");
+  await fs.writeFile(path.join(root, "docs/approval.md"), replacement);
+  const critical = await deliver(root, "WK-bytes", { tier: "critical", write: ["deploy"], approvedBy: "lead" }, "deploy/run.sh", { rollback: "Revert" });
+  await critical.result;
+  await review(root, "WK-bytes", critical.revision, reviewer);
+  await assert.rejects(close(root, "WK-bytes", critical.revision, lead, [".ai-org/artifacts/WK-bytes/review-reviewer-3.json"]), /approval record committed/);
 });

@@ -8,7 +8,7 @@ import {readTaskContractInput, readTaskFile} from './task-contract.mjs';
 import {resolvePolicySettings} from './workkeel-model-policy-resolution.mjs';
 
 const DIMENSIONS = ['model', 'reasoning', 'service'];
-const RISKS = ['low', 'standard', 'high'];
+const RISKS = ['low', 'standard', 'high', 'critical'];
 const ID = /^[A-Za-z0-9][A-Za-z0-9._-]{0,95}$/;
 const digest = value => sha256(formatJson(value));
 function keys(value, required, optional = []) {
@@ -62,7 +62,9 @@ export function validateModelPolicy(policy) {
     if (model.data_classes.some(x => !['public', 'internal', 'sensitive'].includes(x)) || model.risk_tiers.some(x => !RISKS.includes(x))) throw Error('Invalid model data or risk policy');
     number(model.quality, 'quality', 100); number(model.cost, 'cost', Infinity, true); number(model.quota_remaining, 'quota', Infinity, true);
     list(model.reasoning_efforts, 'reasoning efforts'); list(model.service_tiers, 'service tiers');
-    keys(model.auto_efforts, RISKS);
+    // Critical is opt-in per model; a model approved for it needs its own automatic effort.
+    keys(model.auto_efforts, ['low', 'standard', 'high'], model.risk_tiers.includes('critical') ? ['critical'] : []);
+    if (model.risk_tiers.includes('critical') && !Object.hasOwn(model.auto_efforts, 'critical')) throw Error('A model approved for critical risk needs a critical automatic effort');
     for (const effort of Object.values(model.auto_efforts)) if (!model.reasoning_efforts.includes(effort)) throw Error('Automatic effort must be a supported provider-specific label');
     if (!model.service_tiers.includes(model.auto_service)) throw Error('Automatic service must be supported');
   }

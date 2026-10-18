@@ -15,7 +15,9 @@ repository migration does not republish old tags, archives or npm versions.
   rejected or released attempts keep their risk; in teams, a different Principal reviews and the
   approving Principal is neither the implementer nor the initiator. Critical
   work also needs a delivered rollback plan and the approved record committed in
-  the candidate. Review assessment and model routing use the effective tier.
+  the candidate (byte-exact). Review assessment and model routing use the
+  effective tier; model policies may approve models for `critical` with their
+  own automatic effort. Escalation records its comparison base and basis.
 
 - Adds a desktop workspace for registered projects and repositories, controlled
   model settings, exact-version integration checks and detailed recorded execution.
