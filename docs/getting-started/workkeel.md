@@ -17,12 +17,13 @@ Use Node.js 24.15 or newer. Beta.1 is published as
 [installation commands](../../README.md#start). Installed projects can
 use `npx --no-install workkeel`; a reviewed source checkout provides
 `node bin/workkeel.mjs`. Examples below using a source path remain the source
-alternative. Existing legacy projects keep `temple`, `templew.mjs`, `temple.lock`
-and their original workflows; `workkeel legacy <arguments>` is an explicit alias.
+alternative. Version 0.2 removed the earlier legacy mode; projects pinned to an
+older CLI keep that version, and there is no migration path.
 
-Task-first v1 supports ordinary low/standard-risk work. High/critical-risk,
-sensitive-data and verified/distributed identity workflows retain legacy mode.
-The optional Console and legacy provider are not required for task coordination.
+Tasks carry a low, standard, high or critical risk tier. Project policy
+`risk_paths` and sensitive data set a minimum tier, and high or critical work
+adds review by another model family and close by the approving Principal.
+Verified or distributed identity workflows are not supported.
 
 ## Initialize an existing repository
 
@@ -41,8 +42,7 @@ listed as choices, never selected automatically. `next_command` is an argv array
 for the reviewed Workkeel CLI, run from the selected project; it is not shell text.
 
 Follow the returned step, then run `start` again. Initialization and instruction
-application remain explicit. For an existing legacy project it points back to
-the pinned legacy workflow. Broken project pins or conflicting instruction blocks
+application remain explicit. Broken project pins or conflicting instruction blocks
 return an error without overwriting anything. This checks setup and intake inputs;
 use `doctor` separately for existing task health.
 
@@ -110,7 +110,7 @@ this complete example as `task-contract.json`, adjusting its real boundaries:
 
 ```json
 {
-  "schema_version": "workkeel.task-contract/v1",
+  "schema_version": "workkeel.task-contract/v2",
   "id": "WK-cart-total",
   "goal": "Correct cart totals",
   "scope": {"include": ["Cart calculation"], "exclude": ["Deployment"]},
@@ -136,8 +136,7 @@ this complete example as `task-contract.json`, adjusting its real boundaries:
   "execution": {
     "runtime": {"kind": "host-owned", "adapter_id": null, "required_features": []},
     "model_connection": {"kind": "native"}
-  },
-  "legacy": null
+  }
 }
 ```
 
@@ -316,55 +315,7 @@ or an additional API key. Narrower unsupported conditions still block execution.
 Live LiteLLM behavior remains unverified until a real service and explicit test
 authority are supplied. Runtime completion never equals task acceptance.
 
-## Legacy history and migration
-
-Continue the original pinned launcher by default. Legacy `work-item contract`
-provides a read-only projection; missing authority stays missing. Do not globally
-replace old schema IDs, evidence URLs or historical names.
-
-Explicit migration supports only quiescent, attributed Solo projects without
-configured team governance, active work or High-Assurance history. Core policies
-must match this release's unmodified legacy policy; custom/older policies require
-a separately reviewed migration:
-
-```sh
-workkeel migration preview . --policy task-policy.json
-workkeel migration apply . --policy task-policy.json --fingerprint <reviewed-sha256>
-```
-
-For explicitly authorized retirement of an old workflow, inactive unfinished
-items can remain unfinished, read-only history. Save a retention request:
-
-```json
-{
-  "schema_version": "workkeel.legacy-retention/v1",
-  "approved_by": "owner",
-  "approval_ref": "docs/migration-approval.md",
-  "open_work_items": [
-    {"id": "WI-0001", "sha256": "<sha256-of-exact-source-record>"}
-  ]
-}
-```
-
-Pass `--retain-open retention.json` to both migration preview and apply. The
-request must name every unfinished item exactly; its approval and original record
-digests are bound by the preview. Active claims, running workers, configured team
-governance, High-Assurance history and changed core policies remain unsupported.
-This does not close an item or accept its candidate. Create a separately approved
-native task to continue work, referencing the retained evidence.
-
-The event journal is hashed incrementally with a fixed 64 KiB buffer and an 8 MiB
-archive ceiling. Authority JSON and individual task inputs retain their 1 MiB
-bound. Doctor rechecks the frozen journal and retained records after migration.
-
-The preview binds legacy policy, events, tasks and the proposed policy. Apply
-rechecks that fingerprint, adds new files and preserves old ones byte-for-byte.
-Status marks old records `legacy-read-only`; their terminal labels are not native
-dependency grants. Review native/AGENTS instructions with the maintainer when
-switching; init never rewrites user guidance. Old lifecycle writers reject the
-new mode when invoked from this release. Previously installed old binaries cannot
-know this new marker and must not be used after opting in. Active-runtime, team and verified-identity migrations stay unsupported
-rather than dropping safeguards. Inputs over the bounded size also fail closed.
+## Rolling back
 
 Do not remove the new lock to roll back a populated project. Preserve versioned
 records and revert code through normal review. Locks coordinate this checkout,

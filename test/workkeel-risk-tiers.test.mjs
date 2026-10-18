@@ -26,14 +26,14 @@ const soloPolicy = () => ({ schema_version: "workkeel.task-policy/v1", principal
 let operation = 0;
 const request = (version, actor, extra = {}) => ({ expected_version: version, operation_id: `op-${++operation}`, actor, ...extra });
 function contract(id, { tier, write = ["src"], approvedBy = "owner", classification = "internal" }) {
-  return { schema_version: "workkeel.task-contract/v1", id, goal: `Risk fixture ${id}`, state: "intake",
+  return { schema_version: "workkeel.task-contract/v2", id, goal: `Risk fixture ${id}`, state: "intake",
     scope: { include: ["fixture change"], exclude: [] }, actor: builder, dependencies: [],
     acceptance: { criteria: ["The change is reviewed"], evidence: [] }, handoff: null,
     verification: { risk_tier: tier, separation: "distinct-agent", implementer: null, reviewer: null, candidate_revision: null },
     environment: { cwd: ".", read_paths: ["."], write_paths: write, tools: ["node"], resources: [],
       network: { mode: "none", hosts: [] }, external_actions: [], data: { classification, model_access: "none", policy_refs: ["docs/approval.md"] } },
     authorization: { approved_by: approvedBy, approval_ref: "docs/approval.md", operations: ["read", "write", "execute"], expires_at: null }, skills: [],
-    execution: { runtime: { kind: "host-owned", adapter_id: null, required_features: [] }, model_connection: { kind: "native" } }, legacy: null };
+    execution: { runtime: { kind: "host-owned", adapter_id: null, required_features: [] }, model_connection: { kind: "native" } } };
 }
 const git = (root, ...args) => execFileSync("git", ["-C", root, ...args], { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }).trim();
 async function write(root, ref, data) { await fs.mkdir(path.dirname(path.join(root, ref)), { recursive: true }); await fs.writeFile(path.join(root, ref), data); }

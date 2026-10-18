@@ -274,7 +274,7 @@ export function projectWorkspaceAttention(tasks,projects,goals=[]) {
 export async function readWorkspaceSnapshot(stateDir,{snapshotReader=readMonitorSnapshot,autonomyReader=readAutonomy,goalReader=listNativeGoals,now=new Date()}={}) {
   const registry=await readWorkspace(stateDir),projects=[],tasks=[],goals=[];
   for(const registered of registry.projects) {
-    const taskRoots=[];let primary=null,legacy=0;
+    const taskRoots=[];let primary=null;
     for(const root of new Set([registered.task_root,...registered.repositories.map(repo=>repo.path)])){
       const repos=registered.repositories.filter(repo=>repo.path===root),primaryRoot=root===registered.task_root;
       try{
@@ -297,14 +297,14 @@ export async function readWorkspaceSnapshot(stateDir,{snapshotReader=readMonitor
           batch.push({...item,id,reference_id:primaryRoot?id:rootReference(root,id),key:rootedKey(registered,root,id),project_id:registered.id,task_root:root,repo_id:repos.length===1?repos[0].id:null,observer_available:wholeScope,dependencies:dependencyRefs.map(ref=>rootedKey(registered,root,ref)),dependency_pins:dependencyPins,execution:executionSummary(item)});
         }
         if(tasks.length+batch.length>10000)fail('Workspace task projection limit reached');
-        tasks.push(...batch);legacy+=snapshot.legacy_tasks_excluded??0;if(primaryRoot)primary=snapshot;
+        tasks.push(...batch);if(primaryRoot)primary=snapshot;
         taskRoots.push({root,repo_ids:repos.map(repo=>repo.id),read_status:'available',complete:snapshot.complete===true,task_count:batch.length,last_confirmed_at:snapshot.read_at??now.toISOString()});
       }catch(error){taskRoots.push({root,repo_ids:repos.map(repo=>repo.id),read_status:'unavailable',task_count:null,reason:error.message});}
     }
     const references=new Map();for(const task of tasks.filter(task=>task.project_id===registered.id)){if(references.has(task.reference_id))fail('Task route reference is ambiguous');references.set(task.reference_id,task.key);}
     const scoped=tasks.filter(task=>task.project_id===registered.id),active=scoped.filter(task=>!['done','cancelled'].includes(task.task_state)),healthy=taskRoots.filter(root=>root.read_status==='available'),unavailable=taskRoots.some(root=>root.read_status==='unavailable');
     let autonomy;try{autonomy=workspaceAutonomySummary(await autonomyReader(registered.task_root));}catch{autonomy={enabled:null,state:'unknown',last_updated:null,read_status:'unavailable',live_activity:'unconfirmed'};}
-    projects.push({...registered,read_status:unavailable?(healthy.length?'partial':'unavailable'):'available',complete:!unavailable&&healthy.every(root=>root.complete)&&autonomy.read_status==='available',autonomy,task_roots:taskRoots,last_confirmed_at:healthy.map(root=>root.last_confirmed_at).sort().at(0)??null,task_count:healthy.length?scoped.length:null,active_count:healthy.length?active.length:null,goal:active[0]?.goal??active[0]?.title??null,legacy_tasks_excluded:legacy,source:primary?.project??null});
+    projects.push({...registered,read_status:unavailable?(healthy.length?'partial':'unavailable'):'available',complete:!unavailable&&healthy.every(root=>root.complete)&&autonomy.read_status==='available',autonomy,task_roots:taskRoots,last_confirmed_at:healthy.map(root=>root.last_confirmed_at).sort().at(0)??null,task_count:healthy.length?scoped.length:null,active_count:healthy.length?active.length:null,goal:active[0]?.goal??active[0]?.title??null,source:primary?.project??null});
     const projected=projects.at(-1),projectGoals=[],goalRoots=[];
     for(const goalRoot of new Set([registered.task_root,...registered.repositories.map(r=>r.path)])){
       try{

@@ -16,8 +16,8 @@ Turn a repeated, non-obvious procedure into a narrow repository capability witho
 ## Establish ownership and authority
 
 - Treat inspection, classification, and a proposed design as read-only by default. Create or edit files only when the request authorizes Skill changes.
-- If `temple.lock` exists, inspect its exact `managed_files` entries. Do not modify a target path listed there. An unlisted path may be project-owned, but confirm its contents and provenance before editing it.
-- Stop on a name or path collision. Do not resolve it by editing `temple.lock`, replacing a managed Skill, or silently choosing ownership.
+- If the repository records organization-managed Skill files (for example an exact list in a lock or manifest), do not modify a listed target path. An unlisted path may be project-owned, but confirm its contents and provenance before editing it.
+- Stop on a name or path collision. Do not resolve it by editing that record, replacing a managed Skill, or silently choosing ownership.
 - This Skill does not authorize installation, publication, lifecycle mutation, external communication, spending, or irreversible actions.
 
 ## Author the Skill

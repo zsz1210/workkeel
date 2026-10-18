@@ -34,7 +34,7 @@ export function createJsonRpcProcess(command, args = [], options = {}) {
     if (!firstProtocolError) {
       firstProtocolError = new Error("Codex App Server emitted an invalid protocol frame");
       firstProtocolError.protocolDiagnostic = Object.freeze({
-        schema_version: "temple.protocol-diagnostic/v1",
+        schema_version: "workkeel.protocol-diagnostic/v1",
         reason,
         frame_class: !line.trim() ? "empty" : /^[\s]*[\[{]/u.test(line) ? "json-like" : "other",
         frame_bytes: Buffer.byteLength(line),

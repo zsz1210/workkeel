@@ -123,7 +123,7 @@ async function source(target,request){
 }
 
 function contractFor(base,{id:taskId,goal,actor,read_paths,write_paths,refs,acceptance,include,exclude}){
-  const contract=structuredClone(base.contract);contract.id=taskId;contract.goal=goal;contract.actor=actor;contract.state='intake';contract.dependencies=[];contract.scope={include,exclude:[...new Set([...contract.scope.exclude,...exclude])]};contract.acceptance={criteria:acceptance,evidence:[]};contract.verification={risk_tier:contract.verification.risk_tier,separation:contract.verification.separation,implementer:null,reviewer:null,candidate_revision:null};contract.handoff=null;contract.legacy=null;
+  const contract=structuredClone(base.contract);contract.id=taskId;contract.goal=goal;contract.actor=actor;contract.state='intake';contract.dependencies=[];contract.scope={include,exclude:[...new Set([...contract.scope.exclude,...exclude])]};contract.acceptance={criteria:acceptance,evidence:[]};contract.verification={risk_tier:contract.verification.risk_tier,separation:contract.verification.separation,implementer:null,reviewer:null,candidate_revision:null};contract.handoff=null;
   contract.environment={...contract.environment,read_paths,write_paths,data:{...contract.environment.data,policy_refs:[...new Set([...contract.environment.data.policy_refs,...refs])]}};
   if(!validateTaskContract(contract).contract_complete)fail('derived task contract is incomplete');return contract;
 }

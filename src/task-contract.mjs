@@ -3,11 +3,10 @@ import { constants } from "node:fs";
 import path from "node:path";
 import Ajv from "ajv";
 import addFormats from "ajv-formats";
-import { isWorkItemId } from "./ids.mjs";
 import { sha256 } from "./files.mjs";
 import { observeFileRead, observeSource } from './workkeel-read-metrics.mjs';
 
-export const TASK_CONTRACT_SCHEMA = "workkeel.task-contract/v1";
+export const TASK_CONTRACT_SCHEMA = "workkeel.task-contract/v2";
 const MAX_BYTES = 1024 * 1024;
 const text = { type: "string", minLength: 1, pattern: "\\S" };
 const strings = { type: "array", items: text, uniqueItems: true };
@@ -60,9 +59,7 @@ export const taskContractSchema = object({
   execution: object({
     runtime: object({ kind: choice("host-owned", "adapter"), adapter_id: nullable(identifier), required_features: identifiers }),
     model_connection: { oneOf: [nativeModel, gatewayModel, routedModel, subscriptionModel] }
-  }),
-  legacy: nullable(object({ schema_version: { const: "temple.work-item/v1" }, source_ref: text,
-    source_sha256: { type: "string", pattern: "^[a-f0-9]{64}$" }, owner_position: nullable(text), assigned_agent_id: nullable(text) }))
+  })
 });
 const ajv = new Ajv({ allErrors: true, strict: true, ownProperties: true });
 addFormats(ajv);
@@ -196,47 +193,4 @@ export async function readTaskContractInput(target, source) {
   let document;
   try { document = JSON.parse(content); } catch { throw new Error("Contract input is not valid JSON"); }
   return { document, digest };
-}
-
-/** Project legacy data without converting scope, roles or assignment into grants. */
-export function projectLegacyTask(item, { sourceRef, sourceSha256 }) {
-  if (item?.schema_version !== "temple.work-item/v1" || !isWorkItemId(item?.id)) throw new Error("Unsupported legacy Work Item");
-  const active = item.claim?.status === "active" ? item.claim : null;
-  const last = item.handoffs?.at(-1);
-  const contract = {
-    schema_version: TASK_CONTRACT_SCHEMA, id: item.id, goal: item.title,
-    scope: { include: structuredClone(item.scope), exclude: [] },
-    actor: active ? { agent_id: active.agent_id, principal_id: active.principal_id ?? null } :
-      item.assigned_agent_id ? { agent_id: item.assigned_agent_id, principal_id: null } : null,
-    state: item.state, dependencies: structuredClone(item.dependencies ?? []),
-    acceptance: { criteria: structuredClone(item.acceptance_criteria), evidence: structuredClone(item.evidence ?? []) },
-    verification: { risk_tier: item.risk_tier ?? null, separation: "unresolved", implementer: null, reviewer: null,
-      candidate_revision: item.developer_candidate_revision ?? null },
-    handoff: last ? {
-      from_actor: last.actor ? { agent_id: last.actor, principal_id: last.principal_id ?? null } : null,
-      to_actor: null, revision: last.input_revision, summary: null, evidence: [last.artifact],
-      unresolved: structuredClone(item.unresolved ?? []), next_action: null
-    } : null,
-    environment: null, authorization: null, skills: [],
-    execution: { runtime: { kind: "host-owned", adapter_id: null, required_features: [] }, model_connection: { kind: "native" } },
-    legacy: { schema_version: item.schema_version, source_ref: sourceRef, source_sha256: sourceSha256,
-      owner_position: item.owner_position ?? null, assigned_agent_id: item.assigned_agent_id ?? null }
-  };
-  return {
-    ...validateTaskContract(contract), contract,
-    migration_notes: [
-      "Legacy lifecycle authority is unchanged; this is not a migrated canonical Work Item.",
-      "Affected paths describe change scope, not filesystem grants. Environment and authorization require explicit review.",
-      "Host-owned/native execution is a proposed baseline, not an observation of the existing runtime or model.",
-      "Source digest preserves provenance; review original gates, dependencies and handoff artifacts before migration."
-    ]
-  };
-}
-
-export async function inspectLegacyTaskContract(target, workItemId) {
-  if (typeof workItemId !== "string" || !isWorkItemId(workItemId)) throw new Error("A valid Work Item ID is required");
-  const sourceRef = `.ai-org/work-items/${workItemId}.json`;
-  const input = await readTaskContractInput(target, sourceRef);
-  if (input.document?.id !== workItemId) throw new Error("Legacy Work Item ID does not match its filename");
-  return projectLegacyTask(input.document, { sourceRef, sourceSha256: input.digest });
 }

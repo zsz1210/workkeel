@@ -37,7 +37,7 @@ export async function codexPermissionsForContract(target, contract, { productAcc
   const environment = contract.environment;
   const root = await safeDirectory(target, ".");
   const protectedPaths = [".git", ".codex", ".agents", ".ai-org", "AGENTS.md", "CLAUDE.md", "WORKKEEL.md",
-    "workkeel.lock", "workkeelw.mjs", "TEMPLE.md", "temple.lock", "templew.mjs"].map(name => path.join(root, name));
+    "workkeel.lock", "workkeelw.mjs"].map(name => path.join(root, name));
   const under = (entry, parent) => entry === parent || entry.startsWith(`${parent}${path.sep}`);
   const filesystem = { ":root": "deny", ":minimal": "read" };
   const scopePath=async(ref,allowMissing=false)=>{

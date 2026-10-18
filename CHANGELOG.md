@@ -5,7 +5,20 @@ line. Historical release entries describe their own versions, not current-main
 qualification. Actual development tasks and validation records stay private;
 repository migration does not republish old tags, archives or npm versions.
 
-## Unreleased source
+## 0.2.0-beta.0
+
+Unpublished source. Breaking: removes the Temple compatibility mode.
+
+- Removes the `temple` executable, the `workkeel legacy` and `workkeel migration`
+  commands, read-only legacy history, the Temple project overlay, packs and their
+  modules, tests and documentation. Projects pinned to an earlier CLI keep that
+  version; there is no migration path. Existing `.ai-org/work-items` records are
+  archived by their owners, not converted.
+- `workkeel.lock` moves to `workkeel.project/v2` (keys `cli`, `policy`,
+  `schema_version`) and task contracts to `workkeel.task-contract/v2` without the
+  `legacy` field. The mutation lock, temporary files and remaining schema names use
+  the `workkeel` prefix.
+- The monitor and workspace drop the pre-migration history and legacy Skill views.
 
 - Native tasks now accept high, critical and sensitive work. Project policy
   `risk_paths` globs and data classification set a minimum tier that authors can
@@ -115,7 +128,7 @@ Published as a GitHub prerelease and on npm's `next` channel on 2026-09-16.
 - Corrected task risk defaults and actual Developer/reviewer provenance. No hosting permissions, external publication authority, membership expiry or historical evidence is silently rewritten.
 - Reduced redundant test setup and decorative snapshot checks while retaining semantic and boundary coverage. Batched Git blob reads in continuity validation and reused eligible Doctor schema compiler setup within one call; validation results are not cached across calls.
 - Synchronized the Console refresh test with actual watcher readiness and bounded stream cleanup while retaining assertions for both subsequent project changes. This fixes a reproduced test-startup race, not a claim that every historical timeout has the same cause.
-- Prepared exact-package initialization and Alpha.32 upgrade qualification. Existing project-owned actor policies are preserved; adopting ordinary attribution in a legacy installation remains an explicit preview/apply decision. Original package-qualification evidence is retained privately; current compatibility instructions are in the [usage guide](docs/getting-started/usage.md).
+- Prepared exact-package initialization and Alpha.32 upgrade qualification. Existing project-owned actor policies are preserved; adopting ordinary attribution in a legacy installation remains an explicit preview/apply decision. Original package-qualification evidence is retained privately; current compatibility instructions are in the usage guide.
 - Retains Alpha trial limits: local fixtures and measured improvements do not establish universal cost savings, production readiness, or mature multi-machine collaboration.
 
 ## 0.1.0-alpha.32

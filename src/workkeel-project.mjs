@@ -1,11 +1,8 @@
 import fs from "node:fs/promises";
-import { constants } from "node:fs";
-import { createHash } from "node:crypto";
 import path from "node:path";
 import os from "node:os";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
-import { fileURLToPath } from "node:url";
 import Ajv from "ajv";
 import { assertSafeTarget, durableAtomicCreate, formatJson, sha256 } from "./files.mjs";
 import { withProjectMutationLock } from "./workkeel-lock.mjs";
@@ -14,7 +11,7 @@ import { PACKAGE_NAME, TEMPLATE_VERSION } from "./workkeel-version.mjs";
 import { RISK_TIERS, validRiskPattern } from "./workkeel-risk.mjs";
 
 export const WORKKEEL_PACKAGE = PACKAGE_NAME;
-export const TASK_PROJECT_SCHEMA = "workkeel.project/v1";
+export const TASK_PROJECT_SCHEMA = "workkeel.project/v2";
 const exec = promisify(execFile);
 
 /** Bounded native Git observation. Never inherit executable Git configuration
@@ -110,147 +107,21 @@ export async function readTaskProject(target) {
   await assertGitRoot(target);
   const input = await readTaskContractInput(target, "workkeel.lock");
   const p = input.document;
-  if (!p || Object.keys(p).sort().join(",") !== "cli,legacy_manifest,policy,schema_version" || p.schema_version !== TASK_PROJECT_SCHEMA ||
+  if (!p || Object.keys(p).sort().join(",") !== "cli,policy,schema_version" || p.schema_version !== TASK_PROJECT_SCHEMA ||
       p.cli?.package_name !== WORKKEEL_PACKAGE || p.cli.version !== TEMPLATE_VERSION) throw new Error("Task-first project pin is unsupported; use the recorded Workkeel version");
   assertPolicy(p.policy);
-  if (p.legacy_manifest !== null && (!Array.isArray(p.legacy_manifest) || p.legacy_manifest.some(x =>
-    typeof x.path !== "string" || !/^[a-f0-9]{64}$/.test(x.sha256)))) throw new Error("Invalid legacy history manifest");
   return { ...p, digest: input.digest };
 }
 
-// Historical append-only journals are hashed in bounded chunks; they are never
-// interpreted as authority JSON or passed through the 1 MiB contract reader.
-export async function readLegacyDigest(target, ref) {
-  if (ref !== ".ai-org/events/events.jsonl") return (await readTaskFile(target, ref)).bytes_digest;
-  const directory = await safeDirectory(target, ".ai-org/events"), name = path.join(directory, "events.jsonl");
-  const file = await fs.open(name, constants.O_RDONLY | constants.O_NOFOLLOW | constants.O_NONBLOCK);
-  try {
-    const before = await file.stat(), limit = 8 * 1024 * 1024;
-    if (!before.isFile() || before.size > limit) throw Error("Legacy journal exceeds its 8 MiB archive bound");
-    const hash = createHash("sha256"), decoder = new TextDecoder("utf-8", { fatal: true }), chunk = Buffer.alloc(64 * 1024);
-    let size = 0;
-    while (true) {
-      const { bytesRead } = await file.read(chunk, 0, Math.min(chunk.length, limit + 1 - size), null);
-      if (!bytesRead) break;
-      size += bytesRead;
-      if (size > limit) throw Error("Legacy journal exceeds its 8 MiB archive bound");
-      const bytes = chunk.subarray(0, bytesRead);
-      decoder.decode(bytes, { stream: true });
-      hash.update(bytes);
-    }
-    decoder.decode();
-    const after = await file.stat(), entry = await fs.lstat(name);
-    if (size !== before.size || before.size !== after.size || before.mtimeMs !== after.mtimeMs ||
-        before.ctimeMs !== after.ctimeMs || before.dev !== entry.dev || before.ino !== entry.ino ||
-        entry.isSymbolicLink() || await fs.realpath(name) !== name) throw Error("Legacy journal changed during read");
-    return hash.digest("hex");
-  } finally { await file.close(); }
-}
-
-async function readLegacyJson(target, ref) {
-  const { content, bytes_digest } = await readTaskFile(target, ref);
-  let document;
-  try { document = JSON.parse(content); } catch { throw Error("Contract input is not valid JSON"); }
-  return { document, digest: bytes_digest };
-}
-
-export async function previewLegacyMigration(target, policy, { retentionRef = null } = {}) {
-  await assertGitRoot(target);
-  assertPolicy(policy);
-  if (await existsEntry(target, "workkeel.lock")) throw new Error("Project is already in task-first mode");
-  const collaboration = (await readTaskContractInput(target, ".ai-org/project/collaboration.json")).document;
-  if (collaboration.schema_version !== "temple.collaboration/v2" || collaboration.profile !== "solo" ||
-      collaboration.actor_policy?.ordinary_development !== "attributed" ||
-      (collaboration.authority_grants?.length ?? 0) || (collaboration.sponsorships?.length ?? 0) ||
-      (collaboration.principals?.length ?? 0) || collaboration.bootstrap_owner ||
-      collaboration.recovery?.status && collaboration.recovery.status !== "not_configured") throw new Error("Team, verified-identity and configured governance migrations are not supported; retain legacy mode");
-  for (const name of ["policies.json", "workflow.json", "collaboration-profiles.json", "high-assurance.json"]) {
-    const ref = `.ai-org/core/${name}`;
-    const current = (await readTaskContractInput(target, ref)).document;
-    const shipped = JSON.parse(await fs.readFile(fileURLToPath(new URL(`../project-overlay/${ref}`, import.meta.url)), "utf8"));
-    if (JSON.stringify(current) !== JSON.stringify(shipped)) throw new Error("Customized or older core policy requires a reviewed migration; retain legacy mode");
-  }
-  const retained = new Map(), extraPins = [];
-  if (retentionRef !== null) {
-    const { document: retention, digest } = await readLegacyJson(target, retentionRef);
-    if (Object.keys(retention).sort().join(",") !== "approval_ref,approved_by,open_work_items,schema_version" ||
-        retention.schema_version !== "workkeel.legacy-retention/v1" ||
-        !policy.approvers.includes(retention.approved_by) || !Array.isArray(retention.open_work_items) ||
-        !retention.open_work_items.length || retention.open_work_items.length > 1000) throw Error("Invalid explicit legacy retention request");
-    const approval = await readTaskFile(target, retention.approval_ref);
-    if (!approval.content.trim()) throw Error("Legacy retention requires recorded approval");
-    extraPins.push({ path: retentionRef, sha256: digest }, { path: retention.approval_ref, sha256: approval.bytes_digest });
-    for (const item of retention.open_work_items) {
-      if (!item || Object.keys(item).sort().join(",") !== "id,sha256" || !/^WI-[A-Za-z0-9-]+$/.test(item.id) ||
-          !/^[a-f0-9]{64}$/.test(item.sha256) || retained.has(item.id)) throw Error("Invalid or duplicate retained Work Item");
-      retained.set(item.id, item.sha256);
-    }
-  }
-  const directory = await safeDirectory(target, ".ai-org/work-items"), retainedOpen = [];
-  for (const [ref, field, terminal] of [
-    [".ai-org/project/runtime-workers.json", "workers", ["completed", "failed", "cancelled"]],
-    [".ai-org/project/tasks.json", "tasks", ["completed", "archived"]]
-  ]) if (await existsEntry(target, ref)) {
-    const registry = (await readTaskContractInput(target, ref)).document;
-    if (!Array.isArray(registry[field]) || registry[field].some(entry => !terminal.includes(entry.status))) throw new Error("Migration requires all legacy runtimes to be stopped and reconciled");
-  }
-  const manifest = [];
-  for (const entry of (await fs.readdir(directory)).sort()) {
-    // Legacy init installs this explanatory file beside records. Preserve and
-    // pin it as history, never parse it as a task or ignore arbitrary entries.
-    if (entry === "README.md") {
-      const ref = `.ai-org/work-items/${entry}`;
-      manifest.push({ path: ref, sha256: await readLegacyDigest(target, ref) });
-      continue;
-    }
-    if (!entry.endsWith(".json")) throw new Error("Unexpected entry in legacy Work Item store");
-    const ref = `.ai-org/work-items/${entry}`;
-    const { document: item, digest } = await readLegacyJson(target, ref);
-    const terminal = ["done", "concluded", "cancelled"].includes(item.state);
-    if (item.schema_version !== "temple.work-item/v1" || item.id !== entry.slice(0, -5) ||
-        item.claim?.status === "active" || item.workflow_profile === "high-assurance") throw new Error("Migration requires terminal legacy work or explicitly retained inactive work, without active claims or High-Assurance history");
-    if (!terminal) {
-      if (!["intake", "spec", "design", "build", "test", "eval", "independent_qa", "release_gate", "blocked"].includes(item.state) ||
-          retained.get(item.id) !== digest) throw Error("Migration requires terminal work or an exact approved retention entry");
-      retainedOpen.push({ id: item.id, state: item.state, disposition: "unfinished-read-only-history" });
-      retained.delete(item.id);
-    }
-    manifest.push({ path: ref, sha256: digest });
-  }
-  if (retained.size) throw Error("Retention entries must name exactly the unfinished legacy Work Items");
-  // Bind all legacy policy and event bytes, not just the new policy selection.
-  const visit = async (directory) => {
-    for (const entry of (await fs.readdir(path.join(target, directory), { withFileTypes: true })).sort((a,b) => a.name.localeCompare(b.name))) {
-      const relative = `${directory}/${entry.name}`;
-      if (entry.isSymbolicLink()) throw new Error("Legacy policy contains a symlink");
-      if (entry.isDirectory()) await visit(relative);
-      else manifest.push({ path: relative, sha256: await readLegacyDigest(target, relative) });
-    }
-  };
-  for (const directory of [".ai-org/project", ".ai-org/core", ".ai-org/events"]) await visit(directory);
-  manifest.push({ path: "temple.lock", sha256: await readLegacyDigest(target, "temple.lock") });
-  for (const pin of extraPins) if (!manifest.some(p => p.path === pin.path)) manifest.push(pin);
-  return { schema_version: "workkeel.migration-preview/v1", authority: "observation-only", mutation_status: "no-write",
-    fingerprint: sha256(formatJson({ policy, manifest })), legacy_manifest: manifest,
-    retained_open_items: retainedOpen,
-    limitations: ["Existing records are retained, not converted into grants or acceptance.", "Only quiescent Solo legacy projects are supported.", "Explicitly retained unfinished items require separately approved native successor tasks."] };
-}
-
-export async function initializeTaskProject(targetInput, policy, { migrationFingerprint = null, retentionRef = null } = {}) {
+export async function initializeTaskProject(targetInput, policy) {
   const target = await fs.realpath(await assertSafeTarget(targetInput));
   await assertGitRoot(target);
   assertPolicy(policy);
   return withProjectMutationLock(target, async () => {
     for (const ref of ["workkeel.lock", "workkeelw.mjs", "WORKKEEL.md"]) if (await existsEntry(target, ref)) throw new Error("Initialization never overwrites an existing Workkeel file");
-    const legacy = await existsEntry(target, "temple.lock");
-    let manifest = null;
-    if (legacy) {
-      if (!migrationFingerprint) throw new Error("Legacy projects require migration preview and its explicit fingerprint");
-      const preview = await previewLegacyMigration(target, policy, { retentionRef });
-      if (preview.fingerprint !== migrationFingerprint) throw new Error("Stale migration preview");
-      manifest = preview.legacy_manifest;
-    } else if (migrationFingerprint || retentionRef || await existsEntry(target, ".ai-org")) throw new Error("Existing unrecognized .ai-org state must be resolved before initialization");
-    const project = { schema_version: TASK_PROJECT_SCHEMA, cli: { package_name: WORKKEEL_PACKAGE, version: TEMPLATE_VERSION }, policy, legacy_manifest: manifest };
+    // Earlier task records are archived by their owners, never converted.
+    if (await existsEntry(target, ".ai-org")) throw new Error("Existing .ai-org state must be archived or removed before initialization");
+    const project = { schema_version: TASK_PROJECT_SCHEMA, cli: { package_name: WORKKEEL_PACKAGE, version: TEMPLATE_VERSION }, policy };
     const launcher = `import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
@@ -316,7 +187,7 @@ prove Skill application or quality. Finish with the recommended next step.
       for (const file of created.reverse()) if ((await readTaskFile(target, file.ref)).digest === file.digest) await fs.unlink(path.join(target, file.ref));
       throw error;
     }
-    return { schema_version: TASK_PROJECT_SCHEMA, initialized: true, mode: "task-first", migrated_legacy_records: manifest?.filter(e => e.path.startsWith(".ai-org/work-items/") && e.path.endsWith(".json")).length ?? 0,
+    return { schema_version: TASK_PROJECT_SCHEMA, initialized: true, mode: "task-first",
       execution_authorized: false, boundary_enforcement: "host-responsibility" };
   });
 }

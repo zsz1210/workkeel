@@ -18,13 +18,13 @@ async function fixture(t){
  t.after(async()=>{await monitor?.close();await fs.rm(root,{recursive:true,force:true});});
  const start=Date.now();t.mock.timers.enable({apis:['Date'],now:start});
  const actor={agent_id:'builder',principal_id:'owner'},id='WK-host-observer';
- const contract={schema_version:'workkeel.task-contract/v1',id,goal:'Offline host observer integration',state:'intake',actor,
+ const contract={schema_version:'workkeel.task-contract/v2',id,goal:'Offline host observer integration',state:'intake',actor,
   scope:{include:['Bound synthetic host reports'],exclude:['Provider or model calls']},dependencies:[],
   acceptance:{criteria:['Observer keeps attribution and coverage'],evidence:[]},handoff:null,
   verification:{risk_tier:'standard',separation:'distinct-agent',implementer:null,reviewer:null,candidate_revision:null},
   environment:{cwd:'.',read_paths:['src'],write_paths:['src'],tools:['node'],resources:[],network:{mode:'none',hosts:[]},external_actions:[],data:{classification:'public',model_access:'none',policy_refs:['docs/approval.md']}},
   authorization:{approved_by:'owner',approval_ref:'docs/approval.md',operations:['read','write','execute'],expires_at:null},skills:[],
-  execution:{runtime:{kind:'host-owned',adapter_id:null,required_features:[]},model_connection:{kind:'native'}},legacy:null};
+  execution:{runtime:{kind:'host-owned',adapter_id:null,required_features:[]},model_connection:{kind:'native'}}};
  await createNativeTask(root,contract,{operation_id:'create',expected_version:0,actor});
  const env=Object.fromEntries(Object.entries(process.env).filter(([key])=>!key.startsWith('GIT_')));
  const base=execFileSync('git',['-C',root,'rev-parse','HEAD'],{encoding:'utf8',env}).trim();

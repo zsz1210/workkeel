@@ -147,7 +147,7 @@ from provider usage. This includes tool/host waiting and is not model compute
 time. Crash gaps stay unknown; later reconciliation does not replace or double
 count the original execution measurement.
 
-[Model policies](../getting-started/model-routing.md) resolve settings before dispatch. The
+Model policies resolve settings before dispatch. The
 goal manifest freezes its approved phase selections. Saving a project default
 cannot rewrite this manifest or an in-flight turn; changed selections require a
 newly approved goal. Auto/fixed dimensions retain provider-specific meaning and

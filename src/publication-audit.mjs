@@ -7,7 +7,7 @@ import { promisify } from "node:util";
 import { evidenceProfile, readEvidenceProfiles } from "./evidence-profiles.mjs";
 
 const execFileAsync = promisify(execFile);
-export const PUBLICATION_AUDIT_SCHEMA = "temple.publication-audit/v1";
+export const PUBLICATION_AUDIT_SCHEMA = "workkeel.publication-audit/v1";
 export const PUBLICATION_SURFACES = ["repository", "package", "both"];
 
 const TEXT_RULES = [

@@ -21,8 +21,8 @@ When the fit is uncertain, document the proposed trigger and at least two bounde
 
 Inspect the target repository before editing.
 
-- **Organization-managed:** the exact file path appears in `temple.lock.managed_files`. Do not edit it as a project extension. Changes belong in the managing source repository and its release workflow.
-- **Project-owned:** the path is absent from `managed_files` and the repository establishes local ownership. Place a new extension under `.agents/skills/<skill-name>/` without changing the lock.
+- **Organization-managed:** the exact file path appears in the repository's managed-file record. Do not edit it as a project extension. Changes belong in the managing source repository and its release workflow.
+- **Project-owned:** the path is absent from that record and the repository establishes local ownership. Place a new extension under `.agents/skills/<skill-name>/` without changing the lock.
 - **External source:** copied, adapted, or referenced material retains its upstream provenance and license obligations. Its lifecycle may still be project-owned; external origin does not make it organization-managed.
 
 Lock membership is the decisive managed-file signal. A broad directory label is not permission to overwrite an exact managed entry. If a desired name or path already exists, stop and ask for a different name or an explicit maintainer workflow.
@@ -129,7 +129,7 @@ Use an isolated temporary workspace for generated artifacts. Keep side effects i
 ## 11. Current limits
 
 - Do not assume this repository provides dedicated commands to create, validate, list, test, install, adopt, remove, publish, or promote Skills.
-- Do not edit `temple.lock` by hand to register a project-owned Skill.
+- Do not edit a managed-file record by hand to register a project-owned Skill.
 - Do not claim automatic dependency resolution, provenance verification, model-routing evaluation, or third-party update management.
 - Official pack packaging may not support every supporting resource used by a project-owned Skill. Verify the current pack schema before proposing distribution.
 - A validated project Skill remains project-owned. Promotion to an official pack or core capability requires a separate maintainer decision, provenance and license review, real-project evidence, packaging and upgrade tests, and explicit authorization.

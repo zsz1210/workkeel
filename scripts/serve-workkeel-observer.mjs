@@ -5,8 +5,8 @@ import {startTaskMonitor} from '../src/workkeel-monitor.mjs';
 import {startBackgroundCollector} from './workkeel-background-collector.mjs';
 
 // Explicit local deployment entry point. This never installs or changes a service.
-const [target,stateDirectory,portValue='49618',recordMode='native',catalogFile]=process.argv.slice(2);
-if(!target||!stateDirectory)throw Error('Usage: node scripts/serve-workkeel-observer.mjs PROJECT STATE_DIR [PORT] [native|work-items] [SKILL_SOURCES_JSON]');
+const [target,stateDirectory,portValue='49618',catalogFile]=process.argv.slice(2);
+if(!target||!stateDirectory)throw Error('Usage: node scripts/serve-workkeel-observer.mjs PROJECT STATE_DIR [PORT] [SKILL_SOURCES_JSON]');
 await fs.mkdir(stateDirectory,{recursive:true,mode:0o700});
 const tokenPath=path.join(stateDirectory,'observer-access');
 try{await fs.writeFile(tokenPath,randomBytes(32).toString('hex'),{flag:'wx',mode:0o600});}catch(e){if(e.code!=='EEXIST')throw e;}
@@ -14,7 +14,7 @@ const info=await fs.lstat(tokenPath);
 if(!info.isFile()||info.isSymbolicLink()||(info.mode&0o077))throw Error('Observer access file must be private and regular');
 const accessToken=(await fs.readFile(tokenPath,'utf8')).trim();
 const catalogRoots=catalogFile?JSON.parse(await fs.readFile(catalogFile,'utf8')):[];
-const monitor=await startTaskMonitor(target,{port:Number(portValue),recordMode,service:'background',accessToken,catalogRoots});
+const monitor=await startTaskMonitor(target,{port:Number(portValue),service:'background',accessToken,catalogRoots});
 // Optional owner-only private viewer, behind the user's existing Tailscale Serve.
 // The full capability stays on this machine and is never sent to remote browsers.
 let privateViewer=null;

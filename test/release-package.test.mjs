@@ -3,7 +3,6 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
-import { buildCliBootstrapMetadata, SUPPORTED_NODE_RANGE } from "../src/bootstrap.mjs";
 import {
   FORBIDDEN_PACKAGE_PREFIXES,
   REQUIRED_PACKAGE_PATHS,
@@ -12,11 +11,9 @@ import {
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
-test("package and installed bootstrap expose the same qualified Node.js LTS range", async () => {
+test("package declares the qualified Node.js range and public prerelease channel", async () => {
   const packageDocument = JSON.parse(await fs.readFile(path.join(root, "package.json"), "utf8"));
-  const bootstrap = await buildCliBootstrapMetadata();
-  assert.equal(packageDocument.engines.node, SUPPORTED_NODE_RANGE);
-  assert.equal(bootstrap.node, SUPPORTED_NODE_RANGE);
+  assert.equal(packageDocument.engines.node, ">=24.15.0");
   assert.equal(packageDocument.private, undefined, "the approved Alpha package must be publishable");
   assert.deepEqual(packageDocument.publishConfig, { access: "public", tag: "next" });
 });

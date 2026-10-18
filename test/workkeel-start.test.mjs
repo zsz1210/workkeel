@@ -44,11 +44,8 @@ test('start identifies Git root and supplies inert policy without writing',async
   assert.equal((await readStartGuide(root)).valid,false);
   assert.equal(await fs.readFile(root+'/WORKKEEL.md','utf8'),'Existing user file');
 });
-test('legacy projects keep their launcher and malformed native pins never fall back',async t=>{
-  const root=await fixture(t); await fs.writeFile(root+'/temple.lock','legacy marker');
-  const before=await files(root),legacy=await readStartGuide(root);
-  assert.equal(legacy.stage,'legacy'); assert.equal(legacy.next_command,null);
-  assert.deepEqual(await files(root),before);
+test('interrupted or malformed native files never fall back',async t=>{
+  const root=await fixture(t);
   for(const ref of ['WORKKEEL.md','workkeelw.mjs']){
     await fs.writeFile(root+'/'+ref,'Interrupted native initialization');
     const conflict=await readStartGuide(root);

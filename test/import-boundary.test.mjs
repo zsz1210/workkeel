@@ -17,7 +17,7 @@ async function fixture(t, files) {
   return root;
 }
 const entry = 'import "../src/workkeel-cli.mjs";\n';
-const templeImport = "src/workkeel-cli.mjs -> src/project.mjs: native code must not import Temple modules";
+const outsideImport = "src/workkeel-cli.mjs -> src/project.mjs: native code must not import non-native modules";
 const nativeSource = async (t, source) => checkImportBoundary(await fixture(t, { "bin/workkeel.mjs": entry, "src/workkeel-cli.mjs": source }));
 
 // Evaluates each source as a module in V8 and records the imports it actually makes.
@@ -56,12 +56,11 @@ function v8Evaluate(sources, { run = true } = {}) {
 test("the repository's native modules reach only native and shared modules", () => {
   const result = checkImportBoundary();
   assert.deepEqual(result.errors, []);
-  assert.deepEqual(result.bridges, ["src/workkeel-cli.mjs -> src/cli.mjs"]);
   assert.ok(result.entries.includes("src/workkeel-claude-review.mjs") && result.entries.includes("src/workkeel-dispatch-classifier.mjs"));
   assert.ok(result.reached.every(file => file === "bin/workkeel.mjs" || /^src\/(?:workkeel-[^/]+|files|ids|task-contract|headroom-adapter)\.mjs$/.test(file)));
 });
 
-test("native imports of Temple modules are rejected, including transitive ones", async t => {
+test("native imports of non-native modules are rejected, including transitive ones", async t => {
   const root = await fixture(t, {
     "bin/workkeel.mjs": entry,
     "src/workkeel-cli.mjs": 'import { a } from "./workkeel-a.mjs";\nconst x = await import("./cli.mjs");\n',
@@ -69,7 +68,8 @@ test("native imports of Temple modules are rejected, including transitive ones",
     "src/cli.mjs": 'import "./work-items.mjs";\n'
   });
   const result = checkImportBoundary(root);
-  assert.deepEqual(result.errors, ["src/workkeel-a.mjs -> src/project.mjs: native code must not import Temple modules"]);
+  assert.deepEqual(result.errors.sort(), ["src/workkeel-a.mjs -> src/project.mjs: native code must not import non-native modules",
+    "src/workkeel-cli.mjs -> src/cli.mjs: native code must not import non-native modules"]);
   assert.ok(!result.reached.includes("src/work-items.mjs"));
 });
 
@@ -122,7 +122,7 @@ test("regression cases: legal modules that import ./project.mjs are always repor
     assert.equal(evaluated[index].error, undefined, `${label}: V8 must accept and run the module`);
     if (/import\s*\(/.test(source)) assert.ok(evaluated[index].seen.includes("./project.mjs"), `${label}: V8 must actually import ./project.mjs`);
     assert.ok(readImports(source).some(item => item.specifier === "./project.mjs"), `${label}: readImports must find ./project.mjs`);
-    assert.deepEqual((await nativeSource(t, source)).errors, [templeImport], label);
+    assert.deepEqual((await nativeSource(t, source)).errors, [outsideImport], label);
   }
 });
 
@@ -162,7 +162,7 @@ test("the fourth review's 22 probes, verbatim, are all reported", async t => {
     const source = reviewProbes[label];
     assert.equal(evaluated[index].error, undefined, `${label}: V8 must accept the module`);
     assert.ok(readImports(source).some(item => item.specifier === "./project.mjs"), `${label}: readImports must find ./project.mjs`);
-    assert.deepEqual((await nativeSource(t, source)).errors, [templeImport], label);
+    assert.deepEqual((await nativeSource(t, source)).errors, [outsideImport], label);
   }
 });
 
@@ -180,7 +180,7 @@ test("file: URLs, absolute paths and other non-package specifiers cannot reach r
   const real = await fs.realpath(root), absolute = path.join(real, "src/project.mjs");
   const rejected = [pathToFileURL(absolute).href, absolute, `data:text/javascript,import ${JSON.stringify(pathToFileURL(absolute).href)};`,
     "#internal", "C:\\repo\\src\\project.mjs", "@zsz1210/workkeel", "@zsz1210/workkeel/src/project.mjs", "/view.mjs"];
-  // Node really loads the Temple module through the first two.
+  // Node really loads the non-native module through the first two.
   for (const specifier of rejected.slice(0, 2)) {
     const run = spawnSync(process.execPath, ["--input-type=module", "-e", `await import(${JSON.stringify(specifier)});`], { encoding: "utf8" });
     assert.equal(run.stdout.trim(), "LOADED", specifier);
@@ -235,7 +235,7 @@ test("imports in unexecuted branches are still reported", async t => {
   const source = 'if (false) import("./project.mjs");\nconst lazy = () => import("./project.mjs");\n';
   assert.deepEqual(v8Evaluate([source])[0].seen, []);
   assert.deepEqual(readImports(source).map(item => item.specifier), ["./project.mjs", "./project.mjs"]);
-  assert.deepEqual((await nativeSource(t, source)).errors, [templeImport, templeImport]);
+  assert.deepEqual((await nativeSource(t, source)).errors, [outsideImport, outsideImport]);
 });
 
 test("import-like text in comments, strings, templates, regexes and members is not an import", () => {
@@ -252,14 +252,14 @@ test("import-like text in comments, strings, templates, regexes and members is n
   assert.deepEqual(readImports(source), []);
 });
 
-test("computed imports and a static legacy bridge are rejected in native code", async t => {
+test("computed imports and static non-native imports are rejected in native code", async t => {
   const root = await fixture(t, {
     "bin/workkeel.mjs": entry,
     "src/workkeel-cli.mjs": 'import { main } from "./cli.mjs";\nconst name = "x";\nawait import(`./${name}.mjs`);\nawait import("./" + name);\nawait import(String.raw`./project.mjs`);\n',
     "src/cli.mjs": "export const main = 1;\n"
   });
   assert.deepEqual(checkImportBoundary(root).errors.sort(), [
-    "src/workkeel-cli.mjs -> src/cli.mjs: the legacy bridge must stay a lazy import",
+    "src/workkeel-cli.mjs -> src/cli.mjs: native code must not import non-native modules",
     "src/workkeel-cli.mjs: computed import() cannot be checked",
     "src/workkeel-cli.mjs: computed import() cannot be checked",
     "src/workkeel-cli.mjs: computed import() cannot be checked"
@@ -274,7 +274,7 @@ test("native modules the CLI entry does not reach are still checked", async t =>
   });
   const result = checkImportBoundary(root);
   assert.ok(result.entries.includes("src/workkeel-unreached.mjs"));
-  assert.deepEqual(result.errors, ["src/workkeel-unreached.mjs -> src/project.mjs: native code must not import Temple modules"]);
+  assert.deepEqual(result.errors, ["src/workkeel-unreached.mjs -> src/project.mjs: native code must not import non-native modules"]);
 });
 
 test("a native module the parser rejects fails the check instead of passing", async t => {

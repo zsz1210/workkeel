@@ -54,9 +54,8 @@ The exact fields below extend the common request. Unknown fields fail.
 | `retrospective` | `decision` (`no-new-learning` or `captured`), `learning_ids`, `skill_versions`, `summary`, `evidence` |
 
 Candidate files include `SKILL.md` and every declared resource. Their bytes are
-pinned; changed Skill content requires a new version. Follow
-[Skill authoring](skill-authoring.md) for routing, authority, dependencies and
-provenance. Frontmatter uses supported plain scalar name and description fields;
+pinned; changed Skill content requires a new version. Follow the bundled
+`skill-authoring` Skill for routing, authority, dependencies and provenance. Frontmatter uses supported plain scalar name and description fields;
 unsupported YAML constructs fail rather than being interpreted inconsistently.
 
 Each comparison case has `id`, `kind` (`training`, `holdout` or `negative-trigger`),

@@ -24,14 +24,8 @@ The source-checkout entry point below retains a private access token across rest
 and supports an explicitly selected record format:
 
 ```sh
-node scripts/serve-workkeel-observer.mjs /path/to/project /path/to/private-state 49618 native
+node scripts/serve-workkeel-observer.mjs /path/to/project /path/to/private-state 49618
 ```
-
-For an existing `temple.lock` repository with `.ai-org/work-items`, replace `native`
-with `work-items`. This mode shows the original Work Item stages and referenced
-documents. It does not migrate records or treat a recorded stage as acceptance.
-Legacy records without operation usage show unknown tokens and execution time;
-elapsed calendar time includes waiting and is not a usage estimate.
 
 The state directory holds `access-url.txt` and a private observer access token, not
 a model credential. The process listens only on `127.0.0.1`. A local process manager

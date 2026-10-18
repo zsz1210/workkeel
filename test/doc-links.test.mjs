@@ -1,6 +1,5 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import fs from "node:fs/promises";
 import path from "node:path";
 import { extractLocalLinks, resolveLocalLink } from "../scripts/check-doc-links.mjs";
 
@@ -22,9 +21,4 @@ test("documentation link resolution handles relative paths, fragments, and encod
   assert.equal(resolveLocalLink(source, "../README.md#start"), path.join("/workspace", "README.md"));
   assert.equal(resolveLocalLink(source, "assets/My%20Flow.svg?raw=1"), path.join("/workspace", "docs", "assets", "My Flow.svg"));
   assert.equal(resolveLocalLink(source, "#local"), null);
-});
-
-test("usage guide reports unavailable usage as unknown", async () => {
-  const usageGuide = await fs.readFile(new URL("../docs/getting-started/usage.md", import.meta.url), "utf8");
-  assert.match(usageGuide, /missing usage is reported as unknown, never zero/);
 });

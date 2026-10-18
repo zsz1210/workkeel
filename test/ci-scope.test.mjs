@@ -73,8 +73,6 @@ test("CI is one bounded Node.js 24 repository gate", async () => {
   assert.match(workflowStep(workflow, "doctor"), /node \.\/bin\/workkeel\.mjs start \./);
   assert.match(workflowStep(workflow, "doctor"), /npm run check:public-history/);
   assert.doesNotMatch(workflowStep(workflow, "doctor"), /workkeelw\.mjs/, "A clean source clone has no initialized local launcher");
-  assert.doesNotMatch(workflowStep(workflow, "doctor"), /templew\.mjs/, "This repository uses native Workkeel; legacy Doctor belongs to compatibility fixtures");
-  assert.doesNotMatch(workflow, /templew\.mjs schema validate/, "Doctor already validates schemas");
   for (const id of ["install", "governance", "doctor", "behavior"]) {
     assert.match(workflowStep(workflow, id), /if:.*always\(\)/, id);
   }
@@ -89,7 +87,7 @@ test("complete and browser verification remain explicit commands; publishing ver
   assert.equal(packageDocument.scripts["test:daily"], "node scripts/test-groups.mjs daily");
   assert.equal(packageDocument.scripts.verify, "npm run check && npm run test:full");
   assert.equal(packageDocument.scripts["verify:daily"], "npm run check && npm run test:daily");
-  assert.equal(packageDocument.scripts["test:browser"], "node scripts/verify-console-browser.mjs");
+  assert.equal(packageDocument.scripts["test:browser"], "node scripts/verify-workkeel-monitor.mjs");
   assert.match(testingGuide, /npm run verify/);
   assert.match(testingGuide, /npm run test:browser/);
   assert.match(testingGuide, /local/i);

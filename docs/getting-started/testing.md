@@ -3,8 +3,7 @@
 Workkeel separates the bounded remote repository gate from complete local
 verification. This source repository uses the native task lifecycle: claim,
 exact-candidate handoff, different-Agent review, and authorized Principal
-acceptance. Retained Temple Position behavior is covered by isolated
-compatibility fixtures. The native lifecycle and actual verification evidence live
+acceptance. The native lifecycle and actual verification evidence live
 in a [separate private development workspace](../operations/framework-development.md).
 A public source checkout has no maintainer task history or raw development output.
 
@@ -59,19 +58,11 @@ npm run verify
 
 Run it once on the final behavioral candidate, not after every intermediate edit. Further code, fixture, dependency, or contract changes invalidate that result. Later evidence/prose-only updates require their applicable checks and an explicit link to the tested code revision; they do not turn an untested code revision into a tested one. Release verification remains complete regardless of local selection.
 
-Management Console changes also require the real-browser gate. Run browser checks
-in the private workspace so failure screenshots and raw results stay there:
+Monitor and workspace changes also require the real-browser gate. Run browser
+checks in the private workspace so failure screenshots and raw results stay there:
 
 ```bash
 npm run test:browser
-```
-
-This command initializes an isolated synthetic compatibility project, starts its Control Plane on loopback, and opens four responsive layouts in an installed Google Chrome. It reads no maintainer task state. It checks primary navigation, live rendering, browser errors, keyboard tabs, reduced-motion behavior, horizontal overflow, primary-text clipping, and named high-level layout regions. It does not download a browser or use the contributor's normal Chrome profile. A failure writes an actionable screenshot below `output/playwright/`. Temporary fixture data and acquired servers/browser processes are cleaned up on success or failure.
-
-For the task-first monitor, also run its focused browser gate:
-
-```bash
-node scripts/verify-workkeel-monitor.mjs
 ```
 
 It uses synthetic task journals and installed Chrome at desktop/mobile sizes,
@@ -126,11 +117,8 @@ Ordinary PR/push CI does not run `npm run test:full` or `npm run test:browser`. 
 Complete candidate evidence stays private and revision-specific:
 
 - run `npm run verify` before proposing a behavioral candidate;
-- run `npm run test:browser` for Management Console or other user-interface changes;
+- run `npm run test:browser` for monitor, workspace or other user-interface changes;
 - record the exact tested revision and preserve the native task's independent review and authorized acceptance gates. Tests do not accept a task or authorize publication.
-
-Legacy compatibility fixtures retain Position-based contract rules. They do
-not require native-task contributors to configure those Positions.
 
 ## Release and live validation
 

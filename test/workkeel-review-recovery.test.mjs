@@ -33,7 +33,7 @@ function reviewHost({state='stopped',result=completed,probeResult=probe()}={}) {
   return {host,calls};
 }
 // The project mutation lock file used by every task mutation.
-const lockPath=root=>path.join(os.tmpdir(),`temple-mutation-${sha256(path.resolve(root)).slice(0,20)}.lock`);
+const lockPath=root=>path.join(os.tmpdir(),`workkeel-mutation-${sha256(path.resolve(root)).slice(0,20)}.lock`);
 const until=async check=>{for(let i=0;i<400&&!check();i++)await new Promise(r=>setTimeout(r,5));assert.ok(check());};
 
 async function fixture(t,{expiresAt=null,closeBinding=true,beforeHandoff=null,parallelism=2}={}) {

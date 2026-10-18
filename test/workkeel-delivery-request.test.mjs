@@ -176,7 +176,7 @@ test('record-check does not report a supervisor startup failure as a RED test',a
   // Fault injection: the real supervisor child receives the start request but
   // exits before starting the test command or acknowledging it over IPC.
   childProcess.spawn=function(executable,args,options) {
-    if(args[0]?.endsWith('/delivery-check-worker.mjs'))args=['-e',"process.on('message',()=>process.exit(2))"];
+    if(args[0]?.endsWith('/workkeel-command-worker.mjs'))args=['-e',"process.on('message',()=>process.exit(2))"];
     return spawn.call(this,executable,args,options);
   };
   syncBuiltinESMExports();
@@ -194,7 +194,7 @@ test('record-check preserves an interrupted supervisor as unknown execution, not
   await fs.writeFile(f.root+'/src/check.test.mjs','await new Promise(resolve=>setTimeout(resolve,30000));\n');
   childProcess.spawn=function(executable,args,options) {
     const child=spawn.call(this,executable,args,options);
-    if(args[0]?.endsWith('/delivery-check-worker.mjs'))child.on('message',message=>{
+    if(args[0]?.endsWith('/workkeel-command-worker.mjs'))child.on('message',message=>{
       if(message?.action==='command-started'){acknowledged=true;pid=child.pid;process.kill(pid,'SIGKILL');}
     });
     return child;

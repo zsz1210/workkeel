@@ -1,4 +1,4 @@
-"""Temple's isolated, network-denied Headroom wrapper; never a model transport."""
+"""Workkeel's isolated, network-denied Headroom wrapper; never a model transport."""
 import hashlib
 import importlib.metadata
 import json

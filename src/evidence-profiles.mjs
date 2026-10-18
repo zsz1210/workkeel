@@ -1,7 +1,7 @@
 import path from "node:path";
 import { atomicCreate, formatJson, pathExists, readJson, sha256 } from "./files.mjs";
 
-export const EVIDENCE_PROFILES_SCHEMA = "temple.evidence-profiles/v1";
+export const EVIDENCE_PROFILES_SCHEMA = "workkeel.evidence-profiles/v1";
 export const EVIDENCE_PROFILES_RELATIVE_PATH = ".ai-org/project/evidence-profiles.json";
 export const EVIDENCE_PROFILE_IDS = ["private", "public", "restricted"];
 

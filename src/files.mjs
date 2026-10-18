@@ -29,7 +29,7 @@ export async function atomicWrite(targetPath, content) {
   await fs.mkdir(path.dirname(targetPath), { recursive: true });
   const temporaryPath = path.join(
     path.dirname(targetPath),
-    `.temple-tmp-${process.pid}-${crypto.randomBytes(5).toString("hex")}`
+    `.workkeel-tmp-${process.pid}-${crypto.randomBytes(5).toString("hex")}`
   );
   await fs.writeFile(temporaryPath, content, "utf8");
   await fs.rename(temporaryPath, targetPath);
@@ -39,7 +39,7 @@ export async function atomicCreate(targetPath, content) {
   await fs.mkdir(path.dirname(targetPath), { recursive: true });
   const temporaryPath = path.join(
     path.dirname(targetPath),
-    `.temple-tmp-${process.pid}-${crypto.randomBytes(5).toString("hex")}`
+    `.workkeel-tmp-${process.pid}-${crypto.randomBytes(5).toString("hex")}`
   );
   await fs.writeFile(temporaryPath, content);
   try {
@@ -73,8 +73,8 @@ async function writeAndSync(targetPath, content) {
   }
 }
 
-// Matches in-flight durable writes, including leftovers from the pre-rename prefix.
-export const DURABLE_TEMPORARY_NAME = /^\.(?:workkeel|temple)-durable-[A-Za-z0-9-]+$/;
+// Matches in-flight durable writes.
+export const DURABLE_TEMPORARY_NAME = /^\.workkeel-durable-[A-Za-z0-9-]+$/;
 
 export async function durableAtomicWrite(targetPath, content) {
   const directoryPath = path.dirname(targetPath);

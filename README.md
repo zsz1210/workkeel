@@ -83,8 +83,7 @@ Framework development uses the native five-stage workflow in a
 [separate private workspace](docs/operations/framework-development.md). This public
 checkout contains framework source, public documentation, generic templates and
 reproducible tests. Actual tasks, approvals, experiments, logs and review evidence
-stay outside it, including files that Git would ignore. TEMPLE.md and temple-work
-belong to existing projects' historical compatibility mode.
+stay outside it, including files that Git would ignore.
 
 ## Local observer
 

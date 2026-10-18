@@ -25,23 +25,3 @@ mobile layouts, light/dark appearance, keyboard controls and reduced motion.
 The stacked-layer organization was inspired by a reader-supplied infographic;
 no third-party artwork, icons, branding or diagram text is reproduced. These
 assets are repository-authored and covered by the project's MIT license.
-
-## Retained compatibility diagrams
-
-The Temple delivery diagrams in this directory are static README assets generated from the adjacent Mermaid source files.
-
-- `temple-delivery-path.<locale>.mmd` is the desktop source.
-- `temple-delivery-path.<locale>-mobile.mmd` is the narrow-layout source.
-- Earlier README revisions used these assets; current entrypoints use Workkeel diagrams.
-- Historical localized versions remain available for compatibility documentation.
-
-Regenerate all six SVGs with the pinned authoring tool:
-
-    for source in docs/assets/temple-delivery-path.*.mmd; do
-      npx --yes @mermaid-js/mermaid-cli@11.10.1 \
-        -i "$source" \
-        -o "${source%.mmd}.svg" \
-        -b transparent
-    done
-
-Mermaid is an authoring-only tool. It is not a Temple runtime dependency and is not installed by default. After regeneration, validate the SVG files and inspect the rendered READMEs at desktop and narrow widths.

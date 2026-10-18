@@ -5,7 +5,7 @@ import {readAllowlist} from './check-publication.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const privateRoots = new Set([
-  '.ai-org', '.codex', '.workkeel-private', '.temple-tmp', '.git', 'node_modules', 'output', 'coverage',
+  '.ai-org', '.codex', '.workkeel-private', '.workkeel-tmp', '.git', 'node_modules', 'output', 'coverage',
   'private', 'backups', 'workkeel.md', 'workkeel.lock', 'workkeelw.mjs',
   'temple.md', 'temple.lock', 'templew.mjs'
 ]);

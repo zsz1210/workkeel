@@ -1,13 +1,13 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import {createMonitorFixture} from './workkeel-monitor-fixture.mjs';
-import {emptyLearningIndex} from '../src/learning.mjs';
+import {emptyLearningIndex} from '../src/workkeel-learning-schema.mjs';
 export async function createObserverFixture(){
  const root=await createMonitorFixture({extended:true,rich:true});
  const files={
   '.agents/skills/custom-check/SKILL.md':'---\nname: custom-check\ndescription: A project-specific offline check.\n---\n# Custom check\n\nSearchable phrase: copper kestrel.\n<script>window.pwned=true</script>\n',
   '.agents/skills/external-check/SKILL.md':'---\nname: external-check\ndescription: A synthetic third-party example.\norigin: third-party\n---\n# External check\nSynthetic data only.\n',
-  '.agents/skills/temple-work/SKILL.md':await fs.readFile(new URL('../project-overlay/.agents/skills/temple-work/SKILL.md',import.meta.url),'utf8')
+  '.agents/skills/workkeel-work/SKILL.md':await fs.readFile(new URL('../project-overlay/workkeel-skills/workkeel-work/SKILL.md',import.meta.url),'utf8')
  };
  const index=emptyLearningIndex();
  for(const [kind,status] of [['lesson','candidate'],['lesson','validated'],['practice','active'],['lesson','deprecated']]){

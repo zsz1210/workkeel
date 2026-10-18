@@ -72,7 +72,7 @@ test("natural exit rejects pending requests and close remains safe", async t => 
 });
 
 test("spawn failure rejects outstanding work promptly and can be closed", async t => {
-  const directory = await fs.mkdtemp(path.join(os.tmpdir(), "temple-spawn-failure-"));
+  const directory = await fs.mkdtemp(path.join(os.tmpdir(), "workkeel-spawn-failure-"));
   t.after(() => fs.rm(directory, { recursive: true, force: true }));
   const rpc = createJsonRpcProcess(path.join(directory, "nonexistent-command"));
   const request = assert.rejects(rpc.request("never-started", {}, 10000), /ENOENT|ENOTDIR|closed/);

@@ -4,27 +4,18 @@ import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const optional = new Set([
-  "console-browser-contract", "control-plane-foundation", "control-plane-inbox", "control-plane-live",
-  "control-plane-private-viewer", "github-control-plane", "local-observer-service", "optional-console-collector"
-].map((name) => `test/${name}.test.mjs`));
 export const fastFiles = [
-  "ci-scope", "doc-links", "evidence-git", "import-boundary", "model", "npm-release-workflow", "publication-audit", "publication-boundary",
-  "release-package", "skill-policy", "specifications", "test-groups", "workkeel-visuals"
+  "ci-scope", "doc-links", "import-boundary", "npm-release-workflow", "publication-audit", "publication-boundary",
+  "release-package", "skill-policy", "test-groups", "workkeel-visuals"
 ].map((name) => `test/${name}.test.mjs`);
 export const dailyFiles = [...new Set([...fastFiles, ...[
-  "app-server-protocol-replay", "audit-export", "autonomous-delivery", "cli", "collaboration-governance",
-  "collaborative-recovery", "console-browser-contract", "console-delivery-summary", "context",
-  "control-plane-foundation", "control-plane-inbox", "control-plane-live", "control-plane-private-viewer",
-  "daily-delivery", "delivery-entry", "evidence-observer", "evidence-view",
-  "execution-routing", "federation", "field-readiness", "field-verification", "github-control-plane",
-  "handoff-revision", "high-assurance", "json-rpc-process-cleanup", "json-rpc-process-protocol",
-  "learning-operations", "local-observer-service", "optional-console-collector", "recovery",
-  "runtime-coordination", "schema-validation-isolation", "tracker", "workflow"
+  "json-rpc-process-cleanup", "json-rpc-process-protocol", "task-contract", "workkeel-daily-entry",
+  "workkeel-delivery-request", "workkeel-lifecycle", "workkeel-lock", "workkeel-review-recovery", "workkeel-risk-tiers"
 ].map((name) => `test/${name}.test.mjs`)])].sort();
 
-export function groupFor(file) {
-  return optional.has(file) ? "optional" : "core";
+// Every product test is core; the group remains for changed-file selection.
+export function groupFor() {
+  return "core";
 }
 
 export async function testInventory(target = root) {
@@ -81,7 +72,7 @@ async function main(args) {
   if (group === "changed") {
     try { parsed = selectionOptions(group, options); selection = selectChangedTests(changedPaths(root, parsed.base), inventory); }
     catch (error) { selection = { mode: "full", reason: error.message, files: inventory }; }
-  } else if (["core", "optional", "fast", "daily", "full"].includes(group)) {
+  } else if (["core", "fast", "daily", "full"].includes(group)) {
     parsed = selectionOptions(group, options);
     selection = { mode: group, files: group === "fast" ? fastFiles : group === "daily" ? dailyFiles : inventory.filter((file) => group === "full" || groupFor(file) === group) };
   } else throw new Error(`Unknown test group: ${group}`);

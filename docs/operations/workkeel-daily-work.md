@@ -288,13 +288,9 @@ native-session tokens. Keep the capability URL private and stop with Ctrl-C.
 
 ## Repository maintenance
 
-Preserve evidence tags when moving a self-hosted legacy checkout: verify the
-exact `temple/evidence/<revision>` tags in addition to main/tree and run Doctor.
-Do not make missing historical commits pass by suppressing evidence checks.
-
-Retain `project-overlay` copies and installed managed files according to their
-ownership. Large historical experiments remain frozen reproduction instruments
-unless a named task explicitly maintains them; no age-based deletion is implied.
-Before archiving historical evidence, export with the existing evidence-bundle
-CLI, verify every digest and read back a selected original. Removing a working-tree
+Run Doctor after moving a checkout. Do not make missing historical commits pass
+by suppressing evidence checks. Large historical experiments remain frozen
+reproduction instruments unless a named task explicitly maintains them; no
+age-based deletion is implied. Before archiving historical evidence, verify every
+digest and read back a selected original. Removing a working-tree
 file neither shrinks Git history nor proves that its references are unused.

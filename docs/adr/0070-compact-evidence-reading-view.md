@@ -35,4 +35,4 @@ Users explicitly opt into a smaller reading view and retain failure details and
 caveats. Unsupported formats can remain large; the command never truncates to fit
 a token budget. Existing evidence commands and lifecycle gates are unchanged.
 An unavailable or changed original cannot be recovered from the digest alone.
-See [the guide](../operations/compact-evidence.md) for limits and examples.
+See the guide for limits and examples.

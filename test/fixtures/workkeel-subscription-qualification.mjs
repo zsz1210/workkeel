@@ -43,14 +43,14 @@ try {
     edges: [{ from: "start", to: "read" }, { from: "read", to: "write" }, { from: "write", to: "end" }] };
   await fs.writeFile(path.join(root, "docs/policy.json"), formatJson(policy));
   await fs.writeFile(path.join(root, "docs/workflow.json"), formatJson(definition));
-  const contract = { schema_version: "workkeel.task-contract/v1", id: "WK-subscription", goal: "Verify selected subscription models with bounded real tools", state: "intake", actor,
+  const contract = { schema_version: "workkeel.task-contract/v2", id: "WK-subscription", goal: "Verify selected subscription models with bounded real tools", state: "intake", actor,
     scope: { include: ["Read input and create uppercase output"], exclude: ["External actions", "User projects"] }, dependencies: [],
     acceptance: { criteria: ["Output exactly matches uppercase source"], evidence: [] }, handoff: null,
     verification: { risk_tier: "standard", separation: "distinct-agent", implementer: null, reviewer: null, candidate_revision: null },
     environment: { cwd: ".", read_paths: ["."], write_paths: ["src"], tools: ["codex"], resources: [], network: { mode: "none", hosts: [] }, external_actions: [],
       data: { classification: "public", model_access: "approved-connection", policy_refs: ["docs/approval.md", "docs/policy.json", "docs/workflow.json"] } },
     authorization: { approved_by: "owner", approval_ref: "docs/approval.md", operations: ["read", "write", "execute"], expires_at: new Date(Date.now() + 600000).toISOString() }, skills: [],
-    execution: { runtime: { kind: "adapter", adapter_id: "codex-app-server", required_features: ["filesystem-sandbox", "network-disabled", "fixed-model"] }, model_connection: { kind: "policy", policy_ref: "docs/policy.json" } }, legacy: null };
+    execution: { runtime: { kind: "adapter", adapter_id: "codex-app-server", required_features: ["filesystem-sandbox", "network-disabled", "fixed-model"] }, model_connection: { kind: "policy", policy_ref: "docs/policy.json" } } };
   git("add", "."); git("commit", "-qm", "Synthetic subscription qualification");
   await createNativeTask(root, contract, { operation_id: "create", expected_version: 0, actor });
   const claim = await mutateNativeTask(root, contract.id, "claim", { operation_id: "claim", expected_version: 1, actor, base_revision: git("rev-parse", "HEAD") });

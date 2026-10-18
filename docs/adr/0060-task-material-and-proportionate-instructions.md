@@ -9,7 +9,7 @@ does not prove Token savings or a quality improvement.
 
 ## Decision
 
-Keep default stage material and all current safety/authority checks. Add explicit `--material task` to separate complete relevant actor inventory records and non-current gate references from mandatory source bodies. Unknown shapes/relations and independent full-source requirements retain full material. Scope, approval, risk, policy and current evidence are not replaced by a machine-only summary. See the exact supported categories in [context routing](../extensions/context-routing.md).
+Keep default stage material and all current safety/authority checks. Add explicit `--material task` to separate complete relevant actor inventory records and non-current gate references from mandatory source bodies. Unknown shapes/relations and independent full-source requirements retain full material. Scope, approval, risk, policy and current evidence are not replaced by a machine-only summary. See the exact supported categories in context routing.
 
 Retain caller-attested availability as an independent option, with no
 persisted session cache or provider-loading claim. Bind every representation

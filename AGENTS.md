@@ -19,8 +19,6 @@ it is not a second framework implementation or a publishable repository.
   task data in commits, branches, tags, issues, PR attachments or release assets.
   Generic templates and synthetic test fixtures are framework source, not an
   exception allowing sanitized copies of real development records.
-- Do not select Temple lifecycle Skills for new work. Compatibility code and fixtures
-  are product support, not instructions governing this repository.
 - Claim before implementation. Use approved paths and authority; record exact candidate
   verification and obtain review by an actual different Agent before acceptance.
 - Use applicable Skills, read their instructions, and report their use. Use apply_patch

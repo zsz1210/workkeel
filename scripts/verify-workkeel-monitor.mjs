@@ -185,11 +185,8 @@ async function verifyObserverClarity(page,monitor,index){
  await page.goto(monitor.url);await page.waitForFunction(()=>document.querySelector('#connection').dataset.health==='healthy');await language('en');
 
  await page.locator('#nav-backlog').click();await waitText('#content tbody','WK-accepted');
- const current=page.getByRole('button',{name:'Current tasks 6',exact:true}),retained=page.getByRole('button',{name:'Retained history 0',exact:true});
- assert.equal(await current.getAttribute('aria-pressed'),'true');assert.equal(await retained.getAttribute('aria-pressed'),'false');
- await retained.click();await page.waitForFunction(()=>!document.querySelector('#content tbody'));
- assert.equal(await retained.getAttribute('aria-pressed'),'true');assert.match(await page.locator('#content').innerText(),/Read-only history/);
- await current.click();await waitText('#content tbody','WK-accepted');
+ // Removed pre-migration history: the backlog has no history switch.
+ assert.equal(await page.getByRole('button',{name:/Retained history/}).count(),0);
  const acceptedRow=page.locator('#content tbody tr').filter({hasText:'WK-accepted'});
  await acceptedRow.getByRole('button',{name:/^\d+ documents$/}).click();
  await page.locator('#detail-tabs button[aria-current="page"]').filter({hasText:'Documents'}).waitFor();

@@ -131,7 +131,7 @@ installed Python environment. No Headroom/tokenizer source, environment or model
 weights are vendored, downloaded or installed by Workkeel. The upstream LICENSE and
 NOTICE were reviewed; the operator must retain the environment's licenses, notices
 and dependency lock. Default-off operation needs no Python packages. The version
-pin is not a full environment integrity attestation. See the [adapter guide](docs/extensions/headroom-adapter.md).
+pin is not a full environment integrity attestation. See the [context guide](docs/extensions/workkeel-context.md).
 
 ## Archify
 

@@ -1,10 +1,10 @@
 import { isWorkItemId } from "./ids.mjs";
 
-// Pure learning record validators shared by the native monitor and the legacy store.
+// Pure learning record validators used by the native monitor.
 export const LEARNING_INDEX_RELATIVE_PATH = ".ai-org/learning/index.json";
 export const LEARNING_INDEX_SCHEMA = "ai-org.learning-index/v2";
 export const LEGACY_LEARNING_INDEX_SCHEMA = "ai-org.learning-index/v1";
-export const SKILL_PROPOSAL_SCHEMA = "temple.skill-proposal/v1";
+export const SKILL_PROPOSAL_SCHEMA = "workkeel.skill-proposal/v1";
 export const SKILL_PROPOSALS_RELATIVE_PATH = ".ai-org/learning/proposals";
 export const LEARNING_STATUSES_BY_KIND = {
   lesson: ["candidate", "validated", "deprecated"],

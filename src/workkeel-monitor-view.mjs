@@ -58,7 +58,6 @@ const actions = {
 };
 export function taskActions(task) {
   if(task.read_status==='unavailable')return ['任務紀錄無法驗證：檢查此任務檔案；目前狀態未知。'];
-  if(task.record_mode==='work-items')return ['紀錄中的階段：'+label(task.task_state),...(task.unresolved??[])];
   const continuation=task.continuation;
   const detail=continuation?.status==='confirmed-interruption'?'已核對中斷、清理與部分成果：準備本輪接手材料，派送前重新核對接續計畫。此快照不授予執行權限。':
     continuation?.status==='successor-recorded'?'已有接續紀錄：查看既有接續工作，勿重複建立。':

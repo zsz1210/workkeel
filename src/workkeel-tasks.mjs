@@ -4,7 +4,7 @@ import crypto from "node:crypto";
 import { durableAtomicCreate, durableAtomicWrite, formatJson, sha256 } from "./files.mjs";
 import { withProjectMutationLock } from "./workkeel-lock.mjs";
 import { readTaskContractInput, readTaskFile, validateTaskContract } from "./task-contract.mjs";
-import { assertActor, assertApprover, readTaskProject, safeDirectory, existsEntry, readLegacyDigest, readNativeGit } from "./workkeel-project.mjs";
+import { assertActor, assertApprover, readTaskProject, safeDirectory, existsEntry, readNativeGit } from "./workkeel-project.mjs";
 import {loadTaskRequirements, assertRequirementOutcomes} from './workkeel-requirements.mjs';
 import { assertIndependentApproval, assertTaskRisk, candidateRisk, elevatedRisk, isTeamPolicy, maxRisk, taskRisk } from "./workkeel-risk.mjs";
 
@@ -67,9 +67,6 @@ async function evidenceRework(target, item, revision, pins) {
   if (rejected.some(a => a.delivery.revision === revision)) throw new Error("Rework requires a fresh candidate, not the rejected revision");
   return null;
 }
-async function assertLegacyPin(target, pin) {
-  if (await readLegacyDigest(target, pin.path) !== pin.sha256) throw Error("Retained legacy history changed; inspect the original evidence");
-}
 function assertRecord(item, id) {
   if (item?.schema_version !== "workkeel.work-item/v1" || item.id !== id || item.contract?.id !== id ||
       !Number.isSafeInteger(item.version) || item.version < 1 || !Array.isArray(item.history) || item.history.length !== item.version ||
@@ -96,34 +93,20 @@ export function validateNativeTaskSnapshot(item, id) {
   return item;
 }
 export async function listTaskItems(target, { isolateErrors = false } = {}) {
-  const project = await readTaskProject(target);
+  await readTaskProject(target);
   if (!await existsEntry(target, ".ai-org/work-items")) return [];
   const dir = await safeDirectory(target, ".ai-org/work-items");
   const items = [];
   for (const entry of (await fs.readdir(dir)).sort()) {
-    if (entry === "README.md") {
-      const pin = project.legacy_manifest?.find(p => p.path === ".ai-org/work-items/README.md");
-      if (!pin) throw new Error("Unregistered legacy documentation in task-first store");
-      await assertLegacyPin(target, pin);
-      continue;
-    }
     if (!entry.endsWith(".json")) throw new Error("Unexpected file in task store");
     const id = entry.slice(0, -5);
     if (!ID.test(id)) throw new Error('Invalid task filename');
     try {
     const { document: item } = await readTaskContractInput(target, fileRef(id));
-    if (item.schema_version === "temple.work-item/v1") {
-      if (item.id !== id) throw new Error("Legacy task ID differs from its filename");
-      const pin = project.legacy_manifest?.find(p => p.path === fileRef(id));
-      if (!pin) throw new Error("Unregistered legacy record in task-first store");
-      await assertLegacyPin(target, pin);
-      items.push({ id, state: item.state, title: item.title, mode: "legacy-read-only" });
-    } else {
-      assertRecord(item, id);
-      items.push({ id, state: item.state, title: item.contract.goal, mode: "task-first", version: item.version,
-        actor: item.claim?.actor ?? null, candidate_revision: item.delivery?.revision ?? null,
-        risk_tier: effectiveRisk(item), risk_escalated: Boolean(item.delivery?.risk) });
-    }
+    assertRecord(item, id);
+    items.push({ id, state: item.state, title: item.contract.goal, mode: "task-first", version: item.version,
+      actor: item.claim?.actor ?? null, candidate_revision: item.delivery?.revision ?? null,
+      risk_tier: effectiveRisk(item), risk_escalated: Boolean(item.delivery?.risk) });
     } catch (error) {
       if (!isolateErrors) throw error;
       items.push({id,title:id,mode:'unavailable',state:'unknown'});
@@ -149,7 +132,7 @@ async function dependencies(target, item, seen = new Set()) {
   for (const id of item.contract.dependencies) {
     const dependency = await readNativeTask(target, id);
     if (dependency.state !== "done" || !dependency.delivery || dependency.review?.judgment !== "pass" ||
-        dependency.closeout?.revision !== dependency.delivery.revision) throw new Error("Dependencies must be accepted native tasks; legacy terminal labels are not new grants");
+        dependency.closeout?.revision !== dependency.delivery.revision) throw new Error("Dependencies must be accepted native tasks");
     await assertPins(target, [...dependency.authority_pins, ...dependency.delivery.evidence, ...dependency.review.evidence, ...dependency.closeout.evidence]);
     await assertPins(target, retainedReworkEvidence(dependency));
     await dependencies(target, dependency, branch);
@@ -224,9 +207,9 @@ export async function createNativeTask(targetInput, contract, request, { expecte
     assertContractPolicy(contract, project.policy, request.actor);
     // Elevated team work is approved by another Principal; everything else by its creator.
     const delegated = elevatedRisk(contract.verification.risk_tier) && isTeamPolicy(project.policy);
-    if (!delegated && contract.authorization.approved_by !== request.actor.principal_id || contract.state !== "intake" || contract.legacy !== null ||
+    if (!delegated && contract.authorization.approved_by !== request.actor.principal_id || contract.state !== "intake" ||
         contract.handoff !== null || contract.acceptance.evidence.length || contract.verification.implementer !== null ||
-        contract.verification.reviewer !== null || contract.verification.candidate_revision !== null) throw new Error("New task must start at intake without fabricated progress or legacy grants");
+        contract.verification.reviewer !== null || contract.verification.candidate_revision !== null) throw new Error("New task must start at intake without fabricated progress");
     // Existing-only immutable dependencies make cycles impossible in supported writes.
     for (const id of contract.dependencies) await readNativeTask(target, id);
     const authorityRefs = [...new Set([contract.authorization.approval_ref, ...contract.environment.data.policy_refs, ...contract.skills])];
@@ -533,8 +516,6 @@ export async function diagnoseTaskProject(target) {
   let items = [];
   try {
     const project = await readTaskProject(target);
-    for (const pin of project.legacy_manifest ?? []) if (await readLegacyDigest(target, pin.path) !== pin.sha256)
-      throw Error("Retained legacy history changed; inspect the original evidence");
     items = await listTaskItems(target);
     for (const summary of items.filter(i => i.mode === "task-first")) {
       const item = await readNativeTask(target, summary.id);

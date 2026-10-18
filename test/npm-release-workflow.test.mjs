@@ -29,7 +29,7 @@ function packageDocument(version = "0.2.0-alpha.1") {
 }
 
 async function preparationFixture(version = "0.2.0-alpha.1") {
-  const directory = await fs.mkdtemp(path.join(os.tmpdir(), "temple-npm-release-"));
+  const directory = await fs.mkdtemp(path.join(os.tmpdir(), "workkeel-npm-release-"));
   const filename = `zsz1210-workkeel-${version}.tgz`;
   await fs.writeFile(path.join(directory, filename), "qualified package bytes");
   return {
@@ -85,7 +85,7 @@ test("tag, release channel, repository, package policy, npm CLI, and pack identi
 });
 
 test("Release asset must be a byte-identical regular file", async (t) => {
-  const directory = await fs.mkdtemp(path.join(os.tmpdir(), "temple-npm-asset-"));
+  const directory = await fs.mkdtemp(path.join(os.tmpdir(), "workkeel-npm-asset-"));
   t.after(() => fs.rm(directory, { recursive: true, force: true }));
   const fresh = path.join(directory, "fresh.tgz");
   const release = path.join(directory, "release.tgz");
@@ -114,7 +114,7 @@ test("release tooling rejects a different compressor even with identical Node an
 });
 
 test("equal decompressed payloads never weaken the exact compressed-asset gate", async (t) => {
-  const directory = await fs.mkdtemp(path.join(os.tmpdir(), "temple-gzip-gate-"));
+  const directory = await fs.mkdtemp(path.join(os.tmpdir(), "workkeel-gzip-gate-"));
   t.after(() => fs.rm(directory, { recursive: true, force: true }));
   const payload = Buffer.from("repeatable package content ".repeat(1000));
   const fresh = path.join(directory, "fresh.tgz"), release = path.join(directory, "release.tgz");
@@ -126,7 +126,7 @@ test("equal decompressed payloads never weaken the exact compressed-asset gate",
 });
 
 test("release pack command rejects invalid output without changing the source", async (t) => {
-  const directory = await fs.mkdtemp(path.join(os.tmpdir(), "temple-pack-command-"));
+  const directory = await fs.mkdtemp(path.join(os.tmpdir(), "workkeel-pack-command-"));
   t.after(() => fs.rm(directory, { recursive: true, force: true }));
   const source = path.join(directory, "source"); await fs.mkdir(source);
   await fs.writeFile(path.join(source, "package.json"), JSON.stringify(packageDocument()));
@@ -139,7 +139,7 @@ test("release pack command rejects invalid output without changing the source", 
 });
 
 test("pack helper refuses an incompatible compressor before npm pack or output creation", async (t) => {
-  const directory = await fs.mkdtemp(path.join(os.tmpdir(), "temple-toolchain-refusal-"));
+  const directory = await fs.mkdtemp(path.join(os.tmpdir(), "workkeel-toolchain-refusal-"));
   t.after(() => fs.rm(directory, { recursive: true, force: true }));
   const source = path.join(directory, "source"); await fs.mkdir(source);
   const output = path.join(directory, "candidate");
@@ -164,7 +164,7 @@ test("workflow stops before full tests on asset mismatch and retains the final p
     if (!match) return [];
     return [match[1] === "|" ? match[2].split("\n").filter((line) => line.startsWith("          ")).map((line) => line.slice(10)).join("\n") : match[1]];
   });
-  const directory = await fs.mkdtemp(path.join(os.tmpdir(), "temple-workflow-order-"));
+  const directory = await fs.mkdtemp(path.join(os.tmpdir(), "workkeel-workflow-order-"));
   t.after(() => fs.rm(directory, { recursive: true, force: true }));
   const bin = path.join(directory, "bin"); await fs.mkdir(bin);
   const transport = `#!${process.execPath}

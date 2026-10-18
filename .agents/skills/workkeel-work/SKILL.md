@@ -39,5 +39,4 @@ cancel operations; do not manually edit canonical records. Read the shipped nati
 daily-work and getting-started guides for request fields rather than guessing flags.
 Stop at the authorized boundary and report exact candidate, evidence and next step.
 
-Provenance: original instructions for Workkeel's native CLI. The historical
-temple-work name is not an alias for executing the retired lifecycle.
+Provenance: original instructions for Workkeel's native CLI.

@@ -48,5 +48,5 @@ The English README is the canonical public entry point. Keep
 [Japanese](README.ja.md) and [Traditional Chinese](README.zh-TW.md) aligned
 when changing its capabilities or commands; see
 [ADR-0012](docs/adr/0012-documentation-language-policy.md).
-Existing Temple projects follow the
-[compatibility and migration guide](docs/getting-started/migration-from-temple.md).
+Projects pinned to an earlier CLI keep using that version; 0.2 has no migration
+path from the removed legacy mode.

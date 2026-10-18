@@ -80,7 +80,7 @@ test("Codex start/resume uses a real local JSON-RPC process, pinned model and re
   c.contract.authorization = { approval_ref: "approval.md" };
   await fs.writeFile(path.join(c.target, "approval.md"), "Synthetic approval");
   const rootWrites = await codexPermissionsForContract(c.target, c.contract);
-  for (const name of ["workkeel.lock", "workkeelw.mjs", "TEMPLE.md", "temple.lock", "templew.mjs", "approval.md"]) {
+  for (const name of ["workkeel.lock", "workkeelw.mjs", "approval.md"]) {
     assert.equal(rootWrites.filesystem[path.join(await fs.realpath(c.target), name)], "read", name);
   }
 });

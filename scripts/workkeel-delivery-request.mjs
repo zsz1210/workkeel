@@ -4,7 +4,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import {readTaskFile} from '../src/task-contract.mjs';
 import {sha256} from '../src/files.mjs';
-import {runSupervisedCommand} from '../src/delivery-check.mjs';
+import {runSupervisedCommand} from '../src/workkeel-command-supervisor.mjs';
 import {readNativeTask,assertTaskExecutionContext} from '../src/workkeel-tasks.mjs';
 import {readTaskProject,assertActor,assertApprover,safeDirectory} from '../src/workkeel-project.mjs';
 import {exactKeys} from '../src/workkeel-execution-policy.mjs';

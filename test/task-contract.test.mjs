@@ -2,12 +2,9 @@ import assert from "node:assert/strict";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { spawnSync } from "node:child_process";
-import { fileURLToPath } from "node:url";
 import test from "node:test";
-import { TASK_CONTRACT_SCHEMA, validateTaskContract, projectLegacyTask, readTaskContractInput, inspectLegacyTaskContract } from "../src/task-contract.mjs";
+import { TASK_CONTRACT_SCHEMA, validateTaskContract, readTaskContractInput } from "../src/task-contract.mjs";
 
-const cli = fileURLToPath(new URL("../bin/temple.mjs", import.meta.url));
 function contract() {
   return {
     schema_version: TASK_CONTRACT_SCHEMA, id: "WI-0001", goal: "Fix checkout total",
@@ -19,8 +16,7 @@ function contract() {
       network: { mode: "none", hosts: [] }, external_actions: [],
       data: { classification: "internal", model_access: "none", policy_refs: ["docs/data-policy.md"] } },
     authorization: { approved_by: "principal-owner", approval_ref: "docs/work-order.md", operations: ["read", "write", "execute"], expires_at: null },
-    skills: [], execution: { runtime: { kind: "host-owned", adapter_id: null, required_features: [] }, model_connection: { kind: "native" } },
-    legacy: null
+    skills: [], execution: { runtime: { kind: "host-owned", adapter_id: null, required_features: [] }, model_connection: { kind: "native" } }
   };
 }
 function gateway() {
@@ -32,9 +28,6 @@ function gateway() {
   doc.authorization.operations.push("network");
   return doc;
 }
-const legacy = () => ({ schema_version: "temple.work-item/v1", id: "WI-0001", title: "Fix checkout total", state: "build", owner_position: "developer", assigned_agent_id: "agent-a", scope: ["Checkout"], acceptance_criteria: ["Exact total"], affected_paths: ["src/**"], dependencies: [], evidence: [], claim: null });
-const provenance = { sourceRef: ".ai-org/work-items/WI-0001.json", sourceSha256: "a".repeat(64) };
-
 test("role-free native and fixed gateway contracts never grant execution authority", () => {
   for (const document of [contract(), gateway()]) {
     const before = structuredClone(document);
@@ -126,62 +119,18 @@ test("review separation concerns actual actor identifiers, not company titles", 
   assert.equal(validateTaskContract(doc).valid, false);
 });
 
-test("legacy projection keeps provenance and exact handoff revision but invents no grants", () => {
-  const item = legacy();
-  item.claim = { status: "released", agent_id: "old-agent", principal_id: "old-owner" };
-  item.handoffs = [{ actor: "old-agent", principal_id: "old-owner", input_revision: "b".repeat(40), artifact: ".ai-org/artifacts/WI-0001/handoff.md" }];
-  const before = structuredClone(item);
-  const result = projectLegacyTask(item, provenance);
-  assert.equal(result.valid, true);
-  assert.equal(result.contract_complete, false);
-  assert.equal(result.contract.environment, null);
-  assert.equal(result.contract.authorization, null);
-  assert.deepEqual(result.contract.actor, { agent_id: "agent-a", principal_id: null });
-  assert.equal(result.contract.handoff.revision, "b".repeat(40));
-  assert.equal(result.contract.legacy.owner_position, "developer");
-  assert.equal(result.contract.legacy.source_sha256, provenance.sourceSha256);
-  assert.deepEqual(item, before);
-  item.claim.status = "active";
-  assert.equal(projectLegacyTask(item, provenance).contract.actor.principal_id, "old-owner");
-  item.risk_tier = "high";
-  assert.equal(projectLegacyTask(item, provenance).valid, true);
-  assert.equal(projectLegacyTask(item, provenance).contract_complete, false);
-  item.state = "unknown";
-  assert.equal(projectLegacyTask(item, provenance).valid, false);
-  item.schema_version = "unrecognized";
-  assert.throws(() => projectLegacyTask(item, provenance), /Unsupported legacy/);
-});
-
 test("documented full contract matches the executable schema", async () => {
   const guide = await fs.readFile(new URL("../docs/concepts/task-contract.md", import.meta.url), "utf8");
   const example = JSON.parse([...guide.matchAll(/```json\n([\s\S]*?)\n```/g)][0][1]);
   assert.equal(validateTaskContract(example).contract_complete, true);
 });
 
-test("CLI and reader are bounded and read-only without any Position configuration", async (t) => {
+test("the contract reader is bounded and never follows links", async (t) => {
   const root = await fs.mkdtemp(path.join(os.tmpdir(), "workkeel-contract-"));
   t.after(() => fs.rm(root, { recursive: true, force: true }));
   await fs.mkdir(path.join(root, ".ai-org/work-items"), { recursive: true });
-  const source = JSON.stringify(legacy());
-  await fs.writeFile(path.join(root, provenance.sourceRef), source);
   await fs.writeFile(path.join(root, "contract.json"), JSON.stringify(contract()));
-  const run = (...args) => spawnSync(process.execPath, [cli, "work-item", ...args], { encoding: "utf8", timeout: 15000 });
-  let result = run("contract", root, "--work-item", "WI-0001", "--no-write", "--json");
-  assert.equal(result.status, 0, result.stderr);
-  assert.equal(JSON.parse(result.stdout).contract_complete, false);
-  result = run("validate-contract", root, "--source", "contract.json", "--no-write", "--json");
-  assert.equal(result.status, 0, result.stderr);
-  assert.equal(JSON.parse(result.stdout).execution_authorized, false);
-  for (const extra of [["--actor", "agent-a"], ["--source", "contract.json"]]) {
-    result = run("contract", root, "--work-item", "WI-0001", "--no-write", "--json", ...extra);
-    assert.equal(result.status, 1);
-    assert.equal(JSON.parse(result.stdout).mutation_status, "not_started");
-  }
-  result = run("contract", root, "--work-item", "WI-0001", "--json");
-  assert.equal(result.status, 1);
-  assert.equal(await fs.readFile(path.join(root, provenance.sourceRef), "utf8"), source);
-  assert.deepEqual((await fs.readdir(root)).sort(), [".ai-org", "contract.json"]);
-  assert.deepEqual(await fs.readdir(path.join(root, ".ai-org")), ["work-items"]);
+  assert.equal(validateTaskContract((await readTaskContractInput(root, "contract.json")).document).contract_complete, true);
   await fs.symlink(path.join(root, "contract.json"), path.join(root, "linked.json"));
   await fs.symlink(path.join(root, ".ai-org"), path.join(root, "linked-dir"));
   for (const ref of ["../outside.json", "/etc/passwd", "linked.json", "linked-dir/work-items/WI-0001.json", ".ai-org"]) {
@@ -193,7 +142,9 @@ test("CLI and reader are bounded and read-only without any Position configuratio
   await assert.rejects(readTaskContractInput(root, "bad.json"), /^Error: Contract input is not valid JSON$/);
   await fs.writeFile(path.join(root, "bad-utf8.json"), Buffer.from([0xff]));
   await assert.rejects(readTaskContractInput(root, "bad-utf8.json"), /not valid UTF-8/);
-  const item = legacy(); item.id = "WI-0002";
-  await fs.writeFile(path.join(root, provenance.sourceRef), JSON.stringify(item));
-  await assert.rejects(inspectLegacyTaskContract(root, "WI-0001"), /does not match/);
+});
+
+test("contracts no longer accept a legacy projection field", () => {
+  assert.equal(TASK_CONTRACT_SCHEMA, "workkeel.task-contract/v2");
+  assert.equal(validateTaskContract({ ...contract(), legacy: null }).valid, false);
 });

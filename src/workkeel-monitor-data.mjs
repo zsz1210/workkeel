@@ -104,7 +104,6 @@ export async function readMonitorLibrary(root,{cache=createLibraryCache(),query=
       const builtIn=source.source==='project'?await builtinDigest(ref):null;
       const origin=builtIn===file.digest?'workkeel':frontmatter(file.content,'origin')==='third-party'?'third-party':source.source;
       if(!query||entry.search.includes(query.toLocaleLowerCase())){const {search,...publicEntry}=entry;skills.push({...publicEntry,origin,
-        compatibility:!entry.name.startsWith('workkeel-')&&origin==='workkeel'&&/TEMPLE\.md|templew\.mjs|\btemple (?:work-item|init|status|doctor)/.test(file.content)?'legacy':'current',
         source_label:source.label??source.source,availability:source.source==='project'?'project':source.source==='workkeel'&&projectDigests.has(source.project_ref??ref)?'different-version':'not-added',
         origin_basis:origin==='workkeel'?'matches-bundled-source':origin==='third-party'?'declared-or-configured-source':'source-location-author-unrecorded'});}
     }catch{errors.push({path:ref,code:'skill-unavailable'});}
@@ -215,8 +214,8 @@ export async function readMonitorDocument(root,id,{cache=createLibraryCache()}={
   await readTaskProject(root);
   const refs=new Set(),selected=[];
   const items=await listTaskItems(root,{isolateErrors:true});
-  if(items.filter(item=>item.mode!=='legacy-read-only').length>2000)throw Error('Task inventory limit');
-  for(const item of items.filter(i=>!['legacy-read-only','unavailable'].includes(i.mode)))try{
+  if(items.length>2000)throw Error('Task inventory limit');
+  for(const item of items.filter(i=>i.mode!=='unavailable'))try{
     const resources=await taskResourceView(root,item.id);
     for(const doc of resources.documents)refs.add(doc.path);
     for(const skill of resources.skills){refs.add(skill.path);selected.push(skill.path);}

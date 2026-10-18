@@ -34,14 +34,14 @@ async function fixture(t, { separation = 'distinct-agent', impact = 'none', pros
   await write(root, 'capture.log', 'Synthetic fixture capture, exit 0; not a real product measurement.\n');
   await initializeTaskProject(root, policy);
   git(root, 'add', '.'); git(root, 'commit', '-qm', 'base');
-  const contract = { schema_version: 'workkeel.task-contract/v1', id: 'WK-one', goal: 'Correct value', state: 'intake',
+  const contract = { schema_version: 'workkeel.task-contract/v2', id: 'WK-one', goal: 'Correct value', state: 'intake',
     scope: { include: ['value'], exclude: ['publication'] }, actor: builder, dependencies,
     acceptance: { criteria: ['Value equals two'], evidence: [] }, handoff: null,
     verification: { risk_tier: 'standard', separation, implementer: null, reviewer: null, candidate_revision: null },
     environment: { cwd: '.', read_paths: ['.'], write_paths: ['src', 'docs'], tools: ['node'], resources: [],
       network: { mode: 'none', hosts: [] }, external_actions: [], data: { classification: 'internal', model_access: 'none', policy_refs: ['approval.json'] } },
     authorization: { approved_by: 'owner', approval_ref: 'approval.json', operations: ['read', 'write', 'execute'], expires_at: expiresAt }, skills: [],
-    execution: { runtime: { kind: 'host-owned', adapter_id: null, required_features: [] }, model_connection: { kind: 'native' } }, legacy: null };
+    execution: { runtime: { kind: 'host-owned', adapter_id: null, required_features: [] }, model_connection: { kind: 'native' } } };
   await createNativeTask(root, contract, request(0));
   const claim = await mutateNativeTask(root, 'WK-one', 'claim', request(1, { base_revision: git(root, 'rev-parse', 'HEAD') }));
   await write(root, prose ? 'docs/note.md' : 'src/value.mjs', prose ? 'Spelling\n' : 'export const value = 2;\n');

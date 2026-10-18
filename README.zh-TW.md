@@ -69,7 +69,7 @@ Task-first 專案使用 WORKKEEL.md 與 workkeel CLI。選配的
 workkeel-init／workkeel-work 提供原生設定與交付指引。框架開發的原生五階段流程在
 [另外的私有工作區](docs/operations/framework-development.md)執行。這個公開 repo 只保存框架程式、
 公開文件、通用模板與可重現測試；實際任務、批准、實驗、日誌與審查證據都放在外部，
-即使 Git 會忽略的檔案也不放進來。TEMPLE.md 與 temple-work 屬於既有專案的歷史相容模式。
+即使 Git 會忽略的檔案也不放進來。
 
 ## 本機觀察網站
 

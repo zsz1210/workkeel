@@ -1,4 +1,4 @@
-// Guards against accidentally importing Temple modules from native code; it is
+// Guards against native code importing modules outside the native graph; it is
 // not a security boundary against deliberate bypasses. It checks ESM import and
 // export statements and import() only. Known limits: require() through
 // createRequire and import.meta.resolve() are not checked, and acorn 8.19.0
@@ -18,8 +18,6 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 export const NATIVE_SHARED_MODULES = new Set([
   "src/files.mjs", "src/ids.mjs", "src/task-contract.mjs", "src/headroom-adapter.mjs"
 ]);
-// The only import edge into Temple the check allows: lazy `workkeel legacy` and temple.lock dispatch.
-export const LEGACY_BRIDGES = new Set(["src/workkeel-cli.mjs -> src/cli.mjs"]);
 // Modules the monitor serves to the browser; their "/name.mjs" imports are served asset URLs.
 export const BROWSER_MODULES = new Set(["src/workkeel-monitor-client.mjs"]);
 
@@ -89,7 +87,7 @@ function nativeEntries(target) {
 
 /** Walks every relative import from the native entry and all src/workkeel-* modules. */
 export function checkImportBoundary(target = root, entries = nativeEntries(target)) {
-  const errors = [], bridges = [], reached = new Set(), queue = [...entries];
+  const errors = [], reached = new Set(), queue = [...entries];
   while (queue.length) {
     const file = queue.shift();
     if (reached.has(file)) continue;
@@ -112,19 +110,14 @@ export function checkImportBoundary(target = root, entries = nativeEntries(targe
       }
       const dependency = path.posix.normalize(path.posix.join(path.posix.dirname(file), item.specifier));
       const edge = `${file} -> ${dependency}`;
-      if (LEGACY_BRIDGES.has(edge)) {
-        if (!item.dynamic) errors.push(`${edge}: the legacy bridge must stay a lazy import`);
-        bridges.push(edge);
-        continue;
-      }
       if (!isNative(dependency) && !NATIVE_SHARED_MODULES.has(dependency)) {
-        errors.push(`${edge}: native code must not import Temple modules`);
+        errors.push(`${edge}: native code must not import non-native modules`);
         continue;
       }
       queue.push(dependency);
     }
   }
-  return { entries, reached: [...reached].sort(), bridges: [...new Set(bridges)].sort(), errors };
+  return { entries, reached: [...reached].sort(), errors };
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
@@ -133,6 +126,6 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
     for (const error of result.errors) console.error(`import boundary: ${error}`);
     process.exitCode = 1;
   } else {
-    console.log(`Import boundary passed: ${result.entries.length} native entry points, ${result.reached.length} modules checked, legacy bridge ${result.bridges.join(", ") || "none"}.`);
+    console.log(`Import boundary passed: ${result.entries.length} native entry points, ${result.reached.length} modules checked.`);
   }
 }

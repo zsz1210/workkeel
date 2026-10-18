@@ -1,7 +1,7 @@
 import path from "node:path";
 import { TEMPLATE_VERSION } from "./workkeel-version.mjs";
 import { readTaskContractInput } from "./task-contract.mjs";
-import { initializeTaskProject, previewLegacyMigration, existsEntry } from "./workkeel-project.mjs";
+import { initializeTaskProject, existsEntry } from "./workkeel-project.mjs";
 import { createNativeTask, mutateNativeTask, readNativeTask, listTaskItems, diagnoseTaskProject } from "./workkeel-tasks.mjs";
 import { planTaskRuntime } from "./workkeel-runtime.mjs";
 import { previewInstructions, applyInstructions, readStartGuide } from "./workkeel-onboarding.mjs";
@@ -10,8 +10,6 @@ const HELP = `Workkeel — repository-native task coordination for coding agents
 
 workkeel start [target] [--request brief.json]
 workkeel init [target] --policy repository-policy.json
-workkeel migration preview [target] --policy repository-policy.json [--retain-open retention.json]
-workkeel migration apply [target] --policy repository-policy.json --fingerprint sha256 [--retain-open retention.json]
 workkeel status|doctor [target]
 workkeel task create [target] --source contract.json --request request.json
 workkeel task show [target] --id task-id
@@ -53,7 +51,6 @@ workkeel goal create|pause|resume|cancel|recover|extend-admission [target] --req
 workkeel retention inventory|preview|archive|verify|usage [target] --request request.json
 workkeel workspace create|register|remove|integration [private state directory] --request request.json
 workkeel workspace show|serve [private state directory]
-workkeel legacy <original Temple arguments>
 
 All task commands return JSON. Lifecycle mutation requests contain operation_id,
 expected_version and actor; workflow requests use a stable run_id and active claim.
@@ -63,13 +60,13 @@ permissions. Workflow run explicitly launches the qualified Codex subscription h
 `;
 function parse(args) {
   const rest = [...args]; const command = rest.shift() ?? "help";
-  const action = ["task", "usage", "dispatch", "intake", "migration", "runtime", "instructions", "workflow", "headroom", "skills", "context", "learning", "workspace", "model-policy", "skill-lifecycle", "autonomy", "retention", "goal"].includes(command) ? rest.shift() : null;
+  const action = ["task", "usage", "dispatch", "intake", "runtime", "instructions", "workflow", "headroom", "skills", "context", "learning", "workspace", "model-policy", "skill-lifecycle", "autonomy", "retention", "goal"].includes(command) ? rest.shift() : null;
   const target = rest[0] && !rest[0].startsWith("--") ? rest.shift() : ".";
   const options = {};
   while (rest.length) {
     const key = rest.shift();
     if (key === "--json") continue;
-    if (!["--policy", "--source", "--request", "--id", "--fingerprint", "--retain-open"].includes(key) || Object.hasOwn(options, key) || !rest.length || rest[0].startsWith("--")) throw new Error("Unknown, repeated or incomplete Workkeel option");
+    if (!["--policy", "--source", "--request", "--id", "--fingerprint"].includes(key) || Object.hasOwn(options, key) || !rest.length || rest[0].startsWith("--")) throw new Error("Unknown, repeated or incomplete Workkeel option");
     options[key] = rest.shift();
   }
   return { command, action, target: path.resolve(target), options };
@@ -80,21 +77,14 @@ function allow(options, keys) { if (Object.keys(options).some(k => !keys.include
 export async function workkeelMain(args) {
   if (!args.length || ["help", "--help", "-h"].includes(args[0])) { console.log(HELP); return 0; }
   if (["version", "--version"].includes(args[0])) { console.log(TEMPLATE_VERSION); return 0; }
-  if (args[0] === "legacy") {
-    const { main } = await import("./cli.mjs"); return main(args.slice(1));
-  }
   const { command, action, target, options } = parse(args);
   let output;
   if (command === "start") {
     allow(options, ["--request"]);
     output = await readStartGuide(target, { requestRef: options["--request"] ?? null });
-  } else if (command === "init" || command === "migration") {
-    allow(options, command === "init" ? ["--policy"] : action === "preview" ? ["--policy", "--retain-open"] : ["--policy", "--fingerprint", "--retain-open"]);
-    const policy = (await readTaskContractInput(target, required(options, "--policy"))).document;
-    if (command === "init") output = await initializeTaskProject(target, policy);
-    else if (action === "preview") output = await previewLegacyMigration(target, policy, { retentionRef: options["--retain-open"] ?? null });
-    else if (action === "apply") output = await initializeTaskProject(target, policy, { migrationFingerprint: required(options, "--fingerprint"), retentionRef: options["--retain-open"] ?? null });
-    else throw new Error("Migration requires preview or apply");
+  } else if (command === "init") {
+    allow(options, ["--policy"]);
+    output = await initializeTaskProject(target, (await readTaskContractInput(target, required(options, "--policy"))).document);
   } else if(command==='workspace') {
     const workspace=await import('./workkeel-workspace.mjs');
     if(action==='show'){allow(options,[]);output=await workspace.readWorkspaceSnapshot(target);}
@@ -114,9 +104,7 @@ export async function workkeelMain(args) {
       else throw Error('Unknown workspace action');
     }
   } else if (!await existsEntry(target, "workkeel.lock")) {
-    // No migration by inference. Keep the complete original CLI for old projects.
-    if (!await existsEntry(target, "temple.lock")) throw new Error("Initialize the project before using task commands");
-    const { main } = await import("./cli.mjs"); return main(args);
+    throw new Error("Initialize the project with workkeel init before using task commands");
   } else if (["status", "doctor"].includes(command)) {
     allow(options, []);
     output = command === "doctor" ? await diagnoseTaskProject(target) : {
@@ -281,7 +269,7 @@ export async function workkeelMain(args) {
     if (action === "view") output = await workkeelToolView(target, request);
     else if (action === "read") output = await workkeelOriginal(target, request);
     else throw new Error("Headroom requires view or read");
-  } else throw new Error("Unsupported task-first command; legacy writers cannot mutate task-first projects");
+  } else throw new Error("Unsupported Workkeel command");
   console.log(JSON.stringify(output, null, 2));
   return output.valid === false || output.coverage_consistent === false ? 1 : 0;
 }

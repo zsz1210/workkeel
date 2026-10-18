@@ -2,7 +2,6 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import {createHash} from 'node:crypto';
 import os from 'node:os';
 import {execFileSync} from 'node:child_process';
 import {initializeTaskProject} from '../src/workkeel-project.mjs';
@@ -101,14 +100,6 @@ test('observer reads execution inventory once and isolates attributable corrupti
  snapshot=await readMonitorSnapshot(root);assert.equal(snapshot.tasks.find(t=>t.id==='WK-unobserved').read_status,'unavailable');
  assert.equal(snapshot.tasks.find(t=>t.id==='WK-interrupted').read_status,'available');
 });
-test('retained legacy history does not consume native monitor limit',async t=>{
- const root=await fixture(t),lock=JSON.parse(await fs.readFile(path.join(root,'workkeel.lock')));lock.legacy_manifest=[];
- // Inject retained-history fixture records, not production lifecycle writes.
- for(let i=1;i<=201;i++){const id='WI-'+String(i).padStart(4,'0'),ref='.ai-org/work-items/'+id+'.json';const bytes=JSON.stringify({id,schema_version:'temple.work-item/v1',title:'Historical task',state:'done'});await fs.writeFile(path.join(root,ref),bytes);lock.legacy_manifest.push({path:ref,sha256:createHash('sha256').update(bytes).digest('hex')});}
- await fs.writeFile(path.join(root,'workkeel.lock'),JSON.stringify(lock));
- const snapshot=await readMonitorSnapshot(root);assert.equal(snapshot.legacy_tasks_excluded,201);assert.equal(snapshot.tasks.length,3);
-});
-
 test('observer keeps summaries ordered and revalidates changed evidence across concurrent reads',async t=>{
  const root=await fixture(t),input=await brief(root);
  for(let i=0;i<10;i++){
