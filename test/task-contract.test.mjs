@@ -154,3 +154,14 @@ test("an unsupported contract version names the received and supported versions"
   assert.equal(result.valid, false);
   assert.ok(result.errors.includes("/schema_version workkeel.task-contract/v1 is unsupported; this Workkeel reads workkeel.task-contract/v2"), result.errors.join("; "));
 });
+
+test("defaulting keeps a complete contract byte-identical and fills a short draft", async () => {
+  const { completeTaskContract } = await import("../src/workkeel-task-draft.mjs");
+  const policy = { schema_version: "workkeel.task-policy/v1", principals: ["principal-owner"], agents: [], approvers: ["principal-owner"], review_separation: "distinct-agent" };
+  const full = contract();
+  assert.equal(JSON.stringify(completeTaskContract(full, policy, full.actor)), JSON.stringify(full));
+  const short = completeTaskContract({ id: "WK-short", goal: "Fix docs", scope: { include: ["docs"] }, acceptance: { criteria: ["Docs fixed"] },
+    environment: { write_paths: ["docs"] } }, policy, { agent_id: "agent-a", principal_id: "principal-owner" });
+  assert.equal(validateTaskContract(short).contract_complete, true);
+  assert.equal(short.verification.risk_tier, "low"); assert.equal(short.authorization.approval_ref, null);
+});

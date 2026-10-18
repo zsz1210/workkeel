@@ -1,16 +1,31 @@
-import path from "node:path";
 import { TEMPLATE_VERSION } from "./workkeel-version.mjs";
 import { readTaskContractInput } from "./task-contract.mjs";
-import { initializeTaskProject, existsEntry } from "./workkeel-project.mjs";
+import { initializeTaskProject, existsEntry, readTaskProject, soloPolicy, updateProjectPolicy } from "./workkeel-project.mjs";
+import { parseCommandLine, resolveActor, lifecycleRequestFromFlags, draftFromFlags } from "./workkeel-cli-flags.mjs";
 import { createNativeTask, mutateNativeTask, readNativeTask, listTaskItems, diagnoseTaskProject } from "./workkeel-tasks.mjs";
 import { planTaskRuntime } from "./workkeel-runtime.mjs";
 import { previewInstructions, applyInstructions, readStartGuide } from "./workkeel-onboarding.mjs";
 
 const HELP = `Workkeel — repository-native task coordination for coding agents
 
-workkeel start [target] [--request brief.json]
-workkeel init [target] --policy repository-policy.json
+workkeel start [target]                     read-only next-step guidance
+workkeel init [target] --solo               one owner with builder and reviewer Agents
+workkeel task new [target] --goal text --acceptance text [--write path]
+workkeel task claim|handoff|review|close [target] --id task-id --actor id [--summary text] [--evidence path] [--judgment pass|fail] [--rollback text]
 workkeel status|doctor [target]
+workkeel monitor [target]
+workkeel help advanced                      every command, including request-file forms
+
+Commands print JSON. A different Agent reviews; an approving Principal closes.
+See docs/getting-started/workkeel.md.
+`;
+const ADVANCED_HELP = `Workkeel — repository-native task coordination for coding agents
+
+workkeel start [target] [--request brief.json]
+workkeel init [target] --solo [--principal id] | --team --policy repository-policy.json
+workkeel policy show [target] | policy update [target] --policy repository-policy.json [--actor id]
+workkeel status|doctor [target]
+workkeel task new [target] --goal text --acceptance text [--acceptance text] [--write path] [--read path] [--risk tier] [--id id] [--actor id]
 workkeel task create [target] --source contract.json --request request.json
 workkeel task show [target] --id task-id
 workkeel task assess [target] --id task-id [--request assessment.json]
@@ -24,7 +39,8 @@ workkeel dispatch prepare|plan|bind [target] --request dispatch-request.json
 workkeel dispatch show [target] --id execution-id
 workkeel intake preview [target] --request brief.json
 workkeel intake apply [target] --request brief.json --fingerprint sha256
-workkeel task claim|release|handoff|review|rework|close|cancel [target] --id task-id --request request.json
+workkeel task claim|release|handoff|review|rework|close|cancel [target] --id task-id [--actor id] [--summary text] [--evidence path] [--judgment pass|fail] [--revision sha] [--rollback text] [--expect version]
+workkeel task <operation> [target] --id task-id --request request.json   (integration form)
 workkeel runtime plan [target] --id task-id
 workkeel context prepare [target] --id task-id --request material-request.json
 workkeel instructions preview|apply [target] [--fingerprint sha256]
@@ -58,33 +74,20 @@ See docs/getting-started/workkeel.md and docs/operations/workkeel-workflows.md.
 Native host execution is the default. Runtime plans do not launch models or grant
 permissions. Workflow run explicitly launches the qualified Codex subscription host.
 `;
-function parse(args) {
-  const rest = [...args]; const command = rest.shift() ?? "help";
-  const action = ["task", "usage", "dispatch", "intake", "runtime", "instructions", "workflow", "headroom", "skills", "context", "learning", "workspace", "model-policy", "skill-lifecycle", "autonomy", "retention", "goal"].includes(command) ? rest.shift() : null;
-  const target = rest[0] && !rest[0].startsWith("--") ? rest.shift() : ".";
-  const options = {};
-  while (rest.length) {
-    const key = rest.shift();
-    if (key === "--json") continue;
-    if (!["--policy", "--source", "--request", "--id", "--fingerprint"].includes(key) || Object.hasOwn(options, key) || !rest.length || rest[0].startsWith("--")) throw new Error("Unknown, repeated or incomplete Workkeel option");
-    options[key] = rest.shift();
-  }
-  return { command, action, target: path.resolve(target), options };
-}
 function required(options, key) { if (!options[key]) throw new Error(`Missing ${key}`); return options[key]; }
 function allow(options, keys) { if (Object.keys(options).some(k => !keys.includes(k))) throw new Error("Option is not supported by this command"); }
 
 export async function workkeelMain(args) {
-  if (!args.length || ["help", "--help", "-h"].includes(args[0])) { console.log(HELP); return 0; }
+  if (!args.length || ["help", "--help", "-h"].includes(args[0])) { console.log(args[1] === "advanced" ? ADVANCED_HELP : HELP); return 0; }
   if (["version", "--version"].includes(args[0])) { console.log(TEMPLATE_VERSION); return 0; }
-  const { command, action, target, options } = parse(args);
+  const { command, action, target, options } = parseCommandLine(args);
   let output;
   if (command === "start") {
     allow(options, ["--request"]);
     output = await readStartGuide(target, { requestRef: options["--request"] ?? null });
   } else if (command === "init") {
-    allow(options, ["--policy"]);
-    output = await initializeTaskProject(target, (await readTaskContractInput(target, required(options, "--policy"))).document);
+    if (options["--solo"]) { allow(options, ["--solo", "--principal"]); output = await initializeTaskProject(target, soloPolicy(options["--principal"])); }
+    else { allow(options, ["--policy", "--team"]); output = await initializeTaskProject(target, (await readTaskContractInput(target, required(options, "--policy"))).document); }
   } else if(command==='workspace') {
     const workspace=await import('./workkeel-workspace.mjs');
     if(action==='show'){allow(options,[]);output=await workspace.readWorkspaceSnapshot(target);}
@@ -105,6 +108,13 @@ export async function workkeelMain(args) {
     }
   } else if (!await existsEntry(target, "workkeel.lock")) {
     throw new Error("Initialize the project with workkeel init before using task commands");
+  } else if (command === "policy") {
+    if (action === "show") { allow(options, []); output = (await readTaskProject(target)).policy; }
+    else if (action === "update") {
+      allow(options, ["--policy", "--actor"]);
+      const project = await readTaskProject(target);
+      output = await updateProjectPolicy(target, (await readTaskContractInput(target, required(options, "--policy"))).document, await resolveActor(target, project, options["--actor"]));
+    } else throw new Error("Policy requires show or update");
   } else if (["status", "doctor"].includes(command)) {
     allow(options, []);
     output = command === "doctor" ? await diagnoseTaskProject(target) : {
@@ -207,11 +217,24 @@ export async function workkeelMain(args) {
       const { readTaskMeasurements } = await import("./workkeel-measurements.mjs");
       output = await readTaskMeasurements(target, required(options, "--id"));
     } else if (action === "show") { allow(options, ["--id"]); output = await readNativeTask(target, required(options, "--id")); }
-    else {
+    else if (action === "new" || action === "create" && !options["--source"]) {
+      allow(options, ["--goal", "--acceptance", "--write", "--read", "--include", "--exclude", "--risk", "--id", "--actor"]);
+      const { draft, request } = await draftFromFlags(target, options);
+      output = await createNativeTask(target, draft, request);
+    } else if (options["--request"]) {
+      // Integration form: an exact request document, unchanged.
       allow(options, action === "create" ? ["--source", "--request"] : ["--id", "--request"]);
       const request = (await readTaskContractInput(target, required(options, "--request"))).document;
       output = action === "create" ? await createNativeTask(target, (await readTaskContractInput(target, required(options, "--source"))).document, request) :
         await mutateNativeTask(target, required(options, "--id"), action, request);
+    } else if (action === "create") {
+      allow(options, ["--source", "--actor"]);
+      const project = await readTaskProject(target), draft = (await readTaskContractInput(target, options["--source"])).document;
+      output = await createNativeTask(target, draft, { operation_id: `cli-create-${draft?.id}`, expected_version: 0, actor: await resolveActor(target, project, options["--actor"]) });
+    } else {
+      allow(options, ["--id", "--actor", "--revision", "--base", "--claim", "--summary", "--evidence", "--judgment", "--rollback", "--unresolved", "--mode", "--expect", "--attempt"]);
+      const id = required(options, "--id");
+      output = await mutateNativeTask(target, id, action, await lifecycleRequestFromFlags(target, id, action, options));
     }
   } else if (command === "context" && action === "prepare") {
     allow(options, ["--id", "--request"]);

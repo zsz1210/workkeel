@@ -6,6 +6,7 @@ import { withProjectMutationLock } from "./workkeel-lock.mjs";
 import { readTaskContractInput, readTaskFile, validateTaskContract } from "./task-contract.mjs";
 import { assertActor, assertApprover, readTaskProject, safeDirectory, existsEntry, readNativeGit } from "./workkeel-project.mjs";
 import {loadTaskRequirements, assertRequirementOutcomes} from './workkeel-requirements.mjs';
+import { completeTaskContract } from "./workkeel-task-draft.mjs";
 import { assertIndependentApproval, assertTaskRisk, candidateRisk, elevatedRisk, isTeamPolicy, maxRisk, taskRisk } from "./workkeel-risk.mjs";
 
 const ID = /^[A-Za-z0-9][A-Za-z0-9._-]{0,95}$/;
@@ -189,14 +190,16 @@ function result(item, replayed = false) {
     boundary_enforcement: "host-responsibility", external_release: "not-performed" };
 }
 
-export async function createNativeTask(targetInput, contract, request, { expectedPolicyDigest = null, expectedAuthorityPins = null } = {}) {
+export async function createNativeTask(targetInput, draft, request, { expectedPolicyDigest = null, expectedAuthorityPins = null } = {}) {
   const target = await fs.realpath(targetInput);
   assertRequest(request, []);
   if (request.expected_version !== 0) throw new Error("Task creation expects version zero");
-  const ref = fileRef(contract?.id);
+  const ref = fileRef(draft?.id);
   return withProjectMutationLock(target, async () => {
     const project = await readTaskProject(target);
     assertApprover(project.policy, request.actor);
+    // Short drafts get their recorded defaults; a full contract is kept as written.
+    const contract = completeTaskContract(draft, project.policy, request.actor);
     if (expectedPolicyDigest !== null && digest(project.policy) !== expectedPolicyDigest) throw new Error('Intake policy changed; inspect a fresh preview');
     if (await existsEntry(target, ref)) {
       const existing = await readNativeTask(target, contract.id);
@@ -212,10 +215,10 @@ export async function createNativeTask(targetInput, contract, request, { expecte
         contract.verification.reviewer !== null || contract.verification.candidate_revision !== null) throw new Error("New task must start at intake without fabricated progress");
     // Existing-only immutable dependencies make cycles impossible in supported writes.
     for (const id of contract.dependencies) await readNativeTask(target, id);
-    const authorityRefs = [...new Set([contract.authorization.approval_ref, ...contract.environment.data.policy_refs, ...contract.skills])];
+    const authorityRefs = [...new Set([contract.authorization.approval_ref, ...contract.environment.data.policy_refs, ...contract.skills])].filter(ref => ref !== null);
     const item = { schema_version: "workkeel.work-item/v1", id: contract.id, version: 0, state: "intake",
       contract: structuredClone(contract), contract_sha256: digest(contract), policy_sha256: digest(project.policy),
-      authority_pins: await evidence(target, authorityRefs), claim: null, base_revision: null,
+      authority_pins: authorityRefs.length ? await evidence(target, authorityRefs) : [], claim: null, base_revision: null,
       dependency_pins: null, delivery: null, review: null, closeout: null, attempts: [], history: [] };
     if (expectedAuthorityPins !== null && digest(item.authority_pins) !== digest(expectedAuthorityPins)) throw new Error('Intake authority changed; inspect a fresh preview');
     await context(target, item, project, request.actor);

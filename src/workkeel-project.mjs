@@ -4,10 +4,10 @@ import os from "node:os";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import Ajv from "ajv";
-import { assertSafeTarget, durableAtomicCreate, formatJson, sha256 } from "./files.mjs";
+import { assertSafeTarget, durableAtomicCreate, durableAtomicWrite, formatJson, sha256 } from "./files.mjs";
 import { withProjectMutationLock } from "./workkeel-lock.mjs";
 import { readTaskContractInput, readTaskFile } from "./task-contract.mjs";
-import { PACKAGE_NAME, TEMPLATE_VERSION } from "./workkeel-version.mjs";
+import { PACKAGE_NAME, TEMPLATE_REPOSITORY, TEMPLATE_VERSION } from "./workkeel-version.mjs";
 import { RISK_TIERS, validRiskPattern } from "./workkeel-risk.mjs";
 
 export const WORKKEEL_PACKAGE = PACKAGE_NAME;
@@ -144,38 +144,13 @@ process.exitCode = run.status ?? 1;
 `;
     const instructions = `# Workkeel project instructions
 
-Read native project instructions and the approved task contract. Use the pinned
-\`node ./workkeelw.mjs\`; never hand-edit canonical task records.
-
-Before acting, match the request to available Skill descriptions and any explicitly
-named Skills. Read applicable instructions completely, including required references.
-Load only task-relevant material, not the whole Skill catalog. A missing required
-Skill or authority source must be reported; do not pretend it was applied.
-
-\`status\` and \`doctor\` are read-only. The coordinator claims before dispatch and
-owns task lifecycle commands. A dispatched executor performs only its assigned
-work; it must not repeat claim, handoff, review or close commands. When acting
-directly without a coordinator, claim before implementation. Stay inside the
-approved working directory, paths, tools, network, data and spending boundaries.
-The runtime host must actually enforce these conditions; metadata is not a sandbox.
-Workflow progress, approval interrupts and model routing cannot enlarge authority.
-
-Report changed files, actual checks and unresolved work to the coordinator. The
-coordinator hands off the exact Git candidate and verification evidence. A
-different registered Agent reviews the candidate before an
-authorized Principal closes the task. Completion does not publish or deploy.
-
-Before declaring completion, map every approved criterion and supporting design
-requirement to exact candidate evidence. Retain missing, partial and failed results;
-repair within approved scope and repeat affected checks. UI work needs repeated
-inspection of executable states, information hierarchy and interactions, with
-visual evidence. Passing tests do not establish semantic or visual completeness.
-The pinned CLI's \`task evidence-check\` is a read-only coverage aid; it neither
-judges usability nor replaces the distinct Agent's actual review and owner closure.
-
-At handoff, identify the relevant Skills, what was applied, the resulting artifacts
-and checks, and anything unverified. Reading claims or file hashes alone do not
-prove Skill application or quality. Finish with the recommended next step.
+Use the pinned \`node ./workkeelw.mjs\`; never hand-edit records under \`.ai-org/\`.
+Claim before work and stay inside the task's approved paths, tools, network and data.
+Match and read applicable Skills; report what was applied, checked and left unverified.
+Hand off the exact committed candidate with evidence; \`task evidence-check\` helps map criteria.
+A different registered Agent reviews it; an approving Principal closes it. Closing never publishes.
+Commit \`workkeel.lock\`, \`workkeelw.mjs\`, this file and \`.ai-org/\`; ignore \`.workkeel/\` (local settings).
+Details: https://github.com/${TEMPLATE_REPOSITORY}/blob/main/docs/getting-started/workkeel.md
 `;
     const created = [];
     try {
@@ -188,6 +163,45 @@ prove Skill application or quality. Finish with the recommended next step.
       throw error;
     }
     return { schema_version: TASK_PROJECT_SCHEMA, initialized: true, mode: "task-first",
+      commit: ["workkeel.lock", "workkeelw.mjs", "WORKKEEL.md", ".ai-org/"], suggested_gitignore: [LOCAL_SETTINGS_DIRECTORY + "/"],
       execution_authorized: false, boundary_enforcement: "host-responsibility" };
   });
+}
+
+/** Git-ignored per-checkout settings, such as the default actor. Never task authority. */
+export const LOCAL_SETTINGS_DIRECTORY = ".workkeel";
+
+/** One Principal with a builder and a reviewer Agent; implementer and reviewer stay distinct. */
+export function soloPolicy(principal = "owner") {
+  const policy = { schema_version: "workkeel.task-policy/v1", principals: [principal],
+    agents: [{ agent_id: "builder", principal_id: principal }, { agent_id: "reviewer", principal_id: principal }],
+    approvers: [principal], review_separation: "distinct-agent" };
+  assertPolicy(policy);
+  return policy;
+}
+
+/** Replaces the project policy. Open tasks pinned to the old policy must be re-approved. */
+export async function updateProjectPolicy(targetInput, policy, actor) {
+  const target = await fs.realpath(targetInput);
+  assertPolicy(policy);
+  return withProjectMutationLock(target, async () => {
+    const project = await readTaskProject(target);
+    assertApprover(project.policy, actor);
+    const { digest, ...lock } = project;
+    if (formatJson(lock.policy) === formatJson(policy)) return { schema_version: TASK_PROJECT_SCHEMA, updated: false, mutation_status: "already-applied" };
+    const current = await readTaskFile(target, "workkeel.lock");
+    if (current.digest !== digest) throw new Error("workkeel.lock changed while updating; retry");
+    await durableAtomicWrite(path.join(target, "workkeel.lock"), formatJson({ ...lock, policy }));
+    return { schema_version: TASK_PROJECT_SCHEMA, updated: true, mutation_status: "applied",
+      limitations: ["Open tasks approved under the previous policy stop at their next operation until they are cancelled and re-created."] };
+  });
+}
+
+/** The default actor recorded in this checkout's local settings, if any. */
+export async function readLocalActor(target) {
+  const ref = `${LOCAL_SETTINGS_DIRECTORY}/local.json`;
+  if (!await existsEntry(target, ref)) return null;
+  const { document } = await readTaskContractInput(target, ref);
+  if (!document || typeof document.agent_id !== "string") throw new Error(`${ref} must name an agent_id`);
+  return document.agent_id;
 }

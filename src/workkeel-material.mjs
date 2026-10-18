@@ -38,7 +38,7 @@ export async function prepareTaskMaterial(target, contract, request) {
     const old = sources.get(ref);
     sources.set(ref, { path: ref, use: old?.use === "required" ? "required" : use, purposes: [...new Set([...(old?.purposes ?? []), purpose])] });
   };
-  for (const ref of [...contract.environment.data.policy_refs, contract.authorization.approval_ref, ...contract.skills]) add(ref, "required", "contract-required");
+  for (const ref of [...contract.environment.data.policy_refs, contract.authorization.approval_ref, ...contract.skills].filter(ref => ref !== null)) add(ref, "required", "contract-required");
   const {loadTaskRequirements, requirementInstructions, assertRequirementAlignment} = await import('./workkeel-requirements.mjs');
   const decisions = await loadTaskRequirements(target, contract);
   assertRequirementAlignment(decisions, request.requirements_alignment);

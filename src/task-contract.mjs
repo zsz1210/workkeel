@@ -48,10 +48,10 @@ export const taskContractSchema = object({
     cwd: text, read_paths: strings, write_paths: strings, tools: identifiers, resources: identifiers,
     network: object({ mode: choice("none", "allowlist"), hosts: strings }),
     external_actions: identifiers,
-    data: object({ classification: choice("public", "internal", "sensitive"), model_access: choice("none", "approved-connection"), policy_refs: nonempty })
+    data: object({ classification: choice("public", "internal", "sensitive"), model_access: choice("none", "approved-connection"), policy_refs: strings })
   })),
   authorization: nullable(object({
-    approved_by: identifier, approval_ref: text,
+    approved_by: identifier, approval_ref: nullable(text),
     operations: { type: "array", uniqueItems: true, items: choice("read", "write", "execute", "network", "external"), minItems: 1 },
     expires_at: nullable({ type: "string", format: "date-time" })
   })),
@@ -119,7 +119,7 @@ export function validateTaskContract(document, { now = new Date() } = {}) {
     const authority = document.authorization;
     if (!authority) incomplete.push("authorization");
     else {
-      if (!repositoryPath(authority.approval_ref)) errors.push("/authorization/approval_ref must be a repository-relative evidence path");
+      if (authority.approval_ref !== null && !repositoryPath(authority.approval_ref)) errors.push("/authorization/approval_ref must be a repository-relative evidence path");
       if (authority.expires_at && Date.parse(authority.expires_at) <= now.getTime()) incomplete.push("authorization.expired");
       if (env) {
         for (const [operation, needed] of [["read", env.read_paths.length], ["write", env.write_paths.length], ["execute", env.tools.length], ["network", env.network.hosts.length], ["external", env.external_actions.length]]) {

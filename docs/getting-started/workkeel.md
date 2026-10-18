@@ -25,6 +25,31 @@ Tasks carry a low, standard, high or critical risk tier. Project policy
 adds review by another model family and close by the approving Principal.
 Verified or distributed identity workflows are not supported.
 
+## Fastest path: one owner, flags only
+
+For a single owner, `init --solo` registers one Principal with two Agents,
+`builder` and `reviewer`; the implementer and reviewer still differ. Commit the
+generated files and ignore `.workkeel/`, where `local.json` may name your default
+`agent_id`:
+
+```sh
+workkeel init . --solo
+echo ".workkeel/" >> .gitignore && git add -A && git commit -m "Start Workkeel"
+workkeel task new --goal "Clarify the guide" --acceptance "The guide names its audience" --write docs --actor builder
+workkeel task claim --id WK-0001 --actor builder
+# edit, commit, and save evidence under .ai-org/artifacts/WK-0001/
+workkeel task handoff --id WK-0001 --actor builder --summary "Guide updated" --evidence .ai-org/artifacts/WK-0001/check.md
+workkeel task review --id WK-0001 --actor reviewer --judgment pass --summary "Meets the criterion" --evidence .ai-org/artifacts/WK-0001/review.md
+workkeel task close --id WK-0001 --actor builder --summary Accepted --rollback "Revert the guide commit" --evidence .ai-org/artifacts/WK-0001/review.md
+```
+
+`task new` needs only a goal and acceptance criteria. Unstated fields get recorded
+defaults: the repository root as read and write path, no network, native
+execution, and the lowest risk tier the write paths and data allow. Operation IDs
+and expected versions are derived; `--expect` and `--request` remain for
+integrations. Teams use `init --team --policy`, and `policy update` replaces the
+project policy. `workkeel help advanced` lists every command.
+
 ## Initialize an existing repository
 
 Start with read-only guidance from your reviewed source checkout:

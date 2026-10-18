@@ -29,7 +29,7 @@ export async function previewTaskIntake(target, brief) {
   await loadTaskRequirements(target, contract, {requiredRefs: project.policy.requirements_refs ?? []});
   assertTaskRisk(project.policy, contract, brief.actor);
   if (contract.authorization.approved_by !== brief.actor.principal_id) throw Error('Brief actor must be its registered approving Principal');
-  const refs = [...new Set([contract.authorization.approval_ref,...contract.environment.data.policy_refs,...contract.skills])];
+  const refs = [...new Set([contract.authorization.approval_ref,...contract.environment.data.policy_refs,...contract.skills])].filter(ref => ref !== null);
   const pins = [];
   for (const ref of refs) {
     const file = await readTaskFile(target, ref);

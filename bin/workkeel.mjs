@@ -6,7 +6,6 @@ try {
     const {monitorMain}=await import("../src/workkeel-monitor.mjs");
     process.exitCode=await monitorMain(args.slice(1));
   } else {
-    if(!args.length||["help","--help","-h"].includes(args[0]))console.log("workkeel monitor [task-first project] — optional foreground, read-only task monitor\n");
     process.exitCode = await workkeelMain(args);
   }
 }

@@ -9,6 +9,14 @@ repository migration does not republish old tags, archives or npm versions.
 
 Unpublished source. Breaking: removes the Temple compatibility mode.
 
+- Adds a flags-only path: `init --solo`, `task new --goal --acceptance`, and
+  lifecycle flags (`--actor`, `--summary`, `--evidence`, `--judgment`,
+  `--revision`, `--rollback`) with derived operation IDs and versions; request
+  files remain for integrations. Contracts need only a goal, scope and acceptance;
+  other fields get recorded defaults, including the path-derived risk floor.
+  Adds `policy show|update`, a short default help with `help advanced`, a shorter
+  WORKKEEL.md, an `@AGENTS.md`-only CLAUDE.md bridge that upgrades the earlier
+  block, and init's suggested `.gitignore`.
 - Removes the `temple` executable, the `workkeel legacy` and `workkeel migration`
   commands, read-only legacy history, the Temple project overlay, packs and their
   modules, tests and documentation. Projects pinned to an earlier CLI keep that
