@@ -692,6 +692,7 @@
     "test/workkeel-learning-observer.test.mjs",
     "test/workkeel-learning.test.mjs",
     "test/workkeel-lifecycle.test.mjs",
+    "test/workkeel-lock.test.mjs",
     "test/workkeel-measurements.test.mjs",
     "test/workkeel-model-policy.test.mjs",
     "test/workkeel-model-routing.test.mjs",

@@ -149,7 +149,8 @@ export function uniqueStrings(values) {
 }
 
 export async function withProjectMutationLock(target, operation, { leanDeliveryOperation = null, reconciliationRecovery = false } = {}) {
-  // Shares the native lock file so Temple and Workkeel writers exclude each other.
+  // Shares the native lock file; Temple keeps its own recovery checks for the
+  // permitted Lean operation and reconciliation-recovery exemptions.
   return withNativeMutationLock(target, async () => {
     await assertNoPendingLeanDelivery(target, leanDeliveryOperation);
     if (!reconciliationRecovery) {
@@ -157,5 +158,5 @@ export async function withProjectMutationLock(target, operation, { leanDeliveryO
       await assertNoPendingReconciliation(target);
     }
     return operation();
-  });
+  }, { legacyRecoveryCheck: false });
 }
