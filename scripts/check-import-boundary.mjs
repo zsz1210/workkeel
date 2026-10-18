@@ -1,8 +1,15 @@
+// Guards against accidentally importing Temple modules from native code; it is
+// not a security boundary against deliberate bypasses. It checks ESM import and
+// export statements and import() only. Known limits: require() through
+// createRequire and import.meta.resolve() are not checked, and acorn 8.19.0
+// cannot parse `o?.return / 2`, which fails the check rather than passing.
 import fs from "node:fs";
 import path from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
+import { isBuiltin } from "node:module";
 import { parse } from "acorn";
+import validatePackageName from "validate-npm-package-name";
 import { PACKAGE_NAME } from "../src/workkeel-version.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -11,22 +18,34 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 export const NATIVE_SHARED_MODULES = new Set([
   "src/files.mjs", "src/ids.mjs", "src/task-contract.mjs", "src/headroom-adapter.mjs"
 ]);
-// The only remaining route into Temple: lazy `workkeel legacy` and temple.lock dispatch.
+// The only import edge into Temple the check allows: lazy `workkeel legacy` and temple.lock dispatch.
 export const LEGACY_BRIDGES = new Set(["src/workkeel-cli.mjs -> src/cli.mjs"]);
 // Modules the monitor serves to the browser; their "/name.mjs" imports are served asset URLs.
 export const BROWSER_MODULES = new Set(["src/workkeel-monitor-client.mjs"]);
 
-const PACKAGE_SPECIFIER = /^(?:@[a-z0-9][a-z0-9._-]*\/)?[a-z0-9][a-z0-9._-]*(?:\/[^\\:]*)?$/i;
+// A package subpath segment: plain characters only, never "." or "..". This
+// excludes traversal, empty segments, backslashes and percent-encoding, which
+// Node normalizes and could resolve back into the repository.
+const SUBPATH_SEGMENT = /^[A-Za-z0-9._~@+-]+$/;
 
-// Classifies a non-relative specifier. Only built-ins, other packages and the
-// browser module's served assets leave the source graph; every other form
-// (file: or other URLs, absolute or Windows paths, #imports, the package's
-// own name) could load a repository file, so it is rejected.
+// Another package: a valid npm name (checked by npm's validator) and a plain subpath.
+function packageSpecifier(specifier) {
+  const parts = specifier.split("/"), nameParts = specifier.startsWith("@") ? 2 : 1;
+  const name = parts.slice(0, nameParts).join("/");
+  if (name === PACKAGE_NAME || !validatePackageName(name).validForOldPackages) return false;
+  return parts.slice(nameParts).every((segment) => SUBPATH_SEGMENT.test(segment) && segment !== "." && segment !== "..");
+}
+
+// Classifies a non-relative specifier. Only Node built-ins, other packages and
+// the browser module's served assets leave the source graph; every other form
+// (file: or other URLs, absolute or Windows paths, #imports, this package's own
+// name, package subpaths that could normalize) is rejected. This covers ESM
+// import and export statements and import(); CommonJS require through
+// createRequire is not checked.
 function externalSpecifier(file, specifier) {
-  if (specifier.startsWith("node:")) return true;
+  if (specifier.startsWith("node:")) return isBuiltin(specifier);
   if (BROWSER_MODULES.has(file) && /^\/[A-Za-z0-9._-]+\.mjs$/.test(specifier)) return true;
-  if (specifier === PACKAGE_NAME || specifier.startsWith(`${PACKAGE_NAME}/`)) return false;
-  return PACKAGE_SPECIFIER.test(specifier);
+  return packageSpecifier(specifier);
 }
 
 function isNative(file) {

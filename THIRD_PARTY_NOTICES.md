@@ -100,6 +100,15 @@ Workkeel uses Playwright Core only for repository development and browser checks
 
 Workkeel uses Acorn only in the repository import boundary check, to parse its own source modules. Acorn is not imported by Workkeel's runtime source, vendored, or included in its npm package or runtime dependency tree.
 
+### validate-npm-package-name
+
+- Project: <https://github.com/npm/validate-npm-package-name>
+- Package: `validate-npm-package-name`
+- Pinned version: `8.0.0`
+- License: ISC
+
+Workkeel uses validate-npm-package-name only in the repository import boundary check, to validate package names in its own source modules. It is not imported by Workkeel's runtime source, vendored, or included in its npm package or runtime dependency tree.
+
 ## Mermaid README diagrams
 
 - Projects: <https://github.com/mermaid-js/mermaid> and <https://github.com/mermaid-js/mermaid-cli>

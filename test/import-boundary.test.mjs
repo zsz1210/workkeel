@@ -194,10 +194,38 @@ test("file: URLs, absolute paths and other non-package specifiers cannot reach r
   }
 });
 
+test("package subpaths that Node could normalize back into the repository are rejected", async t => {
+  const root = await fixture(t, {
+    "bin/workkeel.mjs": entry,
+    "src/project.mjs": 'console.log("LOADED");\nexport const value = 1;\n',
+    "node_modules/ajv/package.json": '{"name":"ajv","version":"0.0.0","type":"module"}\n',
+    "node_modules/ajv/index.mjs": "export default 1;\n"
+  });
+  // The fifth review's probes, verbatim: Node resolves both to this checkout's src/project.mjs.
+  const probes = ["ajv/../../src/project.mjs", "ajv/%2e%2e/%2e%2e/src/project.mjs"];
+  for (const specifier of probes) {
+    await fs.writeFile(path.join(root, "src/workkeel-probe.mjs"), `await import(${JSON.stringify(specifier)});\n`);
+    const run = spawnSync(process.execPath, [path.join(root, "src/workkeel-probe.mjs")], { encoding: "utf8" });
+    assert.equal(run.stdout.trim(), "LOADED", specifier);
+  }
+  await fs.rm(path.join(root, "src/workkeel-probe.mjs"));
+  const rejected = [...probes, "ajv/./../../src/project.mjs", "ajv//../../src/project.mjs", "ajv/dist/../../../src/project.mjs",
+    "ajv/%2E%2E/%2E%2E/src/project.mjs", "ajv/..%2f..%2fsrc/project.mjs", "ajv/x%2f..%2f..%2f..%2fsrc/project.mjs",
+    "ajv\\..\\..\\src\\project.mjs", "ajv/.", "ajv/", "ajv/x?y", "ajv/x#y", "@scope/pkg/../../../src/project.mjs",
+    "@scope/../../src/project.mjs", "node:../src/project.mjs", "node:not-a-builtin"];
+  for (const specifier of rejected) {
+    for (const form of [`await import(${JSON.stringify(specifier)});\n`, `import ${JSON.stringify(specifier)};\n`]) {
+      await fs.writeFile(path.join(root, "src/workkeel-cli.mjs"), form);
+      assert.deepEqual(checkImportBoundary(root).errors,
+        [`src/workkeel-cli.mjs: import specifier ${JSON.stringify(specifier)} must be a relative path, a node: built-in or another package`], form);
+    }
+  }
+});
+
 test("built-ins, other packages and the browser module's served assets stay allowed", async t => {
   const root = await fixture(t, {
     "bin/workkeel.mjs": entry,
-    "src/workkeel-cli.mjs": 'import fs from "node:fs";\nimport Ajv from "ajv";\nimport x from "ajv/dist/2020.js";\nawait import("@langchain/langgraph");\n',
+    "src/workkeel-cli.mjs": 'import fs from "node:fs";\nimport fsp from "node:fs/promises";\nimport Ajv from "ajv";\nimport x from "ajv/dist/2020.js";\nawait import("@langchain/langgraph");\nawait import("@langchain/langgraph-checkpoint/dist/index.js");\nawait import("JSONStream");\n',
     "src/workkeel-monitor-client.mjs": 'import { label } from "/view.mjs";\n'
   });
   assert.deepEqual(checkImportBoundary(root).errors, []);
