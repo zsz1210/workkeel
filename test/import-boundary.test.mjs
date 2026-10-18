@@ -2,8 +2,9 @@ import assert from "node:assert/strict";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
+import { spawnSync } from "node:child_process";
 import test from "node:test";
-import { checkImportBoundary, dynamicImports, readImports } from "../scripts/check-import-boundary.mjs";
+import { checkImportBoundary, readImports } from "../scripts/check-import-boundary.mjs";
 
 async function fixture(t, files) {
   const root = await fs.mkdtemp(path.join(os.tmpdir(), "workkeel-boundary-"));
@@ -15,6 +16,38 @@ async function fixture(t, files) {
   return root;
 }
 const entry = 'import "../src/workkeel-cli.mjs";\n';
+const templeImport = "src/workkeel-cli.mjs -> src/project.mjs: native code must not import Temple modules";
+const nativeSource = async (t, source) => checkImportBoundary(await fixture(t, { "bin/workkeel.mjs": entry, "src/workkeel-cli.mjs": source }));
+
+// Evaluates each source as a module in V8 and records the import() calls it actually makes.
+function v8Evaluate(sources) {
+  const runner = `
+    import vm from "node:vm";
+    let input = ""; for await (const chunk of process.stdin) input += chunk;
+    const out = [];
+    for (const source of JSON.parse(input)) {
+      const seen = [];
+      try {
+        const module = new vm.SourceTextModule(source, { importModuleDynamically: async specifier => {
+          seen.push(specifier);
+          const target = new vm.SyntheticModule([], () => {});
+          await target.link(() => {}); await target.evaluate(); return target;
+        } });
+        await module.link(specifier => {
+          seen.push(specifier);
+          return new vm.SyntheticModule(["value"], function () { this.setExport("value", 1); });
+        });
+        await module.evaluate();
+        await new Promise(resolve => setTimeout(resolve, 0));
+        out.push({ seen });
+      } catch (error) { out.push({ error: error.message }); }
+    }
+    process.stdout.write(JSON.stringify(out));`;
+  const result = spawnSync(process.execPath, ["--experimental-vm-modules", "--no-warnings", "--input-type=module", "-e", runner],
+    { input: JSON.stringify(sources), encoding: "utf8" });
+  assert.equal(result.status, 0, result.stderr);
+  return JSON.parse(result.stdout);
+}
 
 test("the repository's native modules reach only native and shared modules", () => {
   const result = checkImportBoundary();
@@ -36,107 +69,94 @@ test("native imports of Temple modules are rejected, including transitive ones",
   assert.ok(!result.reached.includes("src/work-items.mjs"));
 });
 
-test("legal syntax variations cannot hide a Temple import", async t => {
-  const hidden = {
-    "spaced dynamic import": 'await import ("./project.mjs");\n',
-    "comment inside static import": 'import/* comment */ {value} from "./project.mjs";\n',
-    "comment before the specifier": 'import { value } from /* x */ "./project.mjs";\n',
-    "line break and comment in dynamic import": 'await import(\n  // load\n  "./project.mjs"\n);\n',
-    "template literal specifier": "await import(`./project.mjs`);\n",
-    "dynamic import with options": 'await import("./project.mjs", { with: {} });\n',
-    "re-export": 'export * from "./project.mjs";\n',
-    "side-effect import with single quotes": "import './project.mjs';\n",
-    "unicode escape in dynamic specifier": 'await import("\\u002e/project.mjs");\n',
-    "braced unicode and hex escapes": "await import('\\u{2e}\\x2fproject.mjs');\n",
-    "escapes in a template specifier": "await import(`\\x2e/\\u0070roject.mjs`);\n",
-    "line continuation in dynamic specifier": 'await import("./pro\\\nject.mjs");\n',
-    "call followed by a block on the next line": 'import("./project.mjs")\n{}\n',
-    "call followed by a block on the same line": 'if (true) import("./project.mjs"); {}\n'
-  };
-  for (const [label, source] of Object.entries(hidden)) {
-    const root = await fixture(t, { "bin/workkeel.mjs": entry, "src/workkeel-cli.mjs": source });
-    assert.deepEqual(checkImportBoundary(root).errors, ["src/workkeel-cli.mjs -> src/project.mjs: native code must not import Temple modules"], label);
+// Every case is a legal module that imports ./project.mjs. Earlier review rounds
+// found each one hidden from a hand-written lexer; acorn must report all of them.
+const target = 'import(".\\x2fproject.mjs");';
+const privateName = (member, use) => `class C {\n  ${member}\n  f() {\n    ${use} / 2; ${target} const b = 6 / 2;\n  }\n}\nnew C().f();\n`;
+const regressions = {
+  "spaced dynamic import": 'await import ("./project.mjs");\n',
+  "comment inside static import": 'import/* comment */ {value} from "./project.mjs";\n',
+  "comment before the specifier": 'import { value } from /* x */ "./project.mjs";\n',
+  "line break and comment in dynamic import": 'await import(\n  // load\n  "./project.mjs"\n);\n',
+  "template literal specifier": "await import(`./project.mjs`);\n",
+  "dynamic import with options": 'await import("./project.mjs", { with: {} });\n',
+  "re-export all": 'export * from "./project.mjs";\n',
+  "named re-export": 'export { value } from "./project.mjs";\n',
+  "side-effect import": "import './project.mjs';\n",
+  "unicode escape in specifier": 'await import("\\u002e/project.mjs");\n',
+  "braced unicode and hex escapes": "await import('\\u{2e}\\x2fproject.mjs');\n",
+  "escapes in a template specifier": "await import(`\\x2e/\\u0070roject.mjs`);\n",
+  "line continuation in specifier": 'await import("./pro\\\nject.mjs");\n',
+  "call followed by a block": 'import("./project.mjs")\n{}\n',
+  "division after an object literal": `let a = {} / 2; ${target} let b = 6 / 2;\n`,
+  "postfix increment": `let x = 0;\nx++ / 2; ${target} const b = 6 / 2;\n`,
+  "postfix decrement": `let x = 0;\nx-- / 2; ${target} const b = 6 / 2;\n`,
+  "keyword property": `const o = { return: 4 };\no.return / 2; ${target} const b = 6 / 2;\n`,
+  "variable named of": `const of = 4;\nof / 2; ${target} const b = 6 / 2;\n`,
+  "private #default": privateName("#default = 4;", "this.#default"),
+  "private #extends": privateName("#extends = 4;", "this.#extends"),
+  "private #if()": privateName("#if() { return 4; }", "this.#if()"),
+  "private #while()": privateName("#while() { return 4; }", "this.#while()"),
+  "private #for()": privateName("#for() { return 4; }", "this.#for()"),
+  "private #with()": privateName("#with() { return 4; }", "this.#with()"),
+  "private postfix increment": privateName("#n = 4;", "this.#n++"),
+  "regex in a template substitution": `\`\${/x/}\` / 2; ${target} const b = 6 / 2;\n`,
+  "regex in a tagged template substitution": `String.raw\`\${/x/}\` / 2; ${target} const b = 6 / 2;\n`,
+  "regex in a nested template substitution": `\`\${\`\${/x/}\`}\` / 2; ${target} const b = 6 / 2;\n`,
+  "regex after a for await head": `for await (const x of []) /"/; ${target} /"/;\n`,
+  "regex after debugger and a line break": `debugger\n/"/; ${target} /"/;\n`,
+  "regex after break and a line break": `for (;;) {\n  ${target}\n  break\n  /"/; /"/;\n}\n`,
+  "regex after continue and a line break": `for (let i = 0; i < 1; i++) {\n  ${target}\n  continue\n  /"/; /"/;\n}\n`,
+  "regex after break label": `outer: for (;;) {\n  ${target}\n  break outer\n  /"/; /"/;\n}\n`,
+  "regex after continue label": `outer: for (let i = 0; i < 1; i++) {\n  ${target}\n  continue outer\n  /"/; /"/;\n}\n`,
+  "prefix increment of a regex member": `let a = 1\n++/x/.lastIndex; ${target} /"/;\n`,
+  "regex after a block": `{}\n/"/; ${target} /"/;\n`,
+  "regex after a class declaration": `class A {}\n/"/; ${target} /"/;\n`,
+  "export default regex": `export default /"/; ${target} /"/;\n`,
+  "class extends regex": `class A extends /"/.constructor {}\n${target}\n`
+};
+
+test("regression cases: legal modules that import ./project.mjs are always reported", async t => {
+  const labels = Object.keys(regressions), evaluated = v8Evaluate(Object.values(regressions));
+  for (const [index, label] of labels.entries()) {
+    const source = regressions[label];
+    assert.equal(evaluated[index].error, undefined, `${label}: V8 must accept and run the module`);
+    if (/import\s*\(/.test(source)) assert.ok(evaluated[index].seen.includes("./project.mjs"), `${label}: V8 must actually import ./project.mjs`);
+    assert.ok(readImports(source).some(item => item.specifier === "./project.mjs"), `${label}: readImports must find ./project.mjs`);
+    assert.deepEqual((await nativeSource(t, source)).errors, [templeImport], label);
   }
 });
 
-test("import-like text in comments, strings and regexes is not an import", () => {
+test("imports in unexecuted branches are still reported", async t => {
+  const source = 'if (false) import("./project.mjs");\nconst lazy = () => import("./project.mjs");\n';
+  assert.deepEqual(v8Evaluate([source])[0].seen, []);
+  assert.deepEqual(readImports(source).map(item => item.specifier), ["./project.mjs", "./project.mjs"]);
+  assert.deepEqual((await nativeSource(t, source)).errors, [templeImport, templeImport]);
+});
+
+test("import-like text in comments, strings, templates, regexes and members is not an import", () => {
   const source = [
     '// import("./project.mjs")',
     '/* import "./project.mjs" */',
     'const text = "import(\'./project.mjs\')";',
     "const page = `<script>await import('/client.mjs')</script>`;",
     "const pattern = /import\\(\"\\.\\/project\\.mjs\"\\)/g;",
+    "const loader = { import(name) { return name; } };",
     'loader.import("./project.mjs");',
     "const value = 4 / 2 / 1;"
   ].join("\n");
-  assert.deepEqual(dynamicImports(source), []);
   assert.deepEqual(readImports(source), []);
-});
-
-test("string and template escapes decode exactly as JavaScript evaluates them", () => {
-  const literals = [String.raw`"\u002e/a.mjs"`, String.raw`'\x2e\x2fb.mjs'`, String.raw`"\u{1F600}\u{2e}"`, String.raw`"\t\n\r\b\f\v\0x"`,
-    String.raw`"\q\'\"\\"`, "\"a\\\nb\"", "\"a\\\r\nb\"", "`\\x2e/t\\u0065mplate.mjs`", "`line\\\ncontinued`"];
-  for (const literal of literals) assert.deepEqual(dynamicImports(`import(${literal})`), [Function(`"use strict"; return ${literal};`)()], literal);
-  assert.throws(() => dynamicImports(String.raw`import("\01.mjs")`), /Octal/);
-  assert.throws(() => dynamicImports(String.raw`import("\u{110000}")`), /Unicode/);
-  assert.throws(() => dynamicImports('import("unterminated\n")'), /Unterminated/);
-});
-
-test("an ambiguous slash after a closing brace fails the check with its position", async t => {
-  const root = await fixture(t, { "bin/workkeel.mjs": entry, "src/workkeel-cli.mjs": 'const ok = 1;\na = {} / 2; import("./project.mjs"); b = c / d;\n' });
-  assert.deepEqual(checkImportBoundary(root).errors, [
-    'src/workkeel-cli.mjs: cannot be checked (Ambiguous "/" after "}" at line 2, column 8: it may be division or the start of a regular expression; wrap the expression in parentheses or move the regular expression to its own statement)'
-  ]);
-  assert.throws(() => dynamicImports("function f() {}\n/x/.test(y);\n"), /Ambiguous "\/" after "}" at line 2, column 1/);
-});
-
-test("slashes after parentheses, increments and property keywords are resolved, not guessed", () => {
-  const cases = {
-    'n = (a + b) / 2 / c; import("./a.mjs");': ["./a.mjs"],
-    'if (x) /"/.test(s); import("./b.mjs");': ["./b.mjs"],
-    'while (x) /\'/.test(s); import("./c.mjs");': ["./c.mjs"],
-    'i++ / 2; import("./d.mjs") / 1;': ["./d.mjs"],
-    'j-- / 2 / import("./e.mjs");': ["./e.mjs"],
-    'o.return / 2; import("./f.mjs") / 1;': ["./f.mjs"],
-    'o?.typeof / 2; import("./g.mjs") / 1;': ["./g.mjs"],
-    'f(if_ = 1) / 2; import("./h.mjs");': ["./h.mjs"]
-  };
-  for (const [source, expected] of Object.entries(cases)) assert.deepEqual(dynamicImports(source), expected, source);
-});
-
-test("review repro: division after increments and property keywords cannot hide an escaped import", async t => {
-  const repros = [
-    'let x = 0;\nx++ / 2; import(".\\x2fproject.mjs"); const b = 6 / 2;\n',
-    'let x = 0;\nx-- / 2; import(".\\x2fproject.mjs"); const b = 6 / 2;\n',
-    'const o = { return: 4 };\no.return / 2; import(".\\x2fproject.mjs"); const b = 6 / 2;\n'
-  ];
-  for (const source of repros) {
-    assert.deepEqual(readImports(source), [{ specifier: "./project.mjs", dynamic: true }], source);
-    const root = await fixture(t, { "bin/workkeel.mjs": entry, "src/workkeel-cli.mjs": source });
-    assert.deepEqual(checkImportBoundary(root).errors, ["src/workkeel-cli.mjs -> src/project.mjs: native code must not import Temple modules"], source);
-  }
-});
-
-test("slashes after keywords follow the reserved-word rules; a slash after `of` is ambiguous", () => {
-  assert.deepEqual(dynamicImports('export default /"/; import("./a.mjs");'), ["./a.mjs"]);
-  assert.deepEqual(dynamicImports('class A extends /"/.constructor {}\nimport("./b.mjs");'), ["./b.mjs"]);
-  assert.throws(() => dynamicImports('const of = 4;\nof / 2; import("./c.mjs");'), /Ambiguous "\/" after "of" at line 2, column 4/);
-});
-
-test("a method named import is conservatively treated as a computed import", async t => {
-  const root = await fixture(t, { "bin/workkeel.mjs": entry, "src/workkeel-cli.mjs": "export const loader = { import(name) { return name; } };\n" });
-  assert.deepEqual(checkImportBoundary(root).errors, ["src/workkeel-cli.mjs: computed import() cannot be checked"]);
 });
 
 test("computed imports and a static legacy bridge are rejected in native code", async t => {
   const root = await fixture(t, {
     "bin/workkeel.mjs": entry,
-    "src/workkeel-cli.mjs": 'import { main } from "./cli.mjs";\nconst name = "x";\nawait import(`./${name}.mjs`);\nawait import("./" + name);\n',
+    "src/workkeel-cli.mjs": 'import { main } from "./cli.mjs";\nconst name = "x";\nawait import(`./${name}.mjs`);\nawait import("./" + name);\nawait import(String.raw`./project.mjs`);\n',
     "src/cli.mjs": "export const main = 1;\n"
   });
-  const { errors } = checkImportBoundary(root);
-  assert.deepEqual(errors.sort(), [
+  assert.deepEqual(checkImportBoundary(root).errors.sort(), [
     "src/workkeel-cli.mjs -> src/cli.mjs: the legacy bridge must stay a lazy import",
+    "src/workkeel-cli.mjs: computed import() cannot be checked",
     "src/workkeel-cli.mjs: computed import() cannot be checked",
     "src/workkeel-cli.mjs: computed import() cannot be checked"
   ].sort());
@@ -153,7 +173,12 @@ test("native modules the CLI entry does not reach are still checked", async t =>
   assert.deepEqual(result.errors, ["src/workkeel-unreached.mjs -> src/project.mjs: native code must not import Temple modules"]);
 });
 
-test("a native module that does not parse fails the check", async t => {
-  const root = await fixture(t, { "bin/workkeel.mjs": entry, "src/workkeel-cli.mjs": "import {;\n" });
-  assert.match(checkImportBoundary(root).errors[0], /^src\/workkeel-cli\.mjs: cannot be checked/);
+test("a native module the parser rejects fails the check instead of passing", async t => {
+  // Syntax errors, and legal code acorn 8.19.0 cannot parse (`o?.return / 2`),
+  // both fail closed.
+  for (const source of ["import {;\n", `const o = { return: 4 };\no?.return / 2; ${target}\n`]) {
+    const { errors } = await nativeSource(t, source);
+    assert.equal(errors.length, 1, source);
+    assert.match(errors[0], /^src\/workkeel-cli\.mjs: cannot be parsed as a module \(/, source);
+  }
 });

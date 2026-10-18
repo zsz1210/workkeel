@@ -76,6 +76,7 @@
     "zod": "4.6.5"
   },
   "devDependencies": {
+    "acorn": "8.19.0",
     "playwright-core": "1.62.1"
   }
 }
