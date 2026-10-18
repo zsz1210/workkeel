@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { execFileSync, spawnSync } from "node:child_process";
+import { execFileSync, spawn, spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import test from "node:test";
 import { readNativeTask } from "../src/workkeel-tasks.mjs";
@@ -157,4 +157,44 @@ test("policy update needs an approving Principal, is idempotent and stops tasks 
   assert.deepEqual(workkeel(root, "policy", "show").principals, ["owner", "helper"]);
   assert.match(fails(root, "policy", "update", "--policy", ".workkeel/team.json", "--actor", "assistant"), /approving Principal/);
   assert.match(fails(root, "task", "claim", "--id", "WK-0001", "--actor", "builder"), /policy changed/);
+});
+
+test("a created task's command keeps replaying after the task moves on", async t => {
+  const root = await solo(t);
+  const args = ["task", "new", "--goal", "Clarify the guide", "--acceptance", "Audience named", "--write", "docs", "--actor", "builder"];
+  assert.equal(workkeel(root, ...args).id, "WK-0001");
+  workkeel(root, "task", "claim", "--id", "WK-0001", "--actor", "builder");
+  const again = workkeel(root, ...args);
+  assert.equal(again.id, "WK-0001"); assert.equal(again.replayed, true);
+  assert.deepEqual((await fs.readdir(path.join(root, ".ai-org/work-items"))).sort(), ["WK-0001.json"]);
+});
+
+test("a different failed command never disturbs the replay of an earlier successful one", async t => {
+  const root = await solo(t);
+  workkeel(root, "task", "new", "--goal", "Tidy", "--acceptance", "Tidy", "--write", "docs", "--actor", "builder");
+  const claimA = ["task", "claim", "--id", "WK-0001", "--actor", "builder"];
+  assert.equal(workkeel(root, ...claimA).replayed, false);
+  fails(root, "task", "claim", "--id", "WK-0001", "--actor", "builder", "--base", git(root, "rev-parse", "HEAD"));
+  assert.equal(workkeel(root, ...claimA).replayed, true);
+  // Identical commands racing each other settle on one request and one operation.
+  const racing = ["task", "new", "--goal", "Race", "--acceptance", "One task", "--write", "docs", "--actor", "builder"];
+  const results = await Promise.all([0, 1].map(() => new Promise(resolve => {
+    const child = spawn(process.execPath, [cli, ...racing], { cwd: root });
+    let out = ""; child.stdout.on("data", chunk => { out += chunk; }); child.on("close", code => resolve({ code, out }));
+  })));
+  const ids = results.filter(r => r.code === 0).map(r => JSON.parse(r.out).id);
+  assert.ok(ids.length >= 1); assert.equal(new Set(ids).size, 1);
+  assert.equal((await fs.readdir(path.join(root, ".ai-org/work-items"))).length, 2);
+});
+
+test("the order of repeated set-like flags does not create a second task", async t => {
+  const root = await solo(t);
+  await fs.mkdir(path.join(root, "src")); await fs.writeFile(path.join(root, "src/a.mjs"), "export {};\n");
+  const first = workkeel(root, "task", "new", "--goal", "Two roots", "--acceptance", "Done", "--write", "docs", "--write", "src", "--actor", "builder");
+  const swapped = workkeel(root, "task", "new", "--goal", "Two roots", "--acceptance", "Done", "--write", "src", "--write", "docs", "--actor", "builder");
+  assert.equal(swapped.id, first.id); assert.equal(swapped.replayed, true);
+  // Ordered criteria stay distinct commands.
+  const reordered = workkeel(root, "task", "new", "--goal", "Ordered", "--acceptance", "First", "--acceptance", "Second", "--write", "docs", "--actor", "builder");
+  const other = workkeel(root, "task", "new", "--goal", "Ordered", "--acceptance", "Second", "--acceptance", "First", "--write", "docs", "--actor", "builder");
+  assert.notEqual(other.id, reordered.id);
 });

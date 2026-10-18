@@ -4,7 +4,7 @@ import { createHash } from "node:crypto";
 import { parseArgs } from "node:util";
 import { readNativeGit, readLocalActor, readTaskProject } from "./workkeel-project.mjs";
 import { readNativeTask, listTaskItems } from "./workkeel-tasks.mjs";
-import { durableAtomicWrite } from "./files.mjs";
+import { durableAtomicCreate } from "./files.mjs";
 
 const GROUPS = ["task", "usage", "dispatch", "intake", "runtime", "instructions", "workflow", "headroom", "skills", "context",
   "learning", "workspace", "model-policy", "skill-lifecycle", "autonomy", "retention", "goal", "policy"];
@@ -52,7 +52,12 @@ const version = (options, item) => {
   return value;
 };
 const hash = value => createHash("sha256").update(JSON.stringify(value)).digest("hex");
-const commandKey = (action, id, options) => hash({ action, id, options: Object.entries(options).sort(([a], [b]) => a.localeCompare(b)) });
+// Repeated flags that name a set are compared as sets; ordered ones (such as
+// --acceptance criteria) keep their order, so reordering them is a new command.
+const SET_LIKE = new Set(["--write", "--read", "--include", "--exclude", "--evidence", "--unresolved"]);
+const commandKey = (action, id, options) => hash({ action, id, options: Object.entries(options)
+  .map(([name, value]) => [name, SET_LIKE.has(name) && Array.isArray(value) ? [...value].sort() : value])
+  .sort(([a], [b]) => a.localeCompare(b)) });
 
 // The exact request a flag command sent is kept inside the Git directory: never
 // committed, never product drift. A retry resubmits it, so the task replays it.
@@ -64,19 +69,30 @@ async function readSaved(file) {
   try { return JSON.parse(await fs.readFile(file, "utf8")); }
   catch (error) { if (error.code === "ENOENT") return null; throw error; }
 }
-async function save(file, value) {
-  await fs.mkdir(path.dirname(file), { recursive: true });
-  await durableAtomicWrite(file, JSON.stringify(value));
+// Saved requests are immutable, one numbered attempt per command key. Creation is
+// exclusive: when identical commands race, the loser adopts the winner's request.
+async function attempts(dir) {
+  try { return (await fs.readdir(dir)).filter(name => /^\d+\.json$/.test(name)).map(name => Number(name.slice(0, -5))).sort((a, b) => a - b); }
+  catch (error) { if (error.code === "ENOENT") return []; throw error; }
+}
+async function latestAttempt(dir) {
+  const numbers = await attempts(dir);
+  return numbers.length ? { number: numbers.at(-1), value: await readSaved(path.join(dir, `${numbers.at(-1)}.json`)) } : null;
+}
+async function saveAttempt(dir, number, value) {
+  await fs.mkdir(dir, { recursive: true });
+  try { await durableAtomicCreate(path.join(dir, `${number}.json`), JSON.stringify(value)); return value; }
+  catch (error) { if (error.code !== "EEXIST") throw error; return readSaved(path.join(dir, `${number}.json`)); }
 }
 
 /** Builds a lifecycle request from flags. The operation ID is derived, so a retried command replays safely. */
 export async function lifecycleRequestFromFlags(target, id, action, options) {
   const project = await readTaskProject(target), item = await readNativeTask(target, id);
-  const key = commandKey(action, id, options), file = await savedRequestPath(target, id, `${action}.json`);
-  const saved = await readSaved(file);
-  if (saved?.key === key) {
+  const key = commandKey(action, id, options), dir = await savedRequestPath(target, id, key.slice(0, 32));
+  const latest = await latestAttempt(dir);
+  if (latest) {
     // Same command again: replay it if it was the latest operation, or resend it if it never landed.
-    const event = item.history.find(entry => entry.operation_id === saved.request.operation_id);
+    const saved = latest.value, event = item.history.find(entry => entry.operation_id === saved.request.operation_id);
     if (event ? event.sequence === item.version : saved.request.expected_version === item.version) return saved.request;
   }
   const expected = version(options, item);
@@ -94,21 +110,18 @@ export async function lifecycleRequestFromFlags(target, id, action, options) {
     rollback: options["--rollback"], evidence: evidence() });
   else if (action === "cancel") Object.assign(request, { summary: summary(), evidence: evidence() });
   else throw new Error("Unknown task operation");
-  await save(file, { key, request });
-  return request;
+  return (await saveAttempt(dir, (latest?.number ?? 0) + 1, { key, request })).request;
 }
 
 /** A short task draft from flags; createNativeTask records every default explicitly. */
 export async function draftFromFlags(target, options) {
   const project = await readTaskProject(target), actor = await resolveActor(target, project, options["--actor"]);
   if (!options["--goal"] || !options["--acceptance"]?.length) throw new Error("task new needs --goal and at least one --acceptance");
-  const key = commandKey("create", null, options), file = await savedRequestPath(target, "create", `${key.slice(0, 32)}.json`);
-  const saved = await readSaved(file);
-  if (saved?.key === key) {
-    const created = await readNativeTask(target, saved.draft.id).catch(error => { if (error.code === "ENOENT") return null; throw error; });
-    // Resend only an identical new task that never landed or was just created; never a second copy.
-    if (!created || created.version === 1 && created.history[0].operation_id === saved.request.operation_id) return { draft: saved.draft, request: saved.request };
-  }
+  const key = commandKey("create", null, options), dir = await savedRequestPath(target, "create", key.slice(0, 32));
+  // An identical task new always resends its original task ID and request; the
+  // task store decides whether that is a replay. It never allocates a second task.
+  const saved = (await latestAttempt(dir))?.value;
+  if (saved) return { draft: saved.draft, request: saved.request };
   let id = options["--id"];
   if (!id) {
     const used = new Set((await listTaskItems(target)).map(item => item.id));
@@ -122,6 +135,6 @@ export async function draftFromFlags(target, options) {
     operations: ["read", "write"], expires_at: null };
   // Bounded and collision-resistant, whatever the length of the task ID.
   const request = { operation_id: `cli-create-${hash({ id, key }).slice(0, 24)}`, expected_version: 0, actor };
-  await save(file, { key, draft, request });
-  return { draft, request };
+  const kept = await saveAttempt(dir, 1, { key, draft, request });
+  return { draft: kept.draft, request: kept.request };
 }

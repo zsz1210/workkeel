@@ -48,7 +48,11 @@ defaults: the repository root as read and write path, no network, native
 execution, and the lowest risk tier the write paths and data allow. Critical work also
 needs `--approval path` to a committed approval record. Operation IDs and
 expected versions are derived, and rerunning a command that already succeeded
-replays it; `--expect` and `--request` remain for integrations. Teams use `init --team --policy`, and `policy update` replaces the
+replays it. Replay uses the exact requests this checkout saved under its Git
+directory (`.git/workkeel/cli-operations/`); a fresh clone or another machine
+does not have them. An identical `task new` always returns its first task, so use
+different arguments or `--id` for another. `--expect` and `--request` remain for
+integrations. Teams use `init --team --policy`, and `policy update` replaces the
 project policy. `workkeel help advanced` lists every command.
 
 ## Initialize an existing repository
