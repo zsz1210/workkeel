@@ -64,6 +64,12 @@ export function assertTaskRisk(policy, contract, initiator) {
   const tier = contract.verification.risk_tier, floor = contractRiskFloor(policy, contract);
   if (rank(tier) < rank(floor)) throw new Error(`Task risk_tier ${tier} is below the ${floor} tier required by its write paths or data classification; risk can only be raised`);
   if (elevatedRisk(tier)) assertIndependentApproval(policy, contract, initiator);
+  assertCriticalApprovalRecord(tier, contract);
+}
+/** Critical close compares a pinned approval record, so it must exist while the task can still be corrected. */
+export function assertCriticalApprovalRecord(tier, contract) {
+  if (tier === "critical" && !contract.authorization?.approval_ref)
+    throw new Error("Critical work needs an authorization.approval_ref approval record; cancel and re-create the task with one");
 }
 /** In a team, high-risk approval cannot come from the implementer or the initiator. */
 export function assertIndependentApproval(policy, contract, initiator) {

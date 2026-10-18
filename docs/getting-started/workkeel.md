@@ -45,9 +45,10 @@ workkeel task close --id WK-0001 --actor builder --summary Accepted --rollback "
 
 `task new` needs only a goal and acceptance criteria. Unstated fields get recorded
 defaults: the repository root as read and write path, no network, native
-execution, and the lowest risk tier the write paths and data allow. Operation IDs
-and expected versions are derived; `--expect` and `--request` remain for
-integrations. Teams use `init --team --policy`, and `policy update` replaces the
+execution, and the lowest risk tier the write paths and data allow. Critical work also
+needs `--approval path` to a committed approval record. Operation IDs and
+expected versions are derived, and rerunning a command that already succeeded
+replays it; `--expect` and `--request` remain for integrations. Teams use `init --team --policy`, and `policy update` replaces the
 project policy. `workkeel help advanced` lists every command.
 
 ## Initialize an existing repository

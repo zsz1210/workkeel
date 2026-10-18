@@ -1,12 +1,15 @@
+import fs from "node:fs/promises";
 import path from "node:path";
+import { createHash } from "node:crypto";
 import { parseArgs } from "node:util";
 import { readNativeGit, readLocalActor, readTaskProject } from "./workkeel-project.mjs";
 import { readNativeTask, listTaskItems } from "./workkeel-tasks.mjs";
+import { durableAtomicWrite } from "./files.mjs";
 
 const GROUPS = ["task", "usage", "dispatch", "intake", "runtime", "instructions", "workflow", "headroom", "skills", "context",
   "learning", "workspace", "model-policy", "skill-lifecycle", "autonomy", "retention", "goal", "policy"];
 const SINGLE = ["policy", "source", "request", "id", "fingerprint", "actor", "revision", "base", "claim", "summary",
-  "judgment", "rollback", "mode", "expect", "goal", "risk", "principal", "attempt"];
+  "judgment", "rollback", "mode", "expect", "goal", "risk", "principal", "attempt", "approval"];
 const MULTIPLE = ["evidence", "acceptance", "write", "read", "include", "exclude", "unresolved"];
 const BOOLEAN = ["json", "solo", "team"];
 
@@ -48,12 +51,36 @@ const version = (options, item) => {
   if (!Number.isSafeInteger(value) || value < 0) throw new Error("--expect must be a task version");
   return value;
 };
+const hash = value => createHash("sha256").update(JSON.stringify(value)).digest("hex");
+const commandKey = (action, id, options) => hash({ action, id, options: Object.entries(options).sort(([a], [b]) => a.localeCompare(b)) });
+
+// The exact request a flag command sent is kept inside the Git directory: never
+// committed, never product drift. A retry resubmits it, so the task replays it.
+async function savedRequestPath(target, ...parts) {
+  const gitDir = (await readNativeGit(target, ["rev-parse", "--absolute-git-dir"])).trim();
+  return path.join(gitDir, "workkeel", "cli-operations", ...parts);
+}
+async function readSaved(file) {
+  try { return JSON.parse(await fs.readFile(file, "utf8")); }
+  catch (error) { if (error.code === "ENOENT") return null; throw error; }
+}
+async function save(file, value) {
+  await fs.mkdir(path.dirname(file), { recursive: true });
+  await durableAtomicWrite(file, JSON.stringify(value));
+}
 
 /** Builds a lifecycle request from flags. The operation ID is derived, so a retried command replays safely. */
 export async function lifecycleRequestFromFlags(target, id, action, options) {
   const project = await readTaskProject(target), item = await readNativeTask(target, id);
+  const key = commandKey(action, id, options), file = await savedRequestPath(target, id, `${action}.json`);
+  const saved = await readSaved(file);
+  if (saved?.key === key) {
+    // Same command again: replay it if it was the latest operation, or resend it if it never landed.
+    const event = item.history.find(entry => entry.operation_id === saved.request.operation_id);
+    if (event ? event.sequence === item.version : saved.request.expected_version === item.version) return saved.request;
+  }
   const expected = version(options, item);
-  const request = { operation_id: `cli-${action}-v${expected + 1}`, expected_version: expected, actor: await resolveActor(target, project, options["--actor"]) };
+  const request = { operation_id: `cli-${action}-${expected + 1}-${key.slice(0, 16)}`, expected_version: expected, actor: await resolveActor(target, project, options["--actor"]) };
   const summary = () => { if (!options["--summary"]) throw new Error(`task ${action} needs --summary`); return options["--summary"]; };
   const evidence = () => options["--evidence"] ?? [];
   if (action === "claim") request.base_revision = options["--base"] ?? await head(target);
@@ -67,6 +94,7 @@ export async function lifecycleRequestFromFlags(target, id, action, options) {
     rollback: options["--rollback"], evidence: evidence() });
   else if (action === "cancel") Object.assign(request, { summary: summary(), evidence: evidence() });
   else throw new Error("Unknown task operation");
+  await save(file, { key, request });
   return request;
 }
 
@@ -74,6 +102,13 @@ export async function lifecycleRequestFromFlags(target, id, action, options) {
 export async function draftFromFlags(target, options) {
   const project = await readTaskProject(target), actor = await resolveActor(target, project, options["--actor"]);
   if (!options["--goal"] || !options["--acceptance"]?.length) throw new Error("task new needs --goal and at least one --acceptance");
+  const key = commandKey("create", null, options), file = await savedRequestPath(target, "create", `${key.slice(0, 32)}.json`);
+  const saved = await readSaved(file);
+  if (saved?.key === key) {
+    const created = await readNativeTask(target, saved.draft.id).catch(error => { if (error.code === "ENOENT") return null; throw error; });
+    // Resend only an identical new task that never landed or was just created; never a second copy.
+    if (!created || created.version === 1 && created.history[0].operation_id === saved.request.operation_id) return { draft: saved.draft, request: saved.request };
+  }
   let id = options["--id"];
   if (!id) {
     const used = new Set((await listTaskItems(target)).map(item => item.id));
@@ -83,5 +118,10 @@ export async function draftFromFlags(target, options) {
     acceptance: { criteria: options["--acceptance"] } };
   if (options["--write"] || options["--read"]) draft.environment = { ...(options["--write"] ? { write_paths: options["--write"] } : {}), ...(options["--read"] ? { read_paths: options["--read"] } : {}) };
   if (options["--risk"]) draft.verification = { risk_tier: options["--risk"] };
-  return { draft, request: { operation_id: `cli-create-${id}`, expected_version: 0, actor } };
+  if (options["--approval"]) draft.authorization = { approved_by: actor.principal_id, approval_ref: options["--approval"],
+    operations: ["read", "write"], expires_at: null };
+  // Bounded and collision-resistant, whatever the length of the task ID.
+  const request = { operation_id: `cli-create-${hash({ id, key }).slice(0, 24)}`, expected_version: 0, actor };
+  await save(file, { key, draft, request });
+  return { draft, request };
 }

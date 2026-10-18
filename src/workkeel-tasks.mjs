@@ -7,7 +7,7 @@ import { readTaskContractInput, readTaskFile, validateTaskContract } from "./tas
 import { assertActor, assertApprover, readTaskProject, safeDirectory, existsEntry, readNativeGit } from "./workkeel-project.mjs";
 import {loadTaskRequirements, assertRequirementOutcomes} from './workkeel-requirements.mjs';
 import { completeTaskContract } from "./workkeel-task-draft.mjs";
-import { assertIndependentApproval, assertTaskRisk, candidateRisk, elevatedRisk, isTeamPolicy, maxRisk, taskRisk } from "./workkeel-risk.mjs";
+import { assertCriticalApprovalRecord, assertIndependentApproval, assertTaskRisk, candidateRisk, elevatedRisk, isTeamPolicy, maxRisk, taskRisk } from "./workkeel-risk.mjs";
 
 const ID = /^[A-Za-z0-9][A-Za-z0-9._-]{0,95}$/;
 const SHA = /^(?:[a-f0-9]{40}|[a-f0-9]{64})$/;
@@ -440,6 +440,8 @@ export async function mutateNativeTask(targetInput, id, action, request) {
         const declared = item.contract.verification.risk_tier, observed = await deliveryRisk(target, item, project.policy, request.revision, action, request);
         // A rejected attempt's tier persists even if its risky change was withdrawn.
         const prior = effectiveRisk(item), tier = maxRisk(declared, observed.tier, prior);
+        // Escalating to critical needs the pinned approval record that close will compare.
+        assertCriticalApprovalRecord(tier, item.contract);
         if (request.rollback !== undefined || tier === "critical") {
           try { assertText(request.rollback); }
           catch { throw new Error(`Critical handoff.rollback must state bounded nonempty rollback steps${tier === declared ? "" : ` (escalated from ${declared})`}`); }

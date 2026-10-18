@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { TEMPLATE_VERSION } from "./workkeel-version.mjs";
 import { readTaskContractInput } from "./task-contract.mjs";
 import { initializeTaskProject, existsEntry, readTaskProject, soloPolicy, updateProjectPolicy } from "./workkeel-project.mjs";
@@ -25,7 +26,7 @@ workkeel start [target] [--request brief.json]
 workkeel init [target] --solo [--principal id] | --team --policy repository-policy.json
 workkeel policy show [target] | policy update [target] --policy repository-policy.json [--actor id]
 workkeel status|doctor [target]
-workkeel task new [target] --goal text --acceptance text [--acceptance text] [--write path] [--read path] [--risk tier] [--id id] [--actor id]
+workkeel task new [target] --goal text --acceptance text [--acceptance text] [--write path] [--read path] [--risk tier] [--approval path] [--id id] [--actor id]
 workkeel task create [target] --source contract.json --request request.json
 workkeel task show [target] --id task-id
 workkeel task assess [target] --id task-id [--request assessment.json]
@@ -218,7 +219,7 @@ export async function workkeelMain(args) {
       output = await readTaskMeasurements(target, required(options, "--id"));
     } else if (action === "show") { allow(options, ["--id"]); output = await readNativeTask(target, required(options, "--id")); }
     else if (action === "new" || action === "create" && !options["--source"]) {
-      allow(options, ["--goal", "--acceptance", "--write", "--read", "--include", "--exclude", "--risk", "--id", "--actor"]);
+      allow(options, ["--goal", "--acceptance", "--write", "--read", "--include", "--exclude", "--risk", "--id", "--actor", "--approval"]);
       const { draft, request } = await draftFromFlags(target, options);
       output = await createNativeTask(target, draft, request);
     } else if (options["--request"]) {
@@ -230,7 +231,7 @@ export async function workkeelMain(args) {
     } else if (action === "create") {
       allow(options, ["--source", "--actor"]);
       const project = await readTaskProject(target), draft = (await readTaskContractInput(target, options["--source"])).document;
-      output = await createNativeTask(target, draft, { operation_id: `cli-create-${draft?.id}`, expected_version: 0, actor: await resolveActor(target, project, options["--actor"]) });
+      output = await createNativeTask(target, draft, { operation_id: `cli-create-${createHash("sha256").update(JSON.stringify(draft ?? null)).digest("hex").slice(0, 24)}`, expected_version: 0, actor: await resolveActor(target, project, options["--actor"]) });
     } else {
       allow(options, ["--id", "--actor", "--revision", "--base", "--claim", "--summary", "--evidence", "--judgment", "--rollback", "--unresolved", "--mode", "--expect", "--attempt"]);
       const id = required(options, "--id");
