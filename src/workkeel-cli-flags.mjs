@@ -100,7 +100,7 @@ export async function runLifecycleFromFlags(target, id, action, options, hooks =
   for (let round = 0; ; round += 1) {
     const item = await readNativeTask(target, id);
     await hooks.afterSnapshot?.(item);
-    const request = await lifecycleRequestFromFlags(target, id, action, options, item);
+    const request = await lifecycleRequestFromFlags(target, id, action, options, item, hooks);
     await hooks.beforeMutation?.(request);
     try { return await mutateNativeTask(target, id, action, request); }
     catch (error) {
@@ -116,9 +116,9 @@ export async function runLifecycleFromFlags(target, id, action, options, hooks =
 const TARGET_FIELDS = { claim: [], cancel: [], release: ["claim_id"], handoff: ["claim_id", "revision"],
   review: ["revision"], close: ["revision"], rework: ["revision"] };
 /** The target a request would act on now. Rework acts on the failed candidate, which its request does not name. */
-function currentTarget(action, item, request) {
+function currentTarget(action, item, request, options) {
   return Object.fromEntries(TARGET_FIELDS[action].map(field =>
-    [field, action === "rework" ? item.delivery?.revision ?? null : request[field] ?? null]));
+    [field, action === "rework" ? options["--revision"] ?? item.delivery?.revision ?? null : request[field] ?? null]));
 }
 /** The target recorded with a saved attempt; attempts saved before binding existed are refused when unknowable. */
 function recordedTarget(action, value) {
@@ -133,7 +133,7 @@ function assertSameTarget(action, first, next) {
 }
 
 /** Selects or creates the saved request for this command against one task snapshot. */
-export async function lifecycleRequestFromFlags(target, id, action, options, snapshot = null) {
+export async function lifecycleRequestFromFlags(target, id, action, options, snapshot = null, hooks = {}) {
   const project = await readTaskProject(target), item = snapshot ?? await readNativeTask(target, id);
   const key = commandKey(action, id, options), dir = await savedRequestPath(target, id, key.slice(0, 32));
   const saved = await savedAttempts(dir, key);
@@ -157,7 +157,12 @@ export async function lifecycleRequestFromFlags(target, id, action, options, sna
     summary: summary(), evidence: evidence(), unresolved: options["--unresolved"] ?? [], ...(options["--rollback"] ? { rollback: options["--rollback"] } : {}) });
   else if (action === "review") Object.assign(request, { revision: options["--revision"] ?? item.delivery?.revision, judgment: options["--judgment"],
     summary: summary(), evidence: evidence(), ...(options["--attempt"] ? { review_attempt_id: options["--attempt"] } : {}) });
-  else if (action === "rework") Object.assign(request, { summary: summary(), ...(options["--mode"] ? { mode: options["--mode"] } : {}) });
+  else if (action === "rework") {
+    // Rework's request does not name the candidate; an explicit --revision must be the failed one.
+    if (options["--revision"] && options["--revision"] !== item.delivery?.revision)
+      throw new Error(`Rework --revision ${options["--revision"]} is not the failed candidate ${item.delivery?.revision ?? "(none)"}`);
+    Object.assign(request, { summary: summary(), ...(options["--mode"] ? { mode: options["--mode"] } : {}) });
+  }
   else if (action === "close") Object.assign(request, { revision: options["--revision"] ?? item.delivery?.revision, summary: summary(),
     rollback: options["--rollback"], evidence: evidence() });
   else if (action === "cancel") Object.assign(request, { summary: summary(), evidence: evidence() });
@@ -165,9 +170,15 @@ export async function lifecycleRequestFromFlags(target, id, action, options, sna
   // A command keeps the claim and candidate its first attempt targeted. If a later
   // attempt would derive a different one, stop rather than apply this judgment,
   // summary or evidence to another target.
-  const aim = currentTarget(action, item, request);
+  const aim = currentTarget(action, item, request, options);
   assertSameTarget(action, firstTarget, aim);
-  return (await saveAttempt(dir, (saved.at(-1)?.number ?? 0) + 1, { key, request, target: aim })).request;
+  await hooks.beforeSave?.(dir, (saved.at(-1)?.number ?? 0) + 1, key);
+  // Another process may have saved this attempt number first. Its request is adopted
+  // only if it is the same command aimed at the same target as this one.
+  const kept = await saveAttempt(dir, (saved.at(-1)?.number ?? 0) + 1, { key, request, target: aim });
+  if (kept?.key !== key) throw new Error("A concurrent CLI request with another command took this attempt; rerun the command");
+  assertSameTarget(action, firstTarget ?? aim, recordedTarget(action, kept));
+  return kept.request;
 }
 
 /** A short task draft from flags; createNativeTask records every default explicitly. */

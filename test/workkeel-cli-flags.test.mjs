@@ -329,7 +329,9 @@ const retargets = {
   newFailedCandidate: async root => { workkeel(root, "task", "rework", "--id", ID, "--actor", B, "--summary", "Other rework");
     workkeel(root, "task", "claim", "--id", ID, "--actor", B, "--base", head(root)); await deliver(root, "candidate-b"); await judge(root, "fail", "fail-b"); },
   // A fails; B is delivered and passes, reaching the release gate.
-  newPassedCandidate: async root => { await retargets.newCandidate(root); await judge(root, "pass", "pass-b"); }
+  newPassedCandidate: async root => { await retargets.newCandidate(root); await judge(root, "pass", "pass-b"); },
+  // Only the commit moves: same claim, new HEAD.
+  newCommit: async root => { await fs.appendFile(path.join(root, "docs/guide.md"), "More\n"); git(root, "commit", "-qam", "more"); }
 };
 const commands = {
   release: { "--id": ID, "--actor": B, "--summary": "Stop" },
@@ -355,32 +357,55 @@ async function leaveRetargetedAttempt(root, action, first, { legacy }) {
   throw new Error("first attempt not found");
 }
 const readSaved = async file => JSON.parse(await fs.readFile(file, "utf8"));
+async function stripTarget(root, first) {
+  const base = path.join(root, ".git/workkeel/cli-operations", ID);
+  for (const dir of await fs.readdir(base)) {
+    const file = path.join(base, dir, "1.json"), saved = await readSaved(file);
+    if (saved.request.operation_id !== first.operation_id) continue;
+    delete saved.target; await fs.writeFile(file, JSON.stringify(saved)); return;
+  }
+  throw new Error("first attempt not found");
+}
 const matrix = [
   ["release", "claimed", "newClaim", "new"], ["release", "claimed", "newClaim", "pending"], ["release", "claimed", "newClaim", "legacy"],
   ["handoff", "claimed", "newClaim", "new"], ["handoff", "claimed", "newClaim", "pending"], ["handoff", "claimed", "newClaim", "legacy"],
   ["review", "delivered", "newCandidate", "new"], ["review", "delivered", "newCandidate", "pending"], ["review", "delivered", "newCandidate", "legacy"],
   ["rework", "failed", "newFailedCandidate", "new"], ["rework", "failed", "newFailedCandidate", "pending"], ["rework", "failed", "newFailedCandidate", "legacy"],
-  ["close", "delivered", "newPassedCandidate", "pending"], ["close", "delivered", "newPassedCandidate", "legacy"]
+  ["close", "delivered", "newPassedCandidate", "pending"], ["close", "delivered", "newPassedCandidate", "legacy"],
+  ["close", "delivered", "newPassedCandidate", "new"],
+  ["handoff", "claimed", "newCommit", "pending"], ["handoff", "claimed", "newCommit", "new"],
+  ["release", "claimed", "newClaim", "legacy-first"], ["review", "delivered", "newCandidate", "legacy-first"],
+  ["rework", "failed", "newFailedCandidate", "legacy-first"]
 ];
 for (const [action, state, retarget, kind] of matrix) {
   test(`target binding: ${action} stops when its target changes (${retarget}, ${kind} attempt)`, async t => {
     const root = await solo(t);
     await states[state](root);
-    if (action === "handoff") { await fs.appendFile(path.join(root, "docs/guide.md"), "Work\n"); git(root, "commit", "-qam", "work"); }
+    if (action === "handoff") { await fs.appendFile(path.join(root, "docs/guide.md"), "Work\n"); git(root, "commit", "-qam", "work");
+      if (retarget === "newCommit") await record(root, `.ai-org/artifacts/${ID}/done.md`, "Done\n"); }
     const before = await readNativeTask(root, ID);
     let run;
     if (kind === "new") {
       let moved = false;
       run = runLifecycleFromFlags(root, ID, action, commands[action], { beforeMutation: async () => { if (!moved) { moved = true; await retargets[retarget](root); } } });
+    } else if (kind === "legacy-first") {
+      // The very first attempt was saved before targets were recorded.
+      const first = await lifecycleRequestFromFlags(root, ID, action, commands[action]);
+      await stripTarget(root, first);
+      await retargets[retarget](root);
+      run = runLifecycleFromFlags(root, ID, action, commands[action]);
     } else {
       const first = await lifecycleRequestFromFlags(root, ID, action, commands[action]);
       await retargets[retarget](root);
       await leaveRetargetedAttempt(root, action, first, { legacy: kind === "legacy" });
       run = runLifecycleFromFlags(root, ID, action, commands[action]);
     }
-    await assert.rejects(run, kind === "legacy" && action === "rework" ? /no recorded target/ : /first targeted/);
+    const revisionOnly = retarget === "newCommit";
+    await assert.rejects(run, (kind === "legacy" || kind === "legacy-first") && action === "rework" ? /no recorded target/
+      : revisionOnly ? /current commit|first targeted/ : /first targeted/);
     const after = await readNativeTask(root, ID);
-    assert.ok(after.version > before.version, "the target really changed");
+    if (!revisionOnly) assert.ok(after.version > before.version, "the target really changed");
+    else assert.equal(after.state, "build", "the new commit was never handed off");
     assert.ok(!after.history.some(event => event.operation_id.startsWith(`cli-${action}-`) && event.summary === commands[action]["--summary"]),
       `${action} was never applied to the new target`);
   });
@@ -395,4 +420,32 @@ test("target binding: claim, cancel and create bind only the task", async t => {
   await record(root, `.ai-org/artifacts/${ID}/cancel.md`, "No longer needed\n");
   const cancel = ["task", "cancel", "--id", ID, "--actor", B, "--summary", "Stop", "--evidence", `.ai-org/artifacts/${ID}/cancel.md`];
   assert.equal(workkeel(root, ...cancel).state, "cancelled"); assert.equal(workkeel(root, ...cancel).replayed, true);
+});
+
+test("an attempt another process saved first is adopted only if it aims at the same target", async t => {
+  const root = await solo(t);
+  await states.delivered(root);
+  const candidateA = (await readNativeTask(root, ID)).delivery.revision;
+  const review = runLifecycleFromFlags(root, ID, "review", commands.review, { beforeSave: async (dir, number, key) => {
+    // Between this command's check and its save, the task moves to B and another
+    // process saves this same command's attempt aimed at B.
+    await retargets.newCandidate(root);
+    const item = await readNativeTask(root, ID);
+    await record(root, `.ai-org/artifacts/${ID}/ok.md`, "Pass\n");
+    const request = { operation_id: "cli-review-other-process", expected_version: item.version, actor: { agent_id: R, principal_id: "owner" },
+      revision: item.delivery.revision, judgment: "pass", summary: "Looks right", evidence: [`.ai-org/artifacts/${ID}/ok.md`] };
+    await fs.mkdir(dir, { recursive: true });
+    await fs.writeFile(path.join(dir, `${number}.json`), JSON.stringify({ key, request, target: { revision: item.delivery.revision } }));
+  } });
+  await assert.rejects(review, /first targeted revision/);
+  const item = await readNativeTask(root, ID);
+  assert.notEqual(item.delivery.revision, candidateA); assert.equal(item.review, null, "the pass for A never lands on B");
+});
+
+test("rework honours an explicit --revision only when it names the failed candidate", async t => {
+  const root = await solo(t);
+  await states.failed(root);
+  const failed = (await readNativeTask(root, ID)).delivery.revision;
+  assert.match(fails(root, "task", "rework", "--id", ID, "--actor", B, "--summary", "Fix", "--revision", "0".repeat(40)), /not the failed candidate/);
+  assert.equal(workkeel(root, "task", "rework", "--id", ID, "--actor", B, "--summary", "Fix", "--revision", failed).state, "intake");
 });
