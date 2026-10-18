@@ -4,7 +4,7 @@ import { KNOWN_PACKAGE_NAMES, PACKAGE_NAME, REPOSITORY_ROOT, TEMPLATE_REPOSITORY
 
 const execFileAsync = promisify(execFile);
 export const CLI_BOOTSTRAP_SCHEMA = "temple.cli-bootstrap/v1";
-export const SUPPORTED_NODE_RANGE = ">=24.0.0";
+export const SUPPORTED_NODE_RANGE = ">=24.15.0";
 
 async function gitSource() {
   try {

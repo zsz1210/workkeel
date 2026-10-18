@@ -9,7 +9,7 @@ models. It is not tied to OpenAI, Codex or a particular model.
 English · [繁體中文](README.zh-TW.md) · [日本語](README.ja.md)
 
 [![CI](https://github.com/zsz1210/workkeel/actions/workflows/ci.yml/badge.svg)](https://github.com/zsz1210/workkeel/actions/workflows/ci.yml)
-Beta.1 experimental prerelease · Node.js 24+ · [MIT](LICENSE)
+Beta.1 experimental prerelease · Node.js 24.15+ · [MIT](LICENSE)
 
 ## What it does
 
@@ -46,7 +46,7 @@ steps. The task records remain in the project.
 
 ## Install Beta.1
 
-Requires Node.js 24+ and an existing coding tool. From your project directory:
+Requires Node.js 24.15+ and an existing coding tool. From your project directory:
 
 ```sh
 npm install --save-dev --save-exact --ignore-scripts @zsz1210/workkeel@0.1.0-beta.1
@@ -61,7 +61,7 @@ for scope and qualification limits. Installation does not initialize or migrate 
 
 ## Start from source
 
-For development, use Git and Node.js 24+. The main branch may contain changes
+For development, use Git and Node.js 24.15+. The main branch may contain changes
 after the immutable Beta.1 package.
 
 ```sh

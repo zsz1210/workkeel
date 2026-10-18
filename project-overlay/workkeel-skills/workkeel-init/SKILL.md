@@ -4,7 +4,7 @@ description: Prepare a native Workkeel task-first project or review a migration 
 ---
 # Native Workkeel initialization
 
-Use the reviewed local Workkeel CLI and Node.js 24+; Git is needed for task
+Use the reviewed local Workkeel CLI and Node.js 24.15+; Git is needed for task
 candidates. Read the project's native instructions and the shipped getting-started
 guide. If unavailable, report the missing dependency without installing it.
 

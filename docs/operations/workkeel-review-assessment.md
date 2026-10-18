@@ -88,7 +88,7 @@ For inline read-only requests, use the API below instead of creating a file.
 
 ## Complete API example: inspect incomplete evidence
 
-Run this from the Workkeel source checkout using Node.js 24 or later. The target is
+Run this from the Workkeel source checkout using Node.js 24.15 or later. The target is
 an existing native project, with a delivered `WK-example` task and `approval.json`
 already pinned as above. Its approved criterion is `Value equals two`. The four
 named evidence files must already exist in its candidate or exact task evidence.
@@ -196,7 +196,7 @@ assessor schema change. Existing execution and review guards retain authority.
 
 `scripts/workkeel-check-evidence.mjs` and the delivery script are source utilities,
 not npm package exports. Use an existing source checkout on a POSIX host with
-Node 24 or later. No model, new dependency, external service or provider is used.
+Node 24.15 or later. No model, new dependency, external service or provider is used.
 The approved native task must already have a current build claim. Its environment
 must allow Node, root execution, the selected input reads and both reads and writes
 under its task artifact directory. The host still enforces those boundaries.

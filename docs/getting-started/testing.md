@@ -134,7 +134,7 @@ not require native-task contributors to configure those Positions.
 
 ## Release and live validation
 
-Workkeel requires Node.js 24 or later. Node.js 24 is the remote baseline and must pass exact-candidate local verification. A newer local Node.js version may provide an additional compatibility signal, but passing on that machine does not by itself qualify a separate runtime line.
+Workkeel requires Node.js 24.15 or later. Node.js 24 is the remote baseline and must pass exact-candidate local verification. A newer local Node.js version may provide an additional compatibility signal, but passing on that machine does not by itself qualify a separate runtime line.
 
 Release candidates should also review the allowlisted package manifest, verify clean-source recovery, and pin every result to the exact candidate revision.
 

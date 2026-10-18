@@ -9,7 +9,7 @@ OpenAI、Codex、特定のモデルを前提としません。
 [English](README.md) · [繁體中文](README.zh-TW.md) · 日本語
 
 [![CI](https://github.com/zsz1210/workkeel/actions/workflows/ci.yml/badge.svg)](https://github.com/zsz1210/workkeel/actions/workflows/ci.yml)
-Beta.1 実験的プレリリース · Node.js 24+ · [MIT](LICENSE)
+Beta.1 実験的プレリリース · Node.js 24.15+ · [MIT](LICENSE)
 
 ## できること
 
@@ -38,7 +38,7 @@ Beta.1 実験的プレリリース · Node.js 24+ · [MIT](LICENSE)
 
 ## Beta.1 をインストールする
 
-Node.js 24+ と既存の開発ツールが必要です。プロジェクトのディレクトリで実行します。
+Node.js 24.15+ と既存の開発ツールが必要です。プロジェクトのディレクトリで実行します。
 
 ```sh
 npm install --save-dev --save-exact --ignore-scripts @zsz1210/workkeel@0.1.0-beta.1
@@ -53,7 +53,7 @@ Beta.1 は早期評価向けに npm の `next` チャネルで公開されてい
 
 ## ソースから始める
 
-ソース開発には Git と Node.js 24+ が必要です。main ブランチには固定された Beta.1 パッケージの公開後の変更が含まれる場合があります。
+ソース開発には Git と Node.js 24.15+ が必要です。main ブランチには固定された Beta.1 パッケージの公開後の変更が含まれる場合があります。
 
 ```sh
 git clone https://github.com/zsz1210/workkeel.git

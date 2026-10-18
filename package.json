@@ -38,7 +38,7 @@
     "temple": "./bin/temple.mjs"
   },
   "engines": {
-    "node": ">=24.0.0"
+    "node": ">=24.15.0"
   },
   "publishConfig": {
     "access": "public",

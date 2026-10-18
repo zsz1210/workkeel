@@ -5,7 +5,7 @@ description: Coordinate an approved native Workkeel task through claim, exact-ca
 # Native Workkeel delivery
 
 Read the project's WORKKEEL.md and the approved native task contract. This Skill
-does not grant authority or launch models. Dependencies: Node.js 24+, Git, and the
+does not grant authority or launch models. Dependencies: Node.js 24.15+, Git, and the
 project's pinned workkeelw.mjs launcher. If an entrypoint or approval is missing,
 report it; do not install packages or substitute the retired workflow.
 

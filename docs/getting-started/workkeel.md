@@ -12,7 +12,7 @@ Do not run task initialization in the public framework source checkout.
 
 ## Availability and compatibility
 
-Use Node.js 24 or newer. Beta.1 is published as
+Use Node.js 24.15 or newer. Beta.1 is published as
 `@zsz1210/workkeel@0.1.0-beta.1` on npm's `next` channel; follow the
 [installation commands](../../README.md#start). Installed projects can
 use `npx --no-install workkeel`; a reviewed source checkout provides
