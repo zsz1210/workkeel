@@ -91,6 +91,15 @@ does not certify a service deployment or grant commercial permissions.
 
 Workkeel uses Playwright Core only for repository development and browser checks. It launches an already installed Google Chrome with an ephemeral automation profile. Workkeel does not download, vendor, redistribute, or include a browser binary in its npm package or runtime dependency tree.
 
+### Acorn
+
+- Project: <https://github.com/acornjs/acorn>
+- Package: `acorn`
+- Pinned version: `8.19.0`
+- License: MIT
+
+Workkeel uses Acorn only in the repository import boundary check, to parse its own source modules. Acorn is not imported by Workkeel's runtime source, vendored, or included in its npm package or runtime dependency tree.
+
 ## Mermaid README diagrams
 
 - Projects: <https://github.com/mermaid-js/mermaid> and <https://github.com/mermaid-js/mermaid-cli>
