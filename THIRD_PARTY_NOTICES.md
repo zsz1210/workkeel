@@ -20,6 +20,7 @@ The npm lockfile resolves these core runtime packages. They are installed as sep
 | `fast-deep-equal` | 3.1.3 | MIT |
 | `fast-uri` | 3.1.6 | BSD-3-Clause |
 | `json-schema-traverse` | 1.0.0 | MIT |
+| `picomatch` | 4.0.7 | MIT |
 | `require-from-string` | 2.0.2 | MIT |
 
 The dependency packages retain their own copyright and license files in an installed dependency tree. Review this inventory together with `package-lock.json` before each public release.

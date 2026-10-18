@@ -28,7 +28,7 @@ test('one brief previews without writes, applies idempotently and rejects stale 
 });
 test('brief does not invent actors, acceptance, permissions or path authority',async t=>{
  const root=await fixture(t),input=await brief(root);
- for(const changed of [{acceptance:[]},{actor:{agent_id:'other',principal_id:'owner'}},{authorization:null},{environment:{...input.environment,write_paths:['../escape']}},{risk_tier:'high'},{extra:'not allowed'}])await assert.rejects(previewTaskIntake(root,{...input,...changed}));
+ for(const changed of [{acceptance:[]},{actor:{agent_id:'other',principal_id:'owner'}},{authorization:null},{environment:{...input.environment,write_paths:['../escape']}},{risk_tier:'low'},{extra:'not allowed'}])await assert.rejects(previewTaskIntake(root,{...input,...changed}));
 });
 test('expired active authority requires attention and cannot be claimed',async t=>{
  const root=await fixture(t),input=await brief(root);input.authorization={...input.authorization,expires_at:new Date(Date.now()+60000).toISOString()};

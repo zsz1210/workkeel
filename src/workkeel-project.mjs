@@ -11,6 +11,7 @@ import { assertSafeTarget, durableAtomicCreate, formatJson, sha256 } from "./fil
 import { withProjectMutationLock } from "./workkeel-lock.mjs";
 import { readTaskContractInput, readTaskFile } from "./task-contract.mjs";
 import { PACKAGE_NAME, TEMPLATE_VERSION } from "./workkeel-version.mjs";
+import { RISK_TIERS, validRiskPattern } from "./workkeel-risk.mjs";
 
 export const WORKKEEL_PACKAGE = PACKAGE_NAME;
 export const TASK_PROJECT_SCHEMA = "workkeel.project/v1";
@@ -63,15 +64,18 @@ export const policySchema = {
     schema_version: { const: "workkeel.task-policy/v1" }, principals: ids, approvers: ids,
     agents: { type: "array", minItems: 1, items: {
       type: "object", additionalProperties: false, required: ["agent_id", "principal_id"],
-      properties: { agent_id: identifier, principal_id: identifier }
+      properties: { agent_id: identifier, principal_id: identifier, model_family: identifier }
     } },
     review_separation: { enum: ["distinct-agent", "distinct-principal"] },
+    risk_paths: { type: "object", additionalProperties: false, properties: Object.fromEntries(RISK_TIERS.map(tier =>
+      [tier, { type: "array", maxItems: 64, uniqueItems: true, items: { type: "string" } }])) },
     requirements_refs: {type: 'array', maxItems: 8, uniqueItems: true, items: {type: 'string', minLength: 1, maxLength: 1024}}
   }
 };
 const validate = new Ajv({ strict: true, allErrors: true }).compile(policySchema);
 export function assertPolicy(policy) {
   if (!validate(policy)) throw new Error("Invalid task policy; use explicit Principals, Agents, approvers and review separation");
+  if (Object.values(policy.risk_paths ?? {}).flat().some(pattern => !validRiskPattern(pattern))) throw Error("Invalid risk path pattern; use repository-relative globs without negation");
   if ((policy.requirements_refs ?? []).some(ref => ref.trim() !== ref || /[\\:\x00-\x1f\x7f*?\[\]{}]/.test(ref) || ref.startsWith('/') || ref.split('/').some(p => !p || p === '.' || p === '..'))) throw Error('Invalid required decision source path');
   if (new Set(policy.agents.map(a => a.agent_id)).size !== policy.agents.length ||
       policy.agents.some(a => !policy.principals.includes(a.principal_id)) ||

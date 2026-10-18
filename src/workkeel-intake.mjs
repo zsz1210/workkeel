@@ -4,6 +4,7 @@ import { createNativeTask } from './workkeel-tasks.mjs';
 import { exactKeys, executionDigest } from './workkeel-execution-policy.mjs';
 import { formatJson, sha256 } from './files.mjs';
 import {loadTaskRequirements} from './workkeel-requirements.mjs';
+import {assertTaskRisk} from './workkeel-risk.mjs';
 
 /** A brief reduces repeated structure; it does not infer approval or tool grants. */
 export async function previewTaskIntake(target, brief) {
@@ -27,7 +28,7 @@ export async function previewTaskIntake(target, brief) {
   if (!validation.contract_complete) throw Error('Incomplete brief: '+[...validation.errors,...validation.incomplete_fields].join('; '));
   if ((project.policy.requirements_refs ?? []).some(ref => !contract.environment.data.policy_refs.includes(ref))) throw Error('Required project decision source omitted from task');
   await loadTaskRequirements(target, contract, {requiredRefs: project.policy.requirements_refs ?? []});
-  if (!['low','standard'].includes(contract.verification.risk_tier) || contract.environment.data.classification === 'sensitive') throw Error('Use the established assurance workflow for high-risk or sensitive tasks');
+  assertTaskRisk(project.policy, contract, brief.actor);
   if (contract.authorization.approved_by !== brief.actor.principal_id) throw Error('Brief actor must be its registered approving Principal');
   const refs = [...new Set([contract.authorization.approval_ref,...contract.environment.data.policy_refs,...contract.skills])];
   const pins = [];

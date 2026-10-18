@@ -6,6 +6,7 @@ import { withProjectMutationLock } from "./workkeel-lock.mjs";
 import { readTaskContractInput, readTaskFile, validateTaskContract } from "./task-contract.mjs";
 import { assertActor, assertApprover, readTaskProject, safeDirectory, existsEntry, readLegacyDigest, readNativeGit } from "./workkeel-project.mjs";
 import {loadTaskRequirements, assertRequirementOutcomes} from './workkeel-requirements.mjs';
+import { assertIndependentApproval, assertTaskRisk, candidateRisk, elevatedRisk, isTeamPolicy, maxRisk } from "./workkeel-risk.mjs";
 
 const ID = /^[A-Za-z0-9][A-Za-z0-9._-]{0,95}$/;
 const SHA = /^(?:[a-f0-9]{40}|[a-f0-9]{64})$/;
@@ -17,6 +18,9 @@ const fileRef = id => {
 const sameActor = (a, b) => a?.agent_id === b?.agent_id && a?.principal_id === b?.principal_id;
 const digest = value => sha256(formatJson(value));
 const bodyHash = item => digest(Object.fromEntries(Object.entries(item).filter(([key]) => key !== "history")));
+const initiator = item => item.history[0]?.actor ?? null;
+/** The contract tier, raised by any escalation recorded when the candidate was delivered. */
+const effectiveRisk = item => maxRisk(item.contract.verification.risk_tier, item.delivery?.risk?.tier ?? "low");
 const under = (file, root) => root === "." || file === root || file.startsWith(`${root}/`);
 function assertKeys(value, keys) {
   if (!value || typeof value !== "object" || Array.isArray(value) || Object.keys(value).some(k => !keys.includes(k))) throw new Error("Unknown request fields are not permitted");
@@ -115,7 +119,8 @@ export async function listTaskItems(target, { isolateErrors = false } = {}) {
     } else {
       assertRecord(item, id);
       items.push({ id, state: item.state, title: item.contract.goal, mode: "task-first", version: item.version,
-        actor: item.claim?.actor ?? null, candidate_revision: item.delivery?.revision ?? null });
+        actor: item.claim?.actor ?? null, candidate_revision: item.delivery?.revision ?? null,
+        risk_tier: effectiveRisk(item), risk_escalated: Boolean(item.delivery?.risk) });
     }
     } catch (error) {
       if (!isolateErrors) throw error;
@@ -125,13 +130,13 @@ export async function listTaskItems(target, { isolateErrors = false } = {}) {
   return items;
 }
 
-function assertContractPolicy(contract, policy) {
+function assertContractPolicy(contract, policy, creator) {
   const valid = validateTaskContract(contract);
   if (!valid.contract_complete) throw new Error(`Incomplete task contract: ${[...valid.errors, ...valid.incomplete_fields].join("; ")}`);
   assertActor(policy, contract.actor);
   if ((policy.requirements_refs ?? []).some(ref => !contract.environment.data.policy_refs.includes(ref))) throw Error('Required project decision source omitted from task');
   if (!policy.approvers.includes(contract.authorization.approved_by)) throw new Error("Task approval must name a registered approving Principal");
-  if (!["low", "standard"].includes(contract.verification.risk_tier) || contract.environment.data.classification === "sensitive") throw new Error("High-risk or sensitive work requires the established assurance workflow; task-first v1 cannot downgrade it");
+  assertTaskRisk(policy, contract, creator);
   if (!["distinct-agent", "distinct-principal"].includes(contract.verification.separation) ||
       policy.review_separation === "distinct-principal" && contract.verification.separation !== "distinct-principal") throw new Error("Task review must meet the project separation policy");
 }
@@ -152,9 +157,9 @@ async function dependencies(target, item, seen = new Set()) {
   if (item.dependency_pins && digest(pins) !== digest(item.dependency_pins)) throw new Error("Accepted dependency snapshot changed");
   return pins;
 }
-async function context(target, item, project) {
+async function context(target, item, project, creator = initiator(item)) {
   if (item.policy_sha256 !== digest(project.policy)) throw new Error("Task policy changed after approval");
-  assertContractPolicy(item.contract, project.policy);
+  assertContractPolicy(item.contract, project.policy, creator);
   await assertPins(target, item.authority_pins);
   await assertPins(target, retainedReworkEvidence(item));
   await loadTaskRequirements(target, item.contract, {requiredRefs: project.policy.requirements_refs ?? []});
@@ -214,8 +219,10 @@ export async function createNativeTask(targetInput, contract, request, { expecte
       if (digest(existing.contract) !== digest(contract) || !replay(existing, "create", request)) throw new Error("Task ID already exists");
       return result(existing, true);
     }
-    assertContractPolicy(contract, project.policy);
-    if (contract.authorization.approved_by !== request.actor.principal_id || contract.state !== "intake" || contract.legacy !== null ||
+    assertContractPolicy(contract, project.policy, request.actor);
+    // Elevated team work is approved by another Principal; everything else by its creator.
+    const delegated = elevatedRisk(contract.verification.risk_tier) && isTeamPolicy(project.policy);
+    if (!delegated && contract.authorization.approved_by !== request.actor.principal_id || contract.state !== "intake" || contract.legacy !== null ||
         contract.handoff !== null || contract.acceptance.evidence.length || contract.verification.implementer !== null ||
         contract.verification.reviewer !== null || contract.verification.candidate_revision !== null) throw new Error("New task must start at intake without fabricated progress or legacy grants");
     // Existing-only immutable dependencies make cycles impossible in supported writes.
@@ -226,7 +233,7 @@ export async function createNativeTask(targetInput, contract, request, { expecte
       authority_pins: await evidence(target, authorityRefs), claim: null, base_revision: null,
       dependency_pins: null, delivery: null, review: null, closeout: null, attempts: [], history: [] };
     if (expectedAuthorityPins !== null && digest(item.authority_pins) !== digest(expectedAuthorityPins)) throw new Error('Intake authority changed; inspect a fresh preview');
-    await context(target, item, project);
+    await context(target, item, project, request.actor);
     append(item, "create", request);
     if (Buffer.byteLength(formatJson(item)) > 1024 * 1024) throw new Error("New task exceeds the bounded record size");
     await safeDirectory(target, ".ai-org/work-items", { create: true });
@@ -269,10 +276,13 @@ async function candidateFiles(target, item, revision, { handoff = false, action 
   await exactRevision(target, revision);
   await git(target, ["merge-base", "--is-ancestor", item.base_revision, revision]);
   if (handoff && (await git(target, ["rev-parse", "HEAD"])).trim() !== revision) throw new Error("Handoff candidate must be the current commit");
-  const issues = [], administrative = [];
+  const issues = [], administrative = [], product = [];
   const changed = (await git(target, ["diff", "--no-renames", "--name-only", "-z", item.base_revision, revision, "--"])).split("\0").filter(Boolean);
-  for (const file of changed) if (!item.contract.environment.write_paths.some(root => under(file, root)) &&
-    !await administrativeFile(target, item, file, action, request)) issues.push({path:file, code:'outside-write-scope', next_action:'Preserve the candidate; obtain approval for the actual scope before a new delivery.'});
+  for (const file of changed) {
+    if (await administrativeFile(target, item, file, action, request)) continue;
+    product.push(file);
+    if (!item.contract.environment.write_paths.some(root => under(file, root))) issues.push({path:file, code:'outside-write-scope', next_action:'Preserve the candidate; obtain approval for the actual scope before a new delivery.'});
+  }
   const drift = [...(await git(target, ["diff", "--no-renames", "--name-only", "-z", revision, "--"])).split("\0"),
     ...(await git(target, ["ls-files", "--others", "--exclude-standard", "-z"])).split("\0")].filter(Boolean);
   for (const file of new Set(drift)) {
@@ -290,11 +300,12 @@ async function candidateFiles(target, item, revision, { handoff = false, action 
       issues.push({path:file, code:'tracked-artifact-changed', next_action:'Keep the recorded candidate evidence immutable; save later observations in a new file.'});
     else administrative.push(file);
   }
-  return {issues, administrative};
+  return {issues, administrative, product};
 }
 async function assertCandidate(target, item, revision, options = {}) {
-  const {issues} = await candidateFiles(target,item,revision,options);
-  if (issues.length) throw new Error(`${CANDIDATE_MESSAGES[issues[0].code]}: ${JSON.stringify(issues[0].path)}`);
+  const out = await candidateFiles(target,item,revision,options);
+  if (out.issues.length) throw new Error(`${CANDIDATE_MESSAGES[out.issues[0].code]}: ${JSON.stringify(out.issues[0].path)}`);
+  return out.product;
 }
 
 /** Read-only file diagnostics, not a rehearsal of authority, review or acceptance. */
@@ -321,10 +332,14 @@ async function assertDelivery(target, item, action, request) {
   await assertPins(target, item.delivery.evidence);
   await dependencies(target, item);
 }
-function assertSeparation(item, actor) {
+function assertSeparation(item, actor, policy) {
   const implementer = item.delivery.implementer;
   if (actor.agent_id === implementer.agent_id || item.contract.verification.separation === "distinct-principal" &&
       actor.principal_id === implementer.principal_id) throw new Error("Reviewer identity does not meet separation policy");
+  if (!elevatedRisk(effectiveRisk(item))) return;
+  if (isTeamPolicy(policy) && actor.principal_id === implementer.principal_id) throw new Error("High-risk team review requires a Principal other than the implementer");
+  const family = who => policy.agents.find(a => a.agent_id === who.agent_id)?.model_family;
+  if (!family(actor) || !family(implementer) || family(actor) === family(implementer)) throw new Error("High-risk review requires a registered reviewer Agent from a different model family");
 }
 
 /** Read-only recheck for an approved review retry. It grants no claim, review or acceptance. */
@@ -337,10 +352,24 @@ export async function assertReviewRecoveryContext(target, id, { approver, review
   if (item.review) throw new Error(item.review.judgment === "fail" ? "An authored failing review uses ordinary rework" : "Task already has an authored review");
   if (item.state !== "test" || !item.delivery) throw new Error("Review recovery requires a delivered candidate awaiting review");
   if (revision !== item.delivery.revision) throw new Error("Review recovery must use the exact delivered candidate");
-  assertSeparation(item, reviewer);
+  assertSeparation(item, reviewer, project.policy);
   await context(target, item, project);
   await assertDelivery(target, item, "review", null);
   return item;
+}
+/** High and critical acceptance is the approving Principal's own act, never the implementer's. */
+async function assertElevatedClose(target, item, policy, actor) {
+  const tier = effectiveRisk(item);
+  if (!elevatedRisk(tier)) return;
+  assertIndependentApproval(policy, item.contract, initiator(item));
+  if (actor.principal_id !== item.contract.authorization.approved_by) throw new Error("High-risk close must be performed by the task's approving Principal");
+  if (isTeamPolicy(policy) && actor.principal_id === item.delivery.implementer.principal_id) throw new Error("High-risk team close cannot be performed by the implementer's Principal");
+  if (tier !== "critical") return;
+  if (!item.delivery.rollback) throw new Error("Critical close requires the rollback plan delivered at handoff");
+  const ref = item.contract.authorization.approval_ref;
+  if (!(await git(target, ["ls-tree", "--name-only", item.delivery.revision, "--", `:(literal)${ref}`])).trim() ||
+      (await git(target, ["diff", "--no-renames", "--name-only", "-z", item.delivery.revision, "--", `:(literal)${ref}`])).trim())
+    throw new Error("Critical close requires the approval record committed unchanged in the candidate");
 }
 async function recoveryChain(target, item) {
   const { readReviewRecoveryChain } = await import("./workkeel-review-recovery.mjs");
@@ -349,7 +378,7 @@ async function recoveryChain(target, item) {
 
 const FIELDS = {
   claim: ["base_revision"], release: ["claim_id", "summary"],
-  handoff: ["claim_id", "revision", "summary", "evidence", "unresolved"],
+  handoff: ["claim_id", "revision", "summary", "evidence", "unresolved", "rollback"],
   review: ["revision", "judgment", "summary", "evidence", "review_attempt_id"],
   rework: ["summary", "mode"], close: ["revision", "summary", "rollback", "evidence"], cancel: ["summary", "evidence"]
 };
@@ -389,16 +418,23 @@ export async function mutateNativeTask(targetInput, id, action, request) {
         await assertRequirementOutcomes(target, item, request, 'delivery');
         const pins = await evidence(target, request.evidence);
         const evidenceOnly = await evidenceRework(target, item, request.revision, pins);
-        await assertCandidate(target, item, request.revision, { handoff: true, action, request });
+        const changed = await assertCandidate(target, item, request.revision, { handoff: true, action, request });
         await dependencies(target, item);
+        // Actually changed paths can raise, never lower, the approved tier.
+        const declared = item.contract.verification.risk_tier, observed = candidateRisk(project.policy, changed);
+        const tier = maxRisk(declared, observed.tier);
+        if (tier === "critical") assertText(request.rollback);
+        else if (request.rollback !== undefined) assertText(request.rollback);
         item.delivery = { revision: request.revision, summary: request.summary, implementer: request.actor,
-          claim_id: item.claim.id, evidence: pins, ...(evidenceOnly ? { evidence_rework: evidenceOnly } : {}) };
+          claim_id: item.claim.id, evidence: pins, ...(evidenceOnly ? { evidence_rework: evidenceOnly } : {}),
+          ...(request.rollback !== undefined ? { rollback: request.rollback } : {}),
+          ...(tier !== declared ? { risk: { tier, escalated_from: declared, paths: observed.paths } } : {}) };
         item.claim = null; item.state = "test";
       }
     } else if (action === "review") {
       if (item.state !== "test" || item.review) throw new Error("Task is not awaiting a review");
       if (!["pass", "fail"].includes(request.judgment)) throw new Error("Review requires pass or fail");
-      assertSeparation(item, request.actor);
+      assertSeparation(item, request.actor, project.policy);
       if (request.revision !== item.delivery.revision) throw new Error("Review must match the exact delivered candidate");
       // After a recovery, only the current completed attempt's reviewer can author
       // the verdict; a predecessor's late result is never accepted.
@@ -408,6 +444,8 @@ export async function mutateNativeTask(targetInput, id, action, request) {
           attempt.value.revision !== request.revision)) throw new Error("Review recovery attempt is not completed by this reviewer for this candidate");
       await assertDelivery(target, item, action, request); assertText(request.summary);
       if (request.judgment === 'pass') {
+        const delivered = new Set(item.delivery.evidence.map(p => p.path));
+        if (elevatedRisk(effectiveRisk(item)) && !request.evidence.some(ref => !delivered.has(ref))) throw new Error("High-risk review requires the reviewer's own review report as evidence");
         await assertRequirementOutcomes(target, item, {revision:item.delivery.revision,actor:item.delivery.implementer,evidence:item.delivery.evidence.map(p=>p.path)}, 'delivery');
         await assertRequirementOutcomes(target, item, request, 'review');
       }
@@ -433,6 +471,7 @@ export async function mutateNativeTask(targetInput, id, action, request) {
           attempt.result?.value.status !== "completed" || attempt.result.sha256 !== reviewed.attempt_result_sha256 ||
           chain.sha256 !== reviewed.recovery_chain_sha256)) throw new Error("Review recovery chain changed after the authored review");
       await assertDelivery(target, item, action, request); await assertPins(target, item.review.evidence);
+      await assertElevatedClose(target, item, project.policy, request.actor);
       await assertRequirementOutcomes(target, item, {revision: item.delivery.revision, actor: item.delivery.implementer, evidence: item.delivery.evidence.map(p => p.path)}, 'delivery');
       await assertRequirementOutcomes(target, item, {revision: item.review.revision, actor: item.review.actor, judgment: item.review.judgment, evidence: item.review.evidence.map(p => p.path)}, 'review');
       assertText(request.summary); assertText(request.rollback);

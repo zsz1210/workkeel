@@ -7,6 +7,14 @@ repository migration does not republish old tags, archives or npm versions.
 
 ## Unreleased source
 
+- Native tasks now accept high, critical and sensitive work. Project policy
+  `risk_paths` globs and data classification set a minimum tier that authors can
+  only raise; a candidate that changes riskier paths is escalated at handoff.
+  High and critical review needs another registered model family and the
+  reviewer's own report; in teams, a different Principal reviews and the
+  approving Principal is neither the implementer nor the initiator. Critical
+  work also needs a delivered rollback plan and a committed approval record.
+
 - Adds a desktop workspace for registered projects and repositories, controlled
   model settings, exact-version integration checks and detailed recorded execution.
 - Resolves independently inherited/automatic/fixed model, reasoning and service
