@@ -104,6 +104,25 @@ test("slashes after parentheses, increments and property keywords are resolved, 
   for (const [source, expected] of Object.entries(cases)) assert.deepEqual(dynamicImports(source), expected, source);
 });
 
+test("review repro: division after increments and property keywords cannot hide an escaped import", async t => {
+  const repros = [
+    'let x = 0;\nx++ / 2; import(".\\x2fproject.mjs"); const b = 6 / 2;\n',
+    'let x = 0;\nx-- / 2; import(".\\x2fproject.mjs"); const b = 6 / 2;\n',
+    'const o = { return: 4 };\no.return / 2; import(".\\x2fproject.mjs"); const b = 6 / 2;\n'
+  ];
+  for (const source of repros) {
+    assert.deepEqual(readImports(source), [{ specifier: "./project.mjs", dynamic: true }], source);
+    const root = await fixture(t, { "bin/workkeel.mjs": entry, "src/workkeel-cli.mjs": source });
+    assert.deepEqual(checkImportBoundary(root).errors, ["src/workkeel-cli.mjs -> src/project.mjs: native code must not import Temple modules"], source);
+  }
+});
+
+test("slashes after keywords follow the reserved-word rules; a slash after `of` is ambiguous", () => {
+  assert.deepEqual(dynamicImports('export default /"/; import("./a.mjs");'), ["./a.mjs"]);
+  assert.deepEqual(dynamicImports('class A extends /"/.constructor {}\nimport("./b.mjs");'), ["./b.mjs"]);
+  assert.throws(() => dynamicImports('const of = 4;\nof / 2; import("./c.mjs");'), /Ambiguous "\/" after "of" at line 2, column 4/);
+});
+
 test("a method named import is conservatively treated as a computed import", async t => {
   const root = await fixture(t, { "bin/workkeel.mjs": entry, "src/workkeel-cli.mjs": "export const loader = { import(name) { return name; } };\n" });
   assert.deepEqual(checkImportBoundary(root).errors, ["src/workkeel-cli.mjs: computed import() cannot be checked"]);

@@ -64,7 +64,11 @@ export function readEscape(source, index) {
   return { value: next, end: index + 2 };
 }
 
-const REGEX_AFTER_WORD = new Set(["return", "typeof", "instanceof", "in", "of", "new", "delete", "void", "throw", "case", "do", "else", "yield", "await"]);
+// Reserved words after which "/" starts a regular expression. Any other word is
+// an identifier or value, so "/" is division. `of` is not reserved: `of / 2`
+// may be a variable, so a slash after it is ambiguous.
+const REGEX_AFTER_WORD = new Set(["return", "typeof", "instanceof", "in", "new", "delete", "void", "throw", "case", "do", "else", "yield", "await", "default", "extends"]);
+const AMBIGUOUS_BEFORE_SLASH = new Set(["of"]);
 
 /** Tokenizes JavaScript just enough to find `import(...)` calls outside comments, strings and regexes. */
 export function tokenize(source) {
@@ -81,7 +85,11 @@ export function tokenize(source) {
   const regexAllowed = () => {
     const token = previous();
     if (!token) return true;
-    if (token.type === "word") return !token.property && REGEX_AFTER_WORD.has(token.value);
+    if (token.type === "word") {
+      if (token.property) return false;
+      if (AMBIGUOUS_BEFORE_SLASH.has(token.value)) throw new Error(`Ambiguous "/" after "${token.value}" at ${location()}: it may be division or the start of a regular expression; wrap the expression in parentheses or rename the variable`);
+      return REGEX_AFTER_WORD.has(token.value);
+    }
     if (token.type !== "punct") return false;
     if (token.value === ")") return token.closesHead;
     if (token.value === "}") throw new Error(`Ambiguous "/" after "}" at ${location()}: it may be division or the start of a regular expression; wrap the expression in parentheses or move the regular expression to its own statement`);
