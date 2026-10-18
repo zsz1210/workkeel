@@ -416,6 +416,13 @@ try{
     assert.ok((await page.locator('.segments').first().boundingBox()).width<=120);
     await page.locator('.learning-row').nth(2).click();{const detail=await page.locator('#detail-content').innerText();assert.match(detail,/已採用/);assert.match(detail,/轉為 Skill 的條件/);}
     await page.keyboard.press('Escape');
+    assert.equal(await page.locator('.legacy-learning-notice').count(),0);
+    // A leftover pre-0.2 folder is refused with its path and the owner's archive action.
+    const legacyDir=path.join(root,'.ai-org/learning/lessons');await fs.mkdir(legacyDir,{recursive:true});await fs.writeFile(path.join(legacyDir,'LESSON-0001.md'),'# Old\n');
+    await page.locator('#nav-board').click();await page.locator('#nav-learning').click();
+    const notice=page.locator('.legacy-learning-notice');await notice.waitFor();
+    assert.match(await notice.innerText(),/\.ai-org\/learning\/lessons/);assert.match(await notice.innerText(),/自行封存/);
+    await fs.rm(legacyDir,{recursive:true,force:true});
    }
    if(name==='settings'){
     const info=page.getByRole('button',{name:'審查安排',exact:true});const before=await page.locator('.settings-grid').boundingBox();

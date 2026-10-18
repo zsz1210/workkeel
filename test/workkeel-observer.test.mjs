@@ -61,3 +61,12 @@ test('pre-0.2 learning records are reported as unsupported and never shown',asyn
  const error=library.errors.find(entry=>entry.code==='legacy-learning-unsupported');
  assert.equal(error?.path,'.ai-org/learning/index.json');assert.match(error.next_action,/archive/i);
 });
+test('leftover pre-0.2 lesson and practice folders are reported without an index',async t=>{
+ for(const folder of ['lessons','practices']){
+  const root=await createObserverFixture();t.after(()=>fs.rm(root,{recursive:true,force:true}));
+  await fs.mkdir(path.join(root,'.ai-org/learning',folder),{recursive:true});
+  await fs.writeFile(path.join(root,'.ai-org/learning',folder,'OLD-0001.md'),'# Old\n');
+  const errors=(await readMonitorLibrary(root)).errors.filter(entry=>entry.code==='legacy-learning-unsupported');
+  assert.deepEqual(errors.map(entry=>entry.path),['.ai-org/learning/'+folder],folder);
+ }
+});

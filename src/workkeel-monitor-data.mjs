@@ -109,7 +109,7 @@ export async function readMonitorLibrary(root,{cache=createLibraryCache(),query=
   }
   // Pre-0.2 Lesson/Practice/proposal stores are not read or converted; their
   // owners archive them. Only .ai-org/learning/native is current learning.
-  for(const ref of ['.ai-org/learning/index.json','.ai-org/learning/proposals'])if(await existsEntry(root,ref))
+  for(const ref of ['.ai-org/learning/index.json','.ai-org/learning/proposals','.ai-org/learning/lessons','.ai-org/learning/practices'])if(await existsEntry(root,ref))
     errors.push({path:ref,code:'legacy-learning-unsupported',next_action:'Archive these pre-0.2 learning records outside the project; Workkeel 0.2 reads only .ai-org/learning/native and does not migrate them.'});
   let nativeTotal=0;
   try {
