@@ -38,6 +38,32 @@ function staticSpecifiers(sources) {
   return JSON.parse(result.stdout);
 }
 
+const SIMPLE_ESCAPES = { b: "\b", f: "\f", n: "\n", r: "\r", t: "\t", v: "\v" };
+
+/** Decodes the escape at `index` (the backslash) as a cooked string or template value does. */
+export function readEscape(source, index) {
+  const next = source[index + 1];
+  if (next === undefined) throw new Error("Unterminated escape sequence");
+  if (next === "\r") return { value: "", end: index + (source[index + 2] === "\n" ? 3 : 2) };
+  if (["\n", "\u2028", "\u2029"].includes(next)) return { value: "", end: index + 2 };
+  if (Object.hasOwn(SIMPLE_ESCAPES, next)) return { value: SIMPLE_ESCAPES[next], end: index + 2 };
+  if (next === "x") {
+    const hex = /^[0-9a-fA-F]{2}/.exec(source.slice(index + 2, index + 4));
+    if (!hex) throw new Error("Invalid hexadecimal escape");
+    return { value: String.fromCodePoint(parseInt(hex[0], 16)), end: index + 4 };
+  }
+  if (next === "u") {
+    const braced = /^\{([0-9a-fA-F]+)\}/.exec(source.slice(index + 2, index + 16));
+    const code = braced ? parseInt(braced[1], 16) : /^[0-9a-fA-F]{4}/.test(source.slice(index + 2, index + 6)) ? parseInt(source.slice(index + 2, index + 6), 16) : NaN;
+    if (!Number.isInteger(code) || code > 0x10ffff) throw new Error("Invalid Unicode escape");
+    return { value: String.fromCodePoint(code), end: index + 2 + (braced ? braced[0].length : 4) };
+  }
+  // Modules are strict: \0 is allowed only before a non-digit; other digits are legacy octal.
+  if (next === "0" && !/[0-9]/.test(source[index + 2] ?? "")) return { value: "\0", end: index + 2 };
+  if (/[0-9]/.test(next)) throw new Error("Octal escapes are not allowed in modules");
+  return { value: next, end: index + 2 };
+}
+
 const REGEX_AFTER_WORD = new Set(["return", "typeof", "instanceof", "in", "of", "new", "delete", "void", "throw", "case", "do", "else", "yield", "await"]);
 
 /** Tokenizes JavaScript just enough to find `import(...)` calls outside comments, strings and regexes. */
@@ -57,7 +83,7 @@ export function tokenize(source) {
     let value = "";
     while (index < source.length) {
       const char = source[index];
-      if (char === "\\") { value += source.slice(index, index + 2); index += 2; continue; }
+      if (char === "\\") { const escape = readEscape(source, index); value += escape.value; index = escape.end; continue; }
       if (char === "`") { index += 1; return { value, closed: true }; }
       if (char === "$" && source[index + 1] === "{") { index += 2; return { value, closed: false }; }
       value += char; index += 1;
@@ -76,7 +102,9 @@ export function tokenize(source) {
     if (char === "'" || char === '"') {
       let value = ""; index += 1;
       while (index < source.length && source[index] !== char) {
-        if (source[index] === "\\") { value += source[index + 1]; index += 2; } else { value += source[index]; index += 1; }
+        if (source[index] === "\\") { const escape = readEscape(source, index); value += escape.value; index = escape.end; }
+        else if (source[index] === "\n" || source[index] === "\r") throw new Error("Unterminated string literal");
+        else { value += source[index]; index += 1; }
       }
       if (index >= source.length) throw new Error("Unterminated string literal");
       index += 1; tokens.push({ type: "string", value }); continue;
@@ -128,13 +156,8 @@ export function dynamicImports(source) {
     const token = tokens[i], before = tokens[i - 1];
     if (token.type !== "word" || token.value !== "import" || tokens[i + 1]?.value !== "(") continue;
     if (before?.type === "punct" && [".", "?."].includes(before.value)) continue;
-    // `import(...) {` is a method definition named import, never a call.
-    let depth = 0, close = i + 1;
-    for (; close < tokens.length; close += 1) {
-      if (tokens[close].value === "(") depth += 1;
-      else if (tokens[close].value === ")" && --depth === 0) break;
-    }
-    if (tokens[close + 1]?.value === "{") continue;
+    // Conservative: a method named import also counts as a call, so it can
+    // never be confused with a call that is followed by a block.
     const argument = tokens[i + 2], after = tokens[i + 3];
     const literal = argument?.type === "string" && [")", ","].includes(after?.value);
     calls.push(literal ? argument.value : null);

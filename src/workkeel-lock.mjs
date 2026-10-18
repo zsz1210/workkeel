@@ -20,7 +20,7 @@ function wait(milliseconds) {
 // Per-checkout recovery journals that Temple writers leave behind on interruption.
 async function legacyRecoveryJournal(target, kind) {
   const git = spawnSync("git", ["-C", target, "rev-parse", "--absolute-git-dir"], { encoding: "utf8" });
-  if (git.status !== 0) return null;
+  if (git.status !== 0) return { present: false };
   const root = await fs.realpath(target);
   let directory = await fs.realpath(git.stdout.trim());
   for (const part of ["temple", kind, sha256(root).slice(0, 20)]) {
@@ -38,25 +38,27 @@ async function legacyRecoveryJournal(target, kind) {
     if (error.code === "ENOENT") return null;
     throw error;
   });
-  if (!stat) return null;
+  if (!stat) return { present: false };
   if (!stat.isFile() || stat.isSymbolicLink() || kind === "reconciliation" && stat.size > MAX_RECONCILIATION_JOURNAL_BYTES) {
     throw new Error(kind === "lean-delivery" ? "Unsafe Lean delivery journal" : "Unsafe reconciliation journal");
   }
-  return JSON.parse(await fs.readFile(file, "utf8"));
+  // Any existing journal blocks mutation; unreadable or invalid content included.
+  return { present: true, journal: JSON.parse(await fs.readFile(file, "utf8")) };
 }
 
 /** Refuses to mutate while an interrupted legacy delivery or reconciliation awaits recovery. */
 export async function assertNoPendingLegacyRecovery(target) {
   const lean = await legacyRecoveryJournal(target, "lean-delivery");
-  if (lean) {
-    const error = new Error(`Lean delivery recovery is pending (${lean.operation_key ?? "invalid journal"}); retry the identical work-item ${lean.request?.position ? "finish" : "deliver"} request before other mutations`);
+  if (lean.present) {
+    const journal = lean.journal;
+    const error = new Error(`Lean delivery recovery is pending (${journal?.operation_key ?? "invalid journal"}); retry the identical work-item ${journal?.request?.position ? "finish" : "deliver"} request before other mutations`);
     error.code = "PENDING_RECOVERY";
     error.mutationStatus = "pending_recovery";
     throw error;
   }
   const reconciliation = await legacyRecoveryJournal(target, "reconciliation");
-  if (reconciliation) {
-    const error = new Error(`Reconciliation ${reconciliation.transaction_id ?? "unknown"} needs recovery; inspect it and roll back before another mutation`);
+  if (reconciliation.present) {
+    const error = new Error(`Reconciliation ${reconciliation.journal?.transaction_id ?? "unknown"} needs recovery; inspect it and roll back before another mutation`);
     error.code = "RECONCILIATION_PENDING_RECOVERY";
     throw error;
   }

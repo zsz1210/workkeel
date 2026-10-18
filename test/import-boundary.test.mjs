@@ -45,7 +45,13 @@ test("legal syntax variations cannot hide a Temple import", async t => {
     "template literal specifier": "await import(`./project.mjs`);\n",
     "dynamic import with options": 'await import("./project.mjs", { with: {} });\n',
     "re-export": 'export * from "./project.mjs";\n',
-    "side-effect import with single quotes": "import './project.mjs';\n"
+    "side-effect import with single quotes": "import './project.mjs';\n",
+    "unicode escape in dynamic specifier": 'await import("\\u002e/project.mjs");\n',
+    "braced unicode and hex escapes": "await import('\\u{2e}\\x2fproject.mjs');\n",
+    "escapes in a template specifier": "await import(`\\x2e/\\u0070roject.mjs`);\n",
+    "line continuation in dynamic specifier": 'await import("./pro\\\nject.mjs");\n',
+    "call followed by a block on the next line": 'import("./project.mjs")\n{}\n',
+    "call followed by a block on the same line": 'if (true) import("./project.mjs"); {}\n'
   };
   for (const [label, source] of Object.entries(hidden)) {
     const root = await fixture(t, { "bin/workkeel.mjs": entry, "src/workkeel-cli.mjs": source });
@@ -60,12 +66,25 @@ test("import-like text in comments, strings and regexes is not an import", () =>
     'const text = "import(\'./project.mjs\')";',
     "const page = `<script>await import('/client.mjs')</script>`;",
     "const pattern = /import\\(\"\\.\\/project\\.mjs\"\\)/g;",
-    'const loader = { import(name) { return name; } };',
     'loader.import("./project.mjs");',
     "const value = 4 / 2 / 1;"
   ].join("\n");
   assert.deepEqual(dynamicImports(source), []);
   assert.deepEqual(readImports(source), []);
+});
+
+test("string and template escapes decode exactly as JavaScript evaluates them", () => {
+  const literals = [String.raw`"\u002e/a.mjs"`, String.raw`'\x2e\x2fb.mjs'`, String.raw`"\u{1F600}\u{2e}"`, String.raw`"\t\n\r\b\f\v\0x"`,
+    String.raw`"\q\'\"\\"`, "\"a\\\nb\"", "\"a\\\r\nb\"", "`\\x2e/t\\u0065mplate.mjs`", "`line\\\ncontinued`"];
+  for (const literal of literals) assert.deepEqual(dynamicImports(`import(${literal})`), [Function(`"use strict"; return ${literal};`)()], literal);
+  assert.throws(() => dynamicImports(String.raw`import("\01.mjs")`), /Octal/);
+  assert.throws(() => dynamicImports(String.raw`import("\u{110000}")`), /Unicode/);
+  assert.throws(() => dynamicImports('import("unterminated\n")'), /Unterminated/);
+});
+
+test("a method named import is conservatively treated as a computed import", async t => {
+  const root = await fixture(t, { "bin/workkeel.mjs": entry, "src/workkeel-cli.mjs": "export const loader = { import(name) { return name; } };\n" });
+  assert.deepEqual(checkImportBoundary(root).errors, ["src/workkeel-cli.mjs: computed import() cannot be checked"]);
 });
 
 test("computed imports and a static legacy bridge are rejected in native code", async t => {

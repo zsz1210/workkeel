@@ -67,6 +67,21 @@ test("native mutations still refuse pending Lean delivery and reconciliation rec
   await assert.rejects(withProjectMutationLock(root, async () => assert.fail("entered")), { code: "RECONCILIATION_PENDING_RECOVERY", message: /tx-1/ });
 });
 
+test("an existing journal with null, falsy or invalid content still blocks mutation", async t => {
+  const root = await repository(t);
+  for (const [kind, code] of [["lean-delivery", "PENDING_RECOVERY"], ["reconciliation", "RECONCILIATION_PENDING_RECOVERY"]]) {
+    for (const content of ["null", "false", "0", '""', "[]"]) {
+      const file = await pendingJournal(root, kind, content);
+      await assert.rejects(withProjectMutationLock(root, async () => assert.fail("entered")), { code }, `${kind} ${content}`);
+      await fs.rm(file);
+    }
+    const file = await pendingJournal(root, kind, "{not json");
+    await assert.rejects(withProjectMutationLock(root, async () => assert.fail("entered")), SyntaxError, `${kind} invalid JSON`);
+    await fs.rm(file);
+  }
+  assert.equal(await withProjectMutationLock(root, async () => "clear"), "clear");
+});
+
 test("migration apply refuses to pin history while a legacy recovery is pending", async t => {
   const root = await repository(t);
   await write(root, "temple.lock", { schema_version: "temple.lock/v1" });
