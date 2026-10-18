@@ -16,7 +16,7 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
 // Shared modules native code may load besides src/workkeel-*.
 export const NATIVE_SHARED_MODULES = new Set([
-  "src/files.mjs", "src/ids.mjs", "src/task-contract.mjs", "src/headroom-adapter.mjs"
+  "src/files.mjs", "src/task-contract.mjs", "src/headroom-adapter.mjs"
 ]);
 // Modules the monitor serves to the browser; their "/name.mjs" imports are served asset URLs.
 export const BROWSER_MODULES = new Set(["src/workkeel-monitor-client.mjs"]);

@@ -57,7 +57,7 @@ test("the repository's native modules reach only native and shared modules", () 
   const result = checkImportBoundary();
   assert.deepEqual(result.errors, []);
   assert.ok(result.entries.includes("src/workkeel-claude-review.mjs") && result.entries.includes("src/workkeel-dispatch-classifier.mjs"));
-  assert.ok(result.reached.every(file => file === "bin/workkeel.mjs" || /^src\/(?:workkeel-[^/]+|files|ids|task-contract|headroom-adapter)\.mjs$/.test(file)));
+  assert.ok(result.reached.every(file => file === "bin/workkeel.mjs" || /^src\/(?:workkeel-[^/]+|files|task-contract|headroom-adapter)\.mjs$/.test(file)));
 });
 
 test("native imports of non-native modules are rejected, including transitive ones", async t => {

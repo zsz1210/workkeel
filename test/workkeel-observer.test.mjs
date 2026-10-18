@@ -50,3 +50,14 @@ test('all observer APIs retain authentication, read-only methods and no external
  const changed=await (await fetch(url.origin+'/api/snapshot',{headers})).json();assert.equal(changed.tasks.find(t=>t.id==='WK-working').settings.execution_policy.source_status,'changed');
  assert.equal((await fetch(url.origin+'/api/document?id='+documentId('private.md'),{headers})).status,503);
 });
+test('pre-0.2 learning records are reported as unsupported and never shown',async t=>{
+ const root=await createObserverFixture();t.after(()=>fs.rm(root,{recursive:true,force:true}));
+ const legacy={schema_version:'ai-org.learning-index/v1',entries:[{id:'LESSON-0001',kind:'lesson',title:'Old lesson',summary:'Old',status:'validated',confidence:'high',tags:[],applies_to:[],source_work_items:['WI-0001'],path:'.ai-org/learning/lessons/LESSON-0001.md',updated_at:'2026-01-01T00:00:00Z'}]};
+ await fs.mkdir(path.join(root,'.ai-org/learning/lessons'),{recursive:true});
+ await fs.writeFile(path.join(root,'.ai-org/learning/index.json'),JSON.stringify(legacy));
+ await fs.writeFile(path.join(root,'.ai-org/learning/lessons/LESSON-0001.md'),'# Old lesson\n');
+ const library=await readMonitorLibrary(root);
+ assert.ok(library.learning.every(entry=>entry.native===true),'only native learning is listed');
+ const error=library.errors.find(entry=>entry.code==='legacy-learning-unsupported');
+ assert.equal(error?.path,'.ai-org/learning/index.json');assert.match(error.next_action,/archive/i);
+});

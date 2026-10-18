@@ -148,3 +148,9 @@ test("contracts no longer accept a legacy projection field", () => {
   assert.equal(TASK_CONTRACT_SCHEMA, "workkeel.task-contract/v2");
   assert.equal(validateTaskContract({ ...contract(), legacy: null }).valid, false);
 });
+
+test("an unsupported contract version names the received and supported versions", () => {
+  const result = validateTaskContract({ ...contract(), schema_version: "workkeel.task-contract/v1" });
+  assert.equal(result.valid, false);
+  assert.ok(result.errors.includes("/schema_version workkeel.task-contract/v1 is unsupported; this Workkeel reads workkeel.task-contract/v2"), result.errors.join("; "));
+});

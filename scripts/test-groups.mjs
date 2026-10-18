@@ -9,7 +9,7 @@ export const fastFiles = [
   "release-package", "skill-policy", "test-groups", "workkeel-visuals"
 ].map((name) => `test/${name}.test.mjs`);
 export const dailyFiles = [...new Set([...fastFiles, ...[
-  "json-rpc-process-cleanup", "json-rpc-process-protocol", "task-contract", "workkeel-daily-entry",
+  "json-rpc-process-cleanup", "json-rpc-process-protocol", "task-contract", "workkeel-command-supervisor", "workkeel-daily-entry",
   "workkeel-delivery-request", "workkeel-lifecycle", "workkeel-lock", "workkeel-review-recovery", "workkeel-risk-tiers"
 ].map((name) => `test/${name}.test.mjs`)])].sort();
 

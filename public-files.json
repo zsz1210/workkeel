@@ -671,6 +671,7 @@
     "test/workkeel-claude-review.test.mjs",
     "test/workkeel-codex-runtime.test.mjs",
     "test/workkeel-codex-skills.test.mjs",
+    "test/workkeel-command-supervisor.test.mjs",
     "test/workkeel-completion-evidence.test.mjs",
     "test/workkeel-daily-entry.test.mjs",
     "test/workkeel-delivery-preflight.test.mjs",

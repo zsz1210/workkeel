@@ -85,7 +85,9 @@ function validGatewayUrl(value) {
 export function validateTaskContract(document, { now = new Date() } = {}) {
   const errors = [];
   const incomplete = [];
-  if (!validate(document)) errors.push(...validate.errors.map((entry) => `${entry.instancePath || "/"} ${entry.message}`));
+  if (!validate(document)) errors.push(...validate.errors.map((entry) => entry.instancePath === "/schema_version" && entry.keyword === "const"
+    ? `/schema_version ${(typeof document.schema_version === "string" ? document.schema_version : JSON.stringify(document.schema_version) ?? "missing").slice(0, 80)} is unsupported; this Workkeel reads ${TASK_CONTRACT_SCHEMA}`
+    : `${entry.instancePath || "/"} ${entry.message}`));
   if (!errors.length) {
     if (document.dependencies.includes(document.id)) errors.push("/dependencies must not include the task itself");
     if (!document.actor?.principal_id) incomplete.push("actor.principal_id");

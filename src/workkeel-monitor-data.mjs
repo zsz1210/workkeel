@@ -5,7 +5,6 @@ import {createHash} from 'node:crypto';
 import {readTaskFile, readTaskContractInput} from './task-contract.mjs';
 import {readNativeTask, listTaskItems} from './workkeel-tasks.mjs';
 import {safeDirectory, existsEntry, readTaskProject} from './workkeel-project.mjs';
-import {validateLearningIndex, validateSkillProposal} from './workkeel-learning-schema.mjs';
 import {validateExecutionPolicy} from './workkeel-execution-policy.mjs';
 import {listNativeLearning} from './workkeel-learning.mjs';
 
@@ -108,34 +107,10 @@ export async function readMonitorLibrary(root,{cache=createLibraryCache(),query=
         origin_basis:origin==='workkeel'?'matches-bundled-source':origin==='third-party'?'declared-or-configured-source':'source-location-author-unrecorded'});}
     }catch{errors.push({path:ref,code:'skill-unavailable'});}
   }
-  const indexRef='.ai-org/learning/index.json';
-  if(await existsEntry(root,indexRef))try{
-    const file=await readSource(root,indexRef,cache),index=indexed(cache,indexRef,file,()=>JSON.parse(file.content));
-    if(!validateLearningIndex(index).valid||index.entries.length>MAX_ENTRIES)throw Error('Invalid learning index');
-    for(const entry of index.entries) {
-      try{
-        const file=await readSource(root,entry.path,cache);
-        const search=indexed(cache,entry.path,file,()=>file.content.toLocaleLowerCase());
-        if(query&&!`${entry.title} ${entry.summary} ${search}`.toLocaleLowerCase().includes(query.toLocaleLowerCase()))continue;
-        let completed=entry.kind==='practice'&&entry.status==='active'?3:entry.status==='validated'?2:1;
-        let proposal=null;
-        if(entry.promotion?.proposal_id) {
-          const ref=`.ai-org/learning/proposals/${entry.promotion.proposal_id}.json`;
-          try{
-            const p=(await readTaskContractInput(root,ref)).document;
-            if(!validateSkillProposal(p).valid||p.source_learning_id!==entry.id)throw Error('Invalid proposal');
-            proposal={id:p.id,status:p.status,authoring_work_item_id:p.authoring_work_item_id,skill_path:p.skill_path};
-            if(completed===3&&p.status==='approved')completed=4;
-            // Existing proposal records do not certify authoring, validation or activation.
-          }catch{errors.push({path:ref,code:'proposal-unavailable'});}
-        }
-        learning.push({id:entry.id,document_id:documentId(entry.path),path:entry.path,title:entry.title,summary:entry.summary,
-          kind:entry.kind,status:entry.status,confidence:entry.confidence,tags:entry.tags,updated_at:entry.updated_at,
-          sources:entry.source_work_items,completed_milestones:completed,total_milestones:7,
-          stopped:entry.status==='deprecated',promotion_target:entry.promotion.target,proposal,digest:file.digest});
-      }catch{errors.push({path:entry.path,code:'learning-unavailable'});}
-    }
-  }catch{errors.push({path:indexRef,code:'learning-index-unavailable'});}
+  // Pre-0.2 Lesson/Practice/proposal stores are not read or converted; their
+  // owners archive them. Only .ai-org/learning/native is current learning.
+  for(const ref of ['.ai-org/learning/index.json','.ai-org/learning/proposals'])if(await existsEntry(root,ref))
+    errors.push({path:ref,code:'legacy-learning-unsupported',next_action:'Archive these pre-0.2 learning records outside the project; Workkeel 0.2 reads only .ai-org/learning/native and does not migrate them.'});
   let nativeTotal=0;
   try {
     const native=await listNativeLearning(root);
@@ -146,7 +121,7 @@ export async function readMonitorLibrary(root,{cache=createLibraryCache(),query=
       const content=nativeLearningText(entry,uses),completed=entry.eligible?(entry.kind==='practice'?3:2):1;
       learning.push({...entry,id:entry.id,document_id:documentId(path),path,title:entry.title,summary:entry.summary,
         native:true,confidence:null,tags:entry.aliases,updated_at:entry.review?.at??null,sources:[entry.source_task],
-        status:entry.effective_state==='adopted'?'active':entry.effective_state,
+        status:entry.effective_state==='adopted'?'active':entry.effective_state==='contradicted'?'deprecated':entry.effective_state,
         completed_milestones:completed,total_milestones:7,stopped:entry.effective_state==='contradicted',
         promotion_target:'skill',proposal:null,uses:uses.slice(-100),use_count:uses.length,digest:hash(content)});
     }
@@ -175,11 +150,7 @@ export async function readLearningDocument(root,id,{cache=createLibraryCache()}=
     const native=await listNativeLearning(root),entry=native.items.find(x=>documentId('native-learning:'+x.id)===id);
     if(entry){const content=nativeLearningText(entry,native.uses.filter(use=>use.learning_id===entry.id));return {id,path:'native-learning:'+entry.id,content,digest:hash(content),read_at:new Date().toISOString(),read_only:true};}
   }catch{/* An invalid native store cannot authorize a document. */}
-  const library=await readMonitorLibrary(root,{cache}),entry=library.learning.find(x=>x.document_id===id);
-  if(entry?.native)return null;
-  if(!entry)return null;
-  const file=await readSource(root,entry.path,cache);
-  return {id,path:entry.path,content:file.content,digest:file.digest,read_at:new Date().toISOString(),read_only:true};
+  return null;
 }
 
 /** The observer never exposes connection URLs, credential variable names or raw policies. */
