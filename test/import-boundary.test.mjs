@@ -3,6 +3,7 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
+import { pathToFileURL } from "node:url";
 import test from "node:test";
 import { checkImportBoundary, readImports } from "../scripts/check-import-boundary.mjs";
 
@@ -19,13 +20,15 @@ const entry = 'import "../src/workkeel-cli.mjs";\n';
 const templeImport = "src/workkeel-cli.mjs -> src/project.mjs: native code must not import Temple modules";
 const nativeSource = async (t, source) => checkImportBoundary(await fixture(t, { "bin/workkeel.mjs": entry, "src/workkeel-cli.mjs": source }));
 
-// Evaluates each source as a module in V8 and records the import() calls it actually makes.
-function v8Evaluate(sources) {
+// Evaluates each source as a module in V8 and records the imports it actually makes.
+// With `run: false` it only parses, which proves the syntax is a legal module.
+function v8Evaluate(sources, { run = true } = {}) {
   const runner = `
     import vm from "node:vm";
     let input = ""; for await (const chunk of process.stdin) input += chunk;
     const out = [];
-    for (const source of JSON.parse(input)) {
+    const { sources, run } = JSON.parse(input);
+    for (const source of sources) {
       const seen = [];
       try {
         const module = new vm.SourceTextModule(source, { importModuleDynamically: async specifier => {
@@ -33,6 +36,7 @@ function v8Evaluate(sources) {
           const target = new vm.SyntheticModule([], () => {});
           await target.link(() => {}); await target.evaluate(); return target;
         } });
+        if (!run) { out.push({ seen }); continue; }
         await module.link(specifier => {
           seen.push(specifier);
           return new vm.SyntheticModule(["value"], function () { this.setExport("value", 1); });
@@ -44,7 +48,7 @@ function v8Evaluate(sources) {
     }
     process.stdout.write(JSON.stringify(out));`;
   const result = spawnSync(process.execPath, ["--experimental-vm-modules", "--no-warnings", "--input-type=module", "-e", runner],
-    { input: JSON.stringify(sources), encoding: "utf8" });
+    { input: JSON.stringify({ sources, run }), encoding: "utf8" });
   assert.equal(result.status, 0, result.stderr);
   return JSON.parse(result.stdout);
 }
@@ -104,11 +108,6 @@ const regressions = {
   "regex in a tagged template substitution": `String.raw\`\${/x/}\` / 2; ${target} const b = 6 / 2;\n`,
   "regex in a nested template substitution": `\`\${\`\${/x/}\`}\` / 2; ${target} const b = 6 / 2;\n`,
   "regex after a for await head": `for await (const x of []) /"/; ${target} /"/;\n`,
-  "regex after debugger and a line break": `debugger\n/"/; ${target} /"/;\n`,
-  "regex after break and a line break": `for (;;) {\n  ${target}\n  break\n  /"/; /"/;\n}\n`,
-  "regex after continue and a line break": `for (let i = 0; i < 1; i++) {\n  ${target}\n  continue\n  /"/; /"/;\n}\n`,
-  "regex after break label": `outer: for (;;) {\n  ${target}\n  break outer\n  /"/; /"/;\n}\n`,
-  "regex after continue label": `outer: for (let i = 0; i < 1; i++) {\n  ${target}\n  continue outer\n  /"/; /"/;\n}\n`,
   "prefix increment of a regex member": `let a = 1\n++/x/.lastIndex; ${target} /"/;\n`,
   "regex after a block": `{}\n/"/; ${target} /"/;\n`,
   "regex after a class declaration": `class A {}\n/"/; ${target} /"/;\n`,
@@ -125,6 +124,83 @@ test("regression cases: legal modules that import ./project.mjs are always repor
     assert.ok(readImports(source).some(item => item.specifier === "./project.mjs"), `${label}: readImports must find ./project.mjs`);
     assert.deepEqual((await nativeSource(t, source)).errors, [templeImport], label);
   }
+});
+
+// The 22 legal modules from the fourth review that the hand-written lexer missed,
+// verbatim. Several imports never run (an unexecuted loop or method), so V8 is
+// only required to accept the module; the checker must still report them.
+const reviewProbes = {
+  "template-regex": "`${/x/}` / 2; import(\".\\x2fproject.mjs\"); const b=6 / 2;",
+  "template-private": "class C{#return=4; f(){`${this.#return}` / 2; import(\".\\x2fproject.mjs\"); const b=6 / 2;}}",
+  "for-await": "for await (const x of []) /\"/; import(\".\\x2fproject.mjs\"); /\"/;",
+  "for-await-nested": "for await (const x of f(g())) /\"/; import(\".\\x2fproject.mjs\"); /\"/;",
+  "label-break": "label: while(false){break label\n /\"/; import(\".\\x2fproject.mjs\"); /\"/;}",
+  "break-asi": "while(false){break\n /\"/; import(\".\\x2fproject.mjs\"); /\"/;}",
+  "continue-asi": "while(false){continue\n /\"/; import(\".\\x2fproject.mjs\"); /\"/;}",
+  "debugger-asi": "debugger\n /\"/; import(\".\\x2fproject.mjs\"); /\"/;",
+  "private-return": "class C { #return=4; f(){this.#return / 2; import(\".\\x2fproject.mjs\"); const b=6 / 2;}}",
+  "optional-private-return": "class C { #return=4; f(){this?.#return / 2; import(\".\\x2fproject.mjs\"); const b=6 / 2;}}",
+  "private-typeof": "class C { #typeof=4; f(){this.#typeof / 2; import(\".\\x2fproject.mjs\"); const b=6 / 2;}}",
+  "optional-private-typeof": "class C { #typeof=4; f(){this?.#typeof / 2; import(\".\\x2fproject.mjs\"); const b=6 / 2;}}",
+  "private-call-if": "class C { #if(){return 4;} f(){this.#if() / 2; import(\".\\x2fproject.mjs\"); const b=6 / 2;}}",
+  "private-call-while": "class C { #while(){return 4;} f(){this.#while() / 2; import(\".\\x2fproject.mjs\"); const b=6 / 2;}}",
+  "private-call-for": "class C { #for(){return 4;} f(){this.#for() / 2; import(\".\\x2fproject.mjs\"); const b=6 / 2;}}",
+  "private-call-with": "class C { #with(){return 4;} f(){this.#with() / 2; import(\".\\x2fproject.mjs\"); const b=6 / 2;}}",
+  "private-default": "class C { #default=4; f(){this.#default / 2; import(\".\\x2fproject.mjs\"); const b=6 / 2;}}",
+  "optional-private-default": "class C { #default=4; f(){this?.#default / 2; import(\".\\x2fproject.mjs\"); const b=6 / 2;}}",
+  "private-extends": "class C { #extends=4; f(){this.#extends / 2; import(\".\\x2fproject.mjs\"); const b=6 / 2;}}",
+  "optional-private-extends": "class C { #extends=4; f(){this?.#extends / 2; import(\".\\x2fproject.mjs\"); const b=6 / 2;}}",
+  "private-in": "class C { #in=4; f(){this.#in / 2; import(\".\\x2fproject.mjs\"); const b=6 / 2;}}",
+  "optional-private-in": "class C { #in=4; f(){this?.#in / 2; import(\".\\x2fproject.mjs\"); const b=6 / 2;}}",
+  "continue-label-asi": "label: while(false){continue label\n /\"/; import(\".\\x2fproject.mjs\"); /\"/;}"
+};
+
+test("the fourth review's 22 probes, verbatim, are all reported", async t => {
+  const labels = Object.keys(reviewProbes), evaluated = v8Evaluate(Object.values(reviewProbes), { run: false });
+  assert.equal(labels.length, 23);
+  for (const [index, label] of labels.entries()) {
+    const source = reviewProbes[label];
+    assert.equal(evaluated[index].error, undefined, `${label}: V8 must accept the module`);
+    assert.ok(readImports(source).some(item => item.specifier === "./project.mjs"), `${label}: readImports must find ./project.mjs`);
+    assert.deepEqual((await nativeSource(t, source)).errors, [templeImport], label);
+  }
+});
+
+test("a computed import in a shared module fails the check", async t => {
+  const root = await fixture(t, {
+    "bin/workkeel.mjs": entry,
+    "src/workkeel-cli.mjs": 'import "./files.mjs";\n',
+    "src/files.mjs": 'await import("./" + "project.mjs");\n'
+  });
+  assert.deepEqual(checkImportBoundary(root).errors, ["src/files.mjs: computed import() cannot be checked"]);
+});
+
+test("file: URLs, absolute paths and other non-package specifiers cannot reach repository files", async t => {
+  const root = await fixture(t, { "bin/workkeel.mjs": entry, "src/project.mjs": 'console.log("LOADED");\nexport const value = 1;\n' });
+  const real = await fs.realpath(root), absolute = path.join(real, "src/project.mjs");
+  const rejected = [pathToFileURL(absolute).href, absolute, `data:text/javascript,import ${JSON.stringify(pathToFileURL(absolute).href)};`,
+    "#internal", "C:\\repo\\src\\project.mjs", "@zsz1210/workkeel", "@zsz1210/workkeel/src/project.mjs", "/view.mjs"];
+  // Node really loads the Temple module through the first two.
+  for (const specifier of rejected.slice(0, 2)) {
+    const run = spawnSync(process.execPath, ["--input-type=module", "-e", `await import(${JSON.stringify(specifier)});`], { encoding: "utf8" });
+    assert.equal(run.stdout.trim(), "LOADED", specifier);
+  }
+  for (const specifier of rejected) {
+    for (const form of [`await import(${JSON.stringify(specifier)});\n`, `import ${JSON.stringify(specifier)};\n`]) {
+      await fs.writeFile(path.join(root, "src/workkeel-cli.mjs"), form);
+      assert.deepEqual(checkImportBoundary(root).errors,
+        [`src/workkeel-cli.mjs: import specifier ${JSON.stringify(specifier)} must be a relative path, a node: built-in or another package`], form);
+    }
+  }
+});
+
+test("built-ins, other packages and the browser module's served assets stay allowed", async t => {
+  const root = await fixture(t, {
+    "bin/workkeel.mjs": entry,
+    "src/workkeel-cli.mjs": 'import fs from "node:fs";\nimport Ajv from "ajv";\nimport x from "ajv/dist/2020.js";\nawait import("@langchain/langgraph");\n',
+    "src/workkeel-monitor-client.mjs": 'import { label } from "/view.mjs";\n'
+  });
+  assert.deepEqual(checkImportBoundary(root).errors, []);
 });
 
 test("imports in unexecuted branches are still reported", async t => {

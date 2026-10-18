@@ -3,6 +3,7 @@ import path from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
 import { parse } from "acorn";
+import { PACKAGE_NAME } from "../src/workkeel-version.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -12,6 +13,21 @@ export const NATIVE_SHARED_MODULES = new Set([
 ]);
 // The only remaining route into Temple: lazy `workkeel legacy` and temple.lock dispatch.
 export const LEGACY_BRIDGES = new Set(["src/workkeel-cli.mjs -> src/cli.mjs"]);
+// Modules the monitor serves to the browser; their "/name.mjs" imports are served asset URLs.
+export const BROWSER_MODULES = new Set(["src/workkeel-monitor-client.mjs"]);
+
+const PACKAGE_SPECIFIER = /^(?:@[a-z0-9][a-z0-9._-]*\/)?[a-z0-9][a-z0-9._-]*(?:\/[^\\:]*)?$/i;
+
+// Classifies a non-relative specifier. Only built-ins, other packages and the
+// browser module's served assets leave the source graph; every other form
+// (file: or other URLs, absolute or Windows paths, #imports, the package's
+// own name) could load a repository file, so it is rejected.
+function externalSpecifier(file, specifier) {
+  if (specifier.startsWith("node:")) return true;
+  if (BROWSER_MODULES.has(file) && /^\/[A-Za-z0-9._-]+\.mjs$/.test(specifier)) return true;
+  if (specifier === PACKAGE_NAME || specifier.startsWith(`${PACKAGE_NAME}/`)) return false;
+  return PACKAGE_SPECIFIER.test(specifier);
+}
 
 function isNative(file) {
   return file === "bin/workkeel.mjs" || /^src\/workkeel-[^/]+\.mjs$/.test(file);
@@ -68,11 +84,13 @@ export function checkImportBoundary(target = root, entries = nativeEntries(targe
     }
     for (const item of imports) {
       if (item.specifier === null) {
-        if (isNative(file)) errors.push(`${file}: computed import() cannot be checked`);
+        errors.push(`${file}: computed import() cannot be checked`);
         continue;
       }
-      // Browser-served paths and packages are outside the source graph.
-      if (!item.specifier.startsWith(".")) continue;
+      if (!item.specifier.startsWith(".")) {
+        if (!externalSpecifier(file, item.specifier)) errors.push(`${file}: import specifier ${JSON.stringify(item.specifier)} must be a relative path, a node: built-in or another package`);
+        continue;
+      }
       const dependency = path.posix.normalize(path.posix.join(path.posix.dirname(file), item.specifier));
       const edge = `${file} -> ${dependency}`;
       if (LEGACY_BRIDGES.has(edge)) {
