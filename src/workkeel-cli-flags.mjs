@@ -109,6 +109,9 @@ export async function runLifecycleFromFlags(target, id, action, options, hooks =
   }
 }
 
+// The object a lifecycle command acts on; a retry must never move to another one.
+const TARGET_FIELDS = { release: ["claim_id"], handoff: ["claim_id", "revision"], review: ["revision"], close: ["revision"] };
+
 /** Selects or creates the saved request for this command against one task snapshot. */
 export async function lifecycleRequestFromFlags(target, id, action, options, snapshot = null) {
   const project = await readTaskProject(target), item = snapshot ?? await readNativeTask(target, id);
@@ -136,6 +139,12 @@ export async function lifecycleRequestFromFlags(target, id, action, options, sna
     rollback: options["--rollback"], evidence: evidence() });
   else if (action === "cancel") Object.assign(request, { summary: summary(), evidence: evidence() });
   else throw new Error("Unknown task operation");
+  // A command keeps the claim and candidate its first attempt targeted. If a later
+  // attempt would derive a different one, stop rather than apply this judgment,
+  // summary or evidence to another target.
+  const first = saved[0]?.value.request;
+  for (const field of TARGET_FIELDS[action] ?? []) if (first && first[field] !== request[field])
+    throw new Error(`This command first targeted ${field} ${first[field]}, but the task now has ${request[field] ?? "none"}; rerun with an explicit --${field === "claim_id" ? "claim" : "revision"} for the new target`);
   return (await saveAttempt(dir, (saved.at(-1)?.number ?? 0) + 1, { key, request })).request;
 }
 

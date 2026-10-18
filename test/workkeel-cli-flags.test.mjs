@@ -250,3 +250,49 @@ test("identical commands forced to overlap both succeed with exactly one operati
   assert.deepEqual(item.history.map(event => event.action), ["create", "claim", "release", "claim"]);
   assert.notEqual(item.history[1].operation_id, item.history[3].operation_id);
 });
+
+test("a retried command stops instead of moving to a new candidate or claim", async t => {
+  const root = await solo(t);
+  workkeel(root, "task", "new", "--goal", "Tidy", "--acceptance", "Tidy", "--write", "docs", "--actor", "builder");
+  workkeel(root, "task", "claim", "--id", "WK-0001", "--actor", "builder");
+  const deliver = async (line, note) => {
+    await fs.appendFile(path.join(root, "docs/guide.md"), line); git(root, "commit", "-qam", note);
+    const ref = `.ai-org/artifacts/WK-0001/${note}.md`;
+    await fs.mkdir(path.join(root, ".ai-org/artifacts/WK-0001"), { recursive: true }); await fs.writeFile(path.join(root, ref), `${note}\n`);
+    workkeel(root, "task", "handoff", "--id", "WK-0001", "--actor", "builder", "--summary", note, "--evidence", ref);
+    git(root, "add", ".ai-org"); git(root, "commit", "-qm", `record ${note}`);
+    return (await readNativeTask(root, "WK-0001")).delivery.revision;
+  };
+  const candidateA = await deliver("A\n", "candidate-a");
+  await fs.writeFile(path.join(root, ".ai-org/artifacts/WK-0001/review.md"), "Pass\n");
+  // While this pass review of A waits, A is failed, reworked, reclaimed and B is handed off.
+  const review = runLifecycleFromFlags(root, "WK-0001", "review", { "--id": "WK-0001", "--actor": "reviewer", "--judgment": "pass",
+    "--summary": "Meets the criterion", "--evidence": [".ai-org/artifacts/WK-0001/review.md"] }, { beforeMutation: async request => {
+    if (request.revision !== candidateA) return;
+    await fs.writeFile(path.join(root, ".ai-org/artifacts/WK-0001/fail.md"), "Fail\n");
+    // The waiting pass report is untracked product drift for other operations; set it aside meanwhile.
+    await fs.rename(path.join(root, ".ai-org/artifacts/WK-0001/review.md"), path.join(root, ".git/review.md.hold"));
+    workkeel(root, "task", "review", "--id", "WK-0001", "--actor", "reviewer", "--judgment", "fail", "--summary", "Missing", "--evidence", ".ai-org/artifacts/WK-0001/fail.md");
+    workkeel(root, "task", "rework", "--id", "WK-0001", "--actor", "builder", "--summary", "Fix it");
+    git(root, "add", ".ai-org"); git(root, "commit", "-qm", "record failed review");
+    workkeel(root, "task", "claim", "--id", "WK-0001", "--actor", "builder");
+    await deliver("B\n", "candidate-b");
+    await fs.rename(path.join(root, ".git/review.md.hold"), path.join(root, ".ai-org/artifacts/WK-0001/review.md"));
+  } });
+  await assert.rejects(review, /first targeted revision/);
+  const afterReview = await readNativeTask(root, "WK-0001");
+  assert.equal(afterReview.state, "test"); assert.equal(afterReview.review, null); assert.notEqual(afterReview.delivery.revision, candidateA);
+
+  const releasing = await solo(t);
+  workkeel(releasing, "task", "new", "--goal", "Tidy", "--acceptance", "Tidy", "--write", "docs", "--actor", "builder");
+  const firstClaim = workkeel(releasing, "task", "claim", "--id", "WK-0001", "--actor", "builder").claim.id;
+  const release = runLifecycleFromFlags(releasing, "WK-0001", "release", { "--id": "WK-0001", "--actor": "builder", "--summary": "Stop" }, {
+    beforeMutation: async request => {
+      if (request.claim_id !== firstClaim) return;
+      workkeel(releasing, "task", "release", "--id", "WK-0001", "--actor", "builder", "--summary", "Pause");
+      workkeel(releasing, "task", "claim", "--id", "WK-0001", "--actor", "builder", "--base", git(releasing, "rev-parse", "HEAD"));
+    } });
+  await assert.rejects(release, /first targeted claim_id/);
+  const afterRelease = await readNativeTask(releasing, "WK-0001");
+  assert.equal(afterRelease.state, "build"); assert.notEqual(afterRelease.claim.id, firstClaim);
+});
