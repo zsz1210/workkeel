@@ -3,7 +3,7 @@ import {readTaskContractInput,readTaskFile} from './task-contract.mjs';
 import {readModelPolicy,saveModelPolicyDraft,approveModelPolicy,selectModelPolicy} from './workkeel-model-policy.mjs';
 import {listNativeSkillLifecycle,mutateNativeSkillLifecycle} from './workkeel-learning-lifecycle.mjs';
 import {listNativeLearning} from './workkeel-learning.mjs';
-import {readAutonomy,mutateAutonomy,cancelAutonomyJob,serveAutonomy} from './workkeel-autonomy.mjs';
+import {readAutonomy,mutateAutonomy,serveAutonomy} from './workkeel-autonomy.mjs';
 import {listNativeGoals,readNativeGoal,createNativeGoal,validateGoalManifest,controlNativeGoal,assertNativeGoalAuthority,serveNativeGoal,runNativeGoalStep} from './workkeel-goals.mjs';
 import {readGoalAdmissions,readGoalAdmissionAuthority} from './workkeel-autonomy-admission.mjs';
 import {previewRetention,applyRetentionArchive,inventoryRetention} from './workkeel-retention.mjs';
@@ -155,19 +155,14 @@ export function createWorkspaceHooks({host_models=[],goalAdapter}={}){
         }
         return {...s,admissions:admissions.entries.map(e=>({id:e.id,goal_id:e.intent.manifest.id,root:e.intent.root,kind:e.kind,status:e.status,proposal_id:e.proposal_id,reservation:e.reservation,error:e.error})),available_goals,needs_attention,service:{state:item&&observation?.state!=='stopped'?'running-in-this-host':'not-confirmed-in-this-host',activity:observation?.state??null,current_check_started_at:observation?.started_at??null,check_interval_ms:observation?.reconcile_ms??null,observed_at:new Date().toISOString(),errors:item?.errors??[],last_step:item?.last_step??null},watch_scope,enabled:s.policy.enabled,state:s.paused?'paused':needs_attention.length||s.jobs.some(j=>j.status==='recovery-required')?'needs-reconciliation':dispatched||s.jobs.some(j=>j.status==='running')?'execution-recorded':s.jobs.some(j=>j.status==='awaiting-acceptance')?'awaiting-acceptance':'idle',live_activity:item&&observation?.state!=='stopped'?'service-running':'unconfirmed',limits:s.policy,next_action:needs_attention.length?'Inspect the blocked goal before continuing':dispatched?'Follow dispatched improvement work':s.last_event??'Await an approved event'};},
       async execute({action,expectedVersion,idempotencyKey,payload,project,actor}){
+        if(action==='autonomy.cancel')throw Error('Autonomy jobs are retired; reconcile legacy jobs with their original runner and use goal controls');
         if(action==='autonomy.start-service'){
           const s=await readAutonomy(project.task_root);if(s.version!==expectedVersion)throw Error('Improvement settings changed');
           if(!s.policy.admission?.enabled)throw Error('Select an approved standing improvement goal');
           const goal=await readNativeGoal(project.task_root,s.policy.admission.goal_id);await assertNativeGoalAuthority(project.task_root,goal,{actor,execution:true});
           if(improvementServices.has(project.task_root))return {state:'running-in-this-host',model_called:false};
-          const {createAutonomyWorkflowAdapter}=await import('./workkeel-autonomy-workflow.mjs');const controller=new AbortController(),item={controller,service:null,errors:[],last_step:null};
-          item.service=await serveAutonomy(project.task_root,{adapter:createAutonomyWorkflowAdapter(project.task_root),goalAdapter,signal:controller.signal,onStep:r=>{item.last_step={idle:r.idle??null,goal_id:r.goal_id??null,progressed:r.progressed??false,...(r.reason?{reason:r.reason,phase:r.phase??null}:{}),...(Number.isSafeInteger(r.manual_proposals)?{manual_proposals:r.manual_proposals}:{}),...(Number.isSafeInteger(r.rounds_used)&&Number.isSafeInteger(r.rounds_limit)?{rounds_used:r.rounds_used,rounds_limit:r.rounds_limit}:{}),at:new Date().toISOString()};},onError:e=>{item.errors.push(e.message);if(item.errors.length>10)item.errors.shift();}});improvementServices.set(project.task_root,item);return {state:'listening',model_called:false};
-        }
-        if(action==='autonomy.cancel'){
-          const job=(await readAutonomy(project.task_root)).jobs.find(job=>job.id===payload.job_id);
-          if(!job?.authority||actor?.agent_id!==job.authority.actor.agent_id||actor?.principal_id!==job.authority.actor.principal_id||payload.task_id!==undefined&&payload.task_id!==job.task_id)throw Error('Cancellation requires the original job operator');
-          const {createAutonomyWorkflowAdapter}=await import('./workkeel-autonomy-workflow.mjs');
-          return cancelAutonomyJob(project.task_root,{...job.authority,job_id:job.id,operation_id:idempotencyKey,expected_version:expectedVersion},{adapter:createAutonomyWorkflowAdapter(project.task_root)});
+          const controller=new AbortController(),item={controller,service:null,errors:[],last_step:null};
+          item.service=await serveAutonomy(project.task_root,{goalAdapter,signal:controller.signal,onStep:r=>{item.last_step={idle:r.idle??null,goal_id:r.goal_id??null,progressed:r.progressed??false,...(r.reason?{reason:r.reason,phase:r.phase??null}:{}),...(Number.isSafeInteger(r.manual_proposals)?{manual_proposals:r.manual_proposals}:{}),...(Number.isSafeInteger(r.rounds_used)&&Number.isSafeInteger(r.rounds_limit)?{rounds_used:r.rounds_used,rounds_limit:r.rounds_limit}:{}),at:new Date().toISOString()};},onError:e=>{item.errors.push(e.message);if(item.errors.length>10)item.errors.shift();}});improvementServices.set(project.task_root,item);return {state:'listening',model_called:false};
         }
         let request;
         if(payload.goal_id){const goal=await readNativeGoal(project.task_root,payload.goal_id);request={task_id:goal.controller.task_id,actor,claim_id:goal.controller.claim_id,contract_sha256:goal.controller.contract_sha256};}

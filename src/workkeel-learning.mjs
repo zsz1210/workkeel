@@ -1,11 +1,8 @@
-import fs from 'node:fs/promises';
-import path from 'node:path';
 import {exactKeys, executionDigest} from './workkeel-execution-policy.mjs';
 import {assertTaskExecutionContext} from './workkeel-tasks.mjs';
 import {readTaskFile} from './task-contract.mjs';
-import {safeDirectory} from './workkeel-project.mjs';
 import {withProjectMutationLock} from './workkeel-lock.mjs';
-import {durableAtomicCreate, formatJson} from './files.mjs';
+import {readLearningReceipts,replayLearningReceipt,appendLearningReceipt,learningEvidenceProblems} from './workkeel-learning-receipts.mjs';
 
 const ROOT='.ai-org/learning/native', MAX=1000;
 const fail=message=>{throw Error(`Native learning: ${message}`);};
@@ -44,33 +41,15 @@ async function pins(target,values,env) {
   }
   return result;
 }
-async function events(target) {
-  let dir;
-  try {dir=await safeDirectory(target,ROOT);}catch(error){if(error.code==='ENOENT')return [];throw error;}
-  const names=(await fs.readdir(dir)).sort();
-  if(names.length>MAX||names.some(name=>!/^\d{6}\.json$/.test(name)))fail('invalid or oversized event inventory');
-  const result=[];
-  for(const [index,name] of names.entries()) {
-    if(name!==`${String(index+1).padStart(6,'0')}.json`)fail('event sequence gap');
-    const envelope=JSON.parse((await readTaskFile(target,`${ROOT}/${name}`)).content);
-    exactKeys(envelope,['event','sha256']);const e=envelope.event;
-    exactKeys(e,['schema_version','sequence','previous_hash','action','request','request_sha256','at','pins']);
-    if(e.schema_version!=='workkeel.learning-event/v1'||e.sequence!==index+1||e.previous_hash!==(result.at(-1)?.sha256??null)||executionDigest(e)!==envelope.sha256||executionDigest(e.request)!==e.request_sha256||!['capture','review','use'].includes(e.action)||!Number.isFinite(Date.parse(e.at)))fail('event integrity');
-    requestShape(e.action,e.request);
-    if(!Array.isArray(e.pins)||e.pins.length>64)fail('invalid evidence pins');
-    for(const pin of e.pins){exactKeys(pin,['path','sha256']);text(pin.path,1024);if(!/^[a-f0-9]{64}$/.test(pin.sha256))fail('invalid evidence pin');}
-    const expected=e.action==='capture'?[...e.request.record.evidence,...e.request.record.skill_refs]:e.request.evidence;
-    if(executionDigest(expected)!==executionDigest(e.pins.map(p=>p.path)))fail('pin references mismatch');
-    result.push(envelope);
-  }
-  return result;
-}
-async function pinProblems(target,values) {
-  const reasons=[];
-  for(const pin of values)try {if((await readTaskFile(target,pin.path)).bytes_digest!==pin.sha256)reasons.push({code:'stale-evidence',source:pin.path});}
-  catch {reasons.push({code:'unknown-evidence',source:pin.path});}
-  return reasons;
-}
+const events=target=>readLearningReceipts(target,{root:ROOT,schema:'workkeel.learning-event/v1',limit:MAX,fail,validate:e=>{
+  if(!['capture','review','use'].includes(e.action))fail('event integrity');
+  requestShape(e.action,e.request);
+  if(!Array.isArray(e.pins)||e.pins.length>64)fail('invalid evidence pins');
+  for(const pin of e.pins){exactKeys(pin,['path','sha256']);text(pin.path,1024);if(!/^[a-f0-9]{64}$/.test(pin.sha256))fail('invalid evidence pin');}
+  const expected=e.action==='capture'?[...e.request.record.evidence,...e.request.record.skill_refs]:e.request.evidence;
+  if(executionDigest(expected)!==executionDigest(e.pins.map(p=>p.path)))fail('pin references mismatch');
+}});
+const pinProblems=(target,values)=>learningEvidenceProblems(target,values,'source');
 async function project(target,history) {
   const map=new Map(),uses=[];
   for(const {event:e,sha256} of history) {
@@ -116,8 +95,7 @@ async function mutate(target,action,request) {
     const task=await assertTaskExecutionContext(target,request.task_id,request),env=task.contract.environment;
     if(!task.contract.authorization.operations.includes('write')||!env.write_paths.some(root=>under(ROOT,root)))fail('learning storage outside approved write scope');
     const history=await events(target),digest=executionDigest(request);
-    const prior=history.find(({event:e})=>e.request.task_id===request.task_id&&e.request.operation_id===request.operation_id);
-    if(prior){if(prior.event.action!==action||prior.event.request_sha256!==digest)fail('operation replay conflict');return {...prior,replayed:true,mutation_status:'already-applied'};}
+    const prior=replayLearningReceipt(history,action,request,fail);if(prior)return prior;
     if(history.length>=MAX)fail('event inventory limit');
     const view=await project(target,history),r=request;
     if(action==='capture') {
@@ -135,9 +113,7 @@ async function mutate(target,action,request) {
     const values=action==='capture'?[...r.record.evidence,...r.record.skill_refs]:r.evidence;
     const evidence=await pins(target,values,env);
     const event={schema_version:'workkeel.learning-event/v1',sequence:history.length+1,previous_hash:history.at(-1)?.sha256??null,action,request:structuredClone(request),request_sha256:digest,at:new Date().toISOString(),pins:evidence};
-    const envelope={event,sha256:executionDigest(event)},dir=await safeDirectory(target,ROOT,{create:true});
-    await durableAtomicCreate(path.join(dir,`${String(event.sequence).padStart(6,'0')}.json`),formatJson(envelope));
-    return {...envelope,replayed:false,mutation_status:'applied'};
+    return appendLearningReceipt(target,ROOT,event);
   });
 }
 export const captureNativeLearning=(target,request)=>mutate(target,'capture',request);

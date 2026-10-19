@@ -204,9 +204,9 @@ submitted request is not confirmation that execution stopped. Reading the page
 does not start model work. Live observations continue while read-only details are
 open, and stale or unavailable observations are explicitly identified.
 
-The background runner uses the qualified workflow engine and stable run identity.
+The background runner selects bounded work and delegates delivery to native goals.
 It cannot grant scope, bypass independent review or infer acceptance from a finished
-graph. An enforcing host remains responsible for execution permissions and usage.
+operation. An enforcing host remains responsible for execution permissions and usage.
 
 Native Skill learning records candidate versions, comparative evaluations,
 independent review, approval, activation, use outcomes and rollback. Activation is

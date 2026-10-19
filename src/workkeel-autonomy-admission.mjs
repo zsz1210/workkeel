@@ -236,6 +236,12 @@ export async function disposeGoalProposal(target,r){
   assertApprover(project.policy,r.actor);if(!sameActor(r.actor,goal.manifest.roles.approver))fail('only the standing goal approver can dispose a proposal');
   return withProjectMutationLock(target,async()=>{
     const s=await readGoalAdmissions(target),prior=(s.dispositions??[]).find(d=>d.goal_id===r.goal_id&&d.proposal_id===r.proposal_id);
+    const {readAutonomy}=await import('./workkeel-autonomy.mjs'),inventory=await readAutonomy(target);
+    const checkProposal=proposalId=>{
+      const proposal=inventory.proposals.find(p=>p.id===proposalId);if(!proposal)fail('unknown proposal: '+proposalId);
+      if(!s.entries.some(e=>e.goal_id===r.goal_id&&e.kind==='discovery'&&e.status==='created'&&e.intent.manifest.id===proposal.origin_goal_id))fail('proposal source does not match standing goal: '+proposalId);
+    };
+    checkProposal(r.proposal_id);if(record.superseded_by)checkProposal(record.superseded_by);
     if(prior){const same=['disposition','superseded_by','reason','operation_id'].every(k=>prior[k]===record[k])&&sameActor(prior.actor,record.actor);if(!same)fail('proposal already has a different disposition');return {version:s.version,disposition:prior,replayed:true};}
     if(s.version!==r.expected_version)fail('journal version conflict');
     if(s.entries.some(e=>e.goal_id===r.goal_id&&e.kind==='execution'&&e.proposal_id===r.proposal_id))fail('admitted proposals are settled through their derived goal');

@@ -145,12 +145,14 @@ rework is decided by the risk tier and the findings, as before.
   issues instead.
 - **Findings** give the reasons for a failed review as `P1` to `P3` with a short
   note. `P3` findings are never counted as rework reasons.
-- **Self-evaluation** is reserved: `self_eval` defaults to `{"enabled": false, ...}`
-  because an externally reviewed task does not need one.
+
+The unused `self_eval` placeholder is no longer accepted in score blocks or
+emitted in statistics. Reports should contain the external reviewer score and
+findings only; a retired or unknown score field is reported as an invalid score.
 
 `workkeel stats` reads these blocks and the task records without writing
 anything. Per task it reports `task_id`, `risk`, `model`, `reasoning_effort`,
-`self_eval`, `external_score` (with the review round, counted from the task
+`external_score` (with the review round, counted from the task
 history) and `rework` (rounds, and each round's reasons by P level; a round
 without findings uses the rework summary). Per tier it reports the average scores
 for each rubric, rework rounds and the distribution of rework reasons. A malformed

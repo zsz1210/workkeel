@@ -21,7 +21,7 @@ import {crc32,deflateSync} from 'node:zlib';
 const actor={agent_id:'builder',principal_id:'owner'},reviewer={agent_id:'reviewer',principal_id:'owner'};
 const git=(root,...args)=>execFileSync('git',['-C',root,...args],{encoding:'utf8',stdio:['ignore','pipe','pipe']}).trim();
 const tuple={provider:'openai',model:'synthetic-only',reasoning:'high',service:'provider-default'};
-async function fixture(t,{risk='standard',maxGoals=8,empty=false,maxRounds=2,guarded=false}={}){
+async function fixture(t,{risk='standard',maxGoals=8,empty=false,maxRounds=2,guarded=false,proposalCount=1}={}){
   const root=await fs.realpath(await fs.mkdtemp(path.join(os.tmpdir(),'workkeel-improvement-')));t.after(()=>fs.rm(root,{recursive:true,force:true}));
   await fs.mkdir(root+'/src');await fs.mkdir(root+'/docs');git(root,'init','-q');git(root,'config','user.name','Synthetic');git(root,'config','user.email','fixture@example.invalid');
   await fs.writeFile(root+'/.gitignore','.ai-org/\n');await fs.writeFile(root+'/docs/approval.md','Synthetic explicit bounded source/goal/improvement approval.');await fs.writeFile(root+'/src/value.mjs','export const value="baseline";\n');
@@ -49,7 +49,7 @@ async function fixture(t,{risk='standard',maxGoals=8,empty=false,maxRounds=2,gua
     const result={status:'completed',operation_id:ctx.operation_id,actor:ctx.input.actor,thread_id:thread,runtime_selection:ctx.input.model,product_access:discovery||['planning','verification','review'].includes(phase)?'read':'write',usage:{input_tokens:null,output_tokens:null,cost_usd:null}};
     if(phase==='planning')result.report_pin=await artifact(ctx,phase,{synthetic:true});
     if(['implementation','repair'].includes(phase)){
-      if(discovery){const evidence={path:'src/value.mjs',sha256:(await readTaskFile(root,'src/value.mjs')).bytes_digest};result.proposal_report={proposals:empty?[]:[{id:'improve-value',title:'Remove the observed fixture defect',direction:'quality',risk_tier:risk,expected_benefit:'Value equals improved',acceptance:['Exported value equals improved'],evidence:[evidence],scope:{read_paths:['.'],write_paths:['src']},budget:{max_attempts:2,max_runtime_ms:50000,max_cost_usd:null}}]};result.source_pins=[evidence];result.report_pin=await artifact(ctx,'discovery',result.proposal_report);}
+      if(discovery){const evidence={path:'src/value.mjs',sha256:(await readTaskFile(root,'src/value.mjs')).bytes_digest};result.proposal_report={proposals:empty?[]:Array.from({length:proposalCount},(_,n)=>({id:'improve-value-'+n,title:'Remove the observed fixture defect',direction:'quality',risk_tier:risk,expected_benefit:'Value equals improved',acceptance:['Exported value equals improved'],evidence:[evidence],scope:{read_paths:['.'],write_paths:['src']},budget:{max_attempts:2,max_runtime_ms:50000,max_cost_usd:null}}))};result.source_pins=[evidence];result.report_pin=await artifact(ctx,'discovery',result.proposal_report);}
       else{const value=ctx.manifest.id==='source-goal'?'source':phase==='repair'?'improved':'defective';await fs.writeFile(root+'/src/value.mjs','export const value="'+value+'";\n');git(root,'add','src/value.mjs');git(root,'commit','-qm','Synthetic '+ctx.operation_id);result.report_pin=await artifact(ctx,phase,{synthetic:true,value});}
       result.candidate_revision=git(root,'rev-parse','HEAD');
     }
@@ -75,12 +75,18 @@ async function fixture(t,{risk='standard',maxGoals=8,empty=false,maxRounds=2,gua
 
 test('opt-in discovery creates bounded work, retains reviewer FAIL, repairs, accepts and reexplores changed sources',async t=>{
   const f=await fixture(t);let execution;
-  for(let n=0;n<90;n++){await runImprovementCycle(f.root,{adapter:f.adapter});const journal=await readGoalAdmissions(f.root);execution=journal.entries.find(e=>e.kind==='execution');if(execution&&(await readNativeGoal(f.root,execution.intent.manifest.id)).accepted)break;}
+  for(let n=0;n<90;n++){await runAutonomyStep(f.root,{goalAdapter:f.adapter});const journal=await readGoalAdmissions(f.root);execution=journal.entries.find(e=>e.kind==='execution');if(execution&&(await readNativeGoal(f.root,execution.intent.manifest.id)).accepted)break;}
   assert.ok(execution);const goal=await readNativeGoal(f.root,execution.intent.manifest.id);assert.equal(goal.accepted,true);const task=await readNativeTask(f.root,execution.intent.product.id);assert.equal(task.attempts[0].review.judgment,'fail');assert.notEqual(task.attempts[0].delivery.revision,task.delivery.revision);assert.equal(task.review.actor.agent_id,'reviewer');assert.equal(task.state,'done');
   assert.ok(f.calls.some(c=>c.component.purpose==='discovery'));assert.ok(f.calls.some(c=>c.input.phase==='repair'));
   for(const op of goal.operations.filter(o=>o.kind==='runtime')){assert.equal(op.timing.execution.basis,'goal-adapter-observed-wall-time');assert.ok(op.timing.execution.duration_ms>=0);assert.equal(op.result.usage.input_tokens,null);}
   const footprint=await inventoryRetention(f.root,{schema_version:'workkeel.retention-policy/v1',roots:['.ai-org/goals','.ai-org/autonomy','.ai-org/artifacts','.ai-org/work-items'],protected_paths:[],archive_root:'.ai-org/retention',limits:{max_files:1024,max_bytes:16777216,max_file_bytes:1048576}});t.diagnostic('Synthetic accepted improvement footprint: '+JSON.stringify({bytes:footprint.bytes,files:footprint.file_count,roots:footprint.roots,scope:'one source goal, one discovery, one repaired improvement; not a daily production estimate'}));
-  const after=await runImprovementCycle(f.root,{adapter:f.adapter});assert.equal(after.progressed,true);assert.equal((await readGoalAdmissions(f.root)).entries.filter(e=>e.kind==='discovery').length,2);
+  const admissionBeforeDisposal=await readGoalAdmissions(f.root);
+  await assert.rejects(disposeGoalProposal(f.root,{
+    goal_id:f.manifest.id,actor,operation_id:'do-not-dispose-admitted',expected_version:admissionBeforeDisposal.version,
+    proposal_id:execution.proposal_id,disposition:'dismissed',reason:'Synthetic admitted work must settle through its goal'
+  }),/admitted proposals are settled through their derived goal/);
+  assert.deepEqual(await readGoalAdmissions(f.root),admissionBeforeDisposal);
+  const after=await runAutonomyStep(f.root,{goalAdapter:f.adapter});assert.equal(after.progressed,true);assert.equal((await readGoalAdmissions(f.root)).entries.filter(e=>e.kind==='discovery').length,2);
   assert.equal((await readNativeGoal(f.root,f.manifest.id)).whole_acceptance,'stale');
 });
 
@@ -172,9 +178,9 @@ test('exhausted discovery is explicit on unchanged sources without blocking admi
 });
 
 test('event driver progresses native derived goals without a human continue and stops cleanly',{timeout:60000},async t=>{
-  const f=await fixture(t,{empty:true});const errors=[],controller=new AbortController();const workflow={id:'unused-workflow',idempotent:true,start:async()=>({status:'unknown'}),reconcile:async()=>({status:'unknown'}),cancel:async()=>({status:'cancelled'})};
+  const f=await fixture(t,{empty:true});const errors=[],controller=new AbortController();
   const settled=Promise.withResolvers();
-  const service=await serveAutonomy(f.root,{adapter:workflow,goalAdapter:f.adapter,signal:controller.signal,debounce_ms:1,reconcile_ms:20,onError:e=>{errors.push(e);settled.reject(e);},onStep:result=>{if(result.idle==='unchanged-approved-sources')settled.resolve();}});t.after(()=>{controller.abort();service.close();});
+  const service=await serveAutonomy(f.root,{goalAdapter:f.adapter,signal:controller.signal,debounce_ms:1,reconcile_ms:20,onError:e=>{errors.push(e);settled.reject(e);},onStep:result=>{if(result.idle==='unchanged-approved-sources')settled.resolve();}});t.after(()=>{controller.abort();service.close();});
   t.signal.addEventListener('abort',()=>{controller.abort();service.close();settled.reject(t.signal.reason);},{once:true});
   // Observe the driver's actual settled event, not a machine-speed dependent poll count.
   await settled.promise;
@@ -270,4 +276,37 @@ test('one registered project routes equal goal IDs to their exact repository wit
   await assert.rejects(hooks.goals.execute({project,actor,action:'goals.pause',expectedVersion:foreign.version,idempotencyKey:'deny-unregistered',payload:{goal_id:'source-goal',repo_id:'arbitrary'}}),/explicitly registered/);
   await hooks.goals.execute({project,actor,action:'goals.pause',expectedVersion:foreign.version,idempotencyKey:'foreign-goal-control',payload:{goal_id:'source-goal',repo_id:'secondary'}});
   assert.equal((await readNativeGoal(first.root,'source-goal')).version,primary.version);assert.equal((await readNativeGoal(second.root,'source-goal')).version,foreign.version+1);
+});
+
+
+test('proposal disposal rejects unknown IDs and foreign sources without journaling a decision',async t=>{
+  const f=await fixture(t,{risk:'high',proposalCount:2});
+  for(let n=0;n<30;n++)if((await runAutonomyStep(f.root,{goalAdapter:f.adapter})).idle==='known-findings-need-attention')break;
+  const state=await readAutonomy(f.root),[original,replacement]=state.proposals;assert.ok(replacement);
+  // A well-formed proposal from a different discovery must not be disposed under this source.
+  state.proposals.push({...structuredClone(original),id:'foreign-proposal',origin_goal_id:'foreign-discovery'});
+  const stateRef=f.root+'/.ai-org/autonomy/state.json';await fs.writeFile(stateRef,JSON.stringify({state,sha256:executionDigest(state)}));
+  const journal=await readGoalAdmissions(f.root),entry=structuredClone(journal.entries[0]);
+  entry.id='foreign-admission';entry.goal_id='other-standing-goal';entry.intent.manifest.id='foreign-discovery';journal.entries.push(entry);
+  const journalRef=f.root+'/.ai-org/autonomy/admissions/state.json';await fs.writeFile(journalRef,JSON.stringify({state:journal,sha256:executionDigest(journal)}));
+  const request={goal_id:f.manifest.id,actor,operation_id:'supersede-original',expected_version:journal.version,proposal_id:original.id,disposition:'superseded',superseded_by:replacement.id,reason:'Synthetic replacing proposal'};
+  const before=await fs.readFile(journalRef,'utf8'),inventory=await fs.readFile(stateRef,'utf8');
+  for(const [extra,message] of [
+    [{proposal_id:'missing'},/unknown proposal: missing/],
+    [{proposal_id:'foreign-proposal'},/source does not match.*foreign-proposal/],
+    [{superseded_by:'missing'},/unknown proposal: missing/],
+    [{superseded_by:'foreign-proposal'},/source does not match.*foreign-proposal/],
+    [{superseded_by:original.id},/cannot supersede itself/],
+    [{superseded_by:'../invalid'},/identifier/],
+    [{superseded_by:null},/superseded_by/],
+    [{disposition:'dismissed'},/superseded_by/],
+    [{expected_version:journal.version+1},/version conflict/]
+  ]){
+    await assert.rejects(disposeGoalProposal(f.root,{...request,...extra}),message);
+    assert.equal(await fs.readFile(journalRef,'utf8'),before);assert.equal(await fs.readFile(stateRef,'utf8'),inventory);
+  }
+  const result=await disposeGoalProposal(f.root,request);assert.equal(result.disposition.superseded_by,replacement.id);assert.equal(result.replayed,false);
+  assert.equal((await disposeGoalProposal(f.root,request)).replayed,true);
+  const after=await readGoalAdmissions(f.root);assert.deepEqual(after.entries,journal.entries);assert.deepEqual(after.receipts,journal.receipts);
+  assert.equal(await fs.readFile(stateRef,'utf8'),inventory);assert.equal(after.dispositions.length,1);
 });

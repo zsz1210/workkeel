@@ -12,9 +12,6 @@ export const RUBRICS = Object.freeze({
   "non-code": ["requirements"]
 });
 const LEVELS = ["P1", "P2", "P3"];
-/** Reserved for a self-evaluation flow; tasks with an external review leave it off. */
-export const DEFAULT_SELF_EVAL = Object.freeze({ enabled: false, round: null, pass_line: null, requirements: [], issues: [], stars: null, result: null, blocked_needs: [] });
-
 const isObject = v => v !== null && typeof v === "object" && !Array.isArray(v);
 const label = v => v === null || typeof v === "string" && v.trim() !== "" && v.length <= 200;
 const note = v => typeof v === "string" && v.trim() !== "" && v.length <= 1000;
@@ -28,20 +25,12 @@ const findings = list => {
   for (const f of list) { keys(f, ["level", "note"]); if (!LEVELS.includes(f.level) || !note(f.note)) throw new Error("finding needs a P1-P3 level and a short note"); }
   return list.map(f => ({ level: f.level, note: f.note }));
 };
-function selfEval(value) {
-  if (value === undefined) return structuredClone(DEFAULT_SELF_EVAL);
-  keys(value, Object.keys(DEFAULT_SELF_EVAL));
-  if (typeof value.enabled !== "boolean") throw new Error("self_eval.enabled must be boolean");
-  for (const k of ["requirements", "issues", "blocked_needs"]) if (!Array.isArray(value[k]) || value[k].length > 64) throw new Error(`self_eval.${k} must be a bounded list`);
-  return structuredClone(value);
-}
-
 /**
  * The optional `score` block a reviewer appends to its own
  * workkeel.review-report/v1 file. Returns the normalized block or throws.
  */
 export function validateReviewScore(score) {
-  keys(score, ["model", "reasoning_effort", "external_score", "findings", "self_eval"], ["external_score"]);
+  keys(score, ["model", "reasoning_effort", "external_score", "findings"], ["external_score"]);
   for (const k of ["model", "reasoning_effort"]) if (score[k] !== undefined && !label(score[k])) throw new Error(`${k} must be a short label or null`);
   const ext = score.external_score;
   keys(ext, ["reviewer_model", "rubric", "scores", "total"], ["rubric", "scores"]);
@@ -52,7 +41,7 @@ export function validateReviewScore(score) {
   if (criteria.some(c => !Number.isInteger(ext.scores[c]) || ext.scores[c] < 1 || ext.scores[c] > 5)) throw new Error("each score is an integer from 1 to 5");
   const total = criteria.reduce((sum, c) => sum + ext.scores[c], 0);
   if (ext.total !== undefined && ext.total !== total) throw new Error("total must equal the sum of the scores");
-  return { model: score.model ?? null, reasoning_effort: score.reasoning_effort ?? null, self_eval: selfEval(score.self_eval),
+  return { model: score.model ?? null, reasoning_effort: score.reasoning_effort ?? null,
     external_score: { reviewer_model: ext.reviewer_model ?? null, rubric: ext.rubric, scores: Object.fromEntries(criteria.map(c => [c, ext.scores[c]])), total, max: criteria.length * 5 },
     findings: findings(score.findings ?? []) };
 }
@@ -101,7 +90,6 @@ export async function taskScoreRecord(target, item, errors = []) {
   // The latest scored review describes the task; its round is counted from the lifecycle.
   const last = scored.findLastIndex(Boolean), latest = last < 0 ? null : scored[last];
   return { task_id: item.id, risk: taskRisk(item), model: latest?.model ?? null, reasoning_effort: latest?.reasoning_effort ?? null,
-    self_eval: latest?.self_eval ?? structuredClone(DEFAULT_SELF_EVAL),
     external_score: latest && { ...latest.external_score, review_round: last + 1 },
     rework: { rounds: rejected.length, reasons } };
 }

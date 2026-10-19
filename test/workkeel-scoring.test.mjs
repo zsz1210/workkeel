@@ -7,7 +7,7 @@ import { fileURLToPath } from "node:url";
 import test from "node:test";
 import { initializeTaskProject } from "../src/workkeel-project.mjs";
 import { createNativeTask, mutateNativeTask, readNativeTask } from "../src/workkeel-tasks.mjs";
-import { DEFAULT_SELF_EVAL, readScoreStats, validateReviewScore } from "../src/workkeel-scoring.mjs";
+import { readScoreStats, validateReviewScore } from "../src/workkeel-scoring.mjs";
 
 const cli = path.join(path.dirname(fileURLToPath(import.meta.url)), "../bin/workkeel.mjs");
 const builder = { agent_id: "builder", principal_id: "owner" };
@@ -33,7 +33,7 @@ test("a review score is a code or non-code rubric with 1-5 integers", () => {
   const score = validateReviewScore(codeScore({ requirements: 5, correctness: 4, tests: 3, maintainability: 4 }));
   assert.deepEqual(score.external_score, { reviewer_model: "reviewer-model", rubric: "code",
     scores: { requirements: 5, correctness: 4, tests: 3, maintainability: 4 }, total: 16, max: 20 });
-  assert.deepEqual(score.self_eval, DEFAULT_SELF_EVAL);
+  assert.equal(Object.hasOwn(score, 'self_eval'), false);
   assert.deepEqual(validateReviewScore({ external_score: { rubric: "non-code", scores: { requirements: 3 } } }).external_score.max, 5);
   for (const [bad, message] of [
     [codeScore({ requirements: 5, correctness: 4, tests: 3 }), /missing field maintainability/],
@@ -42,7 +42,7 @@ test("a review score is a code or non-code rubric with 1-5 integers", () => {
     [{ external_score: { rubric: "visual", scores: {} } }, /rubric must be/],
     [{ external_score: { rubric: "non-code", scores: { requirements: 3 }, total: 4 } }, /sum/],
     [{ external_score: { rubric: "non-code", scores: { requirements: 3 } }, findings: [{ level: "P0", note: "x" }] }, /P1-P3/],
-    [{ external_score: { rubric: "non-code", scores: { requirements: 3 } }, self_eval: { enabled: true } }, /missing field/]
+    [{ external_score: { rubric: "non-code", scores: { requirements: 3 } }, self_eval: { enabled: true } }, /unknown field self_eval/]
   ]) assert.throws(() => validateReviewScore(bad), message);
 });
 
@@ -93,8 +93,8 @@ test("stats report scores and rework reasons by risk tier without writing", asyn
   const stats = await readScoreStats(root);
   assert.equal(git(root, "status", "--porcelain"), before);
   const record = stats.records.find(r => r.task_id === id);
-  assert.deepEqual(Object.keys(record), ["task_id", "risk", "model", "reasoning_effort", "self_eval", "external_score", "rework"]);
-  assert.equal(record.risk, "standard"); assert.equal(record.model, "builder-model"); assert.equal(record.self_eval.enabled, false);
+  assert.deepEqual(Object.keys(record), ["task_id", "risk", "model", "reasoning_effort", "external_score", "rework"]);
+  assert.equal(record.risk, "standard"); assert.equal(record.model, "builder-model");
   assert.deepEqual(record.external_score, { reviewer_model: "reviewer-model", rubric: "code",
     scores: { requirements: 5, correctness: 5, tests: 4, maintainability: 4 }, total: 18, max: 20, review_round: 3 });
   // P3 findings are not rework reasons; a failed review without findings falls back to the rework summary.

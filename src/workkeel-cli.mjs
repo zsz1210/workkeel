@@ -71,7 +71,7 @@ workkeel goal list [target]
 workkeel goal show|tick|serve [target] --id goal-id
 workkeel goal create|pause|resume|cancel|recover|extend-admission|dispose-proposal [target] --request request.json
 workkeel autonomy show [target]
-workkeel autonomy policy|enqueue|pause|resume|cancel|event|discover|resume-job [target] --request request.json
+workkeel autonomy policy|pause|resume|event [target] --request request.json
 workkeel autonomy tick|serve [target]
 workkeel retention inventory|preview|archive|verify|usage [target] --request request.json
 
@@ -206,12 +206,11 @@ async function runCommand(args) {
     const autonomy=await import('./workkeel-autonomy.mjs');
     if(action==='show'){allow(options,[]);output=await autonomy.readAutonomy(target);}
     else if(['tick','serve'].includes(action)){
-      allow(options,[]);const {createAutonomyWorkflowAdapter}=await import('./workkeel-autonomy-workflow.mjs');const adapter=createAutonomyWorkflowAdapter(target);
-      if(action==='tick')output=await autonomy.runAutonomyStep(target,{adapter});
-      else {const controller=new AbortController();const service=await autonomy.serveAutonomy(target,{adapter,signal:controller.signal,onError:e=>console.error(JSON.stringify({error:e.message}))});const stop=()=>{controller.abort();service.close();};process.once('SIGINT',stop);process.once('SIGTERM',stop);console.log(JSON.stringify({schema_version:'workkeel.autonomy-service/v1',state:'listening',inference:'only-on-approved-work',foreground:true}));return 0;}
+      allow(options,[]);
+      if(action==='tick')output=await autonomy.runAutonomyStep(target);
+      else {const controller=new AbortController();const service=await autonomy.serveAutonomy(target,{signal:controller.signal,onError:e=>console.error(JSON.stringify({error:e.message}))});const stop=()=>{controller.abort();service.close();};process.once('SIGINT',stop);process.once('SIGTERM',stop);console.log(JSON.stringify({schema_version:'workkeel.autonomy-service/v1',state:'listening',inference:'only-on-approved-work',foreground:true}));return 0;}
     } else {allow(options,['--request']);const request=(await readTaskContractInput(target,required(options,'--request'))).document;
-      if(action==='cancel'){const {createAutonomyWorkflowAdapter}=await import('./workkeel-autonomy-workflow.mjs');output=await autonomy.cancelAutonomyJob(target,request,{adapter:createAutonomyWorkflowAdapter(target)});}
-      else output=await autonomy.mutateAutonomy(target,action,request);}
+      output=await autonomy.mutateAutonomy(target,action,request);}
   } else if (command === 'learning') {
     const learning=await import('./workkeel-learning.mjs');
     if(action==='list'){allow(options,[]);output=await learning.listNativeLearning(target);}

@@ -117,13 +117,10 @@ test('operator eligibility selects exact tasks and explains absent or stale auth
   assert.equal(saved.version,1,'the selected settings task is used for draft source lookup as well as mutation authority');
   await fs.appendFile(f.root+'/docs/approval.md',' changed');assert.equal((await f.hooks.autonomy.read({...context,task:clone.id})).operator.reason_code,'authority-unavailable');
 });
-test('UI can stop the original queued job after its claim ends, without borrowing another active claim',async t=>{
-  const f=await fixture(t),request={task_id:f.task.id,actor:f.actor,claim_id:f.task.claim.id,contract_sha256:f.task.contract_sha256,operation_id:'enqueue-original',expected_version:0};
-  await mutateAutonomy(f.root,'enqueue',{...request,job:{id:'queued-job',origin:'assigned',direction:null,reason:'Synthetic queued stop',task_id:f.task.id,request_ref:'docs/models.json',depends_on:[]}});
-  await mutateNativeTask(f.root,f.task.id,'release',{operation_id:'release-original',expected_version:f.task.version,actor:f.actor,claim_id:f.task.claim.id,summary:'Synthetic claim ended before dispatch'});
-  const view=await readAutonomy(f.root);await assert.rejects(f.hooks.autonomy.execute({project:f.project,actor:{agent_id:'reviewer',principal_id:'owner'},action:'autonomy.cancel',expectedVersion:view.version,idempotencyKey:'wrong-actor',payload:{job_id:'queued-job'}}),/original job operator/);
-  const result=await f.hooks.autonomy.execute({project:f.project,actor:f.actor,action:'autonomy.cancel',expectedVersion:view.version,idempotencyKey:'stop-original',payload:{job_id:'queued-job'}});
-  assert.equal(result.cancellation,'cancelled-before-dispatch');assert.equal((await readAutonomy(f.root)).jobs[0].status,'cancelled');
+test('UI rejects retired job controls without creating or changing autonomy state',async t=>{
+  const f=await fixture(t),before=await readAutonomy(f.root);
+  for(const actor of [f.actor,{agent_id:'reviewer',principal_id:'owner'}])await assert.rejects(f.hooks.autonomy.execute({project:f.project,actor,action:'autonomy.cancel',expectedVersion:0,idempotencyKey:'retired-stop',payload:{job_id:'legacy-job'}}),/retired.*original runner.*goal controls/);
+  assert.deepEqual(await readAutonomy(f.root),before);
 });
 test('explicit learning discovery does not broaden mandatory Skills or infer usage',async t=>{
   const f=await fixture(t);const request={kind:'initial',instruction:'Perform approved work',write_paths:f.task.contract.environment.write_paths,materials:[],learning_query:'external schema'};

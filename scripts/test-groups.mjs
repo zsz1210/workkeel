@@ -20,7 +20,7 @@ export const optionalFiles = [
   "workkeel-desktop-product", "workkeel-dispatch", "workkeel-dispatch-classifier", "workkeel-dispatch-history",
   "workkeel-execution-capture", "workkeel-execution-visuals", "workkeel-flow-browser", "workkeel-goal-runtime", "workkeel-goals",
   "workkeel-host-observer", "workkeel-host-usage", "workkeel-improvement-cycle", "workkeel-learning", "workkeel-learning-lifecycle",
-  "workkeel-learning-observer", "workkeel-model-policy", "workkeel-model-routing", "workkeel-monitor", "workkeel-monitor-analytics",
+  "workkeel-learning-observer", "workkeel-learning-receipts", "workkeel-model-policy", "workkeel-model-routing", "workkeel-monitor", "workkeel-monitor-analytics",
   "workkeel-monitor-catalogue", "workkeel-monitor-time", "workkeel-observer", "workkeel-observer-index", "workkeel-retention", "workkeel-scoring",
   "workkeel-tailnet", "workkeel-usage-scope", "workkeel-workflows", "workkeel-workspace", "workkeel-workspace-hooks"
 ].map((name) => `test/${name}.test.mjs`);

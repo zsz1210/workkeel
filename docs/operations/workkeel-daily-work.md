@@ -371,7 +371,11 @@ There is no automatic dismissal of manual proposals. The standing goal approver 
 settle a stale or equivalent proposal with `goal dispose-proposal . --request
 request.json` (`goal_id`, `proposal_id`, `disposition` of `superseded`,
 `dismissed` or `needs-reevaluation`, `superseded_by` for `superseded`, and a
-`reason`). The proposal stops blocking exploration; its record, evidence and any
+`reason`, plus `actor`, `operation_id` and admission journal `expected_version`).
+The proposal must exist in the local autonomy inventory and originate from a
+discovery admission of that standing goal. A replacement must also exist and
+belong to that source; self-replacement, unknown IDs and foreign sources fail
+without recording a decision. The proposal stops blocking exploration; its record, evidence and any
 reservation stay, and nothing is retried automatically. A separately approved repair
 and a newly accepted continuation goal can establish the next baseline; the prior
 proposal and its evidence remain historical. Changing source bytes alone is not
