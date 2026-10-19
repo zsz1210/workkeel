@@ -21,6 +21,19 @@ Unpublished source. Breaking: removes the Temple compatibility mode.
   checkout's Git directory. Several processes or mixed CLI versions acting on the
   same task at once can still hit edge cases; such commands stop rather than act on
   another claim or candidate. Further hardening is tracked separately.
+- Approval and evidence rely on Git instead of digest pins. A task records its
+  approving Principal and `approved_at_revision`; later edits to approval, policy
+  or Skill files no longer stop lifecycle operations, and Doctor checks only active
+  tasks against current policy and scope. Launching work through the execution
+  gate still requires those files to match their approval-time snapshot. Evidence
+  is a list of paths, read from the candidate commit when committed there and
+  recorded without digests; low risk work may omit it. Revisions accept
+  abbreviated commit IDs. `unresolved` may be non-empty: high and critical reviews
+  cannot pass with it, and critical work cannot deliver it. Drift is checked only
+  inside the write roots, and all of `.ai-org/` is administrative. Every rework,
+  including `evidence-only`, delivers a new commit. Review recovery links attempts
+  by ID and binds the review to the attempt ID and commit
+  (`workkeel.review-recovery-request/v2`, `workkeel.review-attempt/v2`).
 - Removes the `temple` executable, the `workkeel legacy` and `workkeel migration`
   commands, read-only legacy history, the Temple project overlay, packs and their
   modules, tests and documentation. Projects pinned to an earlier CLI keep that

@@ -249,7 +249,7 @@ test("critical close reads the approval blob committed in the candidate", async 
   await assert.rejects(close(hidden, "WK-hidden", critical.revision, lead, [".ai-org/artifacts/WK-hidden/review-reviewer-3.json"]), /approval record committed/);
 });
 
-test("the validated review report is the exact evidence that gets pinned", async t => {
+test("the validated review report is read once and recorded by path", async t => {
   const root = await fixture(t);
   const high = await deliver(root, "WK-swap", { tier: "high", write: ["src/auth"], approvedBy: "lead" }, "src/auth/token.mjs");
   await high.result;
@@ -262,12 +262,21 @@ test("the validated review report is the exact evidence that gets pinned", async
     if (file === absolute && ++opens === 2) await fs.writeFile(absolute, delivered);
     return open.call(fs, file, ...rest);
   });
-  try { await mutateNativeTask(root, "WK-swap", "review", request(3, reviewer, { revision: high.revision, judgment: "pass", summary: "Reviewed", evidence: [ref] })); }
-  catch { /* refusing the swapped file is also safe */ }
+  await mutateNativeTask(root, "WK-swap", "review", request(3, reviewer, { revision: high.revision, judgment: "pass", summary: "Reviewed", evidence: [ref] }));
   t.mock.restoreAll();
-  const pinned = (await readNativeTask(root, "WK-swap")).review?.evidence ?? [];
-  assert.equal(pinned.length, 1);
-  assert.equal(pinned[0].sha256, createHash("sha256").update(valid).digest("hex"));
+  assert.equal(opens, 1);
+  assert.deepEqual((await readNativeTask(root, "WK-swap")).review.evidence, [{ path: ref, source: "workspace" }]);
+});
+
+test("unresolved issues: high reviews cannot pass them and critical work cannot deliver them", async t => {
+  const root = await fixture(t);
+  const high = await deliver(root, "WK-open", { tier: "high", write: ["src/auth"], approvedBy: "lead" }, "src/auth/token.mjs", { unresolved: ["Token rotation untested"] });
+  await high.result;
+  await assert.rejects(review(root, "WK-open", high.revision, reviewer), /cannot pass while the delivery lists unresolved/);
+  assert.equal((await review(root, "WK-open", high.revision, reviewer, { judgment: "fail" })).state, "test");
+  const critical = await deliver(root, "WK-critical-open", { tier: "critical", write: ["deploy"], approvedBy: "lead" }, "deploy/run.sh",
+    { rollback: "Revert", unresolved: ["Smoke test pending"] });
+  await assert.rejects(critical.result, /Critical work cannot be delivered with unresolved issues/);
 });
 
 test("a re-delivery after a critical escalation still needs a rollback", async t => {

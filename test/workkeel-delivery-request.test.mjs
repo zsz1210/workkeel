@@ -81,12 +81,12 @@ test('native apply rejects out-of-scope candidates and missing evidence',async t
   await assert.rejects(f.deliver(),/outside approved write roots/);assert.equal((await f.read()).state,'build');
 });
 
-test('native apply refuses product drift and changed pinned authority',async t=>{
+test('native apply refuses product drift but not an edited approval file',async t=>{
   const f=await fixture(t);await f.apply(await f.prepare('claim'));
   const handoff=await f.prepare('handoff',{summary:'x',evidence:['docs/approval.md'],unresolved:[]});
-  await fs.writeFile(f.root+'/src/a.txt','uncommitted');await assert.rejects(f.apply(handoff),/clean product tree/i);
+  await fs.writeFile(f.root+'/src/a.txt','uncommitted');await assert.rejects(f.apply(handoff),/clean tree/i);assert.equal((await f.read()).state,'build');
   await fs.writeFile(f.root+'/src/a.txt','baseline');await fs.writeFile(f.root+'/docs/approval.md','Changed approval');
-  await assert.rejects(f.apply(handoff),/evidence|approval|changed/i);assert.equal((await f.read()).state,'build');
+  await f.apply(handoff);assert.equal((await f.read()).state,'test');
 });
 
 test('review requires a distinct actual actor and explicit verdict; fail cannot become close',async t=>{
@@ -101,20 +101,20 @@ test('review requires a distinct actual actor and explicit verdict; fail cannot 
   assert.equal((await readDeliveryGuide(f.root,'WK-entry')).operation.action,null);
 });
 
-test('close rechecks review evidence after preparation',async t=>{
+test('close is not blocked by review evidence edited after preparation',async t=>{
   const f=await fixture(t);await f.apply(await f.prepare('claim'));await f.deliver();
   await fs.mkdir(f.root+'/.ai-org/artifacts/WK-entry',{recursive:true});
   const ref='.ai-org/artifacts/WK-entry/review.md';await fs.writeFile(f.root+'/'+ref,'Actual fixture review');
   await f.apply(await f.prepare('review',{judgment:'pass',summary:'Reviewed',evidence:[ref]}));
   const close=await f.prepare('close',{summary:'Accept',rollback:'Revert',evidence:['docs/approval.md']});
-  await fs.writeFile(f.root+'/'+ref,'Changed judgment');await assert.rejects(f.apply(close),/changed|evidence/i);
-  assert.equal((await f.read()).state,'release_gate');
+  await fs.writeFile(f.root+'/'+ref,'Changed judgment');await f.apply(close);
+  assert.equal((await f.read()).state,'done');
 });
 
-test('guide retains authority warnings and full scope after authority changes',async t=>{
+test('guide keeps full scope and raises no evidence warning after an approval edit',async t=>{
   const f=await fixture(t);await fs.writeFile(f.root+'/docs/approval.md','Changed');
   const guide=await readDeliveryGuide(f.root,'WK-entry');
-  assert.ok(guide.context.attention_reasons.includes('evidence-unavailable'));
+  assert.ok(!guide.context.attention_reasons.includes('evidence-unavailable'));
   assert.deepEqual(guide.context.execution_scope.write_paths,['src']);assert.equal(guide.execution_authorized,false);
 });
 

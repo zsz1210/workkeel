@@ -23,7 +23,7 @@ test('terminal closeout resolves old stopped attempts without hiding later or co
  assert.equal(workflowNeedsAttention({...summary,timeline:[]},measured),true);
 });
 
-test('accepted interrupted fixture leaves attention but retains history and evidence checks',async t=>{
+test('accepted interrupted fixture clears attention and is not re-verified after evidence edits',async t=>{
  const root=await createMonitorFixture();t.after(()=>fs.rm(root,{recursive:true,force:true}));
  const env=Object.fromEntries(Object.entries(process.env).filter(([key])=>!key.startsWith('GIT_')));
  for(const args of [['add','.'],['-c','core.hooksPath=/dev/null','-c','commit.gpgsign=false','commit','-qm','Pin terminal attention fixture']])execFileSync('git',['-C',root,...args],{env});
@@ -36,9 +36,10 @@ test('accepted interrupted fixture leaves attention but retains history and evid
  const accepted=(await readMonitorSnapshot(root)).tasks.find(t=>t.id===id);
  assert.equal(accepted.task_state,'done');assert.equal(accepted.needs_attention,false);assert.equal(accepted.continuation,null);
  assert.equal(accepted.runs[0].runner_state,'blocked');
+ // Closed tasks are not re-verified: editing their evidence leaves them settled.
  await fs.writeFile(path.join(root,'docs/approval.md'),'Changed evidence');
  const changed=(await readMonitorSnapshot(root)).tasks.find(t=>t.id===id);
- assert.equal(changed.needs_attention,true);assert.ok(changed.attention_reasons.includes('evidence-unavailable'));
+ assert.equal(changed.needs_attention,false);assert.ok(!changed.attention_reasons.includes('evidence-unavailable'));
 });
 
 test('formatter preserves unknown, partial, zero, strict numbers and duration semantics',()=>{

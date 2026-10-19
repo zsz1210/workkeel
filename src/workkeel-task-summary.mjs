@@ -1,7 +1,7 @@
 import fs from 'node:fs/promises';
 import { constants } from 'node:fs';
 import path from 'node:path';
-import { readNativeTask } from './workkeel-tasks.mjs';
+import { readNativeTask, evidenceStatus as taskEvidenceStatus } from './workkeel-tasks.mjs';
 import { readTaskProject, assertActor, safeDirectory, existsEntry } from './workkeel-project.mjs';
 import { readTaskContractInput, readTaskFile } from './task-contract.mjs';
 import { withProjectMutationLock } from './workkeel-lock.mjs';
@@ -207,17 +207,22 @@ export async function readTaskSummary(target,id,{now=new Date()}={}) {
   if(task.review?.judgment==='fail')next='Resolve the review findings and request same-scope rework.';
   if(observed.status==='unavailable')next='Inspect the observation record and its referenced evidence.';
   const evidenceStatus=[];
-  for(const stage of ['authority','delivery','review','closeout'])for(const pin of (stage==='authority'?task.authority_pins:task[stage]?.evidence)??[]){
-    let status='verified',current_digest=null;try{current_digest=(await readTaskFile(target,pin.path)).digest;if(current_digest!==pin.sha256)status='changed';}catch{status='unavailable';}
-    evidenceStatus.push({stage,...pin,status,current_digest});
+  // Evidence is a recorded path, committed in the candidate or kept under .ai-org/;
+  // edits never invalidate it, only a missing path needs attention.
+  for(const stage of ['delivery','review','closeout'])for(const entry of task[stage]?.evidence??[]){
+    const status=await taskEvidenceStatus(target,task.delivery?.revision??null,entry);let current_digest=null;
+    if(status==='present')try{current_digest=(await readTaskFile(target,entry.path)).digest;}catch{}
+    evidenceStatus.push({stage,path:entry.path,source:entry.source??'workspace',status,current_digest});
   }
-  if(evidenceStatus.some(p=>p.status!=='verified'))next='Recover the exact recorded evidence before continuing this task.';
+  if(evidenceStatus.some(p=>p.status==='unavailable'))next='Recover the exact recorded evidence before continuing this task.';
+  if(task.state==='test'&&task.delivery?.unresolved?.length)next='Review the delivered candidate and decide on its listed unresolved issues.';
   if(!policyCurrent)next='Inspect the project policy change and re-establish task authority before continuing.';
   if(activeAuthorityExpired)next='Task approval has expired. Obtain renewed approval through a new task before continuing.';
   const attentionReasons=[];
   if(activeAuthorityExpired)attentionReasons.push('approval-expired');
   if(!policyCurrent)attentionReasons.push('policy-changed');
-  if(evidenceStatus.some(p=>p.status!=='verified'))attentionReasons.push('evidence-unavailable');
+  if(evidenceStatus.some(p=>p.status==='unavailable'))attentionReasons.push('evidence-unavailable');
+  if(task.delivery?.unresolved?.length)attentionReasons.push('unresolved-at-delivery');
   if(observed.status==='unavailable')attentionReasons.push('observation-unavailable');
   if(task.review?.judgment==='fail')attentionReasons.push('review-failed');
   else if(task.state==='test')attentionReasons.push('awaiting-review');
@@ -237,7 +242,7 @@ export async function readTaskSummary(target,id,{now=new Date()}={}) {
       formal_rework_count:rejected,formal_first_review_pass:rejected>0?false:task.review?task.review.judgment==='pass':null,
       metric_scope:'formal-task-review',pre_delivery_review:preDeliverySummary(observed),delivery_progress:summarizeIterations(observed,task.delivery?.revision??null),
       approval_status:authorityExpired?'expired':'current',
-      locally_accepted:task.state==='done',evidence_current:policyCurrent&&evidenceStatus.every(p=>p.status==='verified'),policy_current:policyCurrent,
+      locally_accepted:task.state==='done',evidence_current:policyCurrent&&evidenceStatus.every(p=>p.status!=='unavailable'),policy_current:policyCurrent,
       lifecycle_elapsed_ms:['done','cancelled'].includes(task.state)?lifecycle.elapsed_ms:null},
     timeline:await taskTimeline(target,task),
     limitations:['Recorded task state is not process liveness.','Attribution is not provider authentication.','Check and PR observations never satisfy acceptance gates.']};

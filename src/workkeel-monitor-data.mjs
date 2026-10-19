@@ -171,7 +171,7 @@ export async function taskResourceView(root,id) {
       rules:Array.isArray(p.rules)?p.rules.slice(0,64).map(r=>({id:text(r.id,120),nodes:Array.isArray(r.nodes)?r.nodes.slice(0,100).map(n=>text(n,120)):[],model:text(r.model,120)})):[]};
   }catch{executionPolicy={status:'unavailable'};}
   const refs=[...task.authority_pins??[],...task.delivery?.evidence??[],...task.review?.evidence??[],...task.closeout?.evidence??[]];
-  const documents=[...new Map(refs.filter(p=>docPath(p.path)).map(p=>[p.path,{id:documentId(p.path),path:p.path,task_id:id,pinned_digest:p.sha256}])).values()];
+  const documents=[...new Map(refs.filter(p=>docPath(p.path)).map(p=>[p.path,{id:documentId(p.path),path:p.path,task_id:id,pinned_digest:p.sha256??null}])).values()];
   return {documents,skills:c.skills.map(ref=>({path:ref,document_id:documentId(ref),selection:'task-contract',read_complete:null,applied:null,verified:null})),
     settings:{runtime:{kind:c.execution.runtime.kind,adapter_id:c.execution.runtime.adapter_id??null},connection:connectionView(c.execution.model_connection),
       network_mode:c.environment.network.mode,tools:c.environment.tools,read_paths:c.environment.read_paths,write_paths:c.environment.write_paths,

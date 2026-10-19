@@ -8,7 +8,7 @@ import {readTaskFile} from './task-contract.mjs';
 import {checkEvidencePin} from './workkeel-evidence-file.mjs';
 import {assertRequirementAssessment} from './workkeel-requirements.mjs';
 import {readTaskProject,assertActor,assertApprover,safeDirectory,readNativeGit} from './workkeel-project.mjs';
-import {assertTaskExecutionContext,readNativeTask,mutateNativeTask} from './workkeel-tasks.mjs';
+import {assertTaskExecutionContext,readNativeTask,mutateNativeTask,evidenceStatus} from './workkeel-tasks.mjs';
 import {withProjectMutationLock} from './workkeel-lock.mjs';
 import {durableAtomicCreate,durableAtomicWrite,formatJson} from './files.mjs';
 
@@ -102,7 +102,7 @@ async function componentTask(s,c){
 async function evidenceCurrent(root,values){for(const p of values)if(!await freshPin(root,p))return false;return true;}
 async function acceptedFact(s,c){
   const t=await componentTask(s,c);if(t.state!=='done'||t.review?.judgment!=='pass'||!t.closeout||!t.delivery)return null;
-  if(!await evidenceCurrent(c.root,[...t.delivery.evidence,...t.review.evidence,...t.closeout.evidence]))return null;
+  for(const entry of [...t.delivery.evidence,...t.review.evidence,...t.closeout.evidence])if(await evidenceStatus(c.root,t.delivery.revision,entry)==='unavailable')return null;
   if((await readNativeGit(c.root,['rev-parse','--verify',t.delivery.revision+'^{commit}'])).trim()!==t.delivery.revision)return null;
   const interface_pins=[];
   for(const ref of c.interface_refs){const file=await readTaskFile(c.root,ref,{preserveBom:true}),tree=await readNativeGit(c.root,['ls-tree','-z',t.delivery.revision,'--',ref]),match=/^100(?:644|755) blob ([a-f0-9]{40}(?:[a-f0-9]{24})?)\t/.exec(tree);if(!match)return null;const bytes=Buffer.from(file.content),blob=createHash(match[1].length===40?'sha1':'sha256').update(Buffer.from('blob '+bytes.length+'\0')).update(bytes).digest('hex');if(blob!==match[1])return null;interface_pins.push({path:ref,sha256:file.bytes_digest});}

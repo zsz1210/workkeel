@@ -3,7 +3,7 @@ import Ajv from 'ajv';
 import { formatJson, sha256 } from './files.mjs';
 import { readTaskFile, validateTaskContract } from './task-contract.mjs';
 import { readTaskProject, assertActor, safeDirectory, readNativeGit } from './workkeel-project.mjs';
-import { readNativeTask, inspectTaskCandidate } from './workkeel-tasks.mjs';
+import { readNativeTask, inspectTaskCandidate, evidenceStatus } from './workkeel-tasks.mjs';
 import { elevatedRisk, isTeamPolicy, taskRisk } from './workkeel-risk.mjs';
 
 const hash = value => sha256(formatJson(value));
@@ -79,12 +79,13 @@ export async function assessNativeTask(targetInput, id, input = {}) {
   await read(`.ai-org/work-items/${id}.json`);
   const item = await readNativeTask(target, id);
   const contract = item.contract;
-  const checkPins = async (pins, category) => {
-    if (!Array.isArray(pins) || pins.length > 256) throw Error('Invalid or oversized evidence pin collection');
-    for (const p of pins) {
-      try {
-        if ((await read(p.path)).digest !== p.sha256) issue(`${category}-changed`, p.path);
-      } catch (error) { issue(`${category}-unavailable`, `${p.path}: ${error.message}`); }
+  // Evidence is a recorded path: committed in the candidate or a working .ai-org/ file.
+  const checkEvidence = async (entries, revision, category) => {
+    if (!Array.isArray(entries) || entries.length > 256) throw Error('Invalid or oversized evidence collection');
+    for (const p of entries) {
+      // Working files are observed like every other input, so a change during assessment is still seen.
+      if (p.source === 'candidate') { if (await evidenceStatus(target, revision, p) === 'unavailable') issue(`${category}-unavailable`, p.path); continue; }
+      try { await read(p.path); } catch (error) { issue(`${category}-unavailable`, `${p.path}: ${error.message}`); }
     }
   };
   const checkAuthority = async task => {
@@ -94,7 +95,10 @@ export async function assessNativeTask(targetInput, id, input = {}) {
     try { assertActor(project.policy, task.contract.actor); }
     catch (error) { issue('actor-unresolved', error.message); }
     if (!project.policy.approvers.includes(task.contract.authorization?.approved_by)) issue('approver-unresolved', task.id);
-    await checkPins(task.authority_pins, 'authority');
+    // Approval is the Principal plus its commit: edited files are fine, missing ones are reported.
+    for (const p of task.authority_pins) {
+      try { await read(p.path); } catch (error) { issue('authority-unavailable', `${p.path}: ${error.message}`); }
+    }
   };
   await checkAuthority(item);
   try { await safeDirectory(target, contract.environment.cwd); }
@@ -111,7 +115,7 @@ export async function assessNativeTask(targetInput, id, input = {}) {
       await checkAuthority(dep);
       if (dep.state !== 'done' || !dep.delivery || dep.review?.judgment !== 'pass' || dep.closeout?.revision !== dep.delivery.revision)
         throw Error(`Dependency ${dependencyId} has no accepted native candidate`);
-      await checkPins([...dep.delivery.evidence, ...dep.review.evidence, ...dep.closeout.evidence], 'dependency-evidence');
+      await checkEvidence([...dep.delivery.evidence, ...dep.review.evidence, ...dep.closeout.evidence], dep.delivery.revision, 'dependency-evidence');
       await dependencySnapshot(dep, new Set([...ancestors, task.id]));
       if (task.base_revision) await git(target, ['merge-base', '--is-ancestor', dep.delivery.revision, task.base_revision]);
       result.push({ id: dep.id, version: dep.version, revision: dep.delivery.revision,
@@ -123,7 +127,9 @@ export async function assessNativeTask(targetInput, id, input = {}) {
   let dependencies = null;
   try { dependencies = await dependencySnapshot(item); }
   catch (error) { issue('dependency-unresolved', error.message); }
-  for (const stage of ['delivery', 'review', 'closeout']) if (item[stage]) await checkPins(item[stage].evidence, `${stage}-evidence`);
+  for (const stage of ['delivery', 'review', 'closeout']) if (item[stage]) await checkEvidence(item[stage].evidence, item.delivery?.revision ?? null, `${stage}-evidence`);
+  // Open issues travel with the delivery; the reviewer decides below high risk.
+  if (item.delivery?.unresolved?.length) issue('unresolved-at-delivery', item.delivery.unresolved.join('; '), elevatedRisk(taskRisk(item)));
   if (item.review?.judgment === 'fail') issue('failed-independent-review', 'The current candidate has a failed independent review.');
   if (item.state === 'cancelled') issue('cancelled-task', 'This task is cancelled.');
   for (const blocker of input.blockers ?? []) issue('declared-blocker', blocker);

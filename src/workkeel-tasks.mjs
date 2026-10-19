@@ -31,42 +31,67 @@ async function git(target, args) {
   try { return await readNativeGit(target, args); }
   catch (error) { throw new Error(`Git candidate check failed; use a local repository and exact commit: ${error.message}`); }
 }
+/** A full or abbreviated commit ID, resolved to the one full commit it names. */
 async function exactRevision(target, revision) {
-  if (!SHA.test(revision ?? "")) throw new Error("A full immutable commit revision is required");
-  if ((await git(target, ["rev-parse", "--verify", `${revision}^{commit}`])).trim() !== revision) throw new Error("Candidate must identify the commit itself");
+  if (typeof revision !== "string" || !/^[a-f0-9]{4,64}$/.test(revision)) throw new Error("A commit ID (full or abbreviated hexadecimal) is required");
+  const full = (await git(target, ["rev-parse", "--verify", `${revision}^{commit}`])).trim();
+  if (!SHA.test(full) || !full.startsWith(revision)) throw new Error("Candidate must identify the commit itself");
+  return full;
 }
-/** Reads each evidence file once; callers that inspect content use these same bytes. */
-async function readEvidence(target, refs) {
-  if (!Array.isArray(refs) || !refs.length || refs.some(x => typeof x !== "string") || new Set(refs).size !== refs.length) throw new Error("Distinct repository evidence paths are required");
-  const files = [];
+/** The delivered commit, named in full or by an abbreviation of it; null for anything else. */
+const deliveredRevision = (item, revision) => typeof revision === "string" && /^[a-f0-9]{4,64}$/.test(revision) &&
+  item.delivery?.revision.startsWith(revision) ? item.delivery.revision : null;
+// `.ai-org/` holds the task store, reports and requests: administrative, never product.
+const administrative = file => file === ".ai-org" || file.startsWith(".ai-org/");
+/** HEAD, or null before the repository's first commit. */
+async function headRevision(target) {
+  try { return (await readNativeGit(target, ["rev-parse", "--verify", "HEAD^{commit}"])).trim(); } catch { return null; }
+}
+/**
+ * Approval-time digests of the approval, policy and skill files. Lifecycle
+ * operations and Doctor never recheck them; only the execution gate and optional
+ * execution helpers (dispatch, goals, autonomy) compare them before running work.
+ */
+async function authoritySnapshot(target, refs) {
+  const pins = [];
   for (const ref of refs) {
     const input = await readTaskFile(target, ref);
-    if (!input.content.trim()) throw new Error("Evidence files must not be empty");
-    files.push({ path: ref, sha256: input.digest, content: input.content });
+    if (!input.content.trim()) throw new Error("Approval and policy references must not be empty");
+    pins.push({ path: ref, sha256: input.digest });
+  }
+  return pins;
+}
+/**
+ * Evidence is a path committed in the candidate (Git keeps it immutable) or a
+ * working file such as a `.ai-org/` report. Paths are recorded without digests;
+ * callers that inspect content use the bytes read here.
+ */
+async function readEvidence(target, refs, revision, { required = false } = {}) {
+  if (!Array.isArray(refs) || refs.length > 64 || refs.some(x => typeof x !== "string") || new Set(refs).size !== refs.length) throw new Error("Distinct repository evidence paths are required");
+  if (required && !refs.length) throw new Error("Standard and higher risk work needs evidence: a path committed in the candidate or a report such as one under .ai-org/");
+  const files = [];
+  for (const ref of refs) {
+    let content = null, source = "candidate";
+    if (revision && (await git(target, ["ls-tree", revision, "--", `:(literal)${ref}`])).startsWith("100")) {
+      try { content = new TextDecoder("utf-8", { fatal: true }).decode(await readNativeGit(target, ["cat-file", "blob", `${revision}:${ref}`], { encoding: "buffer" })); }
+      catch { throw new Error(`Evidence must be UTF-8 text: ${JSON.stringify(ref)}`); }
+    } else { content = (await readTaskFile(target, ref)).content; source = "workspace"; }
+    if (!content.trim()) throw new Error("Evidence files must not be empty");
+    files.push({ path: ref, source, content });
   }
   return files;
 }
-const pinsOf = files => files.map(({ path, sha256 }) => ({ path, sha256 }));
-const evidence = async (target, refs) => pinsOf(await readEvidence(target, refs));
-async function assertPins(target, pins) {
-  for (const pin of pins) if ((await readTaskFile(target, pin.path)).digest !== pin.sha256) throw new Error("Referenced approval, policy or evidence changed; preserve this attempt and obtain fresh authorization");
-}
-function retainedReworkEvidence(item) {
-  return item.attempts.some(a => a.rework_mode === "evidence-only")
-    ? item.attempts.filter(a => a.kind === "rejected").flatMap(a => [...a.delivery.evidence, ...a.review.evidence]) : [];
-}
-async function evidenceRework(target, item, revision, pins) {
-  const rejected = item.attempts.filter(a => a.kind === "rejected"), latest = rejected.at(-1);
-  if (latest?.rework_mode === "evidence-only") {
-    if (revision !== latest.delivery.revision) throw new Error("Evidence-only rework must preserve the rejected source revision");
-    const previous = rejected.flatMap(a => [...a.delivery.evidence, ...a.review.evidence]);
-    await assertPins(target, previous);
-    const hashes = new Set(previous.map(p => p.sha256));
-    if (!pins.some(p => !hashes.has(p.sha256))) throw new Error("Evidence-only rework requires new evidence content, not renamed or reordered prior evidence");
-    return { rejected_review_sha256: digest(latest.review), previous_evidence_sha256: digest(previous) };
+const refsOf = files => files.map(({ path, source }) => ({ path, source }));
+/**
+ * Observation of one recorded evidence path: "committed" in the given candidate,
+ * "present" as a working file, or "unavailable". Content is never compared.
+ */
+export async function evidenceStatus(target, revision, entry) {
+  if (entry?.source === "candidate") {
+    try { return revision && (await readNativeGit(target, ["ls-tree", revision, "--", `:(literal)${entry.path}`])).startsWith("100") ? "committed" : "unavailable"; }
+    catch { return "unavailable"; }
   }
-  if (rejected.some(a => a.delivery.revision === revision)) throw new Error("Rework requires a fresh candidate, not the rejected revision");
-  return null;
+  try { await readTaskFile(target, entry.path); return "present"; } catch { return "unavailable"; }
 }
 function assertRecord(item, id) {
   if (item?.schema_version !== "workkeel.work-item/v1" || item.id !== id || item.contract?.id !== id ||
@@ -134,8 +159,6 @@ async function dependencies(target, item, seen = new Set()) {
     const dependency = await readNativeTask(target, id);
     if (dependency.state !== "done" || !dependency.delivery || dependency.review?.judgment !== "pass" ||
         dependency.closeout?.revision !== dependency.delivery.revision) throw new Error("Dependencies must be accepted native tasks");
-    await assertPins(target, [...dependency.authority_pins, ...dependency.delivery.evidence, ...dependency.review.evidence, ...dependency.closeout.evidence]);
-    await assertPins(target, retainedReworkEvidence(dependency));
     await dependencies(target, dependency, branch);
     if (item.base_revision) await git(target, ["merge-base", "--is-ancestor", dependency.delivery.revision, item.base_revision]);
     pins.push({ id, version: dependency.version, revision: dependency.delivery.revision, record_sha256: bodyHash(dependency) });
@@ -146,13 +169,15 @@ async function dependencies(target, item, seen = new Set()) {
 async function context(target, item, project, creator = initiator(item)) {
   if (item.policy_sha256 !== digest(project.policy)) throw new Error("Task policy changed after approval");
   assertContractPolicy(item.contract, project.policy, creator);
-  await assertPins(target, item.authority_pins);
-  await assertPins(target, retainedReworkEvidence(item));
   await loadTaskRequirements(target, item.contract, {requiredRefs: project.policy.requirements_refs ?? []});
   await safeDirectory(target, item.contract.environment.cwd);
 }
 
-/** Execution is allowed only under the current implementation claim and unchanged authority. */
+/**
+ * Execution is allowed only under the current implementation claim. Unlike
+ * lifecycle operations, launching work also requires the approval, policy and
+ * Skill files to still match their approval-time snapshot, because hosts run them.
+ */
 export async function assertTaskExecutionContext(target, id, { actor, claim_id, contract_sha256 = null }) {
   const project = await readTaskProject(target);
   const item = await readNativeTask(target, id);
@@ -160,6 +185,8 @@ export async function assertTaskExecutionContext(target, id, { actor, claim_id, 
   if (item.state !== "build" || !item.claim || item.claim.id !== claim_id || !sameActor(item.claim.actor, actor)) throw new Error("Execution requires the current matching implementation claim");
   if (contract_sha256 !== null && contract_sha256 !== item.contract_sha256) throw new Error("Execution contract changed");
   await context(target, item, project);
+  for (const pin of item.authority_pins) if ((await readTaskFile(target, pin.path)).digest !== pin.sha256)
+    throw new Error("Referenced approval, policy or Skill file changed since approval; the lifecycle continues, but launching work needs a re-approved task");
   await dependencies(target, item);
   return item;
 }
@@ -216,9 +243,13 @@ export async function createNativeTask(targetInput, draft, request, { expectedPo
     // Existing-only immutable dependencies make cycles impossible in supported writes.
     for (const id of contract.dependencies) await readNativeTask(target, id);
     const authorityRefs = [...new Set([contract.authorization.approval_ref, ...contract.environment.data.policy_refs, ...contract.skills])].filter(ref => ref !== null);
+    // Approval is the approving Principal plus the commit it was given at. Later
+    // edits to the approval or policy files never invalidate the task; the files as
+    // approved are `git show <approved_at_revision>:<path>` when committed.
     const item = { schema_version: "workkeel.work-item/v1", id: contract.id, version: 0, state: "intake",
       contract: structuredClone(contract), contract_sha256: digest(contract), policy_sha256: digest(project.policy),
-      authority_pins: authorityRefs.length ? await evidence(target, authorityRefs) : [], claim: null, base_revision: null,
+      approval: { approved_by: contract.authorization.approved_by, approved_at_revision: await headRevision(target) },
+      authority_pins: await authoritySnapshot(target, authorityRefs), claim: null, base_revision: null,
       dependency_pins: null, delivery: null, review: null, closeout: null, attempts: [], history: [] };
     if (expectedAuthorityPins !== null && digest(item.authority_pins) !== digest(expectedAuthorityPins)) throw new Error('Intake authority changed; inspect a fresh preview');
     await context(target, item, project, request.actor);
@@ -230,76 +261,44 @@ export async function createNativeTask(targetInput, draft, request, { expectedPo
   });
 }
 
-async function administrativeFile(target, item, file, action, request) {
-  if (file === fileRef(item.id)) return true;
-  if (!file.startsWith(`.ai-org/artifacts/${item.id}/`) || !/\.(?:md|txt|log|json)$/.test(file)) return false;
-  const refs = [...(item.delivery?.evidence ?? []), ...(item.review?.evidence ?? []), ...(item.closeout?.evidence ?? []), ...retainedReworkEvidence(item)].map(p => p.path);
-  if (refs.includes(file) || request?.evidence?.includes(file)) return true;
-  if (!file.endsWith(".json")) return false;
-  let document;
-  try { document = (await readTaskContractInput(target, file)).document; } catch { return false; }
-  // Dispatch retains a claim body as framework evidence. Only the exact body
-  // anchored to this task's canonical chain is administrative; a filename alone
-  // cannot exempt arbitrary untracked files from the clean-candidate gate.
-  if (file.startsWith(`.ai-org/artifacts/${item.id}/dispatch-claim-`)) {
-    try {
-      assertRecord(document, item.id);
-      const last = document.history.at(-1);
-      return document.state === "build" && last.action === "claim" &&
-        file === `.ai-org/artifacts/${item.id}/dispatch-claim-${last.hash}.json` &&
-        document.contract_sha256 === item.contract_sha256 &&
-        digest(document.history) === digest(item.history.slice(0, document.version));
-    } catch { return false; }
-  }
-  return (request && digest(document) === digest(request)) || item.history.some(event =>
-    event.request_sha256 === digest({ action: event.action, request: document }));
-}
 const CANDIDATE_MESSAGES = {
   'outside-write-scope': 'Candidate changes paths outside approved write roots',
-  'unlisted-report': 'Candidate verification requires a clean product tree, including untracked files',
-  'product-drift': 'Candidate verification requires a clean product tree, including untracked files',
-  'tracked-artifact-changed': 'A tracked candidate artifact changed after verification'
+  'product-drift': 'Candidate verification requires a clean tree inside the approved write roots, including untracked files'
 };
-async function candidateFiles(target, item, revision, { handoff = false, action = null, request = null } = {}) {
-  await exactRevision(target, revision);
+/**
+ * Committed product changes must stay inside the write roots. Drift is checked
+ * only inside those roots; `.ai-org/` is always administrative.
+ */
+async function candidateFiles(target, item, revision, { handoff = false } = {}) {
   await git(target, ["merge-base", "--is-ancestor", item.base_revision, revision]);
   if (handoff && (await git(target, ["rev-parse", "HEAD"])).trim() !== revision) throw new Error("Handoff candidate must be the current commit");
-  const issues = [], administrative = [];
-  const { product } = await changedFiles(target, item, item.base_revision, revision, action, request);
-  for (const file of product) if (!item.contract.environment.write_paths.some(root => under(file, root)))
+  const roots = item.contract.environment.write_paths, inScope = file => roots.some(root => under(file, root));
+  const issues = [], drifted = [];
+  const { product } = await changedFiles(target, item.base_revision, revision);
+  for (const file of product) if (!inScope(file))
     issues.push({path:file, code:'outside-write-scope', next_action:'Preserve the candidate; obtain approval for the actual scope before a new delivery.'});
   const drift = [...(await git(target, ["diff", "--no-renames", "--name-only", "-z", revision, "--"])).split("\0"),
     ...(await git(target, ["ls-files", "--others", "--exclude-standard", "-z"])).split("\0")].filter(Boolean);
   for (const file of new Set(drift)) {
-    if (!await administrativeFile(target, item, file, action, request)) {
-      const report = file.startsWith(`.ai-org/artifacts/${item.id}/`) && /\.(?:md|txt|log|json)$/.test(file);
-      issues.push({path:file, code:report?'unlisted-report':'product-drift', next_action:report?
-        'If this is new administrative evidence, name this exact file in the request; otherwise preserve it outside the candidate or commit and verify it.':
-        'Preserve the change; commit and verify a new candidate, or keep unrelated generated output outside the product tree.'});
-      continue;
-    }
-    // Only the task's canonical state may change if it existed in the candidate.
-    // New exact report/request files are administrative; existing artifacts are
-    // still immutable candidate inputs, regardless of extension or directory.
-    if (file !== fileRef(item.id) && (await git(target, ["ls-tree", "--name-only", revision, "--", `:(literal)${file}`])).trim())
-      issues.push({path:file, code:'tracked-artifact-changed', next_action:'Keep the recorded candidate evidence immutable; save later observations in a new file.'});
-    else administrative.push(file);
+    if (administrative(file)) drifted.push(file);
+    else if (inScope(file)) issues.push({path:file, code:'product-drift',
+      next_action:'Preserve the change; commit and verify a new candidate, or keep unrelated generated output outside the write roots.'});
   }
-  return {issues, administrative};
+  return {issues, administrative: drifted};
 }
-/** Committed changes split into product files and this task's administrative records. */
-async function changedFiles(target, item, from, revision, action, request) {
-  const product = [], administrative = [];
+/** Committed changes split into product files and administrative `.ai-org/` records. */
+async function changedFiles(target, from, revision) {
+  const product = [], records = [];
   for (const file of (await git(target, ["diff", "--no-renames", "--name-only", "-z", from, revision, "--"])).split("\0").filter(Boolean))
-    (await administrativeFile(target, item, file, action, request) ? administrative : product).push(file);
-  return { product, administrative };
+    (administrative(file) ? records : product).push(file);
+  return { product, administrative: records };
 }
 /** Risk spans every change since the first claim that was never accepted, so a
  * rejected or released attempt cannot hide its paths behind a newer claim base. */
-async function deliveryRisk(target, item, policy, revision, action, request) {
+async function deliveryRisk(target, item, policy, revision) {
   const first = item.attempts[0]?.base_revision ?? item.base_revision;
   const from = first === item.base_revision ? first : (await git(target, ["merge-base", first, revision])).trim();
-  const span = await changedFiles(target, item, from, revision, action, request);
+  const span = await changedFiles(target, from, revision);
   return { ...candidateRisk(policy, span.product, span.administrative), compared_from: from };
 }
 async function assertCandidate(target, item, revision, options = {}) {
@@ -315,20 +314,20 @@ export async function inspectTaskCandidate(targetInput, id, input) {
   const target=await fs.realpath(targetInput),item=await readNativeTask(target,id),request=input.request;
   if (request.expected_version!==item.version) throw new Error('Stale expected version; inspect current task before retrying');
   if (!Array.isArray(request.evidence) || request.evidence.length>64 || request.evidence.some(ref=>typeof ref!=='string')) throw new Error('Bounded evidence paths are required');
-  if (input.action!=='handoff' && (!item.delivery || request.revision!==item.delivery.revision)) throw new Error('Candidate must match the delivered revision');
-  const out=await candidateFiles(target,item,request.revision,{handoff:input.action==='handoff',action:input.action,request});
+  const revision=input.action==='handoff'?await exactRevision(target,request.revision):deliveredRevision(item,request.revision);
+  if (!revision) throw new Error('Candidate must match the delivered revision');
+  const out=await candidateFiles(target,item,revision,{handoff:input.action==='handoff'});
   return {schema_version:'workkeel.candidate-files/v1',authority:'observation-only',mutation_status:'no-write',execution_authorized:false,
-    task_id:id,task_version:item.version,action:input.action,candidate_revision:request.revision,candidate_files_passed:out.issues.length===0,
+    task_id:id,task_version:item.version,action:input.action,candidate_revision:revision,candidate_files_passed:out.issues.length===0,
     issues:out.issues.slice(0,128),issue_count:out.issues.length,administrative_paths:out.administrative.slice(0,128),administrative_count:out.administrative.length,
     truncated:out.issues.length>128||out.administrative.length>128,lifecycle_validation:'not-performed',full_verification:'not-run',actual_review:'not-performed',
     limitations:['Only candidate files were inspected. This does not authorize or perform a lifecycle operation.',
       'The actual operation rechecks current authority, version, claim, dependencies, evidence and reviewer separation.',
       'Files may change after inspection; preserve the exact candidate and recheck at the operation.']};
 }
-async function assertDelivery(target, item, action, request) {
+async function assertDelivery(target, item) {
   if (!item.delivery) throw new Error("No delivered candidate");
-  await assertCandidate(target, item, item.delivery.revision, { action, request });
-  await assertPins(target, item.delivery.evidence);
+  await assertCandidate(target, item, item.delivery.revision);
   await dependencies(target, item);
 }
 function assertSeparation(item, actor, policy) {
@@ -353,18 +352,19 @@ export async function assertReviewRecoveryContext(target, id, { approver, review
   if (revision !== item.delivery.revision) throw new Error("Review recovery must use the exact delivered candidate");
   assertSeparation(item, reviewer, project.policy);
   await context(target, item, project);
-  await assertDelivery(target, item, "review", null);
+  await assertDelivery(target, item);
   return item;
 }
 /** Elevated review needs the reviewer's own record of this exact candidate,
  * not a renamed copy of anything the implementer delivered. */
 function assertReviewReport(item, request, files) {
-  const delivered = new Set([item.delivery, ...item.attempts.map(a => a.delivery)].flatMap(d => d?.evidence ?? []).map(p => p.sha256));
+  const delivered = new Set([item.delivery, ...item.attempts.map(a => a.delivery)].flatMap(d => d?.evidence ?? []).map(p => p.path));
   for (const file of files) {
-    if (!file.path.endsWith(".json")) continue;
+    // The candidate is the implementer's commit, so the report is a separate .ai-org/ record.
+    if (!file.path.endsWith(".json") || file.source !== "workspace" || delivered.has(file.path)) continue;
     let report;
     try { report = JSON.parse(file.content); } catch { continue; }
-    if (!delivered.has(file.sha256) && report?.schema_version === "workkeel.review-report/v1" && report.task_id === item.id &&
+    if (report?.schema_version === "workkeel.review-report/v1" && report.task_id === item.id &&
         report.stage === "review" && report.revision === request.revision && report.judgment === request.judgment &&
         sameActor(report.reviewer, request.actor) && typeof report.summary === "string" && report.summary.trim()) return;
   }
@@ -414,15 +414,15 @@ export async function mutateNativeTask(targetInput, id, action, request) {
     if (action === "claim") {
       if (item.state !== "intake" || item.claim) throw new Error("Task already claimed or not available for implementation");
       if (!sameActor(item.contract.actor, request.actor)) throw new Error("Only the approved task Agent may claim");
-      await exactRevision(target, request.base_revision);
-      if ((await git(target, ["rev-parse", "HEAD"])).trim() !== request.base_revision) throw new Error("Claim base must equal current HEAD");
-      const pins = await dependencies(target, { ...item, base_revision: request.base_revision });
+      const base = await exactRevision(target, request.base_revision);
+      if ((await git(target, ["rev-parse", "HEAD"])).trim() !== base) throw new Error("Claim base must equal current HEAD");
+      const pins = await dependencies(target, { ...item, base_revision: base });
       for (const active of await listTaskItems(target)) if (active.id !== id && active.mode === "task-first" && active.state === "build") {
         const other = await readNativeTask(target, active.id);
         if (item.contract.environment.write_paths.some(a => other.contract.environment.write_paths.some(b => under(a,b) || under(b,a)))) throw new Error("An active task holds overlapping write roots");
       }
       item.claim = { id: `claim-${crypto.randomUUID()}`, actor: request.actor, at: new Date().toISOString() };
-      item.base_revision = request.base_revision; item.dependency_pins = pins; item.state = "build";
+      item.base_revision = base; item.dependency_pins = pins; item.state = "build";
     } else if (["handoff", "release"].includes(action)) {
       if (item.state !== "build" || !item.claim || item.claim.id !== request.claim_id || !sameActor(item.claim.actor, request.actor)) throw new Error("Operation requires the current matching implementation claim");
       assertText(request.summary);
@@ -430,24 +430,28 @@ export async function mutateNativeTask(targetInput, id, action, request) {
         item.attempts.push({ kind: "released", claim: item.claim, base_revision: item.base_revision, summary: request.summary });
         item.claim = null; item.state = "intake"; item.dependency_pins = null;
       } else {
-        if (!Array.isArray(request.unresolved) || request.unresolved.length) throw new Error("Resolve outstanding issues before delivery");
-        await assertRequirementOutcomes(target, item, request, 'delivery');
-        const pins = await evidence(target, request.evidence);
-        const evidenceOnly = await evidenceRework(target, item, request.revision, pins);
-        await assertCandidate(target, item, request.revision, { handoff: true, action, request });
+        if (!Array.isArray(request.unresolved) || request.unresolved.length > 32 ||
+            request.unresolved.some(x => typeof x !== "string" || !x.trim() || x.length > 1000)) throw new Error("Unresolved issues must be a bounded list of nonempty notes");
+        const revision = await exactRevision(target, request.revision);
+        // Every rework, source or evidence-only, is a new commit.
+        if (item.attempts.some(a => a.kind === "rejected" && a.delivery.revision === revision)) throw new Error("Rework requires a new commit, not the rejected revision");
+        await assertCandidate(target, item, revision, { handoff: true });
         await dependencies(target, item);
         // Actually changed paths can raise, never lower, the approved tier.
-        const declared = item.contract.verification.risk_tier, observed = await deliveryRisk(target, item, project.policy, request.revision, action, request);
+        const declared = item.contract.verification.risk_tier, observed = await deliveryRisk(target, item, project.policy, revision);
         // A rejected attempt's tier persists even if its risky change was withdrawn.
         const prior = effectiveRisk(item), tier = maxRisk(declared, observed.tier, prior);
+        if (tier === "critical" && request.unresolved.length) throw new Error("Critical work cannot be delivered with unresolved issues");
+        await assertRequirementOutcomes(target, item, { ...request, revision }, 'delivery');
+        const delivered = refsOf(await readEvidence(target, request.evidence, revision, { required: tier !== "low" }));
         // Escalating to critical needs the pinned approval record that close will compare.
         assertCriticalApprovalRecord(tier, item.contract);
         if (request.rollback !== undefined || tier === "critical") {
           try { assertText(request.rollback); }
           catch { throw new Error(`Critical handoff.rollback must state bounded nonempty rollback steps${tier === declared ? "" : ` (escalated from ${declared})`}`); }
         }
-        item.delivery = { revision: request.revision, summary: request.summary, implementer: request.actor,
-          claim_id: item.claim.id, evidence: pins, ...(evidenceOnly ? { evidence_rework: evidenceOnly } : {}),
+        item.delivery = { revision, summary: request.summary, implementer: request.actor,
+          claim_id: item.claim.id, evidence: delivered, ...(request.unresolved.length ? { unresolved: [...request.unresolved] } : {}),
           ...(request.rollback !== undefined ? { rollback: request.rollback } : {}),
           ...(tier !== declared ? { risk: { tier, escalated_from: declared, paths: observed.paths, compared_from: observed.compared_from,
             basis: "All changes since the first unaccepted claim base; this can include other work merged meanwhile.",
@@ -458,53 +462,55 @@ export async function mutateNativeTask(targetInput, id, action, request) {
       if (item.state !== "test" || item.review) throw new Error("Task is not awaiting a review");
       if (!["pass", "fail"].includes(request.judgment)) throw new Error("Review requires pass or fail");
       assertSeparation(item, request.actor, project.policy);
-      if (request.revision !== item.delivery.revision) throw new Error("Review must match the exact delivered candidate");
+      const revision = deliveredRevision(item, request.revision);
+      if (!revision) throw new Error("Review must match the exact delivered candidate");
       // After a recovery, only the current completed attempt's reviewer can author
       // the verdict; a predecessor's late result is never accepted.
       const chain = await recoveryChain(target, item), attempt = chain.head;
       if (attempt ? request.review_attempt_id !== attempt.value.attempt_id : request.review_attempt_id !== undefined) throw new Error("Review must name the current review recovery attempt, if any");
       if (attempt && (attempt.result?.value.status !== "completed" || !sameActor(attempt.value.reviewer, request.actor) ||
-          attempt.value.revision !== request.revision)) throw new Error("Review recovery attempt is not completed by this reviewer for this candidate");
-      await assertDelivery(target, item, action, request); assertText(request.summary);
-      // Validate and pin the very same read, so the report cannot be swapped in between.
-      const reviewed = await readEvidence(target, request.evidence);
-      if (elevatedRisk(effectiveRisk(item))) assertReviewReport(item, request, reviewed);
+          attempt.value.revision !== revision)) throw new Error("Review recovery attempt is not completed by this reviewer for this candidate");
+      await assertDelivery(target, item); assertText(request.summary);
+      // A review's evidence may be its summary alone; the validated report is the same read.
+      const reviewed = await readEvidence(target, request.evidence, revision);
+      if (elevatedRisk(effectiveRisk(item))) assertReviewReport(item, { ...request, revision }, reviewed);
       if (request.judgment === 'pass') {
+        // The reviewer decides on standard work; high and critical never pass with open issues.
+        if (elevatedRisk(effectiveRisk(item)) && item.delivery.unresolved?.length) throw new Error("High-risk review cannot pass while the delivery lists unresolved issues");
         await assertRequirementOutcomes(target, item, {revision:item.delivery.revision,actor:item.delivery.implementer,evidence:item.delivery.evidence.map(p=>p.path)}, 'delivery');
-        await assertRequirementOutcomes(target, item, request, 'review');
+        await assertRequirementOutcomes(target, item, { ...request, revision }, 'review');
       }
-      item.review = { actor: request.actor, revision: request.revision, judgment: request.judgment,
-        summary: request.summary, evidence: pinsOf(reviewed),
-        // The reviewed attempt, its completed result and the whole chain are immutable evidence.
-        ...(attempt ? { attempt_id: attempt.value.attempt_id, attempt_sha256: attempt.sha256,
-          attempt_result_sha256: attempt.result.sha256, recovery_chain_sha256: chain.sha256 } : {}) };
+      item.review = { actor: request.actor, revision, judgment: request.judgment,
+        summary: request.summary, evidence: refsOf(reviewed),
+        // A recovered review names the attempt it completed and that attempt's commit.
+        ...(attempt ? { attempt_id: attempt.value.attempt_id, attempt_revision: attempt.value.revision } : {}) };
       if (request.judgment === "pass") item.state = "release_gate";
     } else if (action === "rework") {
       assertApprover(project.policy, request.actor); assertText(request.summary);
       if (request.mode !== undefined && !["source", "evidence-only"].includes(request.mode)) throw new Error("Unknown rework mode");
       if (item.state !== "test" || item.review?.judgment !== "fail") throw new Error("Rework requires a failed review and preserves the same approved contract");
-      if (request.mode === "evidence-only") await assertPins(target, [...item.delivery.evidence, ...item.review.evidence]);
       item.attempts.push({ kind: "rejected", base_revision: item.base_revision, delivery: item.delivery, review: item.review, summary: request.summary,
         ...(request.mode ? { rework_mode: request.mode } : {}) });
       item.delivery = null; item.review = null; item.claim = null; item.state = "intake"; item.dependency_pins = null;
     } else if (action === "close") {
       assertApprover(project.policy, request.actor);
-      if (item.state !== "release_gate" || item.review?.judgment !== "pass" || request.revision !== item.delivery.revision) throw new Error("Close requires the independently accepted exact candidate");
-      const chain = await recoveryChain(target, item), attempt = chain.head, reviewed = item.review;
-      if ((attempt?.value.attempt_id ?? null) !== (reviewed.attempt_id ?? null) || attempt && (attempt.sha256 !== reviewed.attempt_sha256 ||
-          attempt.result?.value.status !== "completed" || attempt.result.sha256 !== reviewed.attempt_result_sha256 ||
-          chain.sha256 !== reviewed.recovery_chain_sha256)) throw new Error("Review recovery chain changed after the authored review");
-      await assertDelivery(target, item, action, request); await assertPins(target, item.review.evidence);
+      const revision = deliveredRevision(item, request.revision);
+      if (item.state !== "release_gate" || item.review?.judgment !== "pass" || !revision) throw new Error("Close requires the independently accepted exact candidate");
+      // The current recovery attempt must still be the completed one the review named, on the same commit.
+      const attempt = (await recoveryChain(target, item)).head, reviewed = item.review;
+      if ((attempt?.value.attempt_id ?? null) !== (reviewed.attempt_id ?? null) || attempt && (attempt.result?.value.status !== "completed" ||
+          attempt.value.revision !== reviewed.attempt_revision || reviewed.attempt_revision !== revision)) throw new Error("Review recovery chain changed after the authored review");
+      await assertDelivery(target, item);
       await assertElevatedClose(target, item, project.policy, request.actor);
       await assertRequirementOutcomes(target, item, {revision: item.delivery.revision, actor: item.delivery.implementer, evidence: item.delivery.evidence.map(p => p.path)}, 'delivery');
       await assertRequirementOutcomes(target, item, {revision: item.review.revision, actor: item.review.actor, judgment: item.review.judgment, evidence: item.review.evidence.map(p => p.path)}, 'review');
       assertText(request.summary); assertText(request.rollback);
-      item.closeout = { actor: request.actor, revision: request.revision, summary: request.summary,
-        rollback: request.rollback, evidence: await evidence(target, request.evidence), external_release: "not-performed" };
+      item.closeout = { actor: request.actor, revision, summary: request.summary,
+        rollback: request.rollback, evidence: refsOf(await readEvidence(target, request.evidence, revision)), external_release: "not-performed" };
       item.state = "done";
     } else {
       assertApprover(project.policy, request.actor); assertText(request.summary);
-      item.closeout = { actor: request.actor, summary: request.summary, evidence: await evidence(target, request.evidence), external_release: "not-performed" };
+      item.closeout = { actor: request.actor, summary: request.summary, evidence: refsOf(await readEvidence(target, request.evidence, item.delivery?.revision ?? null)), external_release: "not-performed" };
       item.claim = null; item.state = "cancelled";
     }
     append(item, action, request);
@@ -524,15 +530,11 @@ export async function diagnoseTaskProject(target) {
     items = await listTaskItems(target);
     for (const summary of items.filter(i => i.mode === "task-first")) {
       const item = await readNativeTask(target, summary.id);
-      try {
-        await assertPins(target, item.authority_pins);
-        await assertPins(target, retainedReworkEvidence(item));
-        // Expiry does not invalidate a completed historical acceptance.
-        if (!TERMINAL.has(item.state)) await context(target, item, project);
-        if (item.delivery) await assertPins(target, item.delivery.evidence);
-        if (item.review) await assertPins(target, item.review.evidence);
-        if (item.closeout) await assertPins(target, item.closeout.evidence);
-      } catch (e) { errors.push({ id: item.id, message: e.message }); }
+      // Every record's structure was checked on read. Only active tasks are checked
+      // against current policy and scope; edited approval or evidence files and
+      // closed tasks are never re-verified.
+      if (TERMINAL.has(item.state)) continue;
+      try { await context(target, item, project); } catch (e) { errors.push({ id: item.id, message: e.message }); }
     }
   } catch (e) { errors.push({ message: e.message }); }
   return { schema_version: "workkeel.diagnostics/v1", valid: errors.length === 0, errors, tasks: items,

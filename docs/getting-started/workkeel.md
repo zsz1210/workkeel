@@ -201,15 +201,17 @@ workkeel task show . --id WK-cart-total
 ```
 
 The approved contract stays immutable. Current state, claim, delivery, review and
-closure are separate fields in the canonical record. Approval, data-policy and
-Skill references are digest-bound. Changing them requires a newly approved task,
-not editing the accepted contract in place.
+closure are separate fields in the canonical record. Approval is the registered
+approving Principal plus the commit it was given at (`approval.approved_at_revision`).
+Editing the approval, data-policy or Skill files afterwards does not invalidate an
+active task, and Doctor does not recheck them; read the approved text with
+`git show <approved_at_revision>:<path>` when it was committed. Changing the
+contract itself still requires a newly approved task.
 
-Administrative reports/requests must not be runtime product inputs. Only exact
-known report paths and digest-matching operation JSON are exempt as newly added
-metadata; arbitrary code in an artifact folder is still product code. A tracked
-candidate artifact cannot change after verification. The task record itself is
-coordination state, never a mutable application configuration source.
+Everything under `.ai-org/` is administrative: task records, reports and requests
+never count as product changes or drift. Do not keep runtime product inputs
+there. The task record itself is coordination state, never a mutable application
+configuration source.
 
 ## Claim, deliver, review, accept
 
@@ -220,22 +222,30 @@ changing parameters under that ID is rejected. No claim is silently stolen.
 
 | Action | Additional request fields | Guard / result |
 | --- | --- | --- |
-| `claim` | `base_revision` (full current commit) | Approved Agent; accepted dependencies; no overlapping active write roots; returns `claim.id` |
+| `claim` | `base_revision` (current commit; full or abbreviated ID) | Approved Agent; accepted dependencies; no overlapping active write roots; returns `claim.id` |
 | `release` | `claim_id`, `summary` | Owner returns work to intake, without acceptance |
-| `handoff` | `claim_id`, `revision`, `summary`, `evidence` (paths), `unresolved: []` | Exact current commit descends from base; changed paths fit write roots; no tracked or untracked product drift |
-| `review` | `revision`, `judgment: "pass"` or `"fail"`, `summary`, `evidence` | Distinct reviewer; exact delivered candidate and unchanged evidence |
-| `rework` | `summary`, optional `mode` | Approver; retain failure, same contract, new candidate and review; explicit `evidence-only` keeps source unchanged |
+| `handoff` | `claim_id`, `revision`, `summary`, `evidence` (paths), `unresolved` (notes) | Current commit descends from base; committed changes fit write roots; no tracked or untracked drift inside the write roots |
+| `review` | `revision`, `judgment: "pass"` or `"fail"`, `summary`, `evidence` | Distinct reviewer; exact delivered candidate |
+| `rework` | `summary`, optional `mode` | Approver; retain failure, same contract; every rework delivers a new commit for a fresh review |
 | `close` | `revision`, `summary`, `rollback`, `evidence` | Approver; independent pass; local acceptance only |
 | `cancel` | `summary`, `evidence` | Approver; preserve history, grant no further work |
 
-For a report-only correction after a failed review, an approver can use
-`"mode": "evidence-only"` in the rework request. Omission or `"source"` keeps
-the default fresh-source requirement. Evidence-only rework requires the same
-rejected commit and new evidence content, with all prior rejected delivery/review
-files preserved. A renamed copy of old evidence is insufficient. Claim again,
-append corrected evidence at new paths, hand off and obtain a fresh distinct
-review. A changed source revision is rejected in this mode; do not use it for
-unresolved code defects. See [ADR-0089](../adr/0089-evidence-rework-and-process-drain.md).
+Revisions may be full or abbreviated commit IDs; the record always stores the
+full ID. Evidence is a list of paths, recorded without digests: a path committed
+in the candidate, which Git keeps immutable, or a report under `.ai-org/`. Low
+risk work may hand off without evidence; standard and higher need at least one
+path. A review may put its evidence in the summary alone, except that high and
+critical reviews need the reviewer's own `workkeel.review-report/v1` file.
+
+`unresolved` lists open issues the implementer could not close. They are shown
+with the delivery. For low and standard work the reviewer decides whether they
+block; a high or critical review cannot pass with them, and critical work cannot
+be delivered with them at all.
+
+For a report-only correction after a failed review, an approver can record
+`"mode": "evidence-only"` in the rework request. Either mode needs a new commit:
+commit the corrected evidence, hand off that commit and obtain a fresh distinct
+review. The rejected revision itself cannot be delivered again.
 
 For example, after creation returns version 1, prepare `claim.json`:
 
@@ -243,7 +253,7 @@ For example, after creation returns version 1, prepare `claim.json`:
 {
   "operation_id": "claim-cart-v1", "expected_version": 1,
   "actor": {"agent_id": "builder", "principal_id": "owner"},
-  "base_revision": "<full-current-git-commit>"
+  "base_revision": "<current-git-commit>"
 }
 ```
 
@@ -260,7 +270,7 @@ without running its check. Save `handoff.json` using the returned claim ID:
 {
   "operation_id": "handoff-cart-v1", "expected_version": 2,
   "actor": {"agent_id": "builder", "principal_id": "owner"},
-  "claim_id": "<returned-claim-id>", "revision": "<full-tested-git-commit>",
+  "claim_id": "<returned-claim-id>", "revision": "<tested-git-commit>",
   "summary": "Implemented the approved fix; see measured checks",
   "evidence": [".ai-org/artifacts/WK-cart-total/developer.md"],
   "unresolved": []

@@ -77,11 +77,11 @@ An approving Principal's Agent then supplies an explicit request:
 
 ```json
 {
-  "schema_version": "workkeel.review-recovery-request/v1",
+  "schema_version": "workkeel.review-recovery-request/v2",
   "operation_id": "retry-review-1",
   "task_id": "WK-example",
   "expected_version": 3,
-  "expected_chain_sha256": null,
+  "expected_head_attempt_id": null,
   "revision": "<exact delivered full revision>",
   "actor": { "agent_id": "coordinator", "principal_id": "owner" },
   "reviewer": { "agent_id": "reviewer", "principal_id": "owner" },
@@ -108,7 +108,7 @@ The launch specification contains a frozen execution contract whose
 and whose `environment.write_paths` are empty. Its `dispatch` carries the
 original execution ID and the same read-only node. Hosts must enforce these
 roots; the broader canonical task contract is unchanged and does not expand
-the retry's access. Delivery evidence remains pinned separately.
+the retry's access. Delivery evidence stays the recorded paths of the delivery.
 
 The request is copied and validated before the first await; later changes to the
 caller's object do not affect the reservation, the launch or the replay digest.
@@ -168,16 +168,19 @@ does not probe again. A changed request or mismatched observation is rejected.
 Observations are immutable, Git-ignored records under
 `.ai-org/review-recovery-stops/<attempt ID>.json`. Source IDs remain reserved.
 
-Later retries name the chain head: `{ "kind": "review-attempt", "id": ..., "sha256": ... }`
-with the current `expected_chain_sha256` from `readReviewRecovery`. A chain holds
-at most three attempts.
+Later retries name the chain head by ID: `{ "kind": "review-attempt", "id": ... }`,
+with the current `expected_head_attempt_id` from `readReviewRecovery`. Each attempt
+links to its predecessor by `previous_attempt_id`. A chain holds at most three
+attempts.
 
 The result reports `completed`, `failed`, `interrupted` or `not-launched`, and
 always `acceptance: "not-performed"`. After `completed`, the named reviewer
 records ordinary `task review` with `review_attempt_id`. The review is rejected
-for any other attempt, reviewer or revision. The review stores the attempt digest,
-the completed result digest and the chain digest; close is rejected if any of
-them differs afterwards, including a rewritten, rehashed or deleted result.
+for any other attempt, reviewer or revision. The review stores the attempt ID and
+that attempt's commit (`attempt_revision`). Close is rejected unless the chain head
+is still that attempt, its result is still `completed` and its commit is still the
+delivered candidate. Close does not compare result digests, so rewritten result
+notes alone do not block acceptance.
 
 ## Failure behavior
 
@@ -185,12 +188,12 @@ them differs afterwards, including a rewritten, rehashed or deleted result.
 | --- | --- |
 | Wrong revision, stale version, stale chain, unknown fields | Rejected; nothing recorded or launched |
 | Reviewer equals implementer or approver, or is unregistered | Rejected before any probe |
-| Changed policy, pins, evidence or candidate | Rejected; no attempt |
+| Changed candidate or drift inside the write roots | Rejected; no attempt |
 | Different model, policy reference or data scope | Rejected; no fallback |
 | Authored PASS or FAIL, `release_gate`, `done`, `cancelled` | Rejected; FAIL uses ordinary rework |
 | Predecessor active, unknown, open or already recovered | Rejected; no launch |
 | Expiry, cancellation or drift while a probe is awaited | Rejected under the lock; no attempt |
-| Expiry or pinned-file drift after reservation, before launch | Attempt recorded as `not-launched`; no launch |
+| Expiry or candidate drift after reservation, before launch | Attempt recorded as `not-launched`; no launch |
 | Same operation ID and input | Returns the recorded attempt; no second launch |
 | Same operation ID with other input, racing retries | One winner; others rejected |
 | Result after supersession or cancellation | Not recorded; attempt stays `unrecorded` |
@@ -202,7 +205,7 @@ them differs afterwards, including a rewritten, rehashed or deleted result.
 | Blank, multi-line or malformed reported model or effort | Recorded as `interrupted` with `invalid-host-result` and unknown usage; retry remains possible |
 | Completed result whose model or effort differs from the pinned selection | Chain read, review and close rejected, even when rehashed |
 | Attempt selection, policy reference or dispatch identity rewritten together with its result | Chain read, review and close rejected, even when both are rehashed |
-| Result changed, rehashed or removed after the authored review | Close rejected |
+| Result status changed from `completed` or result removed after the authored review | Close rejected |
 
 Records live under `.ai-org/review-recovery/<task>/<delivery claim>/` as
 `attempt-NNN.json` and `attempt-NNN-result.json`, created exclusively and never

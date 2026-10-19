@@ -5,7 +5,7 @@ import {exactKeys,executionDigest} from './workkeel-execution-policy.mjs';
 import {loadTaskRequirements} from './workkeel-requirements.mjs';
 import {readTaskFile,validateTaskContract} from './task-contract.mjs';
 import {checkEvidencePin} from './workkeel-evidence-file.mjs';
-import {readNativeTask,createNativeTask,mutateNativeTask,assertTaskExecutionContext} from './workkeel-tasks.mjs';
+import {readNativeTask,createNativeTask,mutateNativeTask,assertTaskExecutionContext,evidenceStatus} from './workkeel-tasks.mjs';
 import {assertActor,assertApprover,readTaskProject,readNativeGit,safeDirectory} from './workkeel-project.mjs';
 import {withProjectMutationLock} from './workkeel-lock.mjs';
 import {durableAtomicCreate,durableAtomicWrite,formatJson,sha256} from './files.mjs';
@@ -104,7 +104,7 @@ async function source(target,request){
   if(!goal.accepted&&!(goal.state==='done'&&goal.integration))fail('complete the source goal before autonomous improvement');
   if(goal.integration){
     for(const p of goal.integration.pins)if((await readTaskFile(target,p.path)).bytes_digest!==p.sha256)fail('historical whole acceptance evidence changed');
-    for(const fact of goal.integration.components){const actual=await readNativeTask(fact.root,fact.task_id);if(executionDigest(actual)!==fact.task_sha256||actual.state!=='done'||actual.review?.judgment!=='pass')fail('historical accepted component changed');for(const p of fact.evidence)if((await readTaskFile(fact.root,p.path)).bytes_digest!==p.sha256)fail('historical review evidence changed');}
+    for(const fact of goal.integration.components){const actual=await readNativeTask(fact.root,fact.task_id);if(executionDigest(actual)!==fact.task_sha256||actual.state!=='done'||actual.review?.judgment!=='pass')fail('historical accepted component changed');for(const p of fact.evidence)if(await evidenceStatus(fact.root,fact.revision,p)==='unavailable')fail('historical review evidence is unavailable');}
   }
   const controller=await readNativeTask(target,goal.controller.task_id),templateFile=await readTaskFile(target,grant.template_ref);
   if(!controller.authority_pins.some(p=>p.path===grant.template_ref&&p.sha256===templateFile.digest))fail('template must be standing-authority pinned');

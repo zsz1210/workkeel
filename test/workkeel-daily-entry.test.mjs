@@ -78,8 +78,9 @@ test('observations are bounded idempotent metadata, never acceptance; changed ev
  await fs.writeFile(path.join(root,'.ai-org/observations/.gitignore'),'*\n');
  await fs.appendFile(path.join(root,'docs/approval.md'),' drift');
  const drift=await readTaskSummary(root,value.task_id);
- assert.equal(drift.observation.status,'unavailable');assert.equal(drift.quality.evidence_current,false);
- assert.match(drift.next_action,/exact recorded evidence/);assert.equal((await readMonitorSnapshot(root)).complete,false);
+ // The observation's own pinned bytes changed; the task's approval edit alone is not stale evidence.
+ assert.equal(drift.observation.status,'unavailable');assert.equal(drift.quality.evidence_current,true);
+ assert.match(drift.next_action,/observation record/);assert.equal((await readMonitorSnapshot(root)).complete,false);
 });
 test('unsafe links, stale versions, unknown actors and invalid observation references reject',async t=>{
  const root=await fixture(t),value=await observed(root);
@@ -124,7 +125,7 @@ test('observer keeps summaries ordered and revalidates changed evidence across c
  await fs.writeFile(file,original);
  assert.equal((await readMonitorSnapshot(root)).tasks.find(task=>task.id==='WK-batch-0').read_status,'available');
  await fs.appendFile(path.join(root,'docs/approval.md'),' Changed authority.');
+ // Approval is the Principal plus its commit: an edited approval file leaves evidence current.
  const changed=await readMonitorSnapshot(root);
- assert.equal(changed.complete,false);
- assert.ok(changed.tasks.every(task=>task.quality.evidence_current===false&&task.needs_attention));
+ assert.ok(changed.tasks.every(task=>task.quality.evidence_current===true),JSON.stringify(changed.tasks.map(task=>task.attention_reasons)));
 });

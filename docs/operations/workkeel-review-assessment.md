@@ -63,9 +63,10 @@ data-policy references **before task creation**, so the normal task writer pins 
 
 Permitted impact values are `none`, `material` and `unknown`. The Principal must
 match the task's approved authority and current project approvers. This is an
-attributed declaration, not authenticated proof that a human participated. Do not
-edit an existing pinned approval to add it: that creates authority drift. Existing
-tasks without the statement can still obtain the conservative blocked report.
+attributed declaration, not authenticated proof that a human participated. The
+statement must match the approval-time snapshot of a task authority file, so add it
+before the task is created. Existing tasks without the statement can still obtain
+the conservative blocked report.
 
 The optional request is strictly versioned:
 
@@ -171,7 +172,9 @@ revision and `current` or `historical` candidate status. Criterion
 `failed_measurements` contains current-candidate failures;
 `historical_failed_measurements` retains older failures without labeling current
 green coverage as failed. Optional `blockers` records further declared unresolved
-defects. The assessor cannot detect undisclosed failures.
+defects. Issues the delivery itself lists as `unresolved` are reported as
+`unresolved-at-delivery`, blocking only for high and critical work. The assessor
+cannot detect undisclosed failures.
 
 Routes are `blocked`, `elevated-independent-review` or `focused-independent-review`.
 The current task/project separation floor is always included. Mechanical owner
@@ -345,8 +348,8 @@ path, plus each supporting evidence path, to the **existing native review**:
 
 Use real immutable commit/digest values and actual review findings. Add the
 document's byte pin as optional `confirmation` in the assessment request. It is
-usable only when that document and its support are pinned in the current native
-review, matching the exact task, candidate, contract and reviewer separation.
+usable only when that document and its support are named in the current native
+review's evidence, matching the exact task, candidate, contract and reviewer separation.
 An author cannot manufacture review authority by supplying a different name in
 this document. Review identity records themselves remain local attribution, not
 provider authentication or proof of independent thought.
@@ -355,8 +358,8 @@ Each criterion is reported as `confirmed`, `partial`, `contradicted` or `unknown
 Missing or invalid binding leaves unknown. A valid negative or partial finding
 stays visible when red or a failed independent review blocks the main route.
 `confirmation_binding` explains whether the statement is bound to the current
-pinned distinct review. Changed or unavailable authority, candidate or review
-evidence withholds the statement, including drift already present when assessment
+pinned distinct review. An unavailable candidate or review evidence path, or a
+document whose bytes differ from the request pin, withholds the statement, including drift already present when assessment
 begins. Plain failed tests still retain correctly bound negative findings.
 Before/after rechecks are not atomic.
 

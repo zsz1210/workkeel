@@ -4,7 +4,6 @@ import fs from 'node:fs/promises';
 import {existsSync} from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
-import {createHash} from 'node:crypto';
 import {execFileSync} from 'node:child_process';
 import {sha256} from '../src/files.mjs';
 import {withProjectMutationLock} from '../src/workkeel-lock.mjs';
@@ -69,8 +68,8 @@ async function fixture(t,{expiresAt=null,closeBinding=true,beforeHandoff=null,pa
   const bindingFile=root+`/.ai-org/host-usage/${ticket.execution_id}/binding.json`;
   async function request(overrides={}) {
     const chain=await readReviewRecovery(root,brief.id),current=await readNativeTask(root,brief.id);
-    return {schema_version:'workkeel.review-recovery-request/v1',operation_id:'recover-1',task_id:brief.id,expected_version:current.version,
-      expected_chain_sha256:chain.chain_sha256,revision,actor,reviewer,
+    return {schema_version:'workkeel.review-recovery-request/v2',operation_id:'recover-1',task_id:brief.id,expected_version:current.version,
+      expected_head_attempt_id:chain.head_attempt_id,revision,actor,reviewer,
       predecessor:{kind:'host-binding',id:ticket.execution_id,sha256:(await inspectHostBinding(root,ticket.execution_id)).file_sha256},
       policy_ref:'docs/dispatch.json',model:{...model},source:{thread_id:'retry-thread-1',turn_id:'retry-turn-1'},...overrides};
   }
@@ -193,7 +192,7 @@ test('unknown and cancelled recovery reservations need an exact trusted stopped 
 test('unknown recovery can be replaced in one slot only after predecessor stop confirmation',async t=>{
   const f=await fixture(t,{parallelism:1});
   const one=await recoverInterruptedReview(f.root,await f.request(),{host:reviewHost({result:{malformed:true}}).host});
-  const request=await f.request({operation_id:'recover-2',predecessor:{kind:'review-attempt',id:one.attempt_id,sha256:one.attempt_sha256},
+  const request=await f.request({operation_id:'recover-2',predecessor:{kind:'review-attempt',id:one.attempt_id},
     source:{thread_id:'retry-thread-2',turn_id:'retry-turn-2'}});
   const active=reviewHost({state:'active'});
   await assert.rejects(recoverInterruptedReview(f.root,request,{host:active.host}),/active/);assert.equal(active.calls.launch,0);
@@ -263,7 +262,7 @@ const rehashAttemptAndResult=async(f,n,editAttempt,editResult)=>{
   const attempt=JSON.parse(await fs.readFile(`${dir}/${name}.json`,'utf8'));editAttempt(attempt.value);attempt.sha256=executionDigest(attempt.value);
   const bytes=JSON.stringify(attempt);await fs.writeFile(`${dir}/${name}.json`,bytes);
   const result=JSON.parse(await fs.readFile(`${dir}/${name}-result.json`,'utf8'));
-  result.value.attempt_sha256=createHash('sha256').update(bytes).digest('hex');editResult(result.value);result.sha256=executionDigest(result.value);
+  editResult(result.value);result.sha256=executionDigest(result.value);
   await fs.writeFile(`${dir}/${name}-result.json`,JSON.stringify(result));
 };
 const unauthorized=v=>{v.selected.model='unauthorized-model';v.selected.reasoning='unauthorized-effort';};
@@ -352,7 +351,7 @@ test('malformed host model or effort becomes a readable interrupted attempt and 
     const envelope=JSON.parse(await fs.readFile(`${f.root}/.ai-org/review-recovery/${f.id}/${f.claimId}/attempt-001-result.json`,'utf8'));
     assert.equal(envelope.value.error,'invalid-host-result');assert.equal(envelope.value.runtime_model,null);assert.equal(envelope.value.reasoning,null);
     assert.equal((await readReviewRecovery(f.root,f.id)).attempts[0].status,'interrupted');
-    const two=await recoverInterruptedReview(f.root,await f.request({operation_id:'recover-2',predecessor:{kind:'review-attempt',id:one.attempt_id,sha256:one.attempt_sha256},
+    const two=await recoverInterruptedReview(f.root,await f.request({operation_id:'recover-2',predecessor:{kind:'review-attempt',id:one.attempt_id},
       source:{thread_id:'retry-thread-2',turn_id:'retry-turn-2'}}),{host:reviewHost().host});
     assert.equal(two.status,'completed');assert.equal((await readReviewRecovery(f.root,f.id)).attempts.length,2);
   }
@@ -423,7 +422,7 @@ test('attempts stay anchored to the original review dispatch; another valid tick
 
   // A later attempt inherits the original dispatch; rewriting it alone, or with its selection, is rejected.
   const g=await fixture(t),first=await recoverInterruptedReview(g.root,await g.request(),{host:reviewHost({result:{...completed,status:'interrupted'}}).host});
-  const second=await recoverInterruptedReview(g.root,await g.request({operation_id:'recover-2',predecessor:{kind:'review-attempt',id:first.attempt_id,sha256:first.attempt_sha256},
+  const second=await recoverInterruptedReview(g.root,await g.request({operation_id:'recover-2',predecessor:{kind:'review-attempt',id:first.attempt_id},
     source:{thread_id:'retry-thread-2',turn_id:'retry-turn-2'}}),{host:reviewHost().host});
   assert.equal(second.status,'completed');
   await rehashAttemptAndResult(g,2,unauthorized,unauthorizedReport);
@@ -446,13 +445,13 @@ test('an interrupted review resumes on the same task and exact candidate, then o
   assert.equal(replayed.replayed,true);assert.equal(replayed.attempt_id,result.attempt_id);assert.equal(calls.launch,1);
   await assert.rejects(recoverInterruptedReview(f.root,{...request,source:{thread_id:'other',turn_id:'other'}},{host}),/different input/);
   // The completed attempt is not acceptance and cannot be retried again.
-  await assert.rejects(recoverInterruptedReview(f.root,await f.request({operation_id:'recover-2',predecessor:{kind:'review-attempt',id:result.attempt_id,sha256:result.attempt_sha256},source:{thread_id:'t3',turn_id:'t3'}}),{host}),/latest attempt completed/);
+  await assert.rejects(recoverInterruptedReview(f.root,await f.request({operation_id:'recover-2',predecessor:{kind:'review-attempt',id:result.attempt_id},source:{thread_id:'t3',turn_id:'t3'}}),{host}),/latest attempt completed/);
   // A late report on the stopped predecessor cannot mutate its retained evidence.
   await assert.rejects(reportHostUsage(f.root,{...f.report,report_id:'late',status:'completed'}),/binding-closed/);
   await assert.rejects(mutateNativeTask(f.root,f.id,'review',review(f)),/current review recovery attempt/);
   await assert.rejects(mutateNativeTask(f.root,f.id,'review',review(f,{review_attempt_id:result.attempt_id,actor:f.other})),/not completed by this reviewer/);
   await mutateNativeTask(f.root,f.id,'review',review(f,{review_attempt_id:result.attempt_id}));
-  task=await readNativeTask(f.root,f.id);assert.equal(task.review.attempt_id,result.attempt_id);assert.equal(task.review.attempt_sha256,result.attempt_sha256);
+  task=await readNativeTask(f.root,f.id);assert.equal(task.review.attempt_id,result.attempt_id);assert.equal(task.review.attempt_revision,f.revision);
   await mutateNativeTask(f.root,f.id,'close',{operation_id:'close',expected_version:4,actor:f.actor,revision:f.revision,summary:'Accepted',rollback:'Revert the synthetic commit',evidence:['docs/check.md']});
   assert.equal((await readNativeTask(f.root,f.id)).state,'done');
   assert.deepEqual(await fs.readFile(f.bindingFile),bindingBytes);
@@ -466,9 +465,9 @@ test('a further retry chains from the interrupted attempt, preserves prior bytes
   const one=await recoverInterruptedReview(f.root,await f.request(),{host:first.host});
   assert.equal(one.status,'interrupted');assert.deepEqual(one.usage,{input_tokens:4,output_tokens:null});
   const attemptFile=f.root+`/.ai-org/review-recovery/${f.id}/${f.claimId}/attempt-001.json`,oneBytes=await fs.readFile(attemptFile),bindingBytes=await fs.readFile(f.bindingFile);
-  const second=reviewHost(),next={operation_id:'recover-2',predecessor:{kind:'review-attempt',id:one.attempt_id,sha256:one.attempt_sha256},source:{thread_id:'retry-thread-2',turn_id:'retry-turn-2'}};
+  const second=reviewHost(),next={operation_id:'recover-2',predecessor:{kind:'review-attempt',id:one.attempt_id},source:{thread_id:'retry-thread-2',turn_id:'retry-turn-2'}};
   await assert.rejects(recoverInterruptedReview(f.root,await f.request({operation_id:'recover-2',source:next.source}),{host:second.host}),/current chain head/);
-  await assert.rejects(recoverInterruptedReview(f.root,await f.request({...next,expected_chain_sha256:null}),{host:second.host}),/stale recovery chain/);
+  await assert.rejects(recoverInterruptedReview(f.root,await f.request({...next,expected_head_attempt_id:null}),{host:second.host}),/stale recovery chain/);
   await assert.rejects(recoverInterruptedReview(f.root,await f.request({...next,source:{thread_id:'retry-thread-1',turn_id:'fresh'}}),{host:second.host}),/fresh source/);
   await assert.rejects(recoverInterruptedReview(f.root,await f.request({...next,source:{thread_id:'review-thread-1',turn_id:'fresh'}}),{host:second.host}),/fresh source/);
   assert.equal(second.calls.launch,0);
@@ -479,9 +478,11 @@ test('a further retry chains from the interrupted attempt, preserves prior bytes
   await assert.rejects(mutateNativeTask(f.root,f.id,'review',review(f,{review_attempt_id:one.attempt_id})),/current review recovery attempt/);
   await mutateNativeTask(f.root,f.id,'review',review(f,{judgment:'fail',review_attempt_id:two.attempt_id}));
   // An authored failure uses ordinary rework; recovery cannot reopen the review.
-  await assert.rejects(recoverInterruptedReview(f.root,await f.request({operation_id:'recover-3',predecessor:{kind:'review-attempt',id:two.attempt_id,sha256:two.attempt_sha256},source:{thread_id:'t3',turn_id:'t3'}}),{host:second.host}),/ordinary rework/);
-  await fs.writeFile(attemptFile,Buffer.concat([oneBytes,Buffer.from(' ')]));
-  await assert.rejects(readReviewRecovery(f.root,f.id),/does not match its attempt/);
+  await assert.rejects(recoverInterruptedReview(f.root,await f.request({operation_id:'recover-3',predecessor:{kind:'review-attempt',id:two.attempt_id},source:{thread_id:'t3',turn_id:'t3'}}),{host:second.host}),/ordinary rework/);
+  // Attempts link by ID: a rewritten link breaks the chain even when the envelope is rehashed.
+  const secondFile=attemptFile.replace('attempt-001.json','attempt-002.json'),envelope=JSON.parse(await fs.readFile(secondFile,'utf8'));
+  envelope.value.previous_attempt_id=null;envelope.sha256=executionDigest(envelope.value);await fs.writeFile(secondFile,JSON.stringify(envelope));
+  await assert.rejects(readReviewRecovery(f.root,f.id),/does not belong to this delivery chain/);
 });
 
 test('unsafe recovery requests fail before reservation or inference',async t=>{
@@ -492,7 +493,7 @@ test('unsafe recovery requests fail before reservation or inference',async t=>{
     [{actor:f.reviewer},/cannot also be the reviewer/],
     [{reviewer:{agent_id:'unregistered',principal_id:'owner'}},/registered Agent/],
     [{expected_version:2},/Stale expected version/],
-    [{expected_chain_sha256:'a'.repeat(64)},/stale recovery chain/],
+    [{expected_head_attempt_id:'review-attempt-stale'},/stale recovery chain/],
     [{predecessor:{kind:'host-binding',id:f.ticket.execution_id,sha256:'b'.repeat(64)}},/differs from the request/],
     [{model:{...model,reasoning:'shallow'}},/fallback is not permitted/],
     [{policy_ref:'docs/approval.md'},/policy reference/],
@@ -509,13 +510,10 @@ test('unsafe recovery requests fail before reservation or inference',async t=>{
   const writable=reviewHost({probeResult:probe({enforcement:{...probe().enforcement,product_access:'write'}})});
   await assert.rejects(recoverInterruptedReview(f.root,await f.request(),{host:writable.host}),/role requires read/);
   await assert.rejects(recoverInterruptedReview(f.root,await f.request(),{host:{runtimeState:async()=>({state:'stopped'}),launch:async()=>completed}}),/trusted embedding code/);
-  await fs.writeFile(f.root+'/docs/check.md','Drifted evidence');
-  await assert.rejects(recoverInterruptedReview(f.root,await f.request(),{host}),/clean product tree|changed/);
-  f.git('checkout','--','docs/check.md');
-  const pinned=await f.request();
-  await fs.writeFile(f.root+'/docs/dispatch.json',JSON.stringify({...policy(),parallelism:1}));
-  await assert.rejects(recoverInterruptedReview(f.root,pinned,{host}),/changed|clean product tree/);
-  f.git('checkout','--','docs/dispatch.json');
+  // Drift inside the write roots blocks; edits to evidence or policy files outside them do not.
+  await fs.writeFile(f.root+'/src/a.mjs','export const a = 2;\n');
+  await assert.rejects(recoverInterruptedReview(f.root,await f.request(),{host}),/clean tree/);
+  f.git('checkout','--','src/a.mjs');
   assert.equal(calls.launch,0);assert.equal((await readReviewRecovery(f.root,f.id)).attempts.length,0);
   const open=await fixture(t,{closeBinding:false});
   await assert.rejects(recoverInterruptedReview(open.root,await open.request(),{host}),/collection is active or completed/);
@@ -535,7 +533,7 @@ test('racing and late attempts have one winner and late results never mutate the
   const slow=reviewHost({result:()=>pending}),late=recoverInterruptedReview(h.root,await h.request(),{host:slow.host});
   let head;for(let i=0;i<200&&!(head=(await readReviewRecovery(h.root,h.id)).attempts[0]);i++)await new Promise(r=>setTimeout(r,10));
   assert.equal(head.status,'unrecorded');
-  const successor=await recoverInterruptedReview(h.root,await h.request({operation_id:'recover-2',predecessor:{kind:'review-attempt',id:head.attempt_id,sha256:head.sha256},source:{thread_id:'t2',turn_id:'t2'}}),{host:reviewHost().host});
+  const successor=await recoverInterruptedReview(h.root,await h.request({operation_id:'recover-2',predecessor:{kind:'review-attempt',id:head.attempt_id},source:{thread_id:'t2',turn_id:'t2'}}),{host:reviewHost().host});
   release(completed);await assert.rejects(late,/no longer current/);
   const chain=await readReviewRecovery(h.root,h.id);assert.deepEqual(chain.attempts.map(a=>a.status),['unrecorded','completed']);assert.equal(chain.attempts[1].attempt_id,successor.attempt_id);
 });
@@ -550,8 +548,7 @@ test('probes run unlocked; changes while they are awaited block reservation and 
   const recovered=async c=>{await recoverInterruptedReview(c.root,await c.request({operation_id:'concurrent',source:{thread_id:'other',turn_id:'other'}}),{host:reviewHost().host});};
   const during=[
     [cancel,/Stale expected version/],
-    [c=>fs.writeFile(c.root+'/docs/dispatch.json',JSON.stringify({...policy(),parallelism:1})),/changed|clean product tree/],
-    [c=>fs.writeFile(c.root+'/docs/check.md','Drifted evidence'),/changed|clean product tree/],
+    [c=>fs.writeFile(c.root+'/src/a.mjs','export const a = 2;\n'),/clean tree/],
     [recovered,/stale recovery chain/]
   ];
   for(const [change,pattern] of during) {
@@ -587,7 +584,7 @@ test('a late result after cancellation is not recorded and grants nothing',async
 
 test('the attempt chain is bounded and rejects unexpected or altered records',async t=>{
   const f=await fixture(t),{host,calls}=reviewHost({result:{...completed,status:'interrupted'}});
-  const next=(head,n)=>f.request({operation_id:`recover-${n}`,predecessor:{kind:'review-attempt',id:head.attempt_id,sha256:head.attempt_sha256},source:{thread_id:`t${n}`,turn_id:`t${n}`}});
+  const next=(head,n)=>f.request({operation_id:`recover-${n}`,predecessor:{kind:'review-attempt',id:head.attempt_id},source:{thread_id:`t${n}`,turn_id:`t${n}`}});
   let head=await recoverInterruptedReview(f.root,await f.request(),{host});
   for(let n=2;n<=3;n++)head=await recoverInterruptedReview(f.root,await next(head,n),{host});
   assert.equal(head.sequence,3);assert.equal(calls.launch,3);
@@ -624,16 +621,20 @@ test('chain readers and identical replays wait for durable record publication',a
   assert.equal(second.replayed,true);assert.equal(second.attempt_id,first.attempt_id);assert.equal(calls.launch,1);
 });
 
-test('close rejects drift, rehashing or deletion of the reviewed attempt result',async t=>{
-  for(const change of ['append','rehash','delete']) {
+test('close binds the reviewed attempt by ID and commit, not by its result digest',async t=>{
+  for(const change of ['rehash','fail','delete']) {
     const f=await fixture(t),result=await recoverInterruptedReview(f.root,await f.request(),{host:reviewHost().host});
     await mutateNativeTask(f.root,f.id,'review',review(f,{review_attempt_id:result.attempt_id}));
     const reviewed=(await readNativeTask(f.root,f.id)).review,view=await readReviewRecovery(f.root,f.id);
-    assert.equal(reviewed.recovery_chain_sha256,view.chain_sha256);assert.match(reviewed.attempt_result_sha256,/^[a-f0-9]{64}$/);
+    assert.equal(reviewed.attempt_id,view.head_attempt_id);assert.equal(reviewed.attempt_revision,f.revision);
+    assert.equal(reviewed.attempt_sha256,undefined);assert.equal(reviewed.recovery_chain_sha256,undefined);
     const file=`${f.root}/.ai-org/review-recovery/${f.id}/${f.claimId}/attempt-001-result.json`;
-    if(change==='append')await fs.appendFile(file,' ');
-    else if(change==='delete')await fs.unlink(file);
-    else {const envelope=JSON.parse(await fs.readFile(file,'utf8'));envelope.value.output='Rewritten notes';envelope.sha256=executionDigest(envelope.value);await fs.writeFile(file,JSON.stringify(envelope));}
+    if(change==='delete')await fs.unlink(file);
+    else {const envelope=JSON.parse(await fs.readFile(file,'utf8'));
+      if(change==='fail')envelope.value.status='failed';else envelope.value.output='Rewritten notes';
+      envelope.sha256=executionDigest(envelope.value);await fs.writeFile(file,JSON.stringify(envelope));}
+    // Rewritten notes keep the same completed attempt on the same commit; a failed or missing result does not.
+    if(change==='rehash'){assert.equal((await mutateNativeTask(f.root,f.id,'close',close(f))).state,'done');continue;}
     await assert.rejects(mutateNativeTask(f.root,f.id,'close',close(f)),/chain changed after the authored review/);
     assert.equal((await readNativeTask(f.root,f.id)).state,'release_gate');
   }
@@ -667,7 +668,7 @@ test('persisted attempts and results are fully validated beyond their envelope d
 
 test('tasks without a recovery chain keep the ordinary review and close path',async t=>{
   const f=await fixture(t),view=await readReviewRecovery(f.root,f.id);
-  assert.equal(view.chain_sha256,null);assert.deepEqual(view.attempts,[]);assert.equal(view.execution_authorized,false);
+  assert.equal(view.head_attempt_id,null);assert.deepEqual(view.attempts,[]);assert.equal(view.execution_authorized,false);
   await assert.rejects(mutateNativeTask(f.root,f.id,'review',review(f,{review_attempt_id:'review-attempt-invented'})),/current review recovery attempt/);
   await mutateNativeTask(f.root,f.id,'review',review(f));
   assert.equal(Object.hasOwn((await readNativeTask(f.root,f.id)).review,'attempt_id'),false);

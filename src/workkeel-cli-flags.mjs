@@ -97,6 +97,11 @@ async function saveAttempt(dir, number, value) {
  * preparing, it reads the task again and reselects instead of failing.
  */
 export async function runLifecycleFromFlags(target, id, action, options, hooks = {}) {
+  // An abbreviated --revision names the same command and target as the full commit ID.
+  if (/^[a-f0-9]{4,39}$/.test(options["--revision"] ?? "")) {
+    try { options = { ...options, "--revision": (await readNativeGit(target, ["rev-parse", "--verify", `${options["--revision"]}^{commit}`])).trim() }; }
+    catch { throw new Error(`--revision ${options["--revision"]} does not name exactly one commit`); }
+  }
   for (let round = 0; ; round += 1) {
     const item = await readNativeTask(target, id);
     await hooks.afterSnapshot?.(item);

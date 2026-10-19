@@ -216,15 +216,22 @@ test('padded and mixed-case reserved versions are unknown across every declared 
   }
 });
 
-test('changed authority, evidence, policy and capture bytes remain explicit blockers or ineligible measurements', async t => {
+test('missing evidence, changed policy and capture bytes remain explicit blockers; edited evidence and approval do not', async t => {
   const { root, evidence } = await fixture(t);
   const measurements = await reusable(root);
   await write(root, 'capture.log', 'changed\n');
   assert((await assessNativeTask(root, 'WK-one', measurements)).measurements[0].reasons.includes('capture-bytes-changed:capture.log'));
+  const kept = await fs.readFile(path.join(root, evidence));
   await write(root, evidence, 'altered\n');
-  assert((await assessNativeTask(root, 'WK-one', input())).reasons.some(r => r.code === 'delivery-evidence-changed'));
+  assert(!(await assessNativeTask(root, 'WK-one', input())).reasons.some(r => r.code.startsWith('delivery-evidence')));
+  await fs.rm(path.join(root, evidence));
+  assert((await assessNativeTask(root, 'WK-one', input())).reasons.some(r => r.code === 'delivery-evidence-unavailable'));
+  await fs.writeFile(path.join(root, evidence), kept);
   await write(root, 'approval.json', 'changed\n');
-  assert((await assessNativeTask(root, 'WK-one', input())).reasons.some(r => r.code === 'authority-changed'));
+  assert(!(await assessNativeTask(root, 'WK-one', input())).reasons.some(r => r.code.startsWith('authority-')));
+  await fs.rm(path.join(root, 'approval.json'));
+  assert((await assessNativeTask(root, 'WK-one', input())).reasons.some(r => r.code === 'authority-unavailable'));
+  await write(root, 'approval.json', 'changed\n');
   const policy = JSON.parse(await fs.readFile(path.join(root, 'workkeel.lock'), 'utf8')); policy.policy.review_separation = 'distinct-principal';
   await write(root, 'workkeel.lock', policy);
   assert((await assessNativeTask(root, 'WK-one', input())).reasons.some(r => r.code === 'policy-changed'));
@@ -248,7 +255,7 @@ test('malformed/unsupported input and unsafe source paths never produce affirmat
   await assert.rejects(assessNativeTask(root, 'WK-one', unknownCoverage), /exact approved criteria/);
 });
 
-test('accepted dependency pins are observed recursively and evidence drift blocks the dependent', async t => {
+test('accepted dependencies are observed recursively and missing dependency evidence blocks the dependent', async t => {
   const { root, revision, contract } = await fixture(t);
   const ref = '.ai-org/artifacts/WK-one/review.md'; await write(root, ref, 'Independent acceptance\n');
   await mutateNativeTask(root, 'WK-one', 'review', request(3, { revision, judgment: 'pass', summary: 'Accepted', evidence: [ref] }, reviewer));
@@ -263,10 +270,12 @@ test('accepted dependency pins are observed recursively and evidence drift block
   const report = await assessNativeTask(root, 'WK-two', parameters);
   assert.equal(report.route, 'focused-independent-review');
   assert.equal(report.repository_observed.dependencies[0].id, 'WK-one');
-  await write(root, ref, 'tampered dependency evidence\n');
-  const changed = await assessNativeTask(root, 'WK-two', parameters);
-  assert.equal(changed.route, 'blocked');
-  assert(changed.reasons.some(r => r.code === 'dependency-evidence-changed'));
+  await write(root, ref, 'edited dependency evidence\n');
+  assert.equal((await assessNativeTask(root, 'WK-two', parameters)).route, 'focused-independent-review');
+  await fs.rm(path.join(root, ref));
+  const missing = await assessNativeTask(root, 'WK-two', parameters);
+  assert.equal(missing.route, 'blocked');
+  assert(missing.reasons.some(r => r.code === 'dependency-evidence-unavailable'));
 });
 
 test('supplied commands and Git external diff drivers are not executed', async t => {

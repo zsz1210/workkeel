@@ -110,7 +110,10 @@ test('query APIs authenticate, invalidate source edits, redact output and remain
  assert.equal((await get('/api/analysis?model=fixture-local-model')).totals.tokens,300);
  const first=await get('/api/changes'),diag1=await get('/api/diagnostics');await get('/api/changes?revision='+first.revision);
  const diag2=await get('/api/diagnostics');assert.equal(diag2.index.builds,diag1.index.builds);assert.equal(diag2.model_calls,0);
- const ref=path.join(root,'docs/approval.md'),saved=await fs.readFile(ref);await fs.appendFile(ref,'\nchanged');
+ // An approval edit leaves evidence current; a project policy change does not.
+ await fs.appendFile(path.join(root,'docs/approval.md'),'\nchanged');assert.equal((await get('/api/task?id=WK-working')).quality.evidence_current,true);
+ const ref=path.join(root,'workkeel.lock'),saved=await fs.readFile(ref),lock=JSON.parse(saved);lock.policy.principals.push('observer-extra');
+ await fs.writeFile(ref,JSON.stringify(lock));
  // Fresh detail must revalidate even before a watcher callback.
  const task=await get('/api/task?id=WK-working');assert.equal(task.quality.evidence_current,false);
  await fs.writeFile(ref,saved);assert.equal((await get('/api/task?id=WK-working')).quality.evidence_current,true);

@@ -99,28 +99,51 @@ test("contract authority, unknown fields, high risk, paths and evidence are boun
   const linked = contract(); linked.authorization.approval_ref = "link.md";
   await assert.rejects(createNativeTask(root, linked, request(0)), /symlink/);
   await fs.unlink(path.join(root, "link.md"));
+  const approvedAt = git(root, "rev-parse", "HEAD");
   await createNativeTask(root, contract(), request(0));
+  assert.deepEqual((await readNativeTask(root, "WK-one")).approval, { approved_by: "owner", approved_at_revision: approvedAt });
+  // Approval is the approving Principal plus a commit: editing the file afterwards
+  // keeps the task usable, and the approved text stays in Git.
   await write(root, "docs/approval.md", "Changed authorization");
-  await assert.rejects(mutateNativeTask(root, "WK-one", "claim", request(1, developer, { base_revision: git(root, "rev-parse", "HEAD") })), /changed/);
+  assert.equal((await diagnoseTaskProject(root)).valid, true);
+  await mutateNativeTask(root, "WK-one", "claim", request(1, developer, { base_revision: git(root, "rev-parse", "HEAD") }));
+  assert.match(git(root, "show", `${approvedAt}:docs/approval.md`), /Approved total repair/);
+  // A deleted decision source is still reported: its requirements cannot be read.
+  await fs.rm(path.join(root, "docs/approval.md"));
   assert.equal((await diagnoseTaskProject(root)).valid, false);
 });
 
-test("candidate guards cover outside roots, untracked product, evidence tampering and unresolved work", async t => {
+test("candidate guards cover outside roots, untracked product, evidence paths and unresolved work", async t => {
   const root = await fixture(t);
   await createNativeTask(root, contract(), request(0));
   const claimed = await mutateNativeTask(root, "WK-one", "claim", request(1, developer, { base_revision: git(root, "rev-parse", "HEAD") }));
   const ref = ".ai-org/artifacts/WK-one/evidence.md"; await write(root, ref, "Evidence");
   const handoff = extra => request(2, developer, { claim_id: claimed.claim.id, revision: git(root, "rev-parse", "HEAD"), summary: "Repair", evidence: [ref], unresolved: [], ...extra });
-  await assert.rejects(mutateNativeTask(root, "WK-one", "handoff", handoff({ unresolved: ["test failed"] })), /outstanding/);
-  await write(root, "untracked.mjs", "Hidden code");
-  await assert.rejects(mutateNativeTask(root, "WK-one", "handoff", handoff()), /clean product/);
-  await fs.unlink(path.join(root, "untracked.mjs"));
+  // Drift is checked only inside the write roots.
+  await write(root, "src/untracked.mjs", "Hidden code");
+  await assert.rejects(mutateNativeTask(root, "WK-one", "handoff", handoff()), /clean tree inside the approved write roots/);
+  await fs.unlink(path.join(root, "src/untracked.mjs"));
   await write(root, "outside.txt", "Out of scope"); git(root, "add", "outside.txt"); git(root, "commit", "-qm", "outside");
   await assert.rejects(mutateNativeTask(root, "WK-one", "handoff", handoff()), /outside approved/);
+  git(root, "reset", "-q", "--hard", "HEAD^");
+  // Standard work needs evidence committed in the candidate or kept under .ai-org/.
+  await assert.rejects(mutateNativeTask(root, "WK-one", "handoff", handoff({ evidence: [] })), /needs evidence/);
+  await assert.rejects(mutateNativeTask(root, "WK-one", "handoff", handoff({ evidence: ["missing.md"] })), /ENOENT|no such file/);
+  await write(root, "notes.txt", "Untracked notes outside the write roots");
+  await assert.rejects(mutateNativeTask(root, "WK-one", "handoff", handoff({ unresolved: [""] })), /bounded list/);
   assert.equal((await readNativeTask(root, "WK-one")).state, "build");
-  const second = await fixture(t); const delivery = await deliver(second);
-  await write(second, delivery.ref, "Changed after delivery");
-  await assert.rejects(mutateNativeTask(second, "WK-one", "review", request(3, reviewer, { revision: delivery.revision, judgment: "pass", summary: "Review", evidence: [delivery.ref] })), /changed/);
+  // Untracked files outside the write roots, an abbreviated commit ID and open issues are accepted.
+  const short = git(root, "rev-parse", "--short=8", "HEAD");
+  await mutateNativeTask(root, "WK-one", "handoff", handoff({ revision: short, evidence: [ref, "src/cart.mjs", "notes.txt"], unresolved: ["Flaky timer test"] }));
+  const delivered = await readNativeTask(root, "WK-one");
+  assert.equal(delivered.delivery.revision, git(root, "rev-parse", "HEAD"));
+  assert.deepEqual(delivered.delivery.evidence, [{ path: ref, source: "workspace" }, { path: "src/cart.mjs", source: "candidate" }, { path: "notes.txt", source: "workspace" }]);
+  assert.deepEqual(delivered.delivery.unresolved, ["Flaky timer test"]);
+  // Editing evidence after delivery does not invalidate the task; Git keeps committed evidence.
+  await write(root, ref, "Changed after delivery");
+  assert.equal((await diagnoseTaskProject(root)).valid, true);
+  await mutateNativeTask(root, "WK-one", "review", request(3, reviewer, { revision: short, judgment: "pass", summary: "Open issue judged acceptable", evidence: [] }));
+  assert.equal((await readNativeTask(root, "WK-one")).review.revision, delivered.delivery.revision);
 });
 
 test("dependencies and overlapping active claims prevent premature or competing work", async t => {
@@ -141,53 +164,41 @@ test("failed review preserves its attempt, requires fresh candidate and invalida
   await assert.rejects(mutateNativeTask(root, "WK-one", "close", request(4, developer, { revision, summary: "Cannot close", rollback: "Revert", evidence: [ref] })), /independently accepted/);
   await mutateNativeTask(root, "WK-one", "rework", request(4, developer, { summary: "Repair same scope" }));
   const claim = await mutateNativeTask(root, "WK-one", "claim", request(5, developer, { base_revision: revision }));
-  await assert.rejects(mutateNativeTask(root, "WK-one", "handoff", request(6, developer, { claim_id: claim.claim.id, revision, summary: "Retry old", evidence: [ref], unresolved: [] })), /fresh candidate/);
+  await assert.rejects(mutateNativeTask(root, "WK-one", "handoff", request(6, developer, { claim_id: claim.claim.id, revision, summary: "Retry old", evidence: [ref], unresolved: [] })), /new commit/);
   const item = await readNativeTask(root, "WK-one"); assert.equal(item.review, null); assert.equal(item.attempts[0].review.judgment, "fail");
 });
 
-test('explicit evidence-only rework preserves source and rejected pins, and requires new content plus fresh distinct review',async t=>{
+test('evidence-only rework is a new commit reviewed again by a distinct Agent',async t=>{
   const root=await fixture(t),{revision,ref}=await deliver(root);
   const failed=request(3,reviewer,{revision,judgment:'fail',summary:'Evidence omits a known counter',evidence:[ref]});
   await mutateNativeTask(root,'WK-one','review',failed);
   await assert.rejects(mutateNativeTask(root,'WK-one','rework',request(4,reviewer,{mode:'evidence-only',summary:'No authority'})),/approving Principal/);
+  await assert.rejects(mutateNativeTask(root,'WK-one','rework',request(4,developer,{mode:'anything',summary:'Unknown mode'})),/rework mode/);
   await mutateNativeTask(root,'WK-one','rework',request(4,developer,{mode:'evidence-only',summary:'Correct the evidence only'}));
   const claim=await mutateNativeTask(root,'WK-one','claim',request(5,developer,{base_revision:revision}));
-  const handoff=evidence=>request(6,developer,{claim_id:claim.claim.id,revision,summary:'Corrected evidence',evidence,unresolved:[]});
-  const before=await fs.readFile(root+'/.ai-org/work-items/WK-one.json');
-  await assert.rejects(mutateNativeTask(root,'WK-one','handoff',handoff([ref])),/new evidence content/);
-  const renamed='.ai-org/artifacts/WK-one/renamed.md';await write(root,renamed,await fs.readFile(root+'/'+ref,'utf8'));
-  await assert.rejects(mutateNativeTask(root,'WK-one','handoff',handoff([renamed,ref])),/new evidence content/);
-  await fs.unlink(root+'/'+renamed);
-  assert.deepEqual(await fs.readFile(root+'/.ai-org/work-items/WK-one.json'),before);
   const corrected='.ai-org/artifacts/WK-one/corrected.md';await write(root,corrected,'Corrected counter, original failure retained.');
-  const original=await fs.readFile(root+'/'+ref);await write(root,ref,'Rewritten rejected evidence');
-  await assert.rejects(mutateNativeTask(root,'WK-one','handoff',handoff([corrected])),/changed/);await fs.writeFile(root+'/'+ref,original);
-  await mutateNativeTask(root,'WK-one','handoff',handoff([corrected]));
+  const handoff=rev=>request(6,developer,{claim_id:claim.claim.id,revision:rev,summary:'Corrected evidence',evidence:[corrected],unresolved:[]});
+  const before=await fs.readFile(root+'/.ai-org/work-items/WK-one.json');
+  await assert.rejects(mutateNativeTask(root,'WK-one','handoff',handoff(revision)),/new commit/);
+  assert.deepEqual(await fs.readFile(root+'/.ai-org/work-items/WK-one.json'),before);
+  // Rewriting the rejected evidence no longer blocks anything.
+  await write(root,ref,'Rewritten rejected evidence');
+  git(root,'add','-f',corrected);git(root,'commit','-qm','corrected evidence');
+  const next=git(root,'rev-parse','HEAD');
+  await mutateNativeTask(root,'WK-one','handoff',handoff(next));
   assert.equal((await mutateNativeTask(root,'WK-one','review',failed)).replayed,true);
   assert.equal((await readNativeTask(root,'WK-one')).review,null);
-  await assert.rejects(mutateNativeTask(root,'WK-one','review',request(3,reviewer,{operation_id:'stale-new-review',revision,judgment:'pass',summary:'Stale',evidence:[corrected]})),/Stale/);
-  await assert.rejects(mutateNativeTask(root,'WK-one','review',request(7,developer,{revision,judgment:'pass',summary:'Self',evidence:[corrected]})),/separation/);
-  await write(root,ref,'Tampered after new handoff');
-  assert.equal((await diagnoseTaskProject(root)).valid,false);
-  await assert.rejects(mutateNativeTask(root,'WK-one','review',request(7,reviewer,{revision,judgment:'pass',summary:'Not valid',evidence:[corrected]})),/changed/);
-  await fs.writeFile(root+'/'+ref,original);
-  await mutateNativeTask(root,'WK-one','review',request(7,reviewer,{revision,judgment:'pass',summary:'Correction independently checked',evidence:[corrected]}));
-  await mutateNativeTask(root,'WK-one','close',request(8,developer,{revision,summary:'Evidence accepted',rollback:'Preserve all versions',evidence:[corrected]}));
+  await assert.rejects(mutateNativeTask(root,'WK-one','review',request(3,reviewer,{operation_id:'stale-new-review',revision:next,judgment:'pass',summary:'Stale',evidence:[corrected]})),/Stale/);
+  await assert.rejects(mutateNativeTask(root,'WK-one','review',request(7,developer,{revision:next,judgment:'pass',summary:'Self',evidence:[corrected]})),/separation/);
+  await assert.rejects(mutateNativeTask(root,'WK-one','review',request(7,reviewer,{revision,judgment:'pass',summary:'Old candidate',evidence:[corrected]})),/exact delivered/);
+  await mutateNativeTask(root,'WK-one','review',request(7,reviewer,{revision:next,judgment:'pass',summary:'Correction independently checked',evidence:[corrected]}));
+  await mutateNativeTask(root,'WK-one','close',request(8,developer,{revision:next,summary:'Evidence accepted',rollback:'Preserve all versions',evidence:[corrected]}));
   const item=await readNativeTask(root,'WK-one');assert.equal(item.state,'done');assert.equal(item.attempts[0].review.judgment,'fail');
-  assert.equal(item.attempts[0].rework_mode,'evidence-only');assert.match(item.delivery.evidence_rework.rejected_review_sha256,/^[a-f0-9]{64}$/);
-  assert.equal(git(root,'rev-parse','HEAD'),revision);assert.equal((await diagnoseTaskProject(root)).valid,true);
-  await write(root,ref,'Tampered after acceptance');assert.equal((await diagnoseTaskProject(root)).valid,false);
-});
-
-test('evidence-only rework cannot deliver a changed source revision',async t=>{
-  const root=await fixture(t),{revision,ref}=await deliver(root);
-  await mutateNativeTask(root,'WK-one','review',request(3,reviewer,{revision,judgment:'fail',summary:'Evidence defect',evidence:[ref]}));
-  await assert.rejects(mutateNativeTask(root,'WK-one','rework',request(4,developer,{mode:'anything',summary:'Unknown mode'})),/rework mode/);
-  await mutateNativeTask(root,'WK-one','rework',request(4,developer,{mode:'evidence-only',summary:'Only evidence'}));
-  const claim=await mutateNativeTask(root,'WK-one','claim',request(5,developer,{base_revision:revision}));
-  await write(root,'src/cart.mjs','export const total = 3;\n');git(root,'add','src');git(root,'commit','-qm','changed source');
-  const corrected='.ai-org/artifacts/WK-one/corrected.md';await write(root,corrected,'New evidence');
-  await assert.rejects(mutateNativeTask(root,'WK-one','handoff',request(6,developer,{claim_id:claim.claim.id,revision:git(root,'rev-parse','HEAD'),summary:'Changed',evidence:[corrected],unresolved:[]})),/preserve the rejected source/);
+  assert.equal(item.attempts[0].rework_mode,'evidence-only');assert.equal(item.delivery.evidence_rework,undefined);
+  assert.deepEqual(item.delivery.evidence,[{path:corrected,source:'candidate'}]);
+  // Closed tasks are not re-verified: evidence edits after acceptance keep Doctor green.
+  await write(root,corrected,'Tampered after acceptance');await fs.rm(root+'/'+ref);
+  assert.equal((await diagnoseTaskProject(root)).valid,true);
 });
 
 test("initialization preserves existing files and removed legacy commands are rejected", async t => {
@@ -226,22 +237,24 @@ test("CLI init/create/claim and concurrent retries share the canonical task path
   await assert.rejects(readNativeTask(root, "WK-one"), /recorded operation/);
 });
 
-test("artifact code, stale dependency evidence and unintegrated dependencies cannot pass acceptance", async t => {
+test("product drift and unintegrated dependencies cannot pass acceptance; administrative drift and old evidence do not block", async t => {
   const root = await fixture(t);
   const helper = ".ai-org/artifacts/WK-one/helper.mjs";
   await write(root, helper, "export const value = 1;\n"); git(root, "add", helper); git(root, "commit", "-qm", "baseline helper");
   const { revision, ref } = await deliver(root);
   const report = ".ai-org/artifacts/WK-one/review.md"; await write(root, report, "Distinct reviewer report");
   await mutateNativeTask(root, "WK-one", "review", request(3, reviewer, { revision, judgment: "pass", summary: "Reviewed", evidence: [report] }));
+  // `.ai-org/` is administrative: its drift never blocks, while product drift in the write roots does.
   await write(root, helper, "export const value = 999;\n");
-  await assert.rejects(mutateNativeTask(root, "WK-one", "close", request(4, developer, { revision, summary: "Accept", rollback: "Revert", evidence: [report] })), /clean product/);
-  await write(root, helper, "export const value = 1;\n");
+  await write(root, "src/cart.mjs", "export const total = 3;\n");
+  await assert.rejects(mutateNativeTask(root, "WK-one", "close", request(4, developer, { revision, summary: "Accept", rollback: "Revert", evidence: [report] })), /clean tree/);
+  git(root, "checkout", "-q", "--", "src/cart.mjs");
   await mutateNativeTask(root, "WK-one", "close", request(4, developer, { revision, summary: "Accept", rollback: "Revert", evidence: [report] }));
+  git(root, "checkout", "-q", "--", helper);
   const child = contract("WK-child"); child.dependencies = ["WK-one"];
   await createNativeTask(root, child, request(0));
+  // An accepted dependency's evidence is not re-verified.
   await write(root, ref, "Changed dependency evidence");
-  await assert.rejects(mutateNativeTask(root, "WK-child", "claim", request(1, developer, { base_revision: revision })), /changed/);
-  await write(root, ref, `Verified ${revision}.\n`);
   const previous = git(root, "rev-parse", `${revision}^`); git(root, "checkout", "--detach", previous);
   await assert.rejects(mutateNativeTask(root, "WK-child", "claim", request(1, developer, { base_revision: previous })), /Git candidate check/);
 });

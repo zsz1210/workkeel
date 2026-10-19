@@ -27,9 +27,9 @@ const USAGE_KEYS = ["input_tokens", "output_tokens"];
 const BINDING_USAGE_KEYS = ["input_tokens", "cached_input_tokens", "cache_write_input_tokens", "output_tokens", "reasoning_output_tokens", "total_tokens"];
 const ATTEMPT_KEYS = ["schema_version", "attempt_id", "sequence", "operation_id", "request_sha256", "task_id", "task_version",
   "task_record_sha256", "contract_sha256", "policy_sha256", "delivery_claim_id", "revision", "delivery_evidence", "implementer",
-  "approved_by", "reviewer", "approval_ref", "authorization_expires_at", "predecessor", "predecessor_runtime", "previous_attempt_sha256",
+  "approved_by", "reviewer", "approval_ref", "authorization_expires_at", "predecessor", "predecessor_runtime", "previous_attempt_id",
   "dispatch_execution_id", "policy_ref", "selected", "source", "preflight", "created_at", "authority", "implementation_authority", "acceptance"];
-const RESULT_KEYS = ["schema_version", "attempt_id", "attempt_sha256", "status", "error", "usage", "runtime_model", "reasoning", "output",
+const RESULT_KEYS = ["schema_version", "attempt_id", "status", "error", "usage", "runtime_model", "reasoning", "output",
   "duration_ms", "duration_basis", "recorded_at", "acceptance"];
 const LAUNCHED_BASIS = "monotonic launch interval measured by the recovery API";
 const LAUNCH_ERRORS = new Set([null, "launch-unconfirmed", "invalid-host-result", "model-mismatch"]);
@@ -55,18 +55,20 @@ function usage(value, keys) {
 }
 
 function validateRequest(request) {
-  strict(request, ["schema_version", "operation_id", "task_id", "expected_version", "expected_chain_sha256", "revision",
+  strict(request, ["schema_version", "operation_id", "task_id", "expected_version", "expected_head_attempt_id", "revision",
     "actor", "reviewer", "predecessor", "policy_ref", "model", "source"]);
-  if (request.schema_version !== "workkeel.review-recovery-request/v1") fail("unsupported request schema");
+  if (request.schema_version !== "workkeel.review-recovery-request/v2") fail("unsupported request schema");
   id(request.operation_id, "operation ID"); id(request.task_id, "task ID");
   if (!Number.isSafeInteger(request.expected_version) || request.expected_version < 1) fail("expected task version is required");
-  if (request.expected_chain_sha256 !== null && !SHA.test(request.expected_chain_sha256 ?? "")) fail("expected chain digest must be null or a SHA-256");
+  if (request.expected_head_attempt_id !== null) id(request.expected_head_attempt_id, "expected head attempt ID");
   if (!REVISION.test(request.revision ?? "")) fail("a full candidate revision is required");
   actor(request.actor, "approving actor"); actor(request.reviewer, "reviewer");
-  strict(request.predecessor, ["kind", "id", "sha256"]);
+  // A host binding is named by its file digest; a prior attempt by its ID alone.
+  if (request.predecessor?.kind === "review-attempt") strict(request.predecessor, ["kind", "id"]);
+  else strict(request.predecessor, ["kind", "id", "sha256"]);
   if (!["host-binding", "review-attempt"].includes(request.predecessor.kind)) fail("unknown predecessor kind");
   id(request.predecessor.id, "predecessor ID");
-  if (!SHA.test(request.predecessor.sha256 ?? "")) fail("predecessor digest is required");
+  if (request.predecessor.kind === "host-binding" && !SHA.test(request.predecessor.sha256 ?? "")) fail("predecessor binding digest is required");
   if (typeof request.policy_ref !== "string" || !request.policy_ref || request.policy_ref.length > 1024) fail("invalid policy reference");
   strict(request.model, ["provider", "model", "reasoning"]);
   for (const key of ["provider", "model"]) if (typeof request.model[key] !== "string" || !request.model[key]) fail("explicit model is required");
@@ -100,10 +102,11 @@ async function readEnvelope(target, ref) {
 // selection must equal the validated approved dispatch ticket.
 async function validateAttempt(target, value, n, item, previous) {
   strict(value, ATTEMPT_KEYS, ["execution_scope"]);
-  check(value.schema_version === "workkeel.review-attempt/v1" && value.sequence === n && value.task_id === item.id &&
+  // Attempts link by ID and bind the delivered commit; envelopes only guard each record's bytes.
+  check(value.schema_version === "workkeel.review-attempt/v2" && value.sequence === n && value.task_id === item.id &&
     value.delivery_claim_id === item.delivery.claim_id && value.revision === item.delivery.revision &&
     value.contract_sha256 === item.contract_sha256 && value.policy_sha256 === item.policy_sha256 &&
-    value.previous_attempt_sha256 === (previous?.sha256 ?? null), "attempt does not belong to this delivery chain");
+    value.previous_attempt_id === (previous?.value.attempt_id ?? null), "attempt does not belong to this delivery chain");
   id(value.attempt_id, "attempt ID"); id(value.operation_id, "operation ID"); id(value.dispatch_execution_id, "dispatch execution");
   check(SHA.test(value.request_sha256 ?? "") && SHA.test(value.task_record_sha256 ?? "") && Number.isSafeInteger(value.task_version) &&
     value.task_version >= 1, "invalid attempt pins");
@@ -124,19 +127,20 @@ async function validateAttempt(target, value, n, item, previous) {
   check(time(value.created_at) && value.predecessor_runtime === "confirmed-stopped" && value.authority === "review-only" &&
     value.implementation_authority === false && value.acceptance === "not-performed", "invalid attempt authority");
   const p = value.predecessor;
-  strict(p, ["kind", "id", "sha256", "result_sha256", "status", "usage", "source", "dispatch_execution_id"]);
+  strict(p, previous ? ["kind", "id", "status", "usage", "source", "dispatch_execution_id"] :
+    ["kind", "id", "sha256", "status", "usage", "source", "dispatch_execution_id"]);
   id(p.id, "predecessor ID"); source(p.source, "predecessor source");
-  check(SHA.test(p.sha256 ?? "") && p.dispatch_execution_id === value.dispatch_execution_id, "invalid predecessor");
+  check((previous || SHA.test(p.sha256 ?? "")) && p.dispatch_execution_id === value.dispatch_execution_id, "invalid predecessor");
   if (previous) {
     usage(p.usage, USAGE_KEYS);
     const prior = previous.result?.value ?? null;
-    check(p.kind === "review-attempt" && p.id === previous.value.attempt_id && p.sha256 === previous.sha256 &&
-      p.result_sha256 === (previous.result?.sha256 ?? null) && p.status === (prior?.status ?? "unrecorded") && p.status !== "completed" &&
+    check(p.kind === "review-attempt" && p.id === previous.value.attempt_id &&
+      p.status === (prior?.status ?? "unrecorded") && p.status !== "completed" &&
       executionDigest(p.usage) === executionDigest(prior?.usage ?? UNKNOWN_USAGE) && executionDigest(p.source) === executionDigest(previous.value.source) &&
       p.dispatch_execution_id === previous.value.dispatch_execution_id, "predecessor evidence changed after recovery");
   } else {
     usage(p.usage, BINDING_USAGE_KEYS);
-    check(p.kind === "host-binding" && p.result_sha256 === null && STOPPED_BINDING.has(p.status), "predecessor evidence changed after recovery");
+    check(p.kind === "host-binding" && STOPPED_BINDING.has(p.status), "predecessor evidence changed after recovery");
     const { binding, file_sha256 } = await inspectHostBinding(target, p.id);
     check(file_sha256 === p.sha256 && binding.task_id === item.id && binding.claim_id === item.delivery.claim_id &&
       binding.contract_sha256 === item.contract_sha256 && binding.dispatch?.activity_kind === "review" &&
@@ -157,8 +161,8 @@ async function validateAttempt(target, value, n, item, previous) {
 }
 function validateResult(value, attempt) {
   strict(value, RESULT_KEYS);
-  check(value.schema_version === "workkeel.review-attempt-result/v1" && value.attempt_id === attempt.value.attempt_id &&
-    value.attempt_sha256 === attempt.sha256, "attempt result does not match its attempt");
+  check(value.schema_version === "workkeel.review-attempt-result/v2" && value.attempt_id === attempt.value.attempt_id,
+    "attempt result does not match its attempt");
   usage(value.usage, USAGE_KEYS);
   check(Number.isSafeInteger(value.duration_ms) && value.duration_ms >= 0, "invalid attempt duration");
   check(label(value.runtime_model) && label(value.reasoning) && (value.output === null || typeof value.output === "string" &&
@@ -184,7 +188,7 @@ function validateResult(value, attempt) {
  * reads with record publication (a durable create briefly hard-links the record).
  */
 export async function readReviewRecoveryChain(target, item) {
-  if (!item.delivery || !await existsEntry(target, `${ROOT}/${item.id}/${item.delivery.claim_id}`)) return { attempts: [], head: null, sha256: null };
+  if (!item.delivery || !await existsEntry(target, `${ROOT}/${item.id}/${item.delivery.claim_id}`)) return { attempts: [], head: null, head_attempt_id: null };
   const ref = chainRef(item), dir = await safeDirectory(target, ref);
   const names = (await fs.readdir(dir)).filter(name => !DURABLE_TEMPORARY_NAME.test(name));
   const attempts = [];
@@ -200,8 +204,8 @@ export async function readReviewRecoveryChain(target, item) {
     attempts.push({ ...attempt, result });
   }
   if (names.length !== attempts.length + attempts.filter(a => a.result).length) fail("unexpected file in recovery chain");
-  const sha256 = attempts.length ? executionDigest(attempts.map(a => [a.sha256, a.result?.sha256 ?? null])) : null;
-  return { attempts, head: attempts.at(-1) ?? null, sha256 };
+  const head = attempts.at(-1) ?? null;
+  return { attempts, head, head_attempt_id: head?.value.attempt_id ?? null };
 }
 
 /**
@@ -247,8 +251,8 @@ async function retainedRecoveryChains(target) {
         check(n <= MAX_REVIEW_RECOVERY_ATTEMPTS, "chain exceeds the attempt bound");
         const attempt = await readEnvelope(target, `${ref}/${attemptName(n)}`), v = attempt.value;
         strict(v, ATTEMPT_KEYS, ["execution_scope"]); id(v.attempt_id, "attempt ID"); source(v.source, "attempt source");
-        check(v.schema_version === "workkeel.review-attempt/v1" && v.task_id === taskId && v.delivery_claim_id === claimId &&
-          v.sequence === n && v.previous_attempt_sha256 === (attempts.at(-1)?.sha256 ?? null), "invalid retained recovery chain");
+        check(v.schema_version === "workkeel.review-attempt/v2" && v.task_id === taskId && v.delivery_claim_id === claimId &&
+          v.sequence === n && v.previous_attempt_id === (attempts.at(-1)?.value.attempt_id ?? null), "invalid retained recovery chain");
         let result = null;
         if (names.includes(resultName(n))) {
           result = await readEnvelope(target, `${ref}/${resultName(n)}`);
@@ -352,7 +356,7 @@ export async function readReviewRecovery(targetInput, taskId) {
     return { item, chain: await readReviewRecoveryChain(target, item) };
   });
   return { schema_version: "workkeel.review-recovery/v1", authority: "observation-only", mutation_status: "no-write", execution_authorized: false,
-    task_id: item.id, task_version: item.version, state: item.state, candidate_revision: item.delivery?.revision ?? null, chain_sha256: chain.sha256,
+    task_id: item.id, task_version: item.version, state: item.state, candidate_revision: item.delivery?.revision ?? null, head_attempt_id: chain.head_attempt_id,
     attempts: chain.attempts.map(a => ({ attempt_id: a.value.attempt_id, sequence: a.value.sequence, sha256: a.sha256, reviewer: a.value.reviewer,
       source: a.value.source, status: a.result?.value.status ?? "unrecorded", usage: a.result?.value.usage ?? UNKNOWN_USAGE,
       duration_ms: a.result?.value.duration_ms ?? null })), acceptance: "not-performed" };
@@ -365,7 +369,7 @@ async function prepare(target, request) {
   if (sameActor(request.reviewer, request.actor)) fail("the approving actor cannot also be the reviewer");
   if (!unexpired(item.contract.authorization.expires_at)) fail("task authorization expired; obtain fresh authority");
   const chain = await readReviewRecoveryChain(target, item);
-  if (chain.sha256 !== request.expected_chain_sha256) fail("stale recovery chain; inspect the current chain before retrying");
+  if (chain.head_attempt_id !== request.expected_head_attempt_id) fail("stale recovery chain; inspect the current chain before retrying");
   if (chain.attempts.length >= MAX_REVIEW_RECOVERY_ATTEMPTS) fail("attempt bound reached; preserve the evidence and obtain a new decision");
   let predecessor, sources;
   if (!chain.head) {
@@ -375,15 +379,15 @@ async function prepare(target, request) {
     if (binding.task_id !== item.id || binding.claim_id !== item.delivery.claim_id || binding.contract_sha256 !== item.contract_sha256 ||
         binding.dispatch?.activity_kind !== "review") fail("predecessor is not the dispatched review of this delivery");
     if (!binding.collection_closed || !STOPPED_BINDING.has(binding.status)) fail("predecessor collection is active or completed; it must be closed as stopped");
-    predecessor = { kind: "host-binding", id: binding.binding_id, sha256: file_sha256, result_sha256: null, status: binding.status,
+    predecessor = { kind: "host-binding", id: binding.binding_id, sha256: file_sha256, status: binding.status,
       usage: structuredClone(binding.usage), source: { thread_id: binding.source.thread_id, turn_id: binding.source.turn_id },
       dispatch_execution_id: binding.dispatch.execution_id };
     sources = [predecessor.source];
   } else {
     const head = chain.head;
-    if (request.predecessor.kind !== "review-attempt" || request.predecessor.id !== head.value.attempt_id || request.predecessor.sha256 !== head.sha256) fail("predecessor must be the current chain head");
+    if (request.predecessor.kind !== "review-attempt" || request.predecessor.id !== head.value.attempt_id) fail("predecessor must be the current chain head");
     if (head.result?.value.status === "completed") fail("the latest attempt completed; its reviewer authors the ordinary review");
-    predecessor = { kind: "review-attempt", id: head.value.attempt_id, sha256: head.sha256, result_sha256: head.result?.sha256 ?? null,
+    predecessor = { kind: "review-attempt", id: head.value.attempt_id,
       status: head.result?.value.status ?? "unrecorded", usage: structuredClone(head.result?.value.usage ?? UNKNOWN_USAGE),
       source: structuredClone(head.value.source), dispatch_execution_id: head.value.dispatch_execution_id };
     sources = [chain.attempts[0].value.predecessor.source, ...chain.attempts.map(a => a.value.source)];
@@ -408,11 +412,11 @@ function preflightReview(host, { item, selected }) {
       model: { provider: selected.provider, model: selected.model, effort: selected.reasoning }, usage: { fields: [...USAGE_KEYS] } } });
 }
 
-function response(attempt, result, { replayed, chainSha256 }) {
+function response(attempt, result, { replayed }) {
   const status = result?.value.status ?? "in-progress";
-  return { schema_version: "workkeel.review-recovery-result/v1", replayed, mutation_status: replayed ? "already-applied" : "applied",
+  return { schema_version: "workkeel.review-recovery-result/v2", replayed, mutation_status: replayed ? "already-applied" : "applied",
     task_id: attempt.value.task_id, candidate_revision: attempt.value.revision, attempt_id: attempt.value.attempt_id,
-    sequence: attempt.value.sequence, attempt_sha256: attempt.sha256, chain_sha256: chainSha256, reviewer: attempt.value.reviewer,
+    sequence: attempt.value.sequence, attempt_sha256: attempt.sha256, reviewer: attempt.value.reviewer,
     status, usage: result?.value.usage ?? UNKNOWN_USAGE, duration_ms: result?.value.duration_ms ?? null,
     acceptance: "not-performed", execution_authorized: false, implementation_authority: false,
     next_action: status === "completed" ? "The named reviewer records the ordinary review with review_attempt_id; this result is not a verdict." :
@@ -423,7 +427,7 @@ async function replay(target, request, requestSha) {
   const prior = chain.attempts.find(a => a.value.operation_id === request.operation_id);
   if (!prior) return null;
   if (prior.value.request_sha256 !== requestSha) fail("operation ID was already used with different input");
-  return response(prior, prior.result, { replayed: true, chainSha256: chain.sha256 });
+  return response(prior, prior.result, { replayed: true });
 }
 function launchResult(raw, failed, selected) {
   const interrupted = error => ({ status: "interrupted", error, usage: { ...UNKNOWN_USAGE }, runtime_model: null, reasoning: null, output: null });
@@ -448,7 +452,7 @@ async function confirmStopped(host, item, predecessor) {
   if (!observed || typeof observed !== "object" || Object.keys(observed).join() !== "state" || observed.state !== "stopped") fail(`predecessor runtime is ${observed?.state === "active" ? "active" : "unknown"}; it must be confirmed stopped`);
 }
 function resultRecord(attempt, value) {
-  return { schema_version: "workkeel.review-attempt-result/v1", attempt_id: attempt.value.attempt_id, attempt_sha256: attempt.sha256,
+  return { schema_version: "workkeel.review-attempt-result/v2", attempt_id: attempt.value.attempt_id,
     ...value, recorded_at: new Date().toISOString(), acceptance: "not-performed" };
 }
 // A launched observation the persisted validator would reject is preserved as
@@ -497,17 +501,17 @@ export async function recoverInterruptedReview(targetInput, input, { host } = {}
       // drift and a concurrent retry each win over this request.
       const { item, chain, predecessor, selected, ticket } = await prepare(target, request);
       if (executionDigest(item) !== executionDigest(probed.item) || predecessor.id !== probed.predecessor.id ||
-          predecessor.sha256 !== probed.predecessor.sha256) fail("task or predecessor changed during host probes");
+          (predecessor.sha256 ?? null) !== (probed.predecessor.sha256 ?? null)) fail("task or predecessor changed during host probes");
       await assertHostDispatchAdmission(target, { ...ticket, node: { ...ticket.node, write_paths: [] } },
         { stoppedRecoverySha256: chain.head?.sha256 ?? null });
       const sequence = chain.attempts.length + 1;
-      const value = { schema_version: "workkeel.review-attempt/v1", attempt_id: `review-attempt-${randomUUID()}`, sequence,
+      const value = { schema_version: "workkeel.review-attempt/v2", attempt_id: `review-attempt-${randomUUID()}`, sequence,
         operation_id: request.operation_id, request_sha256: requestSha, task_id: item.id, task_version: item.version,
         task_record_sha256: executionDigest(item), contract_sha256: item.contract_sha256, policy_sha256: item.policy_sha256,
         delivery_claim_id: item.delivery.claim_id, revision: item.delivery.revision, delivery_evidence: structuredClone(item.delivery.evidence),
         implementer: structuredClone(item.delivery.implementer), approved_by: structuredClone(request.actor), reviewer: structuredClone(request.reviewer),
         approval_ref: item.contract.authorization.approval_ref, authorization_expires_at: item.contract.authorization.expires_at,
-        predecessor, predecessor_runtime: "confirmed-stopped", previous_attempt_sha256: chain.head?.sha256 ?? null,
+        predecessor, predecessor_runtime: "confirmed-stopped", previous_attempt_id: chain.head_attempt_id,
         dispatch_execution_id: predecessor.dispatch_execution_id, policy_ref: request.policy_ref, selected,
         execution_scope: { read_paths: [...ticket.node.read_paths], write_paths: [] },
         source: structuredClone(request.source), preflight: { host_id: receipt.host_id, probed_host: receipt.probed_host,
@@ -558,10 +562,10 @@ export async function recoverInterruptedReview(targetInput, input, { host } = {}
     const current = await readNativeTask(target, item.id), chain = await readReviewRecoveryChain(target, current);
     // Only the current attempt of the unchanged, still-unreviewed delivery may
     // record its own result, exactly once; cancellation or supersession wins.
-    if (chain.head?.sha256 !== attempt.sha256 || chain.head.result) fail("attempt is no longer current; the late result was not recorded");
+    if (chain.head_attempt_id !== attempt.value.attempt_id || chain.head.result) fail("attempt is no longer current; the late result was not recorded");
     if (current.state !== "test" || current.review || current.version !== attempt.value.task_version ||
         executionDigest(current) !== attempt.value.task_record_sha256) fail("task changed during the attempt; the late result was not recorded");
     const after = await writeResult(target, current, attempt, normalizedOutcome(attempt, outcome, { duration_ms, duration_basis: LAUNCHED_BASIS }));
-    return response(after.head, after.head.result, { replayed: false, chainSha256: after.sha256 });
+    return response(after.head, after.head.result, { replayed: false });
   });
 }

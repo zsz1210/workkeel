@@ -54,6 +54,23 @@ test("a solo owner completes a low task using only flags, without writing JSON",
   assert.deepEqual(await jsonFiles(root), [], "no hand-written JSON request or contract files");
 });
 
+test("abbreviated --revision values resolve to the full commit; low work needs no evidence", async t => {
+  const root = await repository(t);
+  workkeel(root, "init", "--solo");
+  await fs.writeFile(path.join(root, ".gitignore"), ".workkeel/\n");
+  git(root, "add", "-A"); git(root, "commit", "-qm", "base");
+  workkeel(root, "task", "new", "--goal", "Tidy the guide", "--acceptance", "The guide is tidy", "--write", "docs", "--actor", "builder");
+  workkeel(root, "task", "claim", "--id", "WK-0001", "--actor", "builder");
+  await fs.appendFile(path.join(root, "docs/guide.md"), "Tidied.\n"); git(root, "commit", "-qam", "tidy");
+  const full = git(root, "rev-parse", "HEAD"), short = full.slice(0, 9);
+  const bad = spawnSync(process.execPath, [cli, "task", "handoff", "--id", "WK-0001", "--actor", "builder", "--summary", "Tidied", "--revision", "ffff0000"], { cwd: root, encoding: "utf8" });
+  assert.notEqual(bad.status, 0); assert.match(bad.stdout + bad.stderr, /does not name exactly one commit/);
+  assert.equal(workkeel(root, "task", "handoff", "--id", "WK-0001", "--actor", "builder", "--summary", "Tidied", "--revision", short).candidate_revision, full);
+  assert.equal(workkeel(root, "task", "review", "--id", "WK-0001", "--actor", "reviewer", "--judgment", "pass", "--summary", "Tidy", "--revision", short).state, "release_gate");
+  const item = await readNativeTask(root, "WK-0001");
+  assert.equal(item.review.revision, full); assert.deepEqual(item.delivery.evidence, []); assert.deepEqual(item.review.evidence, []);
+});
+
 test("the local default actor, derived operation IDs and repeated-flag rejection", async t => {
   const root = await repository(t);
   workkeel(root, "init", "--solo", "--principal", "maria");

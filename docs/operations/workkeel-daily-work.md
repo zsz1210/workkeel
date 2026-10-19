@@ -151,8 +151,9 @@ Prepare delivery documents before committing and verifying the final candidate.
 The optional [evidence preflight and report](workkeel-native-dispatch.md#delivery-evidence-preflight-and-report)
 checks explicit files and produces a numeric summary from existing receipts.
 Then run the required repository gate on that candidate. If documentation is
-added later, check it before pinning it as evidence. Preserve already accepted
-evidence bytes. A generated report never substitutes for executing verification
+added later, check it before naming it as evidence. Prefer committing evidence in
+the candidate, where Git keeps it immutable; handoff records paths, not digests.
+A generated report never substitutes for executing verification
 or obtaining an actual independent review.
 
 Use the same expected-operation list for handoff and closeout reporting. The
@@ -162,7 +163,7 @@ keep that binding and its explicit follow-up instead of reopening the task or
 inventing missing time. Record any remaining reporting gap in closeout evidence.
 When a late terminal row arrives, collect that same source and generate a new
 snapshot outside the candidate or under the existing ignored private capture
-directory. Do not revise evidence bytes already pinned by handoff or acceptance.
+directory. Do not revise evidence files already named by handoff or acceptance.
 Usage observation, activity end and collection timestamps remain separate; late
 token rows never extend a stopped activity clock.
 

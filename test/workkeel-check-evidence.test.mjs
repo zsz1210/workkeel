@@ -57,7 +57,8 @@ test('real capture retains original context; semantic overclaim awaits independe
   const bundle=JSON.parse(await fs.readFile(f.root+'/'+result.bundle.path));
   assert.equal(bundle.runtime.version,process.version);assert.equal(bundle.receipt.exit_code,0);assert.equal(bundle.coverage.author.agent_id,'builder');
   assert.deepEqual(bundle.launch_environment,[{name:'WK_CHECK_FORCE_RED',present:false,sha256:null}]);
-  assert.ok((await f.assess([result])).assessment.reasons.some(r=>r.code==='unlisted-report'));
+  // Every .ai-org/ file is administrative, so an unnamed report is no longer a candidate issue.
+  assert.ok(!(await f.assess([result])).assessment.reasons.some(r=>r.code==='unlisted-report'));
   await f.handoff([result]);const taskBytes=await fs.readFile(f.root+'/.ai-org/work-items/WK-check.json');
   const allBytes=await treeBytes(f.root),assessment=await f.assess([result]);
   assert.deepEqual(await treeBytes(f.root),allBytes);
@@ -169,8 +170,12 @@ test('previously changed authority or candidate cannot retain current criterion 
     revision:f.git('rev-parse','HEAD'),judgment:'pass',summary:'Synthetic review binding fixture',evidence:[ref,support]});
   const confirmation=await f.pin(ref),assess=()=>f.assess([green],{confirmation});
   assert.equal((await assess()).criterion_confirmation[0].status,'confirmed');
+  // An edited approval no longer withholds confirmation; drift and a missing approval still do.
+  const approval=await fs.readFile(f.root+'/docs/approval.md');
+  await fs.writeFile(f.root+'/docs/approval.md','Approval edited after the task was approved');
+  assert.equal((await assess()).criterion_confirmation[0].status,'confirmed');
+  await fs.writeFile(f.root+'/docs/approval.md',approval);
   for(const [changedRef,replacement,reason] of [
-    ['docs/approval.md','Approval changed before assessment','authority-changed'],
     ['src/total.mjs','export const total=()=>0;\n','product-drift'],
     ['docs/approval.md',null,'authority-unavailable']
   ]) {

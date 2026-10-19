@@ -240,11 +240,11 @@ export async function assessDeliveryChecks(target,input) {
       document.candidate_revision!==currentCandidate||document.candidate_revision!==task.review.revision||task.delivery.revision!==task.review.revision||
       !exactActor(document.reviewer,task.review.actor)||document.reviewer.agent_id===task.delivery.implementer.agent_id||
       (project.policy.review_separation==='distinct-principal'||task.contract.verification.separation==='distinct-principal')&&document.reviewer.principal_id===task.delivery.implementer.principal_id||
-      !task.review.evidence.some(p=>p.path===input.confirmation.path&&p.sha256===file.digest))throw Error('review binding');
+      !task.review.evidence.some(p=>p.path===input.confirmation.path))throw Error('review binding');
     if(new Set(document.criteria.map(c=>c.criterion)).size!==document.criteria.length||document.criteria.some(c=>!task.contract.acceptance.criteria.includes(c.criterion)))throw Error('criteria');
     for(const row of document.criteria)for(const p of row.evidence) {
       const support=await pinned(p);
-      if(p.path===input.confirmation.path||!task.review.evidence.some(e=>e.path===p.path&&e.sha256===support.digest))throw Error('support not bound to review');
+      if(p.path===input.confirmation.path||!task.review.evidence.some(e=>e.path===p.path))throw Error('support not bound to review');
     }
     confirmations=confirmations.map(row=>{
       const declaration=document.criteria.find(c=>c.criterion===row.criterion);
