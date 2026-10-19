@@ -1,3 +1,4 @@
+import {countLoopOperation} from './workkeel-loop-run.mjs';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import {randomUUID} from 'node:crypto';
@@ -127,6 +128,8 @@ async function safeScope(target,ref) {
 
 /** Record a dispatch intent under the existing task claim. This does not launch a host or grant authority. */
 export async function prepareDispatchTicket(targetInput,request) {
+  request=structuredClone(request);
+  await countLoopOperation("dispatch-prepare", targetInput);
   exactKeys(request,['task_id','actor','claim_id','contract_sha256','policy_ref','node','capabilities','operation_id'],['route','display_label','model_policy']);
   request=structuredClone(request);
   const target=await fs.realpath(targetInput);nodeShape(request.node);
@@ -264,6 +267,8 @@ async function pinnedPolicy(target,task,ref) {
 
 /** The existing host collector owns exact source binding and usage, never this ticket. */
 export async function bindDispatchTicket(target,request) {
+  request=structuredClone(request);
+  await countLoopOperation("dispatch-bind",target);
   exactKeys(request,['execution_id','source'],['capture_turn_from_start','approval_ref','sample_kind','capabilities','runtime_selection']);
   request=structuredClone(request);
   const ticket=await readDispatchTicket(target,request.execution_id);

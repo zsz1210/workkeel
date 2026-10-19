@@ -65,7 +65,10 @@ async function reviewScore(target, item, review, errors) {
     if (!ref.path.endsWith(".json") || delivered.has(ref.path)) continue;
     let report;
     try { report = JSON.parse(await readReviewEvidence(target, review, ref)); } catch { continue; }
-    if (report?.schema_version !== "workkeel.review-report/v1" || report.task_id !== item.id || report.revision !== review.revision || report.score === undefined) continue;
+    if (report?.schema_version !== "workkeel.review-report/v1" || report.score === undefined) continue;
+    if (report.task_id !== item.id || report.revision !== review.revision || report.judgment !== review.judgment || report.reviewer?.agent_id !== review.actor?.agent_id || report.reviewer?.principal_id !== review.actor?.principal_id) {
+      errors.push({ task_id: item.id, path: ref.path, message: "Score source differs from the actual reviewer, task, candidate or judgment" }); continue;
+    }
     if (report.judgment !== review.judgment || report.reviewer?.agent_id !== review.actor?.agent_id || report.reviewer?.principal_id !== review.actor?.principal_id) continue;
     if (isObject(report.score)) delete report.score.self_eval;
     try { found.push(validateReviewScore(report.score)); }
@@ -124,4 +127,51 @@ export async function readScoreStats(target) {
   return { schema_version: "workkeel.stats/v1", authority: "observation-only", mutation_status: "no-write", by_risk, records, errors,
     limitations: ["Scores are statistics only. They never trigger rework or block acceptance; the risk-tier review rules decide that.",
       "Only the actual reviewer's own workkeel.review-report/v1 file for that candidate and judgment is scored; author or delivered reports are ignored. Rework reasons without P-level findings use the rework summary."] };
+}
+
+export const REWORK_CATEGORIES = Object.freeze(['requirements', 'code-error', 'tests', 'evidence', 'scope', 'false-block', 'unknown']);
+const sameReviewer = (a, b) => a?.agent_id === b?.agent_id && a?.principal_id === b?.principal_id;
+
+/** Historical review rounds, including an unresolved FAIL and an unscored last
+ * round. Never substitute the latest scored round for a missing first/last one. */
+export async function taskObservationRecord(target, item, errors = [], { cutoff = Infinity } = {}) {
+  const available = [...item.attempts.filter(a => a.kind === 'rejected').map(a => a.review), ...(item.review ? [item.review] : [])];
+  const events = (item.history ?? []).filter(e => e.action === 'review' && Date.parse(e.at) < cutoff);
+  const rounds = [];
+  for (const [index, event] of events.entries()) {
+    const review = available.find(r => r.revision === event.revision && r.judgment === event.judgment && sameReviewer(r.actor, event.actor));
+    const independent = event.actor?.agent_id !== item.contract.actor?.agent_id && Boolean(event.actor?.agent_id);
+    if (!review) errors.push({ task_id: item.id, message: 'Historical review evidence unavailable', round: index + 1 });
+    const score = review && independent ? await reviewScore(target, item, review, errors) : null;
+    rounds.push({ round: index + 1, at: event.at, candidate: event.revision, reviewer: event.actor, independent,
+      judgment: event.judgment, score, evidence: review?.evidence ?? [], source: event });
+  }
+  const candidates=new Set((item.history??[]).filter(e=>e.action==='handoff'&&Date.parse(e.at)<cutoff).map(e=>e.revision));
+  const historical={...item,delivery:candidates.has(item.delivery?.revision)?item.delivery:null,attempts:item.attempts.filter(a=>candidates.has(a.delivery?.revision))};
+  return { task_id: item.id, risk: taskRisk(historical), reviews: rounds };
+}
+
+/** Full correction history, including failed-check repairs before handoff.
+ * Preserve task-global ordinals before applying a report's period filter. */
+export function projectReworkIterations(taskId, history, reviews, operations) {
+  const at=value=>Date.parse(value), category=note=>{
+    const label=/^\[([^\]]+)\]/.exec(note??'')?.[1];return REWORK_CATEGORIES.includes(label)?label:'unknown';
+  };
+  const ops=[...operations].sort((a,b)=>at(a.at)-at(b.at)),allReworks=[];
+  for(const event of history.filter(e=>e.action==='rework')){
+    const rejected=reviews.filter(r=>at(r.at)<=at(event.at)&&r.judgment==='fail').at(-1);
+    const findings=rejected?.score?.findings.filter(f=>f.level!=='P3')??[];
+    allReworks.push({task_id:taskId,round:null,candidate:event.revision??rejected?.candidate??null,at:event.at,
+      reasons:(findings.length?findings.map(f=>f.note):[event.summary]).map(note=>({category:category(note),note})),
+      kind:'review-repair',source:event,evidence:rejected?.evidence??[]});
+  }
+  for(const op of ops.filter(o=>o.phase==='repair')){
+    const prior=ops.filter(o=>o.goal_id===op.goal_id&&o.phase==='verification'&&at(o.at)<=at(op.at)).at(-1);
+    if(!prior?.result?.checks?.some(c=>c.status==='fail')||prior.cycle!==null&&op.cycle!==prior.cycle+1)continue;
+    if(allReworks.some(r=>r.candidate===prior.candidate&&at(r.at)<=at(op.at)))continue;
+    allReworks.push({task_id:taskId,round:null,candidate:prior.candidate,at:op.at,kind:'check-repair',
+      reasons:[{category:'tests',note:'Recorded mandatory check failed before this repair iteration'}],source:op,evidence:[prior]});
+  }
+  allReworks.sort((a,b)=>at(a.at)-at(b.at)).forEach((r,i)=>{r.round=i+1;});
+  return allReworks;
 }

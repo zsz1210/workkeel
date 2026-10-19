@@ -1,3 +1,4 @@
+import {countLoopOperation, assertLoopCostPath, readLoopRun} from './workkeel-loop-run.mjs';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import {spawn} from 'node:child_process';
@@ -107,6 +108,7 @@ async function browserPrerequisites(ctx,args){
 }
 async function freePort(){const server=net.createServer();await new Promise((resolve,reject)=>server.once('error',reject).listen(0,'127.0.0.1',resolve));const port=server.address().port;await new Promise(resolve=>server.close(resolve));return port;}
 async function stockCommand(ctx,{command,args,git_write=false,check_id='check'}){
+  await countLoopOperation('local-command-'+check_id);
   if(process.platform!=='darwin')fail('local command runner requires qualified macOS sandbox');
   const parent=await readNativeTask(ctx.target,ctx.controller.task_id);
   if(!parent.contract.environment.tools.includes(command))fail('coordinator tool was not approved');
@@ -201,11 +203,12 @@ function authoredFailure(ctx,result){
 }
 /** Trusted stock host with fixed Codex protocol, role sandbox and unchanged
  * reviewer-authored request relay. Optional factories are trusted embedding code. */
-export async function createCodexGoalAdapter({hostFactory=createLocalCodexSubscriptionHost,commandRunner=stockCommand}={}){
+export async function createCodexGoalAdapter({hostFactory=createLocalCodexSubscriptionHost,commandRunner=stockCommand,costPath}={}){
   if(typeof hostFactory!=='function'||typeof commandRunner!=='function')fail('trusted host functions required');
   const hosts=new Map(),runtimes=new Map();
   async function hostFor(root){if(!hosts.has(root))hosts.set(root,await hostFactory(root));return hosts.get(root);}
   async function componentCapabilities(ctx){
+    const run=await readLoopRun(ctx.target);if(run)assertLoopCostPath(run.cost_path,costPath);
     const model=ctx.input.model;
     // Check the restricted Git environment before a model turn whose changes
     // could not be checkpointed. Global identity is intentionally absent.
@@ -411,5 +414,5 @@ export async function createCodexGoalAdapter({hostFactory=createLocalCodexSubscr
       slot.status='cancelled';await writeSlot(ctx,slot);return {status:'cancelled',reason:'Exact thread terminal state and empty background terminals confirmed'};
     }finally{await rpc.close();}
   }
-  return createTrustedGoalAdapter({id:'codex-native-goal',assertCapabilities:capabilities,execute,reconcile,cancel});
+  return createTrustedGoalAdapter({id:'codex-native-goal',...(costPath?{costPath}:{}),assertCapabilities:capabilities,execute,reconcile,cancel});
 }

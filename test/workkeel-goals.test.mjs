@@ -42,9 +42,9 @@ async function fixture(t,{count=1,maxReworks=2,purpose='execution',release=false
   return {target,roots,manifest,request,directory};
 }
 async function artifact(ctx,kind,value){const ref='.ai-org/artifacts/'+ctx.task.id+'/goal-'+kind+'-'+ctx.operation_id+'.json';await fs.mkdir(path.dirname(ctx.component.root+'/'+ref),{recursive:true});await fs.writeFile(ctx.component.root+'/'+ref,JSON.stringify(value,null,2)+'\n');return {path:ref,sha256:(await readTaskFile(ctx.component.root,ref)).bytes_digest};}
-function fixtureAdapter({firstFail=true,alwaysFail=false,onExecute=()=>{},wrongThread=false,interruptAfterNativeReview=false}={}){
+function fixtureAdapter({firstFail=true,alwaysFail=false,onExecute=()=>{},wrongThread=false,interruptAfterNativeReview=false,costPath}={}){
   const reviews=new Map(),receipts=new Map();
-  return createTrustedGoalAdapter({id:'synthetic-goal-host',assertCapabilities:async()=>{},cancel:async()=>({status:'cancelled',reason:'Synthetic exact owned host stopped'}),reconcile:async ctx=>receipts.get(ctx.operation_id)??{status:'unknown',reason:'Synthetic effects are unknown'},
+  return createTrustedGoalAdapter({id:'synthetic-goal-host',...(costPath?{costPath}:{}),assertCapabilities:async()=>{},cancel:async()=>({status:'cancelled',reason:'Synthetic exact owned host stopped'}),reconcile:async ctx=>receipts.get(ctx.operation_id)??{status:'unknown',reason:'Synthetic effects are unknown'},
     execute:async ctx=>{
       onExecute(ctx);const phase=ctx.input.phase,thread=phase==='review'&&!wrongThread?'synthetic-review-'+ctx.task.id+'-'+ctx.input.cycle:'synthetic-builder-'+ctx.task.id;
       const result={status:'completed',operation_id:ctx.operation_id,actor:ctx.input.actor,thread_id:thread,runtime_selection:ctx.input.model,product_access:['planning','review','verification'].includes(phase)||ctx.component.purpose==='discovery'?'read':'write',usage:{input_tokens:0,output_tokens:0,cost_usd:0}};
@@ -253,4 +253,36 @@ test('goal rework is clamped to the risk-tier limit and then waits for a person'
   for(let n=0;n<60;n++){const step=await runNativeGoalStep(f.target,f.manifest.id,{adapter});view=await readNativeGoal(f.target,f.manifest.id);if(step.idle)break;}
   assert.match(view.components[0].last_error,/Risk-tier rework limit reached/);
   assert.equal((await readNativeTask(f.target,'WK-component-0')).attempts.filter(a=>a.kind==='rejected').length,3);
+});
+
+test('the existing goal path shares the trial ledger and persists a user stop before any further dispatch',async t=>{
+  const {startLoopRun,readLoopRun,requestLoopStop}=await import('../src/workkeel-loop-run.mjs');
+  const f=await fixture(t),costPath={path:'synthetic-goal-host',billing:'local'},adapter=fixtureAdapter({costPath});
+  await startLoopRun(f.target,{id:'synthetic-trial',goal_id:f.manifest.id,proposal_sha256:'a'.repeat(64),baseline_sha256:'b'.repeat(64),cost_path:costPath},{authorizeUser:async()=>true,costPath});
+  await runNativeGoalStep(f.target,f.manifest.id,{adapter});
+  assert.equal((await readLoopRun(f.target)).operations,2,'goal step and native claim are both charged');
+  await runNativeGoalStep(f.target,f.manifest.id,{adapter});
+  assert.equal((await readLoopRun(f.target)).operations,4,'goal step and host planning are both charged');
+  await requestLoopStop(f.target);
+  await assert.rejects(runNativeGoalStep(f.target,f.manifest.id,{adapter}),/stop/);
+  const run=await readLoopRun(f.target),goal=await readNativeGoal(f.target,f.manifest.id);
+  assert.equal(run.stop.requested,true);assert.equal(run.stop.confirmed,true);assert.deepEqual(run.stop.unknown,[]);
+  assert.equal(goal.status,'cancelled');assert.equal(goal.operations.length,2);assert.equal(run.operations,4);
+});
+
+test('an unqualified cost path cannot dispatch even the first native goal operation',async t=>{
+  const {startLoopRun,readLoopRun}=await import('../src/workkeel-loop-run.mjs');
+  const f=await fixture(t),costPath={path:'synthetic-goal-host',billing:'local'};
+  await startLoopRun(f.target,{id:'synthetic-trial',goal_id:f.manifest.id,proposal_sha256:'a'.repeat(64),baseline_sha256:'b'.repeat(64),cost_path:costPath},{authorizeUser:async()=>true,costPath});
+  await assert.rejects(runNativeGoalStep(f.target,f.manifest.id,{adapter:fixtureAdapter()}),/Missing|unknown|cost/);
+  assert.equal((await readNativeGoal(f.target,f.manifest.id)).operations.length,0);
+  assert.equal((await readLoopRun(f.target)).stop.requested,true);
+});
+
+test('an already-aborted user signal persists a trial stop before a native claim can start',async t=>{
+  const {startLoopRun,readLoopRun}=await import('../src/workkeel-loop-run.mjs');
+  const f=await fixture(t),costPath={path:'synthetic-goal-host',billing:'local'},signal=new AbortController();
+  await startLoopRun(f.target,{id:'synthetic-trial',goal_id:f.manifest.id,proposal_sha256:'a'.repeat(64),baseline_sha256:'b'.repeat(64),cost_path:costPath},{authorizeUser:async()=>true,costPath});
+  signal.abort();await runNativeGoalStep(f.target,f.manifest.id,{adapter:fixtureAdapter({costPath}),signal:signal.signal});
+  assert.equal((await readLoopRun(f.target)).stop.requested,true);assert.equal((await readNativeGoal(f.target,f.manifest.id)).operations.length,0);
 });

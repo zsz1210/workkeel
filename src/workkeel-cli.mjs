@@ -44,6 +44,8 @@ workkeel task assess [target] --id task-id [--request assessment.json]
 workkeel task evidence-check [target] --id task-id --request completion-evidence.json
 workkeel task metrics|summary [target] --id task-id
 workkeel stats [target]                     review scores and rework by risk tier
+workkeel stats [target] --report --cutoff ISO --timezone IANA [--previous sha256] [--json]
+                                            one-pass improvement suggestions (Markdown)
 workkeel runtime plan [target] --id task-id
 workkeel context prepare [target] --id task-id --request material-request.json
 workkeel skills audit [target] --request skill-use.json
@@ -120,7 +122,7 @@ async function runCommand(args) {
     const { monitorMain } = await import("./workkeel-monitor.mjs");
     return monitorMain(args.slice(1));
   }
-  const { command, action, target, options } = parseCommandLine(args);
+  const { command, action, target, options, json } = parseCommandLine(args);
   if (!["init", "workspace", "upgrade"].includes(command) && await existsEntry(target, "workkeel.lock")) await checkCompatibility(target, command, action);
   let output;
   if (command === "start") {
@@ -165,6 +167,14 @@ async function runCommand(args) {
     output = command === "doctor" ? await diagnoseTaskProject(target) : {
       schema_version: "workkeel.status/v1", tasks: await listTaskItems(target), authority: "observation-only", mutation_status: "no-write"
     };
+  } else if (command === "stats" && options["--report"]) {
+    allow(options, ["--report", "--days", "--previous", "--cutoff", "--timezone"]);
+    const { readStatsReport, formatStatsReport } = await import("./workkeel-stats-report.mjs");
+    const days = options["--days"] === undefined ? undefined : Number(options["--days"]);
+    if (!options["--cutoff"] || !options["--timezone"]) throw Error("Weekly report requires --cutoff and --timezone");
+    const report = await readStatsReport(target, { days, cutoff: options["--cutoff"], timezone: options["--timezone"], previous: options["--previous"] ?? null });
+    if (!json) { process.stdout.write(formatStatsReport(report)); return 0; }
+    output = report;
   } else if (command === "stats") {
     allow(options, []);
     const { readScoreStats } = await import("./workkeel-scoring.mjs");

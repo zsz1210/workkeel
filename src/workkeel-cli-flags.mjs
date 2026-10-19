@@ -9,9 +9,9 @@ import { durableAtomicCreate } from "./files.mjs";
 const GROUPS = ["task", "usage", "dispatch", "intake", "runtime", "instructions", "workflow", "headroom", "skills", "context",
   "learning", "workspace", "model-policy", "skill-lifecycle", "autonomy", "retention", "goal", "policy"];
 const SINGLE = ["policy", "source", "request", "id", "fingerprint", "actor", "revision", "base", "claim", "summary",
-  "judgment", "rollback", "mode", "expect", "goal", "risk", "principal", "attempt", "approval"];
+  "judgment", "rollback", "mode", "expect", "goal", "risk", "principal", "attempt", "approval", "days", "previous", "cutoff", "timezone"];
 const MULTIPLE = ["evidence", "acceptance", "write", "read", "include", "exclude", "unresolved"];
-const BOOLEAN = ["json"];
+const BOOLEAN = ["json", "report"];
 
 /** Parses `command [action] [target] --flags` with Node's own argument parser. */
 export function parseCommandLine(args) {
@@ -30,9 +30,10 @@ export function parseCommandLine(args) {
   const target = positionals.shift() ?? ".";
   if (positionals.length) throw new Error(`Unexpected argument: ${positionals[0]}`);
   // Keep the established `--name` keys so command handlers can allow-list them.
+  // `--json` is accepted everywhere: output is JSON unless a command offers Markdown.
   const result = {};
   for (const [name, value] of Object.entries(parsed.values)) if (name !== "json") result[`--${name}`] = value;
-  return { command, action, target: path.resolve(target), options: result };
+  return { command, action, target: path.resolve(target), options: result, json: parsed.values.json === true };
 }
 
 /** Resolves `--actor agent-id`, or the checkout's local default, to a registered actor. */

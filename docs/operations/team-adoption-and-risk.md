@@ -162,6 +162,49 @@ only from the actual reviewer's own report for that candidate and judgment; an
 author's report or a delivered file is ignored, and two different reviewer scores
 for one review are left unknown.
 
+`workkeel stats --report --cutoff 2026-10-19T00:00:00Z --timezone UTC
+[--previous sha256] [--json]` observes the preceding seven days once, then stops.
+The fixed cutoff must have an offset and the timezone must be an IANA zone.
+The interval includes its start and excludes its cutoff. Selection uses task
+history and goal-operation events, including check failures before handoff;
+a task's last update is never the period filter. Run this command weekly with
+the agreed cutoff. There is no background scheduler or model call.
+
+The report groups task counts, first-pass rate, failed/stopped/unfinished tasks
+and rework by risk. First-pass rate is first independent-review passes divided
+by tasks entering their first review in the period; a pending first review is
+in the denominator, never a pass. Tasks not yet handed off are listed separately.
+First and last review scores retain their actual reviewer, candidate, round and
+evidence; an unscored last review stays unknown even if an earlier score exists.
+
+One correction iteration counts as one rework round. Native review rework and
+a goal repair for the same candidate are deduplicated. Several failing checks or
+findings in that iteration do not multiply rounds. Check-failure repairs before
+handoff are included. A failed check without a repair is a failure, not a repair
+round. Unavailable check history makes complete rework totals/averages/maxima
+unknown; the report separately shows recorded lower bounds. Scores, unknown task
+types, missing checks and source errors have explicit coverage. Native contracts
+lack a task-type field: explicit non-code scores are excluded, while unknown
+unscored tasks remain visible. Token usage is recorded only, never optimized.
+
+Reason categories are requirements, code-error, tests, evidence, scope,
+false-block and unknown. A review reason can declare its category using an
+explicit prefix such as `[evidence]`; unclassified prose stays unknown. A reason
+category repeated in at least two distinct correction rounds can produce a
+candidate. Unknown reasons must also have matching normalized text. Candidates
+retain task IDs, candidates, rounds, source events and evidence references.
+A low score alone does not authorize work.
+
+Markdown embeds the entire JSON record, so both formats contain identical data.
+The report includes rules and filter settings in its input fingerprint. Stop
+reasons include `complete`, `no-input`, `unchanged` and `no-candidate`; all are
+normal outcomes. Missing data never becomes a pass or a measured zero. The only
+suggested follow-up is to submit one L2 proposal for explicit user approval.
+The report does not create tasks, lessons or Skill versions.
+
+The optional trial infrastructure, including persistent run limits and sealed
+comparison records, is described in [the loop trial guide](loop-trial.md).
+
 ## Rolling out
 
 1. **Agree the policy first.** Start from `workkeel init .`, or write

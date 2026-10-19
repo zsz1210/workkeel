@@ -1,3 +1,4 @@
+import {withLoopRun, countLoopOperation, readLoopRun, requestLoopStop, assertLoopAdmission, countLoopCancellationOperation, reserveLoopCancellation, releaseLoopCancellation} from './workkeel-loop-run.mjs';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import os from 'node:os';
@@ -141,12 +142,15 @@ async function validateDerived(target,m){
   if(receipt.reservation.operations<m.limits.max_operations||receipt.reservation.max_runtime_ms<m.limits.timeout_ms||receipt.control_task_id===undefined)fail('admission budget was not reserved');
 }
 export async function createNativeGoal(target,r){
+  r=structuredClone(r);
+  await countLoopOperation('goal-create',target);
   exactKeys(r,['task_id','actor','claim_id','contract_sha256','operation_id','expected_version','manifest_ref']);id(r.operation_id);if(r.expected_version!==0)fail('new goal expects version zero');
   return withProjectMutationLock(target,async()=>{
     const replayFile=await readTaskFile(target,r.manifest_ref),replayManifest=validateGoalManifest(JSON.parse(replayFile.content));
     try{const prior=await stateAt(target,replayManifest.id);if(prior.receipts[0]?.sha256!==executionDigest(r)||prior.manifest_sha256!==replayFile.bytes_digest)fail('goal registration conflict');await assertNativeGoalAuthority(target,prior.id,{actor:r.actor});return {goal:await readNativeGoal(target,prior.id),replayed:true};}catch(e){if(e.code!=='ENOENT')throw e;}
     const task=await assertTaskExecutionContext(target,r.task_id,r),project=await readTaskProject(target);assertApprover(project.policy,r.actor);
     const file=await readTaskFile(target,r.manifest_ref),m=validateGoalManifest(JSON.parse(file.content));
+    const loopRun=await readLoopRun(target);if(loopRun){await assertLoopAdmission(target,m.id);if(m.components.some(c=>c.root!==target)||m.admission||m.derived_from)fail('L2 is limited to one project and one goal, without new admission');}
     if(!sameActor(m.approved_by,r.actor)||!sameActor(m.roles.approver,r.actor))fail('manifest approver must be the actual approving controller');
     if(!task.contract.environment.write_paths.some(root=>under(ROOT+'/'+m.id,root)))fail('goal store outside controller write authority');
     if(!task.authority_pins.some(p=>p.path===r.manifest_ref&&p.sha256===file.bytes_digest))fail('goal manifest must be explicitly task-authority pinned');
@@ -177,6 +181,8 @@ export async function readNativeGoal(target,goalId){
 }
 export async function listNativeGoals(target){let dir;try{dir=await safeDirectory(target,ROOT);}catch(e){if(e.code==='ENOENT')return [];throw e;}const names=(await fs.readdir(dir)).filter(n=>n!=='.gitignore').sort();if(names.length>200)fail('goal inventory bound');const items=[];for(const name of names){try{items.push(await readNativeGoal(target,name));}catch(e){items.push({id:name,read_status:'unavailable',accepted:false,reason:e.message});}}return items;}
 export async function controlNativeGoal(target,goalId,action,r){
+  r=structuredClone(r);
+  if(action==='cancel'){if(await readLoopRun(target))await requestLoopStop(target,'user-requested');}else await countLoopOperation('goal-control-'+action,target);
   exactKeys(r,['actor','operation_id','expected_version']);actor(r.actor);id(r.operation_id);if(!['pause','resume','cancel','recover'].includes(action))fail('unknown control');
   return withProjectMutationLock(target,async()=>{
     const s=await stateAt(target,goalId),m=await manifestAt(target,s,{frozen:true}),project=await readTaskProject(target);assertApprover(project.policy,r.actor);
@@ -190,7 +196,7 @@ export async function controlNativeGoal(target,goalId,action,r){
     if(s.receipts.length>=1000)fail('receipt bound');s.receipts.push({operation_id:r.operation_id,sha256:hash});await save(target,s);return {goal:await readNativeGoal(target,goalId),replayed:false};
   });
 }
-export function createTrustedGoalAdapter(adapter){exactKeys(adapter,['id','assertCapabilities','execute','reconcile','cancel']);id(adapter.id);for(const f of ['assertCapabilities','execute','reconcile','cancel'])if(typeof adapter[f]!=='function')fail('trusted adapter function required');const value=Object.freeze(adapter);trustedAdapters.add(value);return value;}
+export function createTrustedGoalAdapter(adapter){exactKeys(adapter,['id','assertCapabilities','execute','reconcile','cancel'],['costPath']);id(adapter.id);for(const f of ['assertCapabilities','execute','reconcile','cancel'])if(typeof adapter[f]!=='function')fail('trusted adapter function required');const value=Object.freeze(adapter);trustedAdapters.add(value);return value;}
 function live(owner){if(!owner)return false;if(owner.host!==os.hostname())return true;try{process.kill(owner.pid,0);return true;}catch(e){return e.code!=='ESRCH';}}
 function operationId(s,component,phase,version){return 'goal-'+executionDigest({goal:s.manifest_sha256,component,phase,version}).slice(0,40);}
 function nativeInput(s,m,c,t,phase,p){
@@ -281,6 +287,30 @@ async function reserve(target,goalId,adapter,signal){
 export async function runNativeGoalStep(target,goalId,{adapter,signal}={}){
   if(!adapter){const {createCodexGoalAdapter}=await import('./workkeel-goal-runtime.mjs');adapter=await createCodexGoalAdapter();}
   if(!trustedAdapters.has(adapter))fail('qualified trusted goal adapter required');
+  const controller=new AbortController(),abort=()=>controller.abort();signal?.addEventListener('abort',abort,{once:true});if(signal?.aborted)abort();
+  const cancel=async()=>{
+    controller.abort();
+    const snapshot=await withProjectMutationLock(target,async()=>{const s=await stateAt(target,goalId);if(s.status!=='done')s.status='cancel-requested';await save(target,s);return s;});
+    const unknown=[];
+    for(const op of snapshot.operations.filter(o=>['running','intent','unknown'].includes(o.status))){
+      if(op.kind==='native'){if(live(op.owner))unknown.push(op.id);continue;}
+      const m=snapshot.manifest_frozen,component=m.components.find(c=>c.id===op.input.component_id);
+      try{
+        if(!await countLoopCancellationOperation('host-cancel',target,op.id)){unknown.push(op.id+': cancellation confirmation exceeds remaining allowance');continue;}
+        const result=await adapter.cancel({target,goal:goalId,controller:snapshot.controller,manifest:m,manifest_sha256:snapshot.manifest_sha256,component,operation_id:op.id,input:op.input,task:op.input.task_snapshot,signal:controller.signal});
+        if(result?.status!=='cancelled'){unknown.push(op.id);continue;}
+        await withProjectMutationLock(target,async()=>{const s=await stateAt(target,goalId),stored=s.operations.find(o=>o.id===op.id);stored.result={...stored.result,cancellation:result};stored.status='completed';stored.owner=null;await save(target,s);});
+      }catch{unknown.push(op.id);}
+    }
+    await withProjectMutationLock(target,async()=>{const s=await stateAt(target,goalId);if(s.status!=='done')s.status=unknown.length?'cancel-requested':'cancelled';await save(target,s);});
+    return unknown;
+  };
+  try{return await withLoopRun(target,goalId,adapter,async()=>{const run=await readLoopRun(target);if(run){const m=(await stateAt(target,goalId)).manifest_frozen;if(m.components.some(c=>c.root!==target)||m.admission||m.derived_from)fail('L2 requires one project and one goal without admission');}return runGoalStep(target,goalId,{adapter,signal:controller.signal});},cancel);}
+  finally{signal?.removeEventListener('abort',abort);}
+}
+async function runGoalStep(target,goalId,{adapter,signal}={}){
+  if(!adapter){const {createCodexGoalAdapter}=await import('./workkeel-goal-runtime.mjs');adapter=await createCodexGoalAdapter();}
+  if(!trustedAdapters.has(adapter))fail('qualified trusted goal adapter required');
   if(signal?.aborted)return {idle:'aborted',model_called:false};
   const reservation=await reserve(target,goalId,adapter,signal);if(reservation.idle)return reservation;
   const {operation:op,m,s}=reservation,component=m.components.find(c=>c.id===op.input.component_id);
@@ -314,9 +344,9 @@ export async function runNativeGoalStep(target,goalId,{adapter,signal}={}){
     if(controller.signal.aborted)fail('operation aborted before dispatch');
     effects_started=true;
     if(reservation.mode==='cancel')result=await adapter.cancel(context);
-    else if(reservation.mode==='reconcile')result=await adapter.reconcile(context);
+    else if(reservation.mode==='reconcile'){await countLoopOperation('host-reconcile');await reserveLoopCancellation(op.id);result=await adapter.reconcile(context);if(['completed','cancelled'].includes(result?.status))await releaseLoopCancellation(op.id);}
     else if(op.kind==='native')result={status:'completed',native:await mutateNativeTask(op.input.root,op.input.task_id,op.input.action,op.input.request)};
-    else result=await adapter.execute(context);
+    else {await countLoopOperation('host-'+op.input.phase);await reserveLoopCancellation(op.id);result=await adapter.execute(context);if(['completed','cancelled'].includes(result?.status))await releaseLoopCancellation(op.id);}
   }catch(e){result={status:'unknown',reason:e.message.slice(0,1000)};}
   finally{if(timer)clearTimeout(timer);signal?.removeEventListener('abort',abort);}
   if(!effects_started||reservation.mode==='execute'&&op.kind==='runtime'&&result?.dispatch_started===false&&result.model_called===false)return withProjectMutationLock(target,async()=>{
@@ -337,6 +367,7 @@ export async function runNativeGoalStep(target,goalId,{adapter,signal}={}){
   const timing={started_at,ended_at:new Date().toISOString(),duration_ms:Math.max(0,Math.round(performance.now()-started_clock)),basis:'goal-adapter-observed-wall-time',mode:reservation.mode};
   return withProjectMutationLock(target,async()=>{
     const current=await stateAt(target,goalId),stored=current.operations.find(o=>o.id===op.id),p=current.components.find(p=>p.id===component.id);
+    if(controller.signal.aborted&&['cancel-requested','cancelled'].includes(current.status))return {idle:'loop-stopped',status:current.status,accepted:false,late_result_ignored:true};
     if(stored?.input_sha256===op.input_sha256&&reservation.mode!=='cancel'&&stored.status==='completed'&&stored.result?.status==='cancelled'&&['cancel-requested','cancelled'].includes(current.status))return {operation:stored,status:current.status,accepted:false,late_result_ignored:true,model_called:false};
     if(!stored||stored.input_sha256!==op.input_sha256||reservation.mode!=='cancel'&&stored.owner?.token!==op.owner?.token)fail('operation identity or owner changed');
     stored.timing??={execution:null,latest_observation:null,observation_count:0};
@@ -400,9 +431,9 @@ export async function serveNativeGoal(target,goalId,{adapter,signal,onError=()=>
   const initial=await readNativeGoal(target,goalId);let closed=false,running=false,observing=false,pending=false,timer=null,lastObserved;
   const observation=view=>executionDigest({status:view.state,receipts:view.receipts,components:view.mandatory_components.map(c=>({id:c.id,version:c.task_version,read_status:c.read_status}))});lastObserved=observation(initial);
   const trigger=()=>{if(closed||signal?.aborted)return;if(running){pending=true;return;}if(timer)return;timer=setTimeout(()=>{timer=null;void tick();},20);};
-  const tick=async()=>{if(closed||running||signal?.aborted)return;if(observing){pending=true;return;}running=true;try{const result=await runNativeGoalStep(target,goalId,{adapter,signal});await onStep(result);if(result.operation?.status==='completed')pending=true;}catch(e){onError(e);}finally{try{lastObserved=observation(await readNativeGoal(target,goalId));}catch(e){onError(e);}running=false;if(pending){pending=false;trigger();}}};
+  const tick=async()=>{if(closed||running||signal?.aborted)return;if(observing){pending=true;return;}running=true;try{const result=await runNativeGoalStep(target,goalId,{adapter,signal});await onStep(result);const loop=await readLoopRun(target);if(loop&&(result.accepted||loop.stop.requested))close();else if(result.operation?.status==='completed')pending=true;}catch(e){onError(e);if((await readLoopRun(target))?.stop.requested)close();}finally{try{lastObserved=observation(await readNativeGoal(target,goalId));}catch(e){onError(e);}running=false;if(pending){pending=false;trigger();}}};
   const observe=async()=>{if(closed||running||observing)return;observing=true;try{const next=observation(await readNativeGoal(target,goalId));if(next!==lastObserved){lastObserved=next;trigger();}}catch(e){onError(e);}finally{observing=false;if(pending){pending=false;trigger();}}};
   const {watch}=await import('node:fs'),watchers=[];for(const dir of new Set([path.join(target,ROOT,goalId),...initial.manifest.components.map(c=>path.join(c.root,'.ai-org/work-items'))]))try{watchers.push(watch(dir,()=>{void observe();}));}catch(e){if(e.code!=='ENOENT')throw e;}
-  const interval=setInterval(trigger,reconcile_ms),close=()=>{closed=true;if(timer)clearTimeout(timer);clearInterval(interval);watchers.forEach(w=>w.close());signal?.removeEventListener('abort',close);};
-  signal?.addEventListener('abort',close,{once:true});if(signal?.aborted)close();else trigger();return {close,trigger};
+  const interval=setInterval(trigger,reconcile_ms),close=()=>{closed=true;if(timer)clearTimeout(timer);clearInterval(interval);watchers.forEach(w=>w.close());signal?.removeEventListener('abort',close);signal?.removeEventListener('abort',userStop);};
+  const userStop=()=>{void requestLoopStop(target,'user-requested').catch(onError);close();};signal?.addEventListener('abort',userStop,{once:true});if(signal?.aborted)userStop();else trigger();return {close,trigger};
 }

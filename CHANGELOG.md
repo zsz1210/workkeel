@@ -28,8 +28,15 @@ Unpublished source. Breaking: removes the Temple compatibility mode.
   or `non-code` rubric, 1-5 per criterion, P-level findings) to its own review
   report, and the read-only `workkeel stats` lists average scores, rework rounds
   and rework reasons by risk tier. Scores never trigger rework or block a close.
-  A report committed in the reviewed candidate is read from that revision's blob,
-  not the working tree.
+- Adds `workkeel stats --report`: a single read-only weekly observation with an
+  explicit cutoff/timezone, event-based selection, risk metrics, first/last actual
+  reviewer scores, check/review repair rounds, missing-data coverage and candidate
+  evidence. Markdown contains the same data as JSON; fingerprints include rules
+  and filters. Output ends the observation without model calls or task creation.
+- Adds optional private trial guard infrastructure for the existing goal path:
+  shared 60-operation and two-hour wall limits, persistent stop/cancellation state,
+  user-only stop clearing, and fail-closed non-API billing qualification. Sealed
+  L2 baseline and before/after record validators do not execute an L2 trial.
 - Plain `init` records `builder` as model family `claude` and `reviewer` as
   `codex`, so high-risk tasks can start without a `policy update`. A `--policy`
   file is used as written. High and critical work still needs another model
