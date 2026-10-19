@@ -51,7 +51,12 @@ expected versions are derived, and rerunning a command that already succeeded
 replays it. Replay uses the exact requests this checkout saved under its Git
 directory (`.git/workkeel/cli-operations/`); a fresh clone or another machine
 does not have them. An identical `task new` always returns its first task, so use
-different arguments or `--id` for another. `--expect` and `--request` remain for
+different arguments or `--id` for another.
+
+Known limitation: flag-command replay relies only on that local cache. When several
+processes, or older and newer CLI versions, operate on the same task at the same
+time, edge cases remain; a command that cannot confirm its original claim or
+candidate stops instead of guessing. Hardening this is tracked separately. `--expect` and `--request` remain for
 integrations. Teams use `init --team --policy`, and `policy update` replaces the
 project policy. `workkeel help advanced` lists every command.
 

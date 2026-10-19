@@ -446,6 +446,31 @@ test("rework honours an explicit --revision only when it names the failed candid
   const root = await solo(t);
   await states.failed(root);
   const failed = (await readNativeTask(root, ID)).delivery.revision;
-  assert.match(fails(root, "task", "rework", "--id", ID, "--actor", B, "--summary", "Fix", "--revision", "0".repeat(40)), /not the failed candidate/);
+  assert.match(fails(root, "task", "rework", "--id", ID, "--actor", B, "--summary", "Fix", "--revision", "0".repeat(40)), /current revision/);
+  // An empty value is refused like any mismatch, never treated as absent.
+  assert.match(fails(root, "task", "rework", "--id", ID, "--actor", B, "--summary", "Fix", "--revision="), /must not be empty/);
+  assert.match(fails(root, "task", "rework", "--id", ID, "--actor", B, "--summary", "Fix", "--revision="), /must not be empty/);
   assert.equal(workkeel(root, "task", "rework", "--id", ID, "--actor", B, "--summary", "Fix", "--revision", failed).state, "intake");
+});
+
+test("a request left pending for an old candidate is never resent to a newer one", async t => {
+  const root = await solo(t);
+  await states.failed(root);
+  const candidateA = (await readNativeTask(root, ID)).delivery.revision, version = (await readNativeTask(root, ID)).version;
+  const options = { "--id": ID, "--actor": B, "--summary": "Address A", "--revision": candidateA };
+  // A request for a version the task has not reached is refused, and nothing is saved.
+  await assert.rejects(lifecycleRequestFromFlags(root, ID, "rework", { ...options, "--expect": String(version + 4) }), /does not match the task's current version/);
+  // An older CLI could still have left this pending request for candidate A behind.
+  const first = await lifecycleRequestFromFlags(root, ID, "rework", options);
+  await retargets.newFailedCandidate(root);
+  const item = await readNativeTask(root, ID);
+  const base = path.join(root, ".git/workkeel/cli-operations", ID);
+  for (const dir of await fs.readdir(base)) {
+    const file = path.join(base, dir, "1.json"), saved = await readSaved(file).catch(() => null);
+    if (saved?.request.operation_id !== first.operation_id) continue;
+    saved.request.expected_version = item.version; await fs.writeFile(file, JSON.stringify(saved));
+  }
+  await assert.rejects(runLifecycleFromFlags(root, ID, "rework", options), /current revision/);
+  const after = await readNativeTask(root, ID);
+  assert.notEqual(after.delivery.revision, candidateA); assert.equal(after.state, "test", "B was not archived by A's rework");
 });

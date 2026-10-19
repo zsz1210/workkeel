@@ -17,6 +17,10 @@ Unpublished source. Breaking: removes the Temple compatibility mode.
   Adds `policy show|update`, a short default help with `help advanced`, a shorter
   WORKKEEL.md, an `@AGENTS.md`-only CLAUDE.md bridge that upgrades the earlier
   block, and init's suggested `.gitignore`.
+- Known limitation: replay of flag commands relies on requests saved under the
+  checkout's Git directory. Several processes or mixed CLI versions acting on the
+  same task at once can still hit edge cases; such commands stop rather than act on
+  another claim or candidate. Further hardening is tracked separately.
 - Removes the `temple` executable, the `workkeel legacy` and `workkeel migration`
   commands, read-only legacy history, the Temple project overlay, packs and their
   modules, tests and documentation. Projects pinned to an earlier CLI keep that

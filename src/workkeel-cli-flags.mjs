@@ -118,7 +118,7 @@ const TARGET_FIELDS = { claim: [], cancel: [], release: ["claim_id"], handoff: [
 /** The target a request would act on now. Rework acts on the failed candidate, which its request does not name. */
 function currentTarget(action, item, request, options) {
   return Object.fromEntries(TARGET_FIELDS[action].map(field =>
-    [field, action === "rework" ? options["--revision"] ?? item.delivery?.revision ?? null : request[field] ?? null]));
+    [field, action === "rework" ? ("--revision" in options ? options["--revision"] : item.delivery?.revision ?? null) : request[field] ?? null]));
 }
 /** The target recorded with a saved attempt; attempts saved before binding existed are refused when unknowable. */
 function recordedTarget(action, value) {
@@ -130,6 +130,28 @@ function recordedTarget(action, value) {
 function assertSameTarget(action, first, next) {
   for (const field of TARGET_FIELDS[action]) if (first && first[field] !== next[field])
     throw new Error(`This command first targeted ${field} ${first[field]}, but it would now act on ${next[field] ?? "none"}; rerun with an explicit --${field === "claim_id" ? "claim" : "revision"} for the new target`);
+}
+
+/**
+ * The one check for any request this command is about to send, whether newly
+ * built, resent because it never landed, or adopted from a concurrent save. A
+ * successful operation's replay does not come here: it is already applied.
+ */
+function assertReusable(action, item, options, firstTarget, target) {
+  assertSameTarget(action, firstTarget, target);
+  // An explicit flag, even an empty one, must name exactly this command's target.
+  for (const [flag, field] of [["--revision", "revision"], ["--claim", "claim_id"]]) {
+    if (!(flag in options) || !TARGET_FIELDS[action].includes(field)) continue;
+    if (!options[flag]) throw new Error(`${flag} must not be empty`);
+    if (target[field] !== options[flag]) throw new Error(`${flag} ${options[flag]} does not match this command's target ${target[field] ?? "(none)"}`);
+  }
+  // The target must still be what the task currently holds. A handoff delivers a new
+  // commit, so only its claim is compared here; the task checks the commit is HEAD.
+  const current = { claim_id: item.claim?.id ?? null, revision: item.delivery?.revision ?? null };
+  for (const field of TARGET_FIELDS[action]) {
+    if (action === "handoff" && field === "revision") continue;
+    if (target[field] !== current[field]) throw new Error(`This command targets ${field} ${target[field] ?? "(none)"}, but the task's current ${field} is ${current[field] ?? "(none)"}`);
+  }
 }
 
 /** Selects or creates the saved request for this command against one task snapshot. */
@@ -146,8 +168,12 @@ export async function lifecycleRequestFromFlags(target, id, action, options, sna
   const pending = saved.find(entry => entry.value.request.expected_version === item.version &&
     !item.history.some(event => event.operation_id === entry.value.request.operation_id));
   // A request that never landed is resent only if it still aims at the first target.
-  if (pending) { assertSameTarget(action, firstTarget, recordedTarget(action, pending.value)); return pending.value.request; }
-  const expected = version(options, item);
+  if (pending) { assertReusable(action, item, options, firstTarget, recordedTarget(action, pending.value)); return pending.value.request; }
+  // A new request is built only for the task as it is now; an --expect for another
+  // version could otherwise be saved and become valid later against a new target.
+  if ("--expect" in options && version(options, item) !== item.version)
+    throw new Error(`--expect ${options["--expect"]} does not match the task's current version ${item.version}`);
+  const expected = item.version;
   const request = { operation_id: `cli-${action}-${expected + 1}-${key.slice(0, 16)}`, expected_version: expected, actor: await resolveActor(target, project, options["--actor"]) };
   const summary = () => { if (!options["--summary"]) throw new Error(`task ${action} needs --summary`); return options["--summary"]; };
   const evidence = () => options["--evidence"] ?? [];
@@ -157,12 +183,7 @@ export async function lifecycleRequestFromFlags(target, id, action, options, sna
     summary: summary(), evidence: evidence(), unresolved: options["--unresolved"] ?? [], ...(options["--rollback"] ? { rollback: options["--rollback"] } : {}) });
   else if (action === "review") Object.assign(request, { revision: options["--revision"] ?? item.delivery?.revision, judgment: options["--judgment"],
     summary: summary(), evidence: evidence(), ...(options["--attempt"] ? { review_attempt_id: options["--attempt"] } : {}) });
-  else if (action === "rework") {
-    // Rework's request does not name the candidate; an explicit --revision must be the failed one.
-    if (options["--revision"] && options["--revision"] !== item.delivery?.revision)
-      throw new Error(`Rework --revision ${options["--revision"]} is not the failed candidate ${item.delivery?.revision ?? "(none)"}`);
-    Object.assign(request, { summary: summary(), ...(options["--mode"] ? { mode: options["--mode"] } : {}) });
-  }
+  else if (action === "rework") Object.assign(request, { summary: summary(), ...(options["--mode"] ? { mode: options["--mode"] } : {}) });
   else if (action === "close") Object.assign(request, { revision: options["--revision"] ?? item.delivery?.revision, summary: summary(),
     rollback: options["--rollback"], evidence: evidence() });
   else if (action === "cancel") Object.assign(request, { summary: summary(), evidence: evidence() });
@@ -171,13 +192,13 @@ export async function lifecycleRequestFromFlags(target, id, action, options, sna
   // attempt would derive a different one, stop rather than apply this judgment,
   // summary or evidence to another target.
   const aim = currentTarget(action, item, request, options);
-  assertSameTarget(action, firstTarget, aim);
+  assertReusable(action, item, options, firstTarget, aim);
   await hooks.beforeSave?.(dir, (saved.at(-1)?.number ?? 0) + 1, key);
   // Another process may have saved this attempt number first. Its request is adopted
   // only if it is the same command aimed at the same target as this one.
   const kept = await saveAttempt(dir, (saved.at(-1)?.number ?? 0) + 1, { key, request, target: aim });
   if (kept?.key !== key) throw new Error("A concurrent CLI request with another command took this attempt; rerun the command");
-  assertSameTarget(action, firstTarget ?? aim, recordedTarget(action, kept));
+  assertReusable(action, item, options, firstTarget ?? aim, recordedTarget(action, kept));
   return kept.request;
 }
 
