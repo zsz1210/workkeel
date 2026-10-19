@@ -43,7 +43,7 @@ for explicitly scoped evaluation; see [its limits](workkeel-native-dispatch.md#d
 ## One brief instead of repeating the full contract
 
 When work has approved supporting decisions, preserve their original sources in a
-[requirement bundle](requirement-fidelity.md) before intake and reference it in the
+[requirement bundle](workkeel-daily-work.md#preserve-approved-requirements) before intake and reference it in the
 new brief. Summaries, current code and old screenshots cannot replace those
 decisions. Applicable criteria must survive derived implementation tasks; discovery
 assesses them without claiming fulfillment. Do not rewrite an existing contract.
@@ -109,7 +109,7 @@ interfaces, acceptance and required instructions. Link supporting evidence inste
 of copying the full parent discussion into every node. One executor reports its
 own work; the coordinator alone performs lifecycle mutations. Prepare each exact
 host binding at dispatch and complete its report before the task's closing steps.
-Use the [capture helper](workkeel-native-usage.md#capture-an-operation-from-start-to-finish)
+Use the [capture helper](workkeel-observer.md#capture-an-operation-from-start-to-finish)
 when the host does not already report active intervals. Begin before product work,
 pause during waits, resume only while working, then finish and inspect the receipt.
 Keep the original binding while waiting for a late host completion row. Explicit
@@ -137,7 +137,7 @@ numeric reports and evidence checks; creating another Agent solely to copy
 numbers, update status or reformat a report adds another context handoff.
 For measurement-enabled work, declare preparation, implementation, review and
 closeout in the expected work plan before detailed execution. Follow the
-[recording-boundary table](workkeel-native-usage.md#recording-boundaries-for-new-work)
+[recording-boundary table](workkeel-observer.md#recording-boundaries-for-new-work)
 immediately after claim. Inspect excluded responses at begin and preserve pending
 terminal collection through closeout. A mixed coordinator turn must not be
 reported as several invented stage operations.
@@ -262,15 +262,14 @@ Usage analysis instead sums matching operations, so parallel work can make its
 total larger than the non-overlapping time in task details.
 
 Host-owned tasks report lifecycle transitions independently from usage. The
-optional [native measurement collector](workkeel-native-usage.md) reads metadata
+optional [native measurement collector](workkeel-observer.md#native-execution-reports) reads metadata
 from explicitly bound operations; it does not scan unrelated conversations or
 call models. Native tokens can arrive before timing. A total turn duration is
 kept separate when human waiting cannot be excluded; only measured execution
 intervals appear in stage and activity charts. Task content, documents and events
 remain available when either measurement is missing.
 The activity page opens its bounded event list by default;
-the backlog separates current tasks from retained pre-migration history and links
-document counts to each task's document list.
+the backlog links document counts to each task's document list.
 
 The indexed viewer validates the execution inventory when rebuilding its local
 projection. Task summaries use bounded concurrency and a memory cache invalidated
@@ -282,8 +281,7 @@ Attributable errors mark the affected task incomplete; unknown run attribution m
 task's measurement total incomplete. Healthy task state can remain visible.
 Fatal snapshot errors hide old content until recovery. The indexed workspace supports
 up to 2,000 native tasks; the compatibility full-snapshot endpoint remains capped at
-200. Execution inventory remains bounded at 4,096 entries and responses at 4 MiB. Retained legacy
-tasks are excluded from the visible-task count. This is a point-in-time,
+200. Execution inventory remains bounded at 4,096 entries and responses at 4 MiB. This is a point-in-time,
 single-project view; it does not guarantee process liveness or collect arbitrary
 native-session tokens. Keep the capability URL private and stop with Ctrl-C.
 
@@ -295,3 +293,232 @@ reproduction instruments unless a named task explicitly maintains them; no
 age-based deletion is implied. Before archiving historical evidence, verify every
 digest and read back a selected original. Removing a working-tree
 file neither shrinks Git history nor proves that its references are unused.
+
+## Preserve approved requirements
+
+Use this guard when an approved product decision must survive planning,
+implementation and autonomous improvement. It extends native task gates without
+adding another workflow or requiring a different Agent for every activity.
+
+### Original decisions and scope
+
+Reference a versioned JSON bundle in the task's
+`environment.data.policy_refs`. Preserve original human wording and exact source
+file byte digests, not only a model summary or the current implementation.
+
+```json
+{
+  "schema_version": "workkeel.requirements/v1",
+  "id": "interface-v1",
+  "requirements": [{
+    "id": "R-identity",
+    "criterion": "Use official product marks for reported execution tools",
+    "paths": ["src/ui"],
+    "sources": [{
+      "path": ".workkeel-private/decisions/identity.md",
+      "sha256": "<64-character SHA-256 of original file bytes>",
+      "quote": "<exact original approved wording>"
+    }],
+    "superseded_by": null,
+    "visual": true
+  }]
+}
+```
+
+For new projects, the initialization policy optionally accepts
+`requirements_refs: [".workkeel-private/decisions/interface-v1.json"]`.
+Intake and the native API then reject omission of the entire bundle. Without that
+project setting, bundles are opt-in: unreferenced decisions cannot be detected.
+Existing task contracts and project policies remain immutable; do not hand-edit
+them to retrofit this feature. Include bundles in newly approved task contracts,
+or initialize a new project through its native policy path.
+
+Active requirements apply when their paths overlap task write roots in either
+direction. Their exact criteria must appear in task acceptance. Derived
+implementation tasks inherit applicable criteria from the original contract.
+Discovery retains all active decisions for assessment, even when its only write
+scope is discovery artifacts.
+
+Keep at most 8 bundles, 64 total requirements, 32 paths and 8 original sources per
+requirement. Unique source text is limited to 1 MiB. Partition large projects by
+approved scope rather than loading their entire history.
+
+An approved change uses a new bundle version. Retain older entries with
+`superseded_by` pointing to their replacement in that bundle. Cycles, missing
+targets and duplicate IDs are rejected. Metadata does not grant authority: the new
+original source must record the human-approved change. Create a newly approved
+task; never overwrite sources pinned by running or accepted work.
+
+### Execution and discovery
+
+Prepared material includes one `requirements_alignment` row per active decision:
+`{id, status: "aligned", observation}`. Conflicts or uncertainty block preparation.
+Original source files are included automatically. Guarded graph runtime nodes
+require prepared material. The native goal host supplies original quotations and
+pins to roles and requests structured results.
+
+Discovery returns `requirement_assessments` beside `proposals`. Each active
+decision needs `id`, `status`, `observation`, `sources`, `evidence` and
+`proposal_id`. Statuses are `observed-satisfied`, `unmet`, `unverified` and
+`not-applicable`. Observed results need actual evidence; unmet or unknown
+requirements need a linked proposal. Non-applicability needs a concrete scope
+reason. Assessment does not establish product fulfillment.
+
+The controller attempts eligible known proposals before new exploration.
+Unresolved scope or risk leaves `known-findings-need-attention`; waiting calls no
+model. Resolve the finding through authorized work instead of downgrading risk.
+There is no automatic dismissal of manual proposals. A separately approved repair
+and a newly accepted continuation goal can establish the next baseline; the prior
+proposal and its evidence remain historical. Changing source bytes alone is not
+proof that a finding was resolved.
+
+### Native delivery gates
+
+Passing delivery and independent review each need their own evidence report:
+
+```json
+{
+  "schema_version": "workkeel.requirement-outcomes/v1",
+  "task_id": "WK-example",
+  "contract_sha256": "<contract digest>",
+  "candidate_revision": "<full Git revision>",
+  "requirements_sha256": "<resolver digest>",
+  "phase": "delivery",
+  "actor": {"agent_id": "builder", "principal_id": "owner"},
+  "requirements": [{
+    "id": "R-identity",
+    "status": "pass",
+    "observation": "What was actually seen against the original decision",
+    "sources": [{"path": "<original source>", "sha256": "<original bytes digest>"}],
+    "evidence": [{"path": "<actual artifact>", "sha256": "<artifact digest>", "kind": "screenshot"}]
+  }],
+  "open_findings": []
+}
+```
+
+The source API `loadTaskRequirements(target, contract)` returns the digest and
+pins. The native goal host wraps model-authored observations with the exact task,
+actor and candidate; it does not invent verdicts. Direct coordinators build the
+report from the resolver and actual evidence. The distinct reviewer authors a
+separate `phase: "review"` report.
+
+Every applicable requirement must be covered. Evidence kinds are `observation`,
+`check` and `screenshot`. Visual criteria need a complete supported PNG and
+actual visual review. Missing, partial, failed, unverified or stale evidence cannot
+pass. Failed review decisions remain recordable. Passing review rechecks delivery
+evidence; close rechecks both sets. The broader
+[completion report](workkeel-evidence.md#check-completion-evidence-before-delivery) records whole-scope checks and
+self-reviews without supplying independent acceptance.
+
+These are structural checks of authored judgments. They do not prove semantic
+truth, image authorship, design quality or arbitrary free-text consistency. An
+independent reviewer must compare the instruction, exclusions and result to the
+original. A valid file digest or an unrelated passing test is insufficient.
+
+Use positive and negative evaluations: omitted or inverted requirements, stale
+references, missing evidence, legitimate supersession and a successful complete
+delivery. Run affected checks during repair, then the required full gate on the
+frozen candidate. Track uncovered/reopened requirements, repair rounds and
+reported time/usage; unavailable usage stays unknown. Keep real evidence and
+[scoped learning](../extensions/workkeel-learning.md) private. One incident does
+not automatically become a framework-wide Skill.
+
+## Task material and confirmed continuation
+
+This opt-in task-first entry prepares navigation from the full approved contract.
+It does not grant permission, prove that a model read a file, or replace acceptance.
+Existing workflow v1 string inputs remain supported.
+
+### Prepare material
+
+```sh
+workkeel context prepare . --id WK-example --request docs/material-request.json
+```
+
+The command prints a JSON packet without writing project state or calling a model.
+Save that output to a new project-local file, then reference it in a workflow plan
+or run request as `material_refs: { "work": "docs/material.json" }`, where `work`
+is an existing runtime node. The run command still takes a `{ "run": ... }` wrapper.
+Do not add packet fields to the workflow v1 node schema.
+
+Example material request:
+
+```json
+{
+  "kind": "initial",
+  "instruction": "Implement the specified parser and report actual checks.",
+  "write_paths": ["src"],
+  "materials": [
+    {"path": "docs/spec.md", "use": "required", "purpose": "specification"},
+    {"path": "src/parser.mjs", "use": "required", "purpose": "source"},
+    {"path": "docs/history.md", "use": "reference", "purpose": "history"}
+  ]
+}
+```
+
+Selected files must be inside approved read roots or already required by the
+contract. Policy refs, approval, named Skills and discovered applicable project
+instructions remain required. Applicable nested instructions and matching Skills
+still have to be read during work. The packet binds source bytes and is checked
+again before dispatch; changed material requires a newly prepared packet and run.
+Keep generated packets outside policy refs to avoid a circular hash dependency.
+
+| Kind | Additional required purposes | Write scope / candidate |
+| --- | --- | --- |
+| `initial` | none | Exact selected approved roots |
+| `repair` | `findings` | Exact selected approved roots |
+| `takeover` | `checkpoint` | Exact selected approved roots |
+| `review` | `source`, `diff` | Empty writes; full `candidate_revision` |
+| `rereview` | `source`, `findings`, `diff` | Empty writes; full candidate |
+| `reconsideration` | `source`, `findings`, `counterevidence` | Empty writes; `prior_revision` equals candidate |
+
+Review source files must match their Git blobs at current candidate HEAD. A point
+reconsideration produces a point judgment, never a new whole-candidate PASS.
+Optional material `kinds` selects applicable types; required contract refs cannot
+be filtered out. Arbitrary specification text is never truncated. Requests are
+bounded to 64 selected materials and 1 MiB of source text; split larger work.
+`summarizeChecks` groups exact status/message pairs with all original test IDs,
+without asserting acceptance. Preserve original check evidence beside summaries.
+
+### Continue a confirmed interruption
+
+```sh
+workkeel workflow continuation-plan . --request docs/continuation-plan.json
+workkeel workflow continue . --request docs/continuation-run.json
+```
+
+The plan request contains `source_run_id`, a distinct new `run_id`, `actor`,
+`workflow_ref`, `policy_ref` and optional fresh `material_refs`. The successor
+workflow and policy must already belong to the task's approved policy refs.
+Prepare the successor workflow when authoring the task; a prompt cannot waive
+an unapproved policy change. The execute request wraps those fields and the
+returned digest as `{ "run": { ..., "expected_plan": "..." } }`.
+
+Only a terminal interrupted operation with confirmed cleanup, complete journal,
+unchanged Git HEAD and bounded partial product snapshot can qualify. Explicit
+cancellation, an active/unknown runner, uncertain operation, changed authority,
+expired approval, or source drift blocks dispatch. The default snapshot supports
+bounded UTF-8 product directories (512 entries, 16 MiB), not arbitrary binaries,
+symlinks, the entire repository or `.ai-org`. Unsupported snapshots remain blocked.
+
+Continuation preserves the original operation and creates one durable successor
+through ordinary release/claim operations. Retrying the exact continuation request
+can finish interrupted initialization. Once a successor run exists, repeated calls
+only inspect it; they do not automatically restart it. A retained diagnostic lock
+still requires the existing recovery procedure. Old runs without settlement receipts
+cannot be retroactively declared clean. This is not cross-host or hard-crash recovery.
+
+The existing monitor uses a redacted read-only projection of the same checks for
+its next action. Full plans, prompts, conversation IDs and source bytes are not
+added to the public projection. The view does not authorize a run.
+
+### Scope and limits
+
+The personal `prepare-stage.mjs` wrapper and CLI use the same core preparation.
+Free-text callers retain responsibility for semantic scope; this system validates
+structured scopes and provenance, not the truth of arbitrary instructions.
+Required materials may make a prepared packet larger. No speed, token-cost or
+monetary savings follow solely from shorter optional instructions.
+
+See [workflow execution](workkeel-workflows.md) and
+[ADR-0079](../adr/0079-stage-material-and-confirmed-continuation.md).

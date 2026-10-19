@@ -1,6 +1,9 @@
 # ADR-0083: Separate public framework source from private task state
 
 - Status: Accepted for this public source repository
+- Note (2026-10-19): Temple compatibility source was removed in 0.2, so the last
+  Decision bullet no longer has anything to retain. Every other rule here is
+  unchanged and is restated, not replaced, in [ADR-0091](0091-foundations.md).
 
 ## Context
 

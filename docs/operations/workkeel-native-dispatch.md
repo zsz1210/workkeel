@@ -104,7 +104,7 @@ select and enforce the declared settings before reporting them.
    host's agent-start tool with only necessary context and approved scope. If the
    host cannot select that tuple, report the mismatch; never silently inherit the
    coordinator model. The host still enforces filesystem, tools and networking.
-5. Before product work, use the [capture helper](workkeel-native-usage.md#capture-an-operation-from-start-to-finish)
+5. Before product work, use the [capture helper](workkeel-observer.md#capture-an-operation-from-start-to-finish)
    to bind the returned exact thread/turn and start its activity clock. Hosts that
    already measure intervals can use `dispatch bind` with `{execution_id,source}`.
    Binding rechecks active dependency/conflict limits. A local runner or
@@ -182,7 +182,7 @@ the observer serves no raw prompt, private source path or credential.
 Usage analysis sums operation durations; task execution time takes their interval
 union. Parallel operations can overlap, including across kinds. Explicit activity
 labels take precedence over old lifecycle attribution. Unknown, partial and measured
-zero remain distinct. See [native reporting](workkeel-native-usage.md).
+zero remain distinct. See [native reporting](workkeel-observer.md#native-execution-reports).
 
 Hosts must actually consume tickets and report execution. Workkeel cannot intercept
 arbitrary desktop tool calls. Repository instructions require this path for new
@@ -583,7 +583,7 @@ before the authorized coordinator records local acceptance.
 
 If that review is interrupted before a verdict, do not cancel or recreate the
 task. Close its usage collection as stopped and follow
-[interrupted review recovery](workkeel-review-recovery.md), which also describes
+[interrupted review recovery](workkeel-review-assessment.md#role-preflight-and-interrupted-review-recovery), which also describes
 the opt-in role preflight for dispatched roles.
 
 For future real product work, record the same fields and review/repair outcomes.

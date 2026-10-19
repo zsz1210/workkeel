@@ -20,22 +20,21 @@ npm run verify:fast
 Run a focused test file for the area being changed:
 
 ```bash
-node --test test/tracker.test.mjs
-node --test test/workflow.test.mjs
+node --test test/workkeel-lifecycle.test.mjs
+node --test test/workkeel-risk-tiers.test.mjs
 ```
 
 For a wider edit, choose an explicit local group:
 
 | Command | Coverage |
 | --- | --- |
-| `npm run test:core` | Core CLI, lifecycle, routing, recovery, governance, and mixed core/optional tests |
-| `npm run test:optional` | Console, Control Plane, and optional observer/provider integration |
-| `npm run test:daily` | Curated representative core/optional safety paths for a broad routine check |
+| `npm run test:core` | Every product test; the same set as the complete suite |
+| `npm run test:daily` | Curated representative lifecycle, risk, recovery and JSON-RPC paths for a broad routine check |
 | `npm run test:fast` | Small contracts, package-validator edge cases, and evidence Git-read behavior |
 
-Core and optional groups partition the product test inventory. New test files default to core. Fast tests overlap these groups intentionally; they are not another full suite. Historical development experiment harnesses and their results belong in the private archive.
+Every product test belongs to the core group, and new test files are core by default. Fast tests overlap these groups intentionally; they are not another full suite. Historical development experiment harnesses and their results belong in the private archive.
 
-Use `npm run verify:daily` for a broad routine check when the changed area needs more than the fast contracts. It covers representative production CLI, lifecycle, authority, recovery, rollback, High-Assurance, JSON-RPC, evidence, and optional Control Plane paths in one Node process. It is intentionally not an exhaustive matrix: changed test files still select their whole group, and every retained product test remains in the complete suite. A final behavioral candidate or Release still requires `npm run verify`.
+Use `npm run verify:daily` for a broad routine check when the changed area needs more than the fast contracts. It covers representative production CLI, lifecycle, risk-tier, review recovery, delivery request, lock and JSON-RPC paths in one Node process. It is intentionally not an exhaustive matrix: changed test files still select their whole group, and every retained product test remains in the complete suite. A final behavioral candidate or Release still requires `npm run verify`.
 
 Group commands use Node's compact dot reporter by default: successful cases occupy progress lines, while a failure still expands its test name, assertion diff, stack, and source location. Use `npm run test:full:verbose` only when per-test success names and durations are useful for investigation.
 
@@ -48,7 +47,7 @@ npm run verify:changed -- --base origin/main
 
 Selection includes committed changes since the merge base, staged and unstaged changes, and untracked files. Prose-only changes select fast tests; changed test files select their entire group plus fast tests. Shared source, scripts, fixtures, package metadata, canonical state, deleted tests, unknown paths, or an unavailable base select the full suite. This is deliberately a local editing aid, not a dependency graph or a hosted CI selector. The `--list` form only previews selection and does not verify anything.
 
-Prose-only changes require `npm run verify:fast` and appropriate rendered review. Changes to Agent instructions, Skills, executable examples, manifests, schemas, package contents, or behavioral contracts are not prose-only. Canonical task-state changes in the separate private workspace also require native Doctor through that project's pinned launcher. Legacy compatibility is verified in isolated fixtures. Do not classify a mixed change by its smallest component.
+Prose-only changes require `npm run verify:fast` and appropriate rendered review. Changes to Agent instructions, Skills, executable examples, manifests, schemas, package contents, or behavioral contracts are not prose-only. Canonical task-state changes in the separate private workspace also require native Doctor through that project's pinned launcher. Do not classify a mixed change by its smallest component.
 
 Before proposing a behavioral change, run the complete suite:
 

@@ -41,12 +41,12 @@ For a pull request:
 
 Include a concise, non-sensitive verification summary in a PR: candidate revision,
 commands, results and material limits. Keep raw output and private review records
-outside the public repository. The [repository settings guide](docs/operations/repository-settings.md)
+outside the public repository. The [repository settings guide](docs/operations/publication-boundary.md#public-repository-settings)
 describes the public contribution and security surfaces.
 
 The English README is the canonical public entry point. Keep
 [Japanese](README.ja.md) and [Traditional Chinese](README.zh-TW.md) aligned
 when changing its capabilities or commands; see
-[ADR-0012](docs/adr/0012-documentation-language-policy.md).
+[ADR-0091](docs/adr/0091-foundations.md#2-documentation-language-from-adr-0012).
 Projects pinned to an earlier CLI keep using that version; 0.2 has no migration
 path from the removed legacy mode.

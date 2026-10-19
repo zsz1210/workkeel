@@ -60,7 +60,7 @@ activity has conflicting outcomes whose order cannot be established, its node
 requires reconciliation. Missing chronology does not override an authoritative
 native review decision or invent a latest activity.
 
-Before delivery, use the [completion evidence check](completion-evidence.md) and
+Before delivery, use the [completion evidence check](workkeel-evidence.md#check-completion-evidence-before-delivery) and
 actual repeated visual review. A coverage result cannot judge usability or replace
 the separate registered Agent's native review.
 
@@ -222,7 +222,7 @@ Skills remain required.
 See [native learning](../extensions/workkeel-learning.md),
 [versioned Skill learning](../extensions/workkeel-skill-lifecycle.md),
 [bounded goal execution](workkeel-autonomy.md),
-[context preparation](workkeel-material-and-continuation.md), and
+[context preparation](workkeel-daily-work.md#task-material-and-confirmed-continuation), and
 [testing](../getting-started/testing.md) for the existing evidence boundaries.
 
 ## Capacity and measurement identity

@@ -35,4 +35,4 @@ closure remain authoritative. Real reports and screenshots stay in private
 development storage; only reusable code, guidance and synthetic regressions ship.
 
 See [UI policy](../concepts/ui-design.md), [workspace guide](../operations/workkeel-workspace.md)
-and [completion evidence](../operations/completion-evidence.md).
+and [completion evidence](../operations/workkeel-evidence.md#check-completion-evidence-before-delivery).

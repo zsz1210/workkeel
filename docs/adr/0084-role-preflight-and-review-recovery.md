@@ -77,5 +77,5 @@ a superseded or cancelled attempt is rejected rather than recorded. A recovery
 chain is local to one workspace and adds no distributed identity or high-risk
 workflow support.
 
-See the [operation guide](../operations/workkeel-review-recovery.md) and the
+See the [operation guide](../operations/workkeel-review-assessment.md#role-preflight-and-interrupted-review-recovery) and the
 [native dispatch decision](0081-native-dispatch-and-reading-state.md).

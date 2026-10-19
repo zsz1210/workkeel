@@ -60,10 +60,10 @@ Figma is one example, not a privileged format. In code-first delivery the execut
 
 Keep the selected mode, required states, and design references in the approved task material and its delivery evidence. A lighter mode or materially different interface scope requires explicit authorization and replanning before implementation continues; it cannot be inferred from an existing artifact. Native task contracts remain immutable, and handoff identifies the exact implementation revision and evidence for review.
 
-## Native task and legacy compatibility boundaries
+## Native task boundaries
 
 The native task contract records scope, acceptance criteria, authorization, and verification separation. UI modes and design references belong in its approved supporting material; the native schema does not add the legacy Work Item's dedicated UI-mode or contract-reference fields. Use the [testing guide](../getting-started/testing.md) for executable and browser verification, then the native handoff, independent review, and acceptance gates.
 
-[ADR-0016](../adr/0016-ui-design-position-and-delivery-modes.md) records the earlier Position-based design policy. Its UI Designer installation, five-Identity configuration, UI brief template, machine-readable delivery modes, and Work Item contract-reference gates remain supported for legacy projects and tested in compatibility fixtures. In that workflow, the selected mode and UX/UI/technical contract identities remain pinned from Build onward: only an approved revision of the same contract may be repinned, while a different contract or materially changed scope requires stopping and replanning. Those legacy structures are not setup requirements for a native Workkeel task.
+The earlier Position-based design policy (UI Designer Position, UI brief template and Work Item contract-reference gates) was removed with Temple compatibility in 0.2. It is not a setup requirement for a native Workkeel task.
 
 Project-level UI defaults, design-source adapters, design-token synchronization, and automated visual-regression integration remain planned capabilities.

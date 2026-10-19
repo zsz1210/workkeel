@@ -57,12 +57,11 @@ That integration is not implemented here.
 The workflow runner itself records per-attempt model, token and duration
 observations without another process. Use `task metrics` or `workflow metrics`
 for a read-only report; unknown native sessions and resumed-token baselines remain
-explicit. See [task execution measurements](workkeel-measurements.md).
+explicit. See [task execution measurements](workkeel-observer.md#task-execution-measurements).
 
-Core task coordination needs no server. The existing Console/control plane can
-serve local views and event streams on demand; a managed observer is a separate
-opt-in. Its current records are not yet a complete dashboard for the new Workkeel
-task and graph execution stores. No macOS application is shipped.
+Core task coordination needs no server. The read-only
+[observer](workkeel-observer.md) is a separate opt-in. No macOS application is
+shipped.
 
 The existing [read-only observer](workkeel-observer.md) shows recorded task and
 workflow state, selected/confirmed models, execution intervals and observed token

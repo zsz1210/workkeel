@@ -1,7 +1,8 @@
-# Workkeel: introduce a task contract before migrating lifecycle authority
+# ADR-0090: Introduce a task contract before migrating lifecycle authority
 
 - Status: accepted for additive implementation; lifecycle migration pending
 - Date: 2026-09-23
+- Renumbered: originally filed as a second `0071` beside ADR-0071 (tool-output compression); content unchanged
 
 ## Context
 
