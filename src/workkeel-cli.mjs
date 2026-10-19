@@ -11,7 +11,7 @@ import { previewInstructions, applyInstructions, readStartGuide } from "./workke
 const HELP = `Workkeel — repository-native task coordination for coding agents
 
 workkeel start [target]                     read-only next-step guidance
-workkeel init [target]                      create builder and reviewer Agents
+workkeel init [target]                      create claude builder and codex reviewer Agents
 workkeel task new [target] --goal text --acceptance text [--write path]
 workkeel task claim|handoff|review|close [target] --id task-id --actor id [--summary text] [--evidence path] [--judgment pass|fail] [--rollback text]
 workkeel status|doctor [target]
@@ -127,7 +127,7 @@ async function runCommand(args) {
     allow(options, ["--request"]);
     output = await readStartGuide(target, { requestRef: options["--request"] ?? null });
   } else if (command === "init") {
-    // Without --policy, one owner Principal gets a builder and a reviewer Agent.
+    // Without --policy, one owner Principal gets a claude builder and a codex reviewer Agent.
     if (options["--policy"]) { allow(options, ["--policy"]); output = await initializeTaskProject(target, (await readTaskContractInput(target, options["--policy"])).document); }
     else { allow(options, ["--principal"]); output = await initializeTaskProject(target, defaultPolicy(options["--principal"])); }
   } else if(command==='workspace') {

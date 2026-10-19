@@ -35,7 +35,7 @@ test("plain init creates builder and reviewer, and a low task completes using on
   const init = workkeel(root, "init");
   assert.deepEqual(init.suggested_gitignore, [".workkeel/"]);
   const policy = workkeel(root, "policy", "show");
-  assert.deepEqual(policy.agents, [{ agent_id: "builder", principal_id: "owner" }, { agent_id: "reviewer", principal_id: "owner" }]);
+  assert.deepEqual(policy.agents, [{ agent_id: "builder", principal_id: "owner", model_family: "claude" }, { agent_id: "reviewer", principal_id: "owner", model_family: "codex" }]);
   assert.deepEqual(policy.principals, ["owner"]); assert.deepEqual(policy.approvers, ["owner"]);
   for (const removed of ["--solo", "--team"]) assert.match(fails(root, "init", removed), /Unknown, repeated or incomplete Workkeel option/);
   assert.match(fails(root, "init", "--policy", "policy.json", "--principal", "maria"), /not supported/);

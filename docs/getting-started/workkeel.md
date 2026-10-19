@@ -71,7 +71,9 @@ Known limitation: flag-command replay relies only on that local cache. When seve
 processes, or older and newer CLI versions, operate on the same task at the same
 time, edge cases remain; a command that cannot confirm its original claim or
 candidate stops instead of guessing. Hardening this is tracked separately. `--expect` and `--request` remain for
-integrations. To register other people or Agents, initialize with a reviewed policy file,
+integrations. The default `init` policy records the `builder` Agent as model family
+`claude` and the `reviewer` as `codex`, so high-risk review can start right away.
+To register other people or Agents, initialize with a reviewed policy file,
 `init --policy task-policy.json`; `policy update` replaces the project policy
 later. The same rules apply however many Principals it lists. `workkeel help advanced` lists every form, including the optional
 subsystems that the lifecycle below never needs.

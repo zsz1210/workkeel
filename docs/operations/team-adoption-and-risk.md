@@ -12,7 +12,8 @@ a sandbox or run your tests. Identities are attributed, not verified accounts.
 ## Who to register
 
 `workkeel init .` registers one Principal (a person accountable for approvals),
-`owner`, with two Agents, `builder` and `reviewer`. To register other people or
+`owner`, with two Agents: `builder` (model family `claude`) and `reviewer`
+(model family `codex`). To register other people or
 Agents, write a reviewed policy file and use `workkeel init . --policy task-policy.json`
 instead, or replace the policy later with `workkeel policy update`. Open tasks
 pinned to the old policy must then be approved again. The rules below are the
@@ -32,9 +33,13 @@ High and critical review requires a reviewer Agent from a different **model
 family** than the implementer. Record it in the policy's `agents` entries, for
 example `{"agent_id": "builder", "principal_id": "owner", "model_family": "claude"}`
 and `{"agent_id": "reviewer", "principal_id": "owner", "model_family": "codex"}`.
-The default policy does not set `model_family`, so add the families with
-`workkeel policy update` before the first high-risk task. Workkeel compares the
-recorded labels; it does not inspect which model actually ran.
+The default policy from `workkeel init .` already records exactly these two
+families, so high-risk tasks can start right after init. A policy given with
+`--policy` is used as written; add the families there or later with
+`workkeel policy update`. The rule itself does not change: high and critical work
+still needs a reviewer from another model family and close by the approving
+Principal. Workkeel compares the recorded labels; it does not inspect which model
+actually ran.
 
 ## How a task gets its tier
 

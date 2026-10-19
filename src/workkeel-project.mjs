@@ -191,10 +191,14 @@ Details: https://github.com/${TEMPLATE_REPOSITORY}/blob/main/docs/getting-starte
 /** Git-ignored per-checkout settings, such as the default actor. Never task authority. */
 export const LOCAL_SETTINGS_DIRECTORY = ".workkeel";
 
-/** One Principal with a builder and a reviewer Agent; implementer and reviewer stay distinct. */
+/**
+ * One Principal with a claude builder and a codex reviewer Agent. Implementer and
+ * reviewer stay distinct, and the two model families let high-risk review run at once.
+ */
 export function defaultPolicy(principal = "owner") {
   const policy = { schema_version: "workkeel.task-policy/v1", principals: [principal],
-    agents: [{ agent_id: "builder", principal_id: principal }, { agent_id: "reviewer", principal_id: principal }],
+    agents: [{ agent_id: "builder", principal_id: principal, model_family: "claude" },
+      { agent_id: "reviewer", principal_id: principal, model_family: "codex" }],
     approvers: [principal], review_separation: "distinct-agent" };
   assertPolicy(policy);
   return policy;

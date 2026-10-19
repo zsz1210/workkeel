@@ -49,7 +49,7 @@ cd workkeel && npm ci --omit=optional --ignore-scripts
 alias workkeel="node $PWD/bin/workkeel.mjs"
 ```
 
-In your project, `init` creates one owner with a `builder` and a `reviewer` Agent:
+In your project, `init` creates one owner with a `builder` (model family `claude`) and a `reviewer` (model family `codex`) Agent:
 
 ```sh
 workkeel init .

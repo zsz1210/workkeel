@@ -6,7 +6,7 @@ import { execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import test from "node:test";
 import { initializeTaskProject } from "../src/workkeel-project.mjs";
-import { createNativeTask, mutateNativeTask } from "../src/workkeel-tasks.mjs";
+import { createNativeTask, mutateNativeTask, readNativeTask } from "../src/workkeel-tasks.mjs";
 import { DEFAULT_SELF_EVAL, readScoreStats, validateReviewScore } from "../src/workkeel-scoring.mjs";
 
 const cli = path.join(path.dirname(fileURLToPath(import.meta.url)), "../bin/workkeel.mjs");
@@ -111,4 +111,29 @@ test("stats report scores and rework reasons by risk tier without writing", asyn
   const output = JSON.parse(execFileSync(process.execPath, [cli, "stats", root], { encoding: "utf8" }));
   assert.equal(output.schema_version, "workkeel.stats/v1"); assert.equal(output.mutation_status, "no-write");
   assert.deepEqual(output.by_risk, stats.by_risk);
+});
+
+test("review evidence committed in the candidate is read from that revision, not the working tree", async t => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), "workkeel-scoring-"));
+  t.after(() => fs.rm(root, { recursive: true, force: true }));
+  git(root, "init", "-q"); git(root, "config", "user.name", "Fixture"); git(root, "config", "user.email", "fixture@example.invalid");
+  await write(root, "docs/approval.md", "Approved synthetic fixture work.\n");
+  await initializeTaskProject(root, policy);
+  git(root, "add", "."); git(root, "commit", "-qm", "base");
+  const id = "WK-committed", ref = "docs/review.json";
+  const report = revision => JSON.stringify({ schema_version: "workkeel.review-report/v1", task_id: id, stage: "review", revision,
+    reviewer, judgment: "pass", summary: "Reviewed", score: { external_score: { rubric: "non-code", scores: { requirements: 4 } } } });
+  await createNativeTask(root, contract(id, "low", "docs"), request(0, builder));
+  const claim = await mutateNativeTask(root, id, "claim", request(1, builder, { base_revision: git(root, "rev-parse", "HEAD") }));
+  // The candidate commits a report that cannot name itself; a matching copy exists only in the working tree.
+  await write(root, ref, report("0".repeat(40))); git(root, "add", ref); git(root, "commit", "-qm", "report");
+  const revision = git(root, "rev-parse", "HEAD");
+  await mutateNativeTask(root, id, "handoff", request(2, builder, { claim_id: claim.claim.id, revision, summary: "Docs", evidence: [], unresolved: [] }));
+  await mutateNativeTask(root, id, "review", request(3, reviewer, { revision, judgment: "pass", summary: "Fine", evidence: [ref] }));
+  assert.deepEqual((await readNativeTask(root, id)).review.evidence, [{ path: ref, source: "candidate" }]);
+  await write(root, ref, report(revision));
+
+  const stats = await readScoreStats(root);
+  assert.equal(stats.records.find(r => r.task_id === id).external_score, null);
+  assert.deepEqual(stats.errors, []);
 });

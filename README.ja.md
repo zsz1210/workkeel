@@ -44,7 +44,7 @@ cd workkeel && npm ci --omit=optional --ignore-scripts
 alias workkeel="node $PWD/bin/workkeel.mjs"
 ```
 
-プロジェクトでは、`init` が 1 人の責任者と `builder`、`reviewer` の 2 つの Agent を作成します。
+プロジェクトでは、`init` が 1 人の責任者と `builder`（model family `claude`）、`reviewer`（model family `codex`）の 2 つの Agent を作成します。
 
 ```sh
 workkeel init .

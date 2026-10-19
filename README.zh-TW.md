@@ -43,7 +43,7 @@ cd workkeel && npm ci --omit=optional --ignore-scripts
 alias workkeel="node $PWD/bin/workkeel.mjs"
 ```
 
-在你的專案裡，`init` 會建立一位負責人加上 `builder` 和 `reviewer` 兩個 Agent：
+在你的專案裡，`init` 會建立一位負責人，加上 `builder`（model family `claude`）和 `reviewer`（model family `codex`）兩個 Agent：
 
 ```sh
 workkeel init .

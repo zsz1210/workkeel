@@ -28,6 +28,12 @@ Unpublished source. Breaking: removes the Temple compatibility mode.
   or `non-code` rubric, 1-5 per criterion, P-level findings) to its own review
   report, and the read-only `workkeel stats` lists average scores, rework rounds
   and rework reasons by risk tier. Scores never trigger rework or block a close.
+  A report committed in the reviewed candidate is read from that revision's blob,
+  not the working tree.
+- Plain `init` records `builder` as model family `claude` and `reviewer` as
+  `codex`, so high-risk tasks can start without a `policy update`. A `--policy`
+  file is used as written. High and critical work still needs another model
+  family's review and the approving Principal's close.
 - Known limitation: replay of flag commands relies on requests saved under the
   checkout's Git directory. Several processes or mixed CLI versions acting on the
   same task at once can still hit edge cases; such commands stop rather than act on

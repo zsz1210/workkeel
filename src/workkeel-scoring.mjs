@@ -1,4 +1,5 @@
 import { readTaskFile } from "./task-contract.mjs";
+import { readNativeGit } from "./workkeel-project.mjs";
 import { listTaskItems, readNativeTask } from "./workkeel-tasks.mjs";
 import { RISK_TIERS, taskRisk } from "./workkeel-risk.mjs";
 
@@ -56,12 +57,19 @@ export function validateReviewScore(score) {
     findings: findings(score.findings ?? []) };
 }
 
+/** Evidence as recorded: a candidate path is the blob in the reviewed revision, not the working tree. */
+async function readReviewEvidence(target, review, ref) {
+  if (ref.source !== "candidate") return (await readTaskFile(target, ref.path)).content;
+  const bytes = await readNativeGit(target, ["cat-file", "blob", `${review.revision}:${ref.path}`], { encoding: "buffer" });
+  return new TextDecoder("utf-8", { fatal: true }).decode(bytes);
+}
+
 /** The scored review report among one review's evidence, if any. */
 async function reviewScore(target, item, review, errors) {
   for (const ref of review?.evidence ?? []) {
     if (!ref.path.endsWith(".json")) continue;
     let report;
-    try { report = JSON.parse((await readTaskFile(target, ref.path)).content); } catch { continue; }
+    try { report = JSON.parse(await readReviewEvidence(target, review, ref)); } catch { continue; }
     if (report?.schema_version !== "workkeel.review-report/v1" || report.task_id !== item.id || report.revision !== review.revision || report.score === undefined) continue;
     try { return validateReviewScore(report.score); }
     catch (error) { errors.push({ task_id: item.id, path: ref.path, message: `Invalid score: ${error.message}` }); return null; }

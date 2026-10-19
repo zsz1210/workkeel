@@ -5,7 +5,7 @@ import path from "node:path";
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import test from "node:test";
-import { initializeTaskProject } from "../src/workkeel-project.mjs";
+import { defaultPolicy, initializeTaskProject, readTaskProject } from "../src/workkeel-project.mjs";
 import { createNativeTask, mutateNativeTask, readNativeTask, listTaskItems, diagnoseTaskProject } from "../src/workkeel-tasks.mjs";
 import { assessNativeTask } from "../src/workkeel-review-assessment.mjs";
 
@@ -103,6 +103,21 @@ for (const [name, policy, approvedBy, closer] of [["one Principal", soloPolicy, 
     assert.equal((await listTaskItems(root)).find(i => i.id === "WK-high").risk_tier, "high");
   });
 }
+
+test("the default init policy registers model families so high work can run at once", async t => {
+  const root = await fixture(t, defaultPolicy());
+  assert.deepEqual((await readTaskProject(root)).policy.agents, [{ ...builder, model_family: "claude" }, { agent_id: "reviewer", principal_id: "owner", model_family: "codex" }]);
+  const high = await deliver(root, "WK-default", { tier: "high", write: ["src/auth"] }, "src/auth/token.mjs");
+  await high.result;
+  await assert.rejects(review(root, "WK-default", high.revision, builder), /separation/);
+  const ownReviewer = { agent_id: "reviewer", principal_id: "owner" };
+  await review(root, "WK-default", high.revision, ownReviewer);
+  // Cross-family review does not replace the approving Principal's close.
+  assert.equal((await close(root, "WK-default", high.revision, builder, [".ai-org/artifacts/WK-default/review-reviewer-3.json"])).state, "done");
+  // An explicit policy file is used as written; init adds no families to it.
+  const custom = await fixture(t, { ...soloPolicy(), agents: [builder, sameOwnerReviewer] });
+  assert.deepEqual((await readTaskProject(custom)).policy.agents, [builder, sameOwnerReviewer]);
+});
 
 test("high work without a different model family registered cannot be reviewed", async t => {
   const sameFamily = () => ({ ...soloPolicy(), agents: [{ ...builder, model_family: "claude" }, { ...sameOwnerReviewer, model_family: "claude" }] });
