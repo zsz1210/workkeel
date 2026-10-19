@@ -4,8 +4,6 @@ export const RISK_TIERS = ["low", "standard", "high", "critical"];
 const rank = tier => RISK_TIERS.indexOf(tier);
 export const maxRisk = (...tiers) => tiers.reduce((a, b) => rank(b) > rank(a) ? b : a, "low");
 export const elevatedRisk = tier => rank(tier) >= rank("high");
-/** A project with more than one Principal is a team; one Principal is solo work. */
-export const isTeamPolicy = policy => policy.principals.length > 1;
 const under = (file, root) => root === "." || file === root || file.startsWith(`${root}/`);
 // Dotfiles count: `deploy/**` must cover `deploy/.env`.
 const OPTIONS = { dot: true, windows: false };
@@ -60,21 +58,13 @@ export function taskRisk(item) {
 }
 
 /** Authority rules that depend on risk and are checked on every task operation. */
-export function assertTaskRisk(policy, contract, initiator) {
+export function assertTaskRisk(policy, contract) {
   const tier = contract.verification.risk_tier, floor = contractRiskFloor(policy, contract);
   if (rank(tier) < rank(floor)) throw new Error(`Task risk_tier ${tier} is below the ${floor} tier required by its write paths or data classification; risk can only be raised`);
-  if (elevatedRisk(tier)) assertIndependentApproval(policy, contract, initiator);
   assertCriticalApprovalRecord(tier, contract);
 }
 /** Critical close compares a pinned approval record, so it must exist while the task can still be corrected. */
 export function assertCriticalApprovalRecord(tier, contract) {
   if (tier === "critical" && !contract.authorization?.approval_ref)
     throw new Error("Critical work needs an authorization.approval_ref approval record; cancel and re-create the task with one");
-}
-/** In a team, high-risk approval cannot come from the implementer or the initiator. */
-export function assertIndependentApproval(policy, contract, initiator) {
-  if (!isTeamPolicy(policy)) return;
-  const approver = contract.authorization.approved_by;
-  if (approver === contract.actor?.principal_id || approver === initiator?.principal_id)
-    throw new Error("High-risk team work needs approval from a Principal other than the implementer and the initiator");
 }

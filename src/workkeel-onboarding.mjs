@@ -9,11 +9,11 @@ import { withProjectMutationLock } from "./workkeel-lock.mjs";
 
 const exec = promisify(execFile);
 
-/** First-use navigation only. Drafts intentionally cannot grant authority. */
+/** First-use navigation only. It never writes, chooses an actor or grants authority. */
 export async function readStartGuide(target, { requestRef = null } = {}) {
   const guide = { schema_version: "workkeel.start/v1", mutation_status: "no-write",
     execution_authorized: false, ready: false, stage: "project", required: [],
-    next_action: "", next_command: null, drafts: {}, errors: [],
+    next_action: "", next_command: null, errors: [],
     limitation: "Readiness is an intake preview, not a claim, model dispatch or acceptance. Commands are argv relative to this project; inspect before running." };
   const step = (stage, next_action, next_command, required = []) =>
     Object.assign(guide, { stage, next_action, next_command, required });
@@ -29,8 +29,7 @@ export async function readStartGuide(target, { requestRef = null } = {}) {
         if (await existsEntry(root, ref)) throw Error(`Existing ${ref} requires inspection before initialization; no files were overwritten`);
       }
       if (await existsEntry(root, ".ai-org")) throw Error("Existing .ai-org requires inspection before initialization; no files were overwritten");
-      guide.drafts.policy = { schema_version: "workkeel.task-policy/v1", principals: [], agents: [], approvers: [], review_separation: null };
-      return step("policy", "Agree on identities and review separation, complete drafts.policy and save it as task-policy.json. Then initialize explicitly.", ["init", ".", "--policy", "task-policy.json"], ["Principal IDs", "Agent-to-Principal mappings", "Approvers", "Review separation"]);
+      return step("init", "Initialize explicitly. init registers one owner Principal with builder and reviewer Agents; add --policy file only for a reviewed custom policy.", ["init", "."]);
     }
     const project = await readTaskProject(root);
     guide.identity_choices = project.policy;
@@ -41,16 +40,10 @@ export async function readStartGuide(target, { requestRef = null } = {}) {
       guide.instruction_preview = instructions;
       return step("instructions", "Inspect the additive instruction preview, then apply its fingerprint. Existing instructions are preserved.", ["instructions", "apply", ".", "--fingerprint", instructions.fingerprint]);
     }
-    guide.stage = "brief";
-    if (requestRef === null) {
-      guide.drafts.brief = { schema_version: "workkeel.task-brief/v1", id: null, goal: null,
-        actor: { agent_id: null, principal_id: null }, acceptance: [], exclude: [],
-        environment: { cwd: ".", read_paths: [], write_paths: [], tools: [], resources: [],
-          network: { mode: "none", hosts: [] }, external_actions: [],
-          data: { classification: null, model_access: "none", policy_refs: [] } },
-        authorization: { approved_by: null, approval_ref: null, operations: [], expires_at: null } };
-      return step("brief", "Complete drafts.brief from the approved goal and boundaries, save it as brief.json, and record the actual approval and data policy in referenced files.", ["start", ".", "--request", "brief.json"], ["Task ID and goal", "Registered actor", "Acceptance criteria", "Paths and tools", "Data classification and policy", "Actual approval and operations"]);
-    }
+    guide.stage = "task";
+    if (requestRef === null)
+      return step("task", "Create a task from the approved goal with task new, replacing each <...> value; choose the actor from identity_choices and add --write path to narrow the write scope. Then follow claim, handoff, review and close in the quick start.",
+        ["task", "new", ".", "--goal", "<goal>", "--acceptance", "<acceptance criterion>", "--actor", "<agent id>"], ["Approved goal", "Acceptance criteria", "Registered actor"]);
     const { previewTaskIntake } = await import("./workkeel-intake.mjs");
     guide.intake_preview = await previewTaskIntake(root, (await readTaskContractInput(root, requestRef)).document);
     guide.ready = true;

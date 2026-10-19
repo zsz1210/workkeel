@@ -11,7 +11,7 @@ const GROUPS = ["task", "usage", "dispatch", "intake", "runtime", "instructions"
 const SINGLE = ["policy", "source", "request", "id", "fingerprint", "actor", "revision", "base", "claim", "summary",
   "judgment", "rollback", "mode", "expect", "goal", "risk", "principal", "attempt", "approval"];
 const MULTIPLE = ["evidence", "acceptance", "write", "read", "include", "exclude", "unresolved"];
-const BOOLEAN = ["json", "solo", "team"];
+const BOOLEAN = ["json"];
 
 /** Parses `command [action] [target] --flags` with Node's own argument parser. */
 export function parseCommandLine(args) {

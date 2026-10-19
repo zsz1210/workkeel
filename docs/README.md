@@ -14,7 +14,7 @@ Workkeel in your own project is a separate use case.
 | Understand the framework and its concepts | [README](../README.md), [terminology](concepts/terminology.md), [architecture](concepts/architecture.md) |
 | Check what the published Beta.1 contains | [Published Beta.1](../README.md#published-beta1), [release notes](../CHANGELOG.md#010-beta1) |
 | Initialize, claim, hand off and accept a task | [Quick start](getting-started/workkeel.md), [task contract](concepts/task-contract.md) |
-| Choose risk tiers, review requirements and a team policy | [Team adoption and risk tiers](operations/team-adoption-and-risk.md) |
+| Choose risk tiers, review requirements and a custom policy | [Adoption and risk tiers](operations/team-adoption-and-risk.md) |
 | Prepare a daily brief, preserve approved requirements and resume a handoff | [Daily work](operations/workkeel-daily-work.md) |
 | Check agreed requirements and visual evidence before declaring completion | [Completion evidence](operations/workkeel-evidence.md) |
 | Focus an independent review or recover an interrupted one | [Review assessment and recovery](operations/workkeel-review-assessment.md) |

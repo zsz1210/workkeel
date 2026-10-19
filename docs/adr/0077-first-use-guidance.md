@@ -1,6 +1,9 @@
 # ADR-0077: Read-only first-use guidance
 
-Status: Accepted.
+Status: Accepted. Amended: `start` no longer returns policy or brief drafts. Before
+initialization it points to plain `workkeel init .`; afterwards it points to
+`task new`, whose `<...>` placeholders the caller replaces. An explicit
+`--request brief.json` still returns an intake preview.
 
 ## Context
 

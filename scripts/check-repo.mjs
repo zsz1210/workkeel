@@ -8,7 +8,7 @@ import { documentationLanguageIssue } from "./documentation-policy.mjs";
 
 // Generic Skills shipped beside the two native Workkeel Skills.
 const BUNDLED_SKILLS = ["decision-interview", "domain-modeling", "project-documentation", "skill-authoring"];
-const NATIVE_SKILLS = ["workkeel-init", "workkeel-work"];
+const NATIVE_SKILLS = ["workkeel-work"];
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const failures = [];

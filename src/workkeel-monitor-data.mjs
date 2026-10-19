@@ -72,7 +72,7 @@ async function catalogueSources(root,skillRefs,catalogRoots,errors=[]) {
   const bundled=fileURLToPath(new URL('../project-overlay/',import.meta.url));
   for(const ref of await skillPaths(bundled))result.push({root:bundled,ref,source:'workkeel',id:documentId('bundled:'+ref)});
   const native=path.join(bundled,'workkeel-skills');
-  for(const name of ['workkeel-init','workkeel-work'])result.push({root:native,ref:name+'/SKILL.md',project_ref:'.agents/skills/'+name+'/SKILL.md',source:'workkeel',id:documentId('native:'+name)});
+  for(const name of ['workkeel-work'])result.push({root:native,ref:name+'/SKILL.md',project_ref:'.agents/skills/'+name+'/SKILL.md',source:'workkeel',id:documentId('native:'+name)});
   for(const [index,source] of catalogRoots.entries()){
     if(!source||!path.isAbsolute(source.path)||!['user','third-party'].includes(source.origin))throw Error('Invalid Skill source');
     // Launch-selected Skill directories only; never discover account/config files.

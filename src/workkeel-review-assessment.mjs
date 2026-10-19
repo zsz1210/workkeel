@@ -4,7 +4,7 @@ import { formatJson, sha256 } from './files.mjs';
 import { readTaskFile, validateTaskContract } from './task-contract.mjs';
 import { readTaskProject, assertActor, safeDirectory, readNativeGit } from './workkeel-project.mjs';
 import { readNativeTask, inspectTaskCandidate, evidenceStatus } from './workkeel-tasks.mjs';
-import { elevatedRisk, isTeamPolicy, taskRisk } from './workkeel-risk.mjs';
+import { elevatedRisk, taskRisk } from './workkeel-risk.mjs';
 
 const hash = value => sha256(formatJson(value));
 const text = { type: 'string', minLength: 1, maxLength: 2000, pattern: '\\S' };
@@ -150,8 +150,7 @@ export async function assessNativeTask(targetInput, id, input = {}) {
   const risk = taskRisk(item), elevated = elevatedRisk(risk);
   const assurance = elevated || contract.environment.data.classification === 'sensitive' || impact.value === 'material';
   if (assurance) issue('elevated-review-required', 'High or critical risk, sensitive data or material irreversible impact requires elevated review: a reviewer Agent from another model family with its own review report, and close by the approving Principal.', false);
-  const separation = project.policy.review_separation === 'distinct-principal' || contract.verification.separation === 'distinct-principal' ||
-    elevated && isTeamPolicy(project.policy) ? 'distinct-principal' : 'distinct-agent';
+  const separation = project.policy.review_separation === 'distinct-principal' || contract.verification.separation === 'distinct-principal' ? 'distinct-principal' : 'distinct-agent';
   if (!['distinct-agent', 'distinct-principal'].includes(contract.verification.separation) ||
       project.policy.review_separation === 'distinct-principal' && contract.verification.separation !== 'distinct-principal')
     issue('review-floor-unresolved', 'The task must meet the current project review separation.');

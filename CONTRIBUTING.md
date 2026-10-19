@@ -33,8 +33,8 @@ For a pull request:
    task acceptance. A passing test or PR check does not itself accept a task.
 5. Promote only reviewed source commits to the clean public checkout; never copy
    the private workspace wholesale. Install its local pre-push hook with
-   `npm run setup:hooks`. Run `npm run check:source-checkout`, review additions to
-   `public-files.json` and run `npm run check:publication` and
+   `npm run setup:hooks`; it pushes only `workkeel/*` branches. Run
+   `npm run check:source-checkout`, review additions to `public-files.json` and run `npm run check:publication` and
    `npm run check:public-history` before any public push. Follow the
    [publication boundary guide](docs/operations/publication-boundary.md).
    Publication and package release require separate maintainer authorization.

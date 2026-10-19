@@ -102,17 +102,16 @@ PNG integrity regressions are covered by `test/workkeel-browser-check.test.mjs`.
 
 ## Continuous integration
 
-Ordinary GitHub Actions is intentionally a short remote consistency check, not Workkeel's complete test environment. Every pull request and push to `main` runs one Node.js 24 job with an eight-minute ceiling. The job uses a clean checkout and performs:
+Ordinary GitHub Actions is a remote consistency check, not Workkeel's complete test environment. Every pull request and every push to `main` or a `workkeel/*` branch runs one Node.js 24 job with a fifteen-minute ceiling. The job uses a clean checkout and performs:
 
 - lockfile-strict dependency installation without lifecycle scripts;
-- repository, documentation-link, and package-boundary checks;
-- source and package-boundary checks that need no private task state;
-- public-checkout cleanliness before and after the bounded tests;
-- `npm run test:fast`.
+- the clean-clone entrypoint, `check:source-checkout`, `check:publication` and `check:public-history`;
+- `npm run verify`: repository, documentation-link and package-boundary checks plus the full contract suite;
+- public-checkout cleanliness again after the tests.
 
 The workflow reports every required result and fails if any required step fails. It uses immutable Action revisions, read-only repository permission, and cancels an older in-progress run when the same pull request receives a newer commit.
 
-Ordinary PR/push CI does not run `npm run test:full` or `npm run test:browser`. The separate GitHub Release publishing workflow does run `npm run verify` against the Release source before publication. A green ordinary CI badge is only the remote repository gate: it does not prove the complete integration suite, browser behavior, independent review, or release readiness.
+Ordinary PR/push CI does not run `npm run test:browser`. The separate GitHub Release publishing workflow runs `npm run verify` again against the Release source before publication. A green ordinary CI badge is only the remote repository gate: it does not prove browser behavior, independent review, or release readiness.
 
 Complete candidate evidence stays private and revision-specific:
 

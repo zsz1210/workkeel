@@ -85,28 +85,31 @@ test("low and standard tasks keep the existing distinct-agent lifecycle", async 
   assert.equal((await diagnoseTaskProject(root)).valid, true);
 });
 
-test("high team work needs an independent approver, another model family and a distinct reviewer Principal", async t => {
-  const root = await fixture(t);
-  await assert.rejects(createNativeTask(root, contract("WK-self", { tier: "high", write: ["src/auth"] }), request(0, builder)), /other than the implementer and the initiator/);
-  await assert.rejects(createNativeTask(root, contract("WK-under", { tier: "standard", write: ["src/auth"], approvedBy: "lead" }), request(0, builder)), /below the high tier/);
-  const high = await deliver(root, "WK-high", { tier: "high", write: ["src/auth"], approvedBy: "lead" }, "src/auth/token.mjs");
-  await high.result;
-  await assert.rejects(review(root, "WK-high", high.revision, sameOwnerReviewer), /Principal other than the implementer/);
-  await assert.rejects(review(root, "WK-high", high.revision, sameFamilyReviewer), /different model family/);
-  await assert.rejects(mutateNativeTask(root, "WK-high", "review", request(3, reviewer, { revision: high.revision, judgment: "pass", summary: "Reused", evidence: [high.ref] })), /review-report/);
-  await review(root, "WK-high", high.revision, reviewer);
-  const reviewRef = ".ai-org/artifacts/WK-high/review-reviewer-3.json";
-  await assert.rejects(close(root, "WK-high", high.revision, builder, [reviewRef]), /approving Principal/);
-  assert.equal((await close(root, "WK-high", high.revision, lead, [reviewRef])).state, "done");
-  assert.equal((await listTaskItems(root)).find(i => i.id === "WK-high").risk_tier, "high");
-});
+// High work is the same with one Principal or many: another model family reviews it, then the approving Principal closes it.
+for (const [name, policy, approvedBy, closer] of [["one Principal", soloPolicy, "owner", builder], ["several Principals", teamPolicy, "lead", lead]]) {
+  test(`high work with ${name} needs another model family's review and the approving Principal's close`, async t => {
+    const root = await fixture(t, policy());
+    await assert.rejects(createNativeTask(root, contract("WK-under", { tier: "standard", write: ["src/auth"], approvedBy }), request(0, builder)), /below the high tier/);
+    const high = await deliver(root, "WK-high", { tier: "high", write: ["src/auth"], approvedBy }, "src/auth/token.mjs");
+    await high.result;
+    await assert.rejects(review(root, "WK-high", high.revision, builder), /separation/);
+    if (policy === teamPolicy) await assert.rejects(review(root, "WK-high", high.revision, sameFamilyReviewer), /different model family/);
+    await assert.rejects(mutateNativeTask(root, "WK-high", "review", request(3, sameOwnerReviewer, { revision: high.revision, judgment: "pass", summary: "Reused", evidence: [high.ref] })), /review-report/);
+    // The reviewer may share the implementer's Principal; only the model family must differ.
+    await review(root, "WK-high", high.revision, sameOwnerReviewer);
+    const reviewRef = ".ai-org/artifacts/WK-high/review-owner-codex-3.json";
+    if (closer !== builder) await assert.rejects(close(root, "WK-high", high.revision, builder, [reviewRef]), /approving Principal/);
+    assert.equal((await close(root, "WK-high", high.revision, closer, [reviewRef])).state, "done");
+    assert.equal((await listTaskItems(root)).find(i => i.id === "WK-high").risk_tier, "high");
+  });
+}
 
-test("solo high work is reviewed by another model family and closed by the owner", async t => {
-  const root = await fixture(t, soloPolicy());
-  const high = await deliver(root, "WK-solo", { tier: "high", write: ["src/auth"] }, "src/auth/token.mjs");
+test("high work without a different model family registered cannot be reviewed", async t => {
+  const sameFamily = () => ({ ...soloPolicy(), agents: [{ ...builder, model_family: "claude" }, { ...sameOwnerReviewer, model_family: "claude" }] });
+  const root = await fixture(t, sameFamily());
+  const high = await deliver(root, "WK-same", { tier: "high", write: ["src/auth"] }, "src/auth/token.mjs");
   await high.result;
-  await review(root, "WK-solo", high.revision, sameOwnerReviewer);
-  assert.equal((await close(root, "WK-solo", high.revision, builder, [".ai-org/artifacts/WK-solo/review-owner-codex-3.json"])).state, "done");
+  await assert.rejects(review(root, "WK-same", high.revision, sameOwnerReviewer), /different model family/);
 });
 
 test("critical work requires a delivered rollback plan and a committed approval record", async t => {
@@ -144,13 +147,14 @@ test("a low task whose candidate touches a high path is escalated at handoff", a
   const assessment = await assessNativeTask(root, "WK-escalate");
   assert.equal(assessment.repository_observed.risk_tier, "high");
   assert.equal(assessment.repository_observed.declared_risk_tier, "low");
-  assert.equal(assessment.current_review_floor.separation, "distinct-principal");
+  assert.equal(assessment.current_review_floor.separation, "distinct-agent");
   assert.equal(assessment.current_review_floor.distinct_model_family_required, true);
   assert(assessment.reasons.some(r => r.code === "elevated-review-required"));
-  await assert.rejects(review(root, "WK-escalate", low.revision, sameOwnerReviewer), /Principal other than the implementer/);
+  await assert.rejects(review(root, "WK-escalate", low.revision, sameFamilyReviewer), /different model family/);
   await review(root, "WK-escalate", low.revision, reviewer);
-  // The creator approved it as low work; high acceptance needs a fresh independent approval.
-  await assert.rejects(close(root, "WK-escalate", low.revision, builder, [low.ref]), /other than the implementer and the initiator/);
+  // Escalated work is still confirmed by its approving Principal, here the creator.
+  await assert.rejects(close(root, "WK-escalate", low.revision, lead, [low.ref]), /approving Principal/);
+  assert.equal((await close(root, "WK-escalate", low.revision, builder, [".ai-org/artifacts/WK-escalate/review-reviewer-3.json"])).state, "done");
 });
 
 test("risk path patterns are repository-relative, include dotfiles and cannot negate", async t => {
@@ -188,7 +192,7 @@ test("rework and release keep the highest risk of every unaccepted change", asyn
   const revision = git(root, "rev-parse", "HEAD"), ref = ".ai-org/artifacts/WK-rework/retry.md"; await write(root, ref, "Retry verified\n");
   await mutateNativeTask(root, "WK-rework", "handoff", request(6, builder, { claim_id: claimed.claim.id, revision, summary: "Retry", evidence: [ref], unresolved: [] }));
   assert.equal((await readNativeTask(root, "WK-rework")).delivery.risk.tier, "high");
-  await assert.rejects(review(root, "WK-rework", revision, sameOwnerReviewer, { version: 7 }), /Principal other than the implementer/);
+  await assert.rejects(review(root, "WK-rework", revision, sameFamilyReviewer, { version: 7 }), /different model family/);
 
   const second = await fixture(t);
   await createNativeTask(second, contract("WK-release", { tier: "low", write: ["src"] }), request(0, builder));

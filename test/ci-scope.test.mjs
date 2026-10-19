@@ -38,7 +38,7 @@ test('framework checks preserve private failed evidence while public source boun
   assert.equal(await fs.readFile(path.join(clone,'.workkeel-private/failed-stdout.json'),'utf8'),'','retain the original failed evidence unchanged');
 });
 
-test("CI is one bounded Node.js 24 repository gate", async () => {
+test("CI is one bounded Node.js 24 gate requiring verify and the publication checks", async () => {
   const workflow = await fs.readFile(path.join(root, ".github/workflows/ci.yml"), "utf8");
   const jobs = workflow.slice(workflow.indexOf("\njobs:\n"));
   const jobNames = [...jobs.matchAll(/^  ([a-zA-Z0-9_-]+):\s*$/gm)].map((match) => match[1]);
@@ -56,7 +56,9 @@ test("CI is one bounded Node.js 24 repository gate", async () => {
   assert.doesNotMatch(workflow, /npm run test:full/);
   assert.doesNotMatch(workflow, /npm run test:browser/);
   assert.doesNotMatch(workflow, /ci-scope\.mjs/);
-  assert.match(workflow, /npm run test:fast/);
+  assert.match(workflowStep(workflow, "verify"), /npm run verify\n/);
+  for (const check of ["check:source-checkout", "check:publication", "check:public-history"])
+    assert.match(workflowStep(workflow, "doctor"), new RegExp(`npm run ${check}(\\n|$)`), check);
   assert.match(workflow, /GITHUB_STEP_SUMMARY/);
   assert.match(workflow, /Enforce aggregated verification result/);
   assert.match(workflow, /cancel-in-progress: true/);
@@ -69,11 +71,11 @@ test("CI is one bounded Node.js 24 repository gate", async () => {
   }
 
   assert.match(workflow, /pull_request:/);
-  assert.match(workflow, /push:\n    branches:\n      - main/);
+  assert.match(workflow, /push:\n    branches:\n      - main\n      - 'workkeel\/\*\*'\n/);
   assert.match(workflowStep(workflow, "doctor"), /node \.\/bin\/workkeel\.mjs start \./);
   assert.match(workflowStep(workflow, "doctor"), /npm run check:public-history/);
   assert.doesNotMatch(workflowStep(workflow, "doctor"), /workkeelw\.mjs/, "A clean source clone has no initialized local launcher");
-  for (const id of ["install", "governance", "doctor", "behavior"]) {
+  for (const id of ["install", "doctor", "verify"]) {
     assert.match(workflowStep(workflow, id), /if:.*always\(\)/, id);
   }
 });

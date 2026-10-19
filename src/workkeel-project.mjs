@@ -192,7 +192,7 @@ Details: https://github.com/${TEMPLATE_REPOSITORY}/blob/main/docs/getting-starte
 export const LOCAL_SETTINGS_DIRECTORY = ".workkeel";
 
 /** One Principal with a builder and a reviewer Agent; implementer and reviewer stay distinct. */
-export function soloPolicy(principal = "owner") {
+export function defaultPolicy(principal = "owner") {
   const policy = { schema_version: "workkeel.task-policy/v1", principals: [principal],
     agents: [{ agent_id: "builder", principal_id: principal }, { agent_id: "reviewer", principal_id: principal }],
     approvers: [principal], review_separation: "distinct-agent" };

@@ -88,12 +88,15 @@ test("identity, immutable input, stale claims, duplicate requests and self-revie
 test("contract authority, unknown fields, high risk, paths and evidence are bounded", async t => {
   const root = await fixture(t);
   for (const change of [
-    d => { d.verification.separation = "none"; }, d => { d.verification.risk_tier = "high"; },
+    d => { d.verification.separation = "none"; },
     d => { d.environment.data.classification = "sensitive"; }, d => { d.authorization.approved_by = "review-owner"; },
     d => { d.environment.cwd = ".."; }, d => { d.authorization.approval_ref = "../secret"; },
     d => { d.actor.principal_id = "unregistered"; }, d => { d.capabilities = ["coding"]; },
     d => { d.authorization.expires_at = "2000-01-01T00:00:00Z"; }
   ]) { const doc = structuredClone(contract()); change(doc); await assert.rejects(createNativeTask(root, doc, request(0))); }
+  // High work may be approved by its creator's Principal, even with several Principals; that Principal later closes it.
+  const high = contract(); high.id = "WK-high"; high.verification.risk_tier = "high";
+  assert.equal((await createNativeTask(root, high, request(0))).state, "intake");
   await fs.symlink("docs/approval.md", path.join(root, "link.md"));
   const linked = contract(); linked.authorization.approval_ref = "link.md";
   await assert.rejects(createNativeTask(root, linked, request(0)), /symlink/);

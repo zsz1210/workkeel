@@ -30,10 +30,10 @@ async function files(root) {
   }
   await walk(root); return result;
 }
-test('start identifies Git root and supplies inert policy without writing',async t=>{
+test('start identifies Git root and points to plain init without writing',async t=>{
   const root=await fixture(t),before=await files(root),guide=await readStartGuide(root);
-  assert.equal(guide.stage,'policy'); assert.equal(guide.ready,false);
-  assert.deepEqual(guide.drafts.policy.agents,[]); assert.equal(guide.drafts.policy.review_separation,null);
+  assert.equal(guide.stage,'init'); assert.equal(guide.ready,false);
+  assert.deepEqual(guide.next_command,['init','.']); assert.equal(guide.drafts,undefined);
   assert.deepEqual(await files(root),before);
   await fs.mkdir(root+'/nested');
   assert.equal((await readStartGuide(root+'/nested')).stage,'git-root');
@@ -61,11 +61,12 @@ test('native start preserves instructions and does not invent an actor or grants
   const before=await files(root),guide=await readStartGuide(root);
   assert.equal(guide.stage,'instructions'); assert.deepEqual(await files(root),before);
   await applyInstructions(root,guide.instruction_preview.fingerprint);
-  const brief=await readStartGuide(root);
-  assert.equal(brief.stage,'brief'); assert.equal(brief.drafts.brief.actor.agent_id,null);
-  assert.deepEqual(brief.drafts.brief.authorization.operations,[]);
-  assert.deepEqual(brief.drafts.brief.environment.write_paths,[]);
-  assert.equal(brief.execution_authorized,false);
+  const next=await readStartGuide(root);
+  assert.equal(next.stage,'task'); assert.equal(next.drafts,undefined);
+  assert.deepEqual(next.next_command.slice(0,3),['task','new','.']);
+  assert.equal(next.next_command[next.next_command.indexOf('--actor')+1],'<agent id>','no actor is chosen for the user');
+  assert.deepEqual(next.identity_choices.agents,[actor]);
+  assert.equal(next.execution_authorized,false);
   assert.ok((await fs.readFile(root+'/AGENTS.md','utf8')).startsWith('Custom policy\n'));
   await fs.appendFile(root+'/AGENTS.md','<!-- workkeel:begin -->');
   assert.equal((await readStartGuide(root)).valid,false);
@@ -74,9 +75,9 @@ test('explicit brief uses pinned intake and stale approval remains rejected',asy
   const root=await fixture(t,true),g=await readStartGuide(root);
   await applyInstructions(root,g.instruction_preview.fingerprint);
   await fs.writeFile(root+'/approval.md','Approved offline fixture');
-  const draft=(await readStartGuide(root)).drafts.brief;
-  const brief={...draft,id:'WK-start',goal:'Test entry',actor,acceptance:['Verified'],
-    environment:{...draft.environment,read_paths:['src'],write_paths:['src'],tools:['node'],data:{classification:'internal',model_access:'none',policy_refs:['approval.md']}},
+  const brief={schema_version:'workkeel.task-brief/v1',id:'WK-start',goal:'Test entry',actor,acceptance:['Verified'],exclude:[],
+    environment:{cwd:'.',read_paths:['src'],write_paths:['src'],tools:['node'],resources:[],network:{mode:'none',hosts:[]},external_actions:[],
+      data:{classification:'internal',model_access:'none',policy_refs:['approval.md']}},
     authorization:{approved_by:'owner',approval_ref:'approval.md',operations:['read','write','execute'],expires_at:null}};
   await fs.writeFile(root+'/brief.json',JSON.stringify(brief));
   const before=await files(root),preview=await readStartGuide(root,{requestRef:'brief.json'});
@@ -98,5 +99,5 @@ test('CLI start operates before init and invalid briefs return nonzero with no-w
   const bad=spawnSync(process.execPath,[cli,'start',root,'--request','missing.json'],{encoding:'utf8'});
   assert.equal(bad.status,1); assert.equal(JSON.parse(bad.stdout).mutation_status,'no-write');
   const fresh=await fixture(t),ok=spawnSync(process.execPath,[cli,'start',fresh],{encoding:'utf8'});
-  assert.equal(ok.status,0); assert.equal(JSON.parse(ok.stdout).stage,'policy');
+  assert.equal(ok.status,0); assert.equal(JSON.parse(ok.stdout).stage,'init');
 });

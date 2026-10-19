@@ -9,14 +9,17 @@ repository migration does not republish old tags, archives or npm versions.
 
 Unpublished source. Breaking: removes the Temple compatibility mode.
 
-- Adds a flags-only path: `init --solo`, `task new --goal --acceptance`, and
+- Adds a flags-only path: plain `init` (one owner Principal with `builder` and
+  `reviewer` Agents; `--policy file` for a custom policy), `task new --goal --acceptance`, and
   lifecycle flags (`--actor`, `--summary`, `--evidence`, `--judgment`,
   `--revision`, `--rollback`) with derived operation IDs and versions; request
   files remain for integrations. Contracts need only a goal, scope and acceptance;
   other fields get recorded defaults, including the path-derived risk floor.
   Adds `policy show|update`, a short default help with `help advanced`, a shorter
   WORKKEEL.md, an `@AGENTS.md`-only CLAUDE.md bridge that upgrades the earlier
-  block, and init's suggested `.gitignore`.
+  block, and init's suggested `.gitignore`. `start` points to `init` and
+  `task new` instead of returning policy and brief drafts, and the
+  `workkeel-init` Skill is removed.
 - Known limitation: replay of flag commands relies on requests saved under the
   checkout's Git directory. Several processes or mixed CLI versions acting on the
   same task at once can still hit edge cases; such commands stop rather than act on
@@ -72,8 +75,9 @@ Unpublished source. Breaking: removes the Temple compatibility mode.
   only raise; a candidate that changes riskier paths is escalated at handoff.
   High and critical review needs another registered model family and the
   reviewer's own `workkeel.review-report/v1` record of the exact candidate;
-  rejected or released attempts keep their risk; in teams, a different Principal reviews and the
-  approving Principal is neither the implementer nor the initiator. Critical
+  rejected or released attempts keep their risk. The task's approving Principal
+  then closes it as the human confirmation; the rule is the same however many
+  Principals the policy lists, and there is no separate solo or team mode. Critical
   work also needs a delivered rollback plan and the approved record committed in
   the candidate (byte-exact). Review assessment and model routing use the
   effective tier; model policies may approve models for `critical` with their

@@ -8,7 +8,7 @@ import { readTaskContractInput, readTaskFile, validateTaskContract } from "./tas
 import { assertActor, assertApprover, readTaskProject, safeDirectory, existsEntry, readNativeGit } from "./workkeel-project.mjs";
 import {loadTaskRequirements, assertRequirementOutcomes} from './workkeel-requirements.mjs';
 import { completeTaskContract } from "./workkeel-task-draft.mjs";
-import { assertCriticalApprovalRecord, assertIndependentApproval, assertTaskRisk, candidateRisk, elevatedRisk, isTeamPolicy, maxRisk, taskRisk } from "./workkeel-risk.mjs";
+import { assertCriticalApprovalRecord, assertTaskRisk, candidateRisk, elevatedRisk, maxRisk, taskRisk } from "./workkeel-risk.mjs";
 
 const ID = /^[A-Za-z0-9][A-Za-z0-9._-]{0,95}$/;
 const SHA = /^(?:[a-f0-9]{40}|[a-f0-9]{64})$/;
@@ -20,7 +20,6 @@ const fileRef = id => {
 const sameActor = (a, b) => a?.agent_id === b?.agent_id && a?.principal_id === b?.principal_id;
 const digest = value => sha256(formatJson(value));
 const bodyHash = item => digest(Object.fromEntries(Object.entries(item).filter(([key]) => key !== "history")));
-const initiator = item => item.history[0]?.actor ?? null;
 const effectiveRisk = taskRisk;
 const under = (file, root) => root === "." || file === root || file.startsWith(`${root}/`);
 /**
@@ -154,13 +153,13 @@ export async function listTaskItems(target, { isolateErrors = false } = {}) {
   return items;
 }
 
-function assertContractPolicy(contract, policy, creator) {
+function assertContractPolicy(contract, policy) {
   const valid = validateTaskContract(contract);
   if (!valid.contract_complete) throw new Error(`Incomplete task contract: ${[...valid.errors, ...valid.incomplete_fields].join("; ")}`);
   assertActor(policy, contract.actor);
   if ((policy.requirements_refs ?? []).some(ref => !contract.environment.data.policy_refs.includes(ref))) throw Error('Required project decision source omitted from task');
   if (!policy.approvers.includes(contract.authorization.approved_by)) throw new Error("Task approval must name a registered approving Principal");
-  assertTaskRisk(policy, contract, creator);
+  assertTaskRisk(policy, contract);
   if (!["distinct-agent", "distinct-principal"].includes(contract.verification.separation) ||
       policy.review_separation === "distinct-principal" && contract.verification.separation !== "distinct-principal") throw new Error("Task review must meet the project separation policy");
 }
@@ -179,9 +178,9 @@ async function dependencies(target, item, seen = new Set()) {
   if (item.dependency_pins && digest(pins) !== digest(item.dependency_pins)) throw new Error("Accepted dependency snapshot changed");
   return pins;
 }
-async function context(target, item, project, creator = initiator(item)) {
+async function context(target, item, project) {
   if (item.policy_sha256 !== digest(project.policy)) throw new Error("Task policy changed after approval");
-  assertContractPolicy(item.contract, project.policy, creator);
+  assertContractPolicy(item.contract, project.policy);
   await loadTaskRequirements(target, item.contract, {requiredRefs: project.policy.requirements_refs ?? []});
   await safeDirectory(target, item.contract.environment.cwd);
 }
@@ -249,9 +248,9 @@ export async function createNativeTask(targetInput, draft, request, { expectedPo
       if (digest(existing.contract) !== digest(contract) || !replay(existing, "create", request)) throw new Error("Task ID already exists");
       return result(existing, true);
     }
-    assertContractPolicy(contract, project.policy, request.actor);
-    // Elevated team work is approved by another Principal; everything else by its creator.
-    const delegated = elevatedRisk(contract.verification.risk_tier) && isTeamPolicy(project.policy);
+    assertContractPolicy(contract, project.policy);
+    // Elevated work may name another approving Principal, who must then close it; everything else is approved by its creator.
+    const delegated = elevatedRisk(contract.verification.risk_tier);
     if (!delegated && contract.authorization.approved_by !== request.actor.principal_id || contract.state !== "intake" ||
         contract.handoff !== null || contract.acceptance.evidence.length || contract.verification.implementer !== null ||
         contract.verification.reviewer !== null || contract.verification.candidate_revision !== null) throw new Error("New task must start at intake without fabricated progress");
@@ -267,7 +266,7 @@ export async function createNativeTask(targetInput, draft, request, { expectedPo
       authority_pins: await authoritySnapshot(target, authorityRefs), claim: null, base_revision: null,
       dependency_pins: null, delivery: null, review: null, closeout: null, attempts: [], history: [] };
     if (expectedAuthorityPins !== null && digest(item.authority_pins) !== digest(expectedAuthorityPins)) throw new Error('Intake authority changed; inspect a fresh preview');
-    await context(target, item, project, request.actor);
+    await context(target, item, project);
     append(item, "create", request);
     if (Buffer.byteLength(formatJson(item)) > 1024 * 1024) throw new Error("New task exceeds the bounded record size");
     await safeDirectory(target, ".ai-org/work-items", { create: true });
@@ -350,7 +349,6 @@ function assertSeparation(item, actor, policy) {
   if (actor.agent_id === implementer.agent_id || item.contract.verification.separation === "distinct-principal" &&
       actor.principal_id === implementer.principal_id) throw new Error("Reviewer identity does not meet separation policy");
   if (!elevatedRisk(effectiveRisk(item))) return;
-  if (isTeamPolicy(policy) && actor.principal_id === implementer.principal_id) throw new Error("High-risk team review requires a Principal other than the implementer");
   const family = who => policy.agents.find(a => a.agent_id === who.agent_id)?.model_family;
   if (!family(actor) || !family(implementer) || family(actor) === family(implementer)) throw new Error("High-risk review requires a registered reviewer Agent from a different model family");
 }
@@ -385,13 +383,11 @@ function assertReviewReport(item, request, files) {
   }
   throw new Error("High-risk review requires the reviewer's own workkeel.review-report/v1 evidence naming this task, candidate, reviewer and judgment");
 }
-/** High and critical acceptance is the approving Principal's own act, never the implementer's. */
+/** High and critical work is reviewed by another model family, then confirmed by the approving Principal, however many Principals the project has. */
 async function assertElevatedClose(target, item, policy, actor) {
   const tier = effectiveRisk(item);
   if (!elevatedRisk(tier)) return;
-  assertIndependentApproval(policy, item.contract, initiator(item));
   if (actor.principal_id !== item.contract.authorization.approved_by) throw new Error("High-risk close must be performed by the task's approving Principal");
-  if (isTeamPolicy(policy) && actor.principal_id === item.delivery.implementer.principal_id) throw new Error("High-risk team close cannot be performed by the implementer's Principal");
   if (tier !== "critical") return;
   if (!item.delivery.rollback) throw new Error("Critical close requires the rollback plan delivered at handoff");
   // Compare the candidate's own blob with the pinned approval; worktree state and

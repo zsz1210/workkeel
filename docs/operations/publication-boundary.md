@@ -48,8 +48,9 @@ does not inspect or print private contents. Run it again after verification.
 `check:publication` reads tracked and non-ignored working files. `--staged` reads
 the actual index bytes, even if the working copy differs. The history check reads every
 reachable local commit, including files deleted from the latest tree. The pre-push
-hook checks source-checkout cleanliness and the complete ancestry of every outgoing
-commit. The publication scanner rejects undeclared
+hook refuses every push except to `workkeel/*` branches, so `main` changes only
+through a PR; it then checks source-checkout cleanliness and the complete ancestry
+of every outgoing commit. The publication scanner rejects undeclared
 paths, private roots, symlinks, submodules, unapproved binary data, oversized files,
 personal home paths and common credential formats without echoing matched secrets.
 CI repeats the history check after upload; it cannot undo an earlier disclosure.

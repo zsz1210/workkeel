@@ -5,7 +5,7 @@ import path from "node:path";
 import { execFileSync, spawn, spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import test from "node:test";
-import { initializeTaskProject, soloPolicy } from "../src/workkeel-project.mjs";
+import { initializeTaskProject, defaultPolicy } from "../src/workkeel-project.mjs";
 import { cliCompatibility, drainCompatibilityWarnings } from "../src/workkeel-compat.mjs";
 import { diagnoseTaskProject, mutateNativeTask, readNativeTask } from "../src/workkeel-tasks.mjs";
 import { runCreateFromFlags } from "../src/workkeel-cli-flags.mjs";
@@ -18,7 +18,7 @@ async function fixture(t, lockVersion = "0.2.0") {
   const root = await fs.mkdtemp(path.join(os.tmpdir(), "workkeel-compat-"));
   t.after(() => fs.rm(root, { force: true, recursive: true }));
   execFileSync("git", ["-C", root, "init", "-q"]);
-  await initializeTaskProject(root, soloPolicy());
+  await initializeTaskProject(root, defaultPolicy());
   const lock = JSON.parse(await fs.readFile(path.join(root, "workkeel.lock"), "utf8"));
   lock.cli.version = lockVersion;
   await fs.writeFile(path.join(root, "workkeel.lock"), JSON.stringify(lock, null, 2) + "\n");

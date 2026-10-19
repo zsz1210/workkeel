@@ -39,15 +39,15 @@ Tasks carry a low, standard, high or critical risk tier. Project policy
 adds review by another model family and close by the approving Principal.
 Verified or distributed identity workflows are not supported.
 
-## Fastest path: one owner, flags only
+## Fastest path: flags only
 
-For a single owner, `init --solo` registers one Principal with two Agents,
-`builder` and `reviewer`; the implementer and reviewer still differ. Commit the
+`init` registers one Principal, `owner`, with two Agents, `builder` and
+`reviewer`; the implementer and reviewer still differ. Commit the
 generated files and ignore `.workkeel/`, where `local.json` may name your default
 `agent_id`:
 
 ```sh
-workkeel init . --solo
+workkeel init .
 echo ".workkeel/" >> .gitignore && git add -A && git commit -m "Start Workkeel"
 workkeel task new --goal "Clarify the guide" --acceptance "The guide names its audience" --write docs --actor builder
 workkeel task claim --id WK-0001 --actor builder
@@ -71,8 +71,9 @@ Known limitation: flag-command replay relies only on that local cache. When seve
 processes, or older and newer CLI versions, operate on the same task at the same
 time, edge cases remain; a command that cannot confirm its original claim or
 candidate stops instead of guessing. Hardening this is tracked separately. `--expect` and `--request` remain for
-integrations. Teams use `init --team --policy`, and `policy update` replaces the
-project policy. `workkeel help advanced` lists every form, including the optional
+integrations. To register other people or Agents, initialize with a reviewed policy file,
+`init --policy task-policy.json`; `policy update` replaces the project policy
+later. The same rules apply however many Principals it lists. `workkeel help advanced` lists every form, including the optional
 subsystems that the lifecycle below never needs.
 
 ## Initialize an existing repository
@@ -83,20 +84,21 @@ Start with read-only guidance from your reviewed source checkout:
 node /path/to/workkeel/bin/workkeel.mjs start /path/to/your/project
 ```
 
-The JSON response identifies the next setup stage: Git root, project policy,
-instruction bridge, or task brief. `drafts.policy` and `drafts.brief` provide the
-structure to fill in; nulls and empty required fields are unresolved decisions,
-not defaults or approval. Ask your coding agent to fill them from your agreed
-goal and boundaries and save the reviewed document. Existing identities are
-listed as choices, never selected automatically. `next_command` is an argv array
-for the reviewed Workkeel CLI, run from the selected project; it is not shell text.
+The JSON response identifies the next setup stage: Git root, `init`,
+instruction bridge, or the first task. Before initialization it points to
+`workkeel init .`; afterwards it points to `task new`, whose `<...>` values you
+replace with the agreed goal, acceptance criteria and actor. Existing identities
+are listed as choices, never selected automatically. `next_command` is an argv
+array for the reviewed Workkeel CLI, run from the selected project; it is not
+shell text.
 
 Follow the returned step, then run `start` again. Initialization and instruction
 application remain explicit. Broken project pins or conflicting instruction blocks
 return an error without overwriting anything. This checks setup and intake inputs;
 use `doctor` separately for existing task health.
 
-Once the bridge is applied and the approved brief is saved:
+An integration that already has an approved
+[single brief](../operations/workkeel-daily-work.md) can preview it instead:
 
 ```sh
 node /path/to/workkeel/bin/workkeel.mjs start /path/to/your/project --request brief.json
@@ -110,7 +112,8 @@ An invalid brief returns exit code 1 with `mutation_status: no-write`; a valid
 guidance step returns exit code 0 even when there is more setup to do.
 
 Read native repository instructions and confirm identities, approval authority and
-review separation with the human. Save the reviewed policy as `task-policy.json`:
+review separation with the human. Plain `init .` writes this policy; to use a
+different one, save the reviewed policy as `task-policy.json`:
 
 ```json
 {
@@ -130,7 +133,7 @@ independent human. Select `distinct-principal` only with genuinely separate peop
 registered as Principals when that separation is required.
 
 ```sh
-node /path/to/workkeel/bin/workkeel.mjs init . --policy task-policy.json
+node /path/to/workkeel/bin/workkeel.mjs init .    # or: init . --policy task-policy.json
 WORKKEEL_CLI_PATH=/path/to/workkeel/bin/workkeel.mjs node ./workkeelw.mjs doctor .
 ```
 

@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import { TEMPLATE_VERSION } from "./workkeel-version.mjs";
 import { readTaskContractInput } from "./task-contract.mjs";
-import { initializeTaskProject, existsEntry, readProjectCompatibility, readTaskProject, soloPolicy, updateProjectPolicy, upgradeTaskProject } from "./workkeel-project.mjs";
+import { initializeTaskProject, existsEntry, readProjectCompatibility, readTaskProject, defaultPolicy, updateProjectPolicy, upgradeTaskProject } from "./workkeel-project.mjs";
 import { assertMutationCompatible, cliCompatibility, drainCompatibilityWarnings, warnIncompatibleCli } from "./workkeel-compat.mjs";
 import { parseCommandLine, resolveActor, runLifecycleFromFlags, runCreateFromFlags } from "./workkeel-cli-flags.mjs";
 import { createNativeTask, mutateNativeTask, readNativeTask, listTaskItems, diagnoseTaskProject } from "./workkeel-tasks.mjs";
@@ -11,7 +11,7 @@ import { previewInstructions, applyInstructions, readStartGuide } from "./workke
 const HELP = `Workkeel — repository-native task coordination for coding agents
 
 workkeel start [target]                     read-only next-step guidance
-workkeel init [target] --solo               one owner with builder and reviewer Agents
+workkeel init [target]                      create builder and reviewer Agents
 workkeel task new [target] --goal text --acceptance text [--write path]
 workkeel task claim|handoff|review|close [target] --id task-id --actor id [--summary text] [--evidence path] [--judgment pass|fail] [--rollback text]
 workkeel status|doctor [target]
@@ -25,7 +25,7 @@ const ADVANCED_HELP = `Workkeel — repository-native task coordination for codi
 
 Core lifecycle, every form:
 workkeel start [target] [--request brief.json]
-workkeel init [target] --solo [--principal id] | --team --policy repository-policy.json
+workkeel init [target] [--principal id] | [--policy repository-policy.json]
 workkeel policy show [target] | policy update [target] --policy repository-policy.json [--actor id]
 workkeel status|doctor [target]
 workkeel upgrade [target] [--actor id]
@@ -34,6 +34,7 @@ workkeel task create [target] --source contract.json --request request.json
 workkeel task show [target] --id task-id
 workkeel task claim|release|handoff|review|rework|close|cancel [target] --id task-id [--actor id] [--summary text] [--evidence path] [--judgment pass|fail] [--revision sha] [--rollback text] [--expect version]
 workkeel task <operation> [target] --id task-id --request request.json   (integration form)
+workkeel task observe [target] --id task-id --request observation.json   (writes an observation record; task state unchanged)
 workkeel intake preview [target] --request brief.json
 workkeel intake apply [target] --request brief.json --fingerprint sha256
 workkeel instructions preview|apply [target] [--fingerprint sha256]
@@ -42,7 +43,6 @@ Read-only checks and reports:
 workkeel task assess [target] --id task-id [--request assessment.json]
 workkeel task evidence-check [target] --id task-id --request completion-evidence.json
 workkeel task metrics|summary [target] --id task-id
-workkeel task observe [target] --id task-id --request observation.json
 workkeel runtime plan [target] --id task-id
 workkeel context prepare [target] --id task-id --request material-request.json
 workkeel skills audit [target] --request skill-use.json
@@ -126,8 +126,9 @@ async function runCommand(args) {
     allow(options, ["--request"]);
     output = await readStartGuide(target, { requestRef: options["--request"] ?? null });
   } else if (command === "init") {
-    if (options["--solo"]) { allow(options, ["--solo", "--principal"]); output = await initializeTaskProject(target, soloPolicy(options["--principal"])); }
-    else { allow(options, ["--policy", "--team"]); output = await initializeTaskProject(target, (await readTaskContractInput(target, required(options, "--policy"))).document); }
+    // Without --policy, one owner Principal gets a builder and a reviewer Agent.
+    if (options["--policy"]) { allow(options, ["--policy"]); output = await initializeTaskProject(target, (await readTaskContractInput(target, options["--policy"])).document); }
+    else { allow(options, ["--principal"]); output = await initializeTaskProject(target, defaultPolicy(options["--principal"])); }
   } else if(command==='workspace') {
     const workspace=await import('./workkeel-workspace.mjs');
     if(action==='show'){allow(options,[]);output=await workspace.readWorkspaceSnapshot(target);}

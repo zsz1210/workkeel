@@ -1,4 +1,4 @@
-# Team adoption and risk tiers
+# Adoption and risk tiers
 
 This guide is for the person who sets up Workkeel in a repository and decides how
 much review each kind of change needs. It covers who to register, how a task gets
@@ -9,22 +9,14 @@ the choices behind them.
 Workkeel records and checks these rules. It does not authenticate people, enforce
 a sandbox or run your tests. Identities are attributed, not verified accounts.
 
-## Solo or team
+## Who to register
 
-A project is a **team** project when its policy registers more than one Principal
-(a person accountable for approvals). With one Principal it is **solo**.
-
-| | Solo | Team |
-| --- | --- | --- |
-| Start | `workkeel init . --solo` | `workkeel init . --team --policy task-policy.json` |
-| Registered by default | Principal `owner`, Agents `builder` and `reviewer` | Whatever the reviewed policy file lists |
-| Implementer and reviewer | Always different Agents | Always different Agents; `distinct-principal` also requires different people |
-| High and critical approval | The owner approves and closes | Another Principal approves; the implementer's Principal cannot close |
-
-Start solo when one person owns the repository and its decisions. Move to a team
-policy as soon as a second person approves, reviews or closes work, and replace
-the policy with `workkeel policy update`. Open tasks pinned to the old policy must
-then be approved again.
+`workkeel init .` registers one Principal (a person accountable for approvals),
+`owner`, with two Agents, `builder` and `reviewer`. To register other people or
+Agents, write a reviewed policy file and use `workkeel init . --policy task-policy.json`
+instead, or replace the policy later with `workkeel policy update`. Open tasks
+pinned to the old policy must then be approved again. The rules below are the
+same however many Principals the policy lists.
 
 Choose `review_separation` deliberately:
 
@@ -40,8 +32,8 @@ High and critical review requires a reviewer Agent from a different **model
 family** than the implementer. Record it in the policy's `agents` entries, for
 example `{"agent_id": "builder", "principal_id": "owner", "model_family": "claude"}`
 and `{"agent_id": "reviewer", "principal_id": "owner", "model_family": "codex"}`.
-The solo default does not set `model_family`, so a solo owner who needs high-risk
-work adds the families with `workkeel policy update` first. Workkeel compares the
+The default policy does not set `model_family`, so add the families with
+`workkeel policy update` before the first high-risk task. Workkeel compares the
 recorded labels; it does not inspect which model actually ran.
 
 ## How a task gets its tier
@@ -102,21 +94,20 @@ passing review of that commit.
 | Review evidence | Summary may suffice | Summary may suffice | Reviewer's own `workkeel.review-report/v1` record | Same as high |
 | Reviewer | Different Agent | Different Agent | Different Agent from a different model family | Same as high |
 | Unresolved issues listed at handoff | Reviewer decides | Reviewer decides | Review cannot pass | Handoff is refused |
-| Who closes | An approver | An approver | The task's approving Principal | The task's approving Principal |
-| Team approval | Creator | Creator | A Principal other than the implementer and the initiator | Same as high |
-| Team review and close | Separation policy applies | Separation policy applies | Not by the implementer's Principal | Same as high |
+| Who closes | An approver | An approver | The task's approving Principal, as the human confirmation | Same as high |
 | Rollback plan at handoff | Optional | Optional | Optional | Required |
 | Approval record | Not required | Not required | Not required | A committed `--approval` record whose content in the candidate must match what was approved |
 
 Optional automation (whole goals, bounded autonomy and automatic improvement)
 accepts only `low` and `standard` work. High and critical tasks always go through
-the manual lifecycle.
+the manual lifecycle: another model family reviews, then a person confirms.
 
-## Rolling out in a team
+## Rolling out
 
-1. **Agree the policy first.** Write `task-policy.json` with the real Principals,
-   Agents, approvers, `review_separation` and `risk_paths`, and review it like
-   code. Initialize with it, then commit `workkeel.lock`, `workkeelw.mjs`,
+1. **Agree the policy first.** Start from `workkeel init .`, or write
+   `task-policy.json` with the real Principals, Agents, approvers,
+   `review_separation` and `risk_paths`, review it like code and pass it with
+   `--policy`. Then commit `workkeel.lock`, `workkeelw.mjs`,
    `WORKKEEL.md` and `.ai-org/`, and ignore `.workkeel/`.
 2. **Mark the dangerous paths.** List deployment, CI, migrations, authentication
    and secret-handling paths under `high` or `critical`. Anything not listed

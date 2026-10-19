@@ -22,13 +22,23 @@ async function repository(t) {
   await fs.mkdir(path.join(root, "docs")); await fs.writeFile(path.join(root, "docs/guide.md"), "# Guide\n");
   return root;
 }
+const fails = (root, ...args) => {
+  const result = spawnSync(process.execPath, [cli, ...args], { cwd: root, encoding: "utf8" });
+  assert.notEqual(result.status, 0, args.join(" "));
+  return result.stdout + result.stderr;
+};
 const jsonFiles = async root => (await fs.readdir(root, { recursive: true }))
   .filter(name => name.endsWith(".json") && !name.startsWith(".git/") && !name.startsWith(".ai-org/")).sort();
 
-test("a solo owner completes a low task using only flags, without writing JSON", async t => {
+test("plain init creates builder and reviewer, and a low task completes using only flags, without writing JSON", async t => {
   const root = await repository(t);
-  const init = workkeel(root, "init", "--solo");
+  const init = workkeel(root, "init");
   assert.deepEqual(init.suggested_gitignore, [".workkeel/"]);
+  const policy = workkeel(root, "policy", "show");
+  assert.deepEqual(policy.agents, [{ agent_id: "builder", principal_id: "owner" }, { agent_id: "reviewer", principal_id: "owner" }]);
+  assert.deepEqual(policy.principals, ["owner"]); assert.deepEqual(policy.approvers, ["owner"]);
+  for (const removed of ["--solo", "--team"]) assert.match(fails(root, "init", removed), /Unknown, repeated or incomplete Workkeel option/);
+  assert.match(fails(root, "init", "--policy", "policy.json", "--principal", "maria"), /not supported/);
   await fs.writeFile(path.join(root, ".gitignore"), ".workkeel/\n");
   git(root, "add", "-A"); git(root, "commit", "-qm", "base");
   const created = workkeel(root, "task", "new", "--goal", "Clarify the guide", "--acceptance", "The guide names its audience", "--write", "docs", "--actor", "builder");
@@ -56,7 +66,7 @@ test("a solo owner completes a low task using only flags, without writing JSON",
 
 test("abbreviated --revision values resolve to the full commit; low work needs no evidence", async t => {
   const root = await repository(t);
-  workkeel(root, "init", "--solo");
+  workkeel(root, "init");
   await fs.writeFile(path.join(root, ".gitignore"), ".workkeel/\n");
   git(root, "add", "-A"); git(root, "commit", "-qm", "base");
   workkeel(root, "task", "new", "--goal", "Tidy the guide", "--acceptance", "The guide is tidy", "--write", "docs", "--actor", "builder");
@@ -73,7 +83,7 @@ test("abbreviated --revision values resolve to the full commit; low work needs n
 
 test("the local default actor, derived operation IDs and repeated-flag rejection", async t => {
   const root = await repository(t);
-  workkeel(root, "init", "--solo", "--principal", "maria");
+  workkeel(root, "init", "--principal", "maria");
   await fs.writeFile(path.join(root, ".gitignore"), ".workkeel/\n");
   git(root, "add", "-A"); git(root, "commit", "-qm", "base");
   const missing = spawnSync(process.execPath, [cli, "task", "new", "--goal", "G", "--acceptance", "A"], { cwd: root, encoding: "utf8" });
@@ -106,21 +116,16 @@ test("the short help lists only the everyday commands", async t => {
   }
 });
 
-const fails = (root, ...args) => {
-  const result = spawnSync(process.execPath, [cli, ...args], { cwd: root, encoding: "utf8" });
-  assert.notEqual(result.status, 0, args.join(" "));
-  return result.stdout + result.stderr;
-};
-async function solo(t, principal = "owner") {
+async function initialized(t, principal = "owner") {
   const root = await repository(t);
-  workkeel(root, "init", "--solo", "--principal", principal);
+  workkeel(root, "init", "--principal", principal);
   await fs.writeFile(path.join(root, ".gitignore"), ".workkeel/\n");
   git(root, "add", "-A"); git(root, "commit", "-qm", "base");
   return root;
 }
 
 test("retrying a flag command after it succeeded replays it instead of failing", async t => {
-  const root = await solo(t);
+  const root = await initialized(t);
   const args = ["task", "new", "--goal", "Clarify the guide", "--acceptance", "Audience named", "--write", "docs", "--actor", "builder"];
   assert.equal(workkeel(root, ...args).id, "WK-0001");
   const again = workkeel(root, ...args);
@@ -142,7 +147,7 @@ test("retrying a flag command after it succeeded replays it instead of failing",
 });
 
 test("long task IDs keep a bounded operation ID", async t => {
-  const root = await solo(t);
+  const root = await initialized(t);
   const id = "W" + "k".repeat(95);
   const created = workkeel(root, "task", "new", "--id", id, "--goal", "Long ID", "--acceptance", "Created", "--write", "docs", "--actor", "builder");
   assert.equal(created.id, id);
@@ -150,12 +155,12 @@ test("long task IDs keep a bounded operation ID", async t => {
 });
 
 test("critical work needs an approval record before it can start or escalate", async t => {
-  const root = await solo(t);
+  const root = await initialized(t);
   assert.match(fails(root, "task", "new", "--goal", "Ship", "--acceptance", "Shipped", "--risk", "critical", "--actor", "builder"), /approval_ref/);
   await fs.writeFile(path.join(root, "docs/approval.md"), "Approved critical deploy.\n"); git(root, "add", "docs"); git(root, "commit", "-qm", "approval");
   assert.equal(workkeel(root, "task", "new", "--goal", "Ship", "--acceptance", "Shipped", "--risk", "critical", "--approval", "docs/approval.md", "--actor", "builder").state, "intake");
 
-  const escalating = await solo(t);
+  const escalating = await initialized(t);
   const policy = workkeel(escalating, "policy", "show");
   await fs.mkdir(path.join(escalating, ".workkeel")); await fs.writeFile(path.join(escalating, ".workkeel/policy.json"), JSON.stringify({ ...policy, risk_paths: { critical: ["deploy/**"] } }));
   assert.equal(workkeel(escalating, "policy", "update", "--policy", ".workkeel/policy.json", "--actor", "builder").updated, true);
@@ -172,7 +177,7 @@ test("critical work needs an approval record before it can start or escalate", a
 });
 
 test("policy update needs an approving Principal, is idempotent and stops tasks approved under the old policy", async t => {
-  const root = await solo(t);
+  const root = await initialized(t);
   workkeel(root, "task", "new", "--goal", "Tidy", "--acceptance", "Tidy", "--write", "docs", "--actor", "builder");
   const team = { schema_version: "workkeel.task-policy/v1", principals: ["owner", "helper"],
     agents: [{ agent_id: "builder", principal_id: "owner" }, { agent_id: "reviewer", principal_id: "owner" }, { agent_id: "assistant", principal_id: "helper" }],
@@ -186,7 +191,7 @@ test("policy update needs an approving Principal, is idempotent and stops tasks 
 });
 
 test("a created task's command keeps replaying after the task moves on", async t => {
-  const root = await solo(t);
+  const root = await initialized(t);
   const args = ["task", "new", "--goal", "Clarify the guide", "--acceptance", "Audience named", "--write", "docs", "--actor", "builder"];
   assert.equal(workkeel(root, ...args).id, "WK-0001");
   workkeel(root, "task", "claim", "--id", "WK-0001", "--actor", "builder");
@@ -196,7 +201,7 @@ test("a created task's command keeps replaying after the task moves on", async t
 });
 
 test("a different failed command never disturbs the replay of an earlier successful one", async t => {
-  const root = await solo(t);
+  const root = await initialized(t);
   workkeel(root, "task", "new", "--goal", "Tidy", "--acceptance", "Tidy", "--write", "docs", "--actor", "builder");
   const claimA = ["task", "claim", "--id", "WK-0001", "--actor", "builder"];
   assert.equal(workkeel(root, ...claimA).replayed, false);
@@ -215,7 +220,7 @@ test("a different failed command never disturbs the replay of an earlier success
 });
 
 test("the order of repeated set-like flags does not create a second task", async t => {
-  const root = await solo(t);
+  const root = await initialized(t);
   await fs.mkdir(path.join(root, "src")); await fs.writeFile(path.join(root, "src/a.mjs"), "export {};\n");
   const first = workkeel(root, "task", "new", "--goal", "Two roots", "--acceptance", "Done", "--write", "docs", "--write", "src", "--actor", "builder");
   const swapped = workkeel(root, "task", "new", "--goal", "Two roots", "--acceptance", "Done", "--write", "src", "--write", "docs", "--actor", "builder");
@@ -231,7 +236,7 @@ const barrier = count => { let arrived = 0, open; const ready = new Promise(reso
   return async () => { arrived += 1; if (arrived === count) open(); await ready; }; };
 
 test("a command that read a stale task snapshot still replays the claim that succeeded", async t => {
-  const root = await solo(t);
+  const root = await initialized(t);
   workkeel(root, "task", "new", "--goal", "Tidy", "--acceptance", "Tidy", "--write", "docs", "--actor", "builder");
   workkeel(root, "task", "claim", "--id", "WK-0001", "--actor", "builder");
   // A reads v2 and pauses; meanwhile the task is released (v3) and claimed again by the same command (v4).
@@ -247,7 +252,7 @@ test("a command that read a stale task snapshot still replays the claim that suc
   assert.deepEqual(item.history.map(event => event.action), ["create", "claim", "release", "claim"]);
 
   // A snapshot taken before the first claim resends that claim instead of creating a failing one.
-  const fresh = await solo(t);
+  const fresh = await initialized(t);
   workkeel(fresh, "task", "new", "--goal", "Tidy", "--acceptance", "Tidy", "--write", "docs", "--actor", "builder");
   const replayed = await runLifecycleFromFlags(fresh, "WK-0001", "claim", claimOptions, { afterSnapshot: async () => {
     workkeel(fresh, "task", "claim", "--id", "WK-0001", "--actor", "builder");
@@ -258,7 +263,7 @@ test("a command that read a stale task snapshot still replays the claim that suc
 });
 
 test("identical commands forced to overlap both succeed with exactly one operation", async t => {
-  const root = await solo(t);
+  const root = await initialized(t);
   const createOptions = { "--goal": "Race", "--acceptance": ["One task"], "--write": ["docs"], "--actor": "builder" };
   const createGate = barrier(2);
   const created = await Promise.all([0, 1].map(() => runCreateFromFlags(root, createOptions, { beforeMutation: createGate })));
@@ -277,7 +282,7 @@ test("identical commands forced to overlap both succeed with exactly one operati
 });
 
 test("a retried command stops instead of moving to a new candidate or claim", async t => {
-  const root = await solo(t);
+  const root = await initialized(t);
   workkeel(root, "task", "new", "--goal", "Tidy", "--acceptance", "Tidy", "--write", "docs", "--actor", "builder");
   workkeel(root, "task", "claim", "--id", "WK-0001", "--actor", "builder");
   const deliver = async (line, note) => {
@@ -308,7 +313,7 @@ test("a retried command stops instead of moving to a new candidate or claim", as
   const afterReview = await readNativeTask(root, "WK-0001");
   assert.equal(afterReview.state, "test"); assert.equal(afterReview.review, null); assert.notEqual(afterReview.delivery.revision, candidateA);
 
-  const releasing = await solo(t);
+  const releasing = await initialized(t);
   workkeel(releasing, "task", "new", "--goal", "Tidy", "--acceptance", "Tidy", "--write", "docs", "--actor", "builder");
   const firstClaim = workkeel(releasing, "task", "claim", "--id", "WK-0001", "--actor", "builder").claim.id;
   const release = runLifecycleFromFlags(releasing, "WK-0001", "release", { "--id": "WK-0001", "--actor": "builder", "--summary": "Stop" }, {
@@ -404,7 +409,7 @@ const matrix = [
 ];
 for (const [action, state, retarget, kind] of matrix) {
   test(`target binding: ${action} stops when its target changes (${retarget}, ${kind} attempt)`, async t => {
-    const root = await solo(t);
+    const root = await initialized(t);
     await states[state](root);
     if (action === "handoff") { await fs.appendFile(path.join(root, "docs/guide.md"), "Work\n"); git(root, "commit", "-qam", "work");
       if (retarget === "newCommit") await record(root, `.ai-org/artifacts/${ID}/done.md`, "Done\n"); }
@@ -437,7 +442,7 @@ for (const [action, state, retarget, kind] of matrix) {
 }
 
 test("target binding: claim, cancel and create bind only the task", async t => {
-  const root = await solo(t);
+  const root = await initialized(t);
   await states.claimed(root);
   workkeel(root, "task", "release", "--id", ID, "--actor", B, "--summary", "Pause");
   // The same claim command later makes a fresh claim; its base revision is deliberately not bound.
@@ -448,7 +453,7 @@ test("target binding: claim, cancel and create bind only the task", async t => {
 });
 
 test("an attempt another process saved first is adopted only if it aims at the same target", async t => {
-  const root = await solo(t);
+  const root = await initialized(t);
   await states.delivered(root);
   const candidateA = (await readNativeTask(root, ID)).delivery.revision;
   const review = runLifecycleFromFlags(root, ID, "review", commands.review, { beforeSave: async (dir, number, key) => {
@@ -468,7 +473,7 @@ test("an attempt another process saved first is adopted only if it aims at the s
 });
 
 test("rework honours an explicit --revision only when it names the failed candidate", async t => {
-  const root = await solo(t);
+  const root = await initialized(t);
   await states.failed(root);
   const failed = (await readNativeTask(root, ID)).delivery.revision;
   assert.match(fails(root, "task", "rework", "--id", ID, "--actor", B, "--summary", "Fix", "--revision", "0".repeat(40)), /current revision/);
@@ -479,7 +484,7 @@ test("rework honours an explicit --revision only when it names the failed candid
 });
 
 test("a request left pending for an old candidate is never resent to a newer one", async t => {
-  const root = await solo(t);
+  const root = await initialized(t);
   await states.failed(root);
   const candidateA = (await readNativeTask(root, ID)).delivery.revision, version = (await readNativeTask(root, ID)).version;
   const options = { "--id": ID, "--actor": B, "--summary": "Address A", "--revision": candidateA };

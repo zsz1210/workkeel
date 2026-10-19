@@ -22,7 +22,6 @@ export const REQUIRED_PACKAGE_PATHS = [
   "docs/operations/workkeel-native-dispatch.md",
   "docs/adr/0081-native-dispatch-and-reading-state.md",
   "src/workkeel-observer-index.mjs",
-  "project-overlay/workkeel-skills/workkeel-init/SKILL.md",
   "project-overlay/workkeel-skills/workkeel-work/SKILL.md",
   "src/workkeel-monitor-time.mjs",
   "src/workkeel-monitor-data.mjs",

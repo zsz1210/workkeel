@@ -4,28 +4,23 @@ The public repository is a framework distribution and source repository. Keep
 the process of building it in a separate private workspace. This rule also applies
 to ignored files: a clean public checkout is not a place to store real tasks.
 
-## What belongs where
-
 | Public framework source | Private development workspace |
 | --- | --- |
 | Runtime and CLI source | Actual tasks, assignments, plans and approvals |
 | Public usage, architecture and contribution documentation | Conversations, prompts, dispatch and host records |
-| Generic project templates and fictional examples | Experiment captures, measurements and real project data |
+| Fictional examples | Experiment captures, measurements and real project data |
 | Reproducible product tests and synthetic fixtures | Raw test output, screenshots, review and acceptance evidence |
 | Concise product-facing PR and release descriptions | Workkeel task state, local policy, machine settings and backups |
 
-The nested `project-overlay/.ai-org/` files are generic installation templates.
-They are not the maintainer's `.ai-org/` task store. Create public examples from
-fictional inputs; removing names from a real record is not sufficient review.
+Create public examples from fictional inputs; removing names from a real record
+is not sufficient review.
 
-## Two working locations, one source history
+## Set up the private workspace
 
 Keep the public source checkout and private workspace in separate directories,
-not nested in one another. The private workspace can contain a working copy of
-the public framework so native Workkeel can validate its exact Git candidate.
-It has no public push destination. It is not a second framework implementation.
-
-For a new private workspace, choose actual locations before running:
+not nested in one another. The private workspace holds a working copy of the
+public framework so native Workkeel can validate its exact Git candidate. It has
+no public push destination and is not a second framework implementation.
 
 ```sh
 WORKKEEL_SOURCE=/path/to/workkeel
@@ -34,6 +29,8 @@ git clone --no-hardlinks "$WORKKEEL_SOURCE" "$WORKKEEL_WORKSPACE"
 git -C "$WORKKEEL_WORKSPACE" remote set-url --push origin DISABLED
 cd "$WORKKEEL_WORKSPACE"
 npm ci --ignore-scripts
+node bin/workkeel.mjs init .
+node bin/workkeel.mjs doctor .
 ```
 
 The fetch remote is the local public checkout. Do not change this private
@@ -42,22 +39,18 @@ records and evidence uncommitted, even here; preserve them in a separate private
 backup. Never push this workspace wholesale to either public or private remotes.
 Backups preserve state separately from the framework's source history.
 
-Read [AGENTS.md](../../AGENTS.md), then review identities and approval policy
-using the [native setup guide](../getting-started/workkeel.md). Save the approved
-policy as `.workkeel-private/policy.json` **inside the private workspace**. With
-that file prepared and reviewed:
+`init .` registers the `builder` and `reviewer` Agents described in the
+[native setup guide](../getting-started/workkeel.md). To use a different reviewed
+policy instead, save it as `.workkeel-private/policy.json` **inside the private
+workspace** and run `node bin/workkeel.mjs init . --policy .workkeel-private/policy.json`.
 
-```sh
-node bin/workkeel.mjs init . --policy .workkeel-private/policy.json
-node bin/workkeel.mjs doctor .
-```
-
-Read the generated `WORKKEEL.md`. Use the pinned source CLI and
-[daily lifecycle](workkeel-daily-work.md) there: approved brief, claim, implementation,
-exact-candidate checks, actual different-Agent review and authorized acceptance.
-Store lifecycle requests and evidence under private `.ai-org/` paths. Do not
-follow generic product examples that place real work orders in public `docs/`.
-The public checkout needs no initialization for source inspection or product tests.
+Read [AGENTS.md](../../AGENTS.md) and the generated `WORKKEEL.md`. Use the pinned
+source CLI and [daily lifecycle](workkeel-daily-work.md) there: approved brief,
+claim, implementation, exact-candidate checks, actual different-Agent review and
+authorized acceptance. Store lifecycle requests and evidence under private
+`.ai-org/` paths. Do not follow generic product examples that place real work
+orders in public `docs/`. The public checkout needs no initialization for source
+inspection or product tests.
 
 For an existing initialized checkout, stop its writers, copy state and referenced
 evidence to the private workspace, verify file digests and native Doctor there,
@@ -87,9 +80,9 @@ in the private workspace too: ignored state is not committed state.
 To transfer an approved source candidate without copying its working directory:
 
 ```sh
-# Set CANDIDATE to the full reviewed commit ID and choose an unused branch name.
+# Set CANDIDATE to the full reviewed commit ID and choose an unused workkeel/* branch name.
 git -C "$WORKKEEL_SOURCE" fetch --no-tags "$WORKKEEL_WORKSPACE" "$CANDIDATE"
-git -C "$WORKKEEL_SOURCE" switch -c codex/reviewed-change FETCH_HEAD
+git -C "$WORKKEEL_SOURCE" switch -c workkeel/reviewed-change FETCH_HEAD
 cd "$WORKKEEL_SOURCE"
 npm run setup:hooks
 npm run check:source-checkout
@@ -99,14 +92,19 @@ npm run check:public-history
 
 Confirm the public checkout's HEAD equals the reviewed candidate. Do not copy
 `.ai-org/`, `WORKKEEL.md`, launchers, policies, output or backups across. If source
-integration changes the candidate, verify and review the new candidate. Push only
-within the authorized scope and use a PR with the required CI checks. Keep a short
-check summary in the PR and full evidence privately. Run `check:source-checkout`
-again after local verification to detect newly created data paths.
+integration changes the candidate, verify and review the new candidate. Run
+`check:source-checkout` again after local verification to detect newly created
+data paths.
+
+Push only within the authorized scope. The pre-push hook installed by
+`npm run setup:hooks` refuses every push except to `workkeel/*` branches, so
+`main` changes only through a PR. It also reruns `check:source-checkout` and the
+history check over every outgoing commit. CI runs `npm run verify` and the
+publication checks on each PR; keep a short check summary in the PR and full
+evidence privately.
 
 `check:source-checkout` is deliberately for the public checkout and will reject
 an initialized private workspace. It recursively checks known private path names
-while skipping Git metadata and root dependencies; generic templates require exact
-manifest entries. It cannot prove that all arbitrary prose is public.
-The [publication guard](publication-boundary.md), file
+while skipping Git metadata and root dependencies. It cannot prove that all
+arbitrary prose is public. The [publication guard](publication-boundary.md), file
 review and private backup are separate controls.

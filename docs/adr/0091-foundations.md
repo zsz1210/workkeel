@@ -86,9 +86,10 @@ Two older rules point the same way and remain in force (ADR-0011, ADR-0048):
   workflows keep least-privilege permissions.
 - Ordinary hosted CI is one bounded job on Node.js 24 that cancels superseded
   runs. It installs locked dependencies without lifecycle scripts and runs the
-  repository, documentation-link and package checks, the clean-clone entrypoint
-  and publication-boundary checks, and the fast contract suite. It does not run
-  the full suite or browser verification.
+  clean-clone entrypoint and publication-boundary checks and `npm run verify`
+  (repository, documentation-link and package checks plus the full contract
+  suite). It does not run browser verification. The pre-push hook refuses every
+  push except to `workkeel/*` branches.
 - Complete verification stays local. A behavioral candidate passes
   `npm run verify`; a user-interface candidate also passes
   `npm run test:browser`. Prose-only changes use `npm run verify:fast`. Hosted
@@ -180,7 +181,7 @@ installs a login service.
   High-Assurance profiles, federation, tracker coordination) are not supported
   and must not be cited as current behavior.
 - Risk tiers for native tasks are described in the
-  [team adoption and risk tier guide](../operations/team-adoption-and-risk.md),
+  [adoption and risk tier guide](../operations/team-adoption-and-risk.md),
   not by the removed High-Assurance records.
 
 ## Rejected alternatives

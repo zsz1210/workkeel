@@ -49,10 +49,10 @@ cd workkeel && npm ci --omit=optional --ignore-scripts
 alias workkeel="node $PWD/bin/workkeel.mjs"
 ```
 
-In your project, one owner with a `builder` and a `reviewer` Agent:
+In your project, `init` creates one owner with a `builder` and a `reviewer` Agent:
 
 ```sh
-workkeel init . --solo
+workkeel init .
 echo ".workkeel/" >> .gitignore && git add -A && git commit -m "Start Workkeel"
 workkeel task new --goal "Clarify the guide" --acceptance "The guide names its audience" --write docs --actor builder
 workkeel task claim --id WK-0001 --actor builder
@@ -64,10 +64,10 @@ workkeel task close --id WK-0001 --actor builder --summary Accepted --rollback "
 
 `workkeel start .` previews setup without writing anything, and
 `workkeel help advanced` lists the request-file forms and the optional subsystems. The
-[quick start guide](docs/getting-started/workkeel.md) covers team policies,
-request files and rollback.
+[quick start guide](docs/getting-started/workkeel.md) covers custom policies
+(`init --policy`), request files and rollback.
 
-## Risk tiers and teams
+## Risk tiers
 
 | Tier | Typical use | Before close |
 | --- | --- | --- |
@@ -76,10 +76,10 @@ request files and rollback.
 | `high` | Authentication, migrations, sensitive data | Reviewer from another model family with its own review report; no open issues; the approving Principal closes |
 | `critical` | Deployment, CI, production configuration | Everything in `high`, plus a rollback plan and a committed approval record |
 
-A project with more than one Principal is a team: high-risk approval, review and
-close then also require a different person from the implementer. Read
-[team adoption and risk tiers](docs/operations/team-adoption-and-risk.md) before
-rolling Workkeel out to a team.
+High-risk work is the same for one person or many: a reviewer from another
+model family, then confirmation by a person, the approving Principal. Read
+[adoption and risk tiers](docs/operations/team-adoption-and-risk.md) before
+rolling Workkeel out.
 
 ## Published Beta.1
 

@@ -43,10 +43,10 @@ cd workkeel && npm ci --omit=optional --ignore-scripts
 alias workkeel="node $PWD/bin/workkeel.mjs"
 ```
 
-在你的專案裡，用一位負責人加上 `builder` 和 `reviewer` 兩個 Agent：
+在你的專案裡，`init` 會建立一位負責人加上 `builder` 和 `reviewer` 兩個 Agent：
 
 ```sh
-workkeel init . --solo
+workkeel init .
 echo ".workkeel/" >> .gitignore && git add -A && git commit -m "Start Workkeel"
 workkeel task new --goal "Clarify the guide" --acceptance "The guide names its audience" --write docs --actor builder
 workkeel task claim --id WK-0001 --actor builder
@@ -57,9 +57,9 @@ workkeel task close --id WK-0001 --actor builder --summary Accepted --rollback "
 ```
 
 `workkeel start .` 只預覽設定步驟，不會寫入任何檔案；`workkeel help advanced` 會列出 request 檔案形式和選用子系統。
-團隊政策、request 檔案和回復方式請看[快速開始指南](docs/getting-started/workkeel.md)。
+自訂政策（`init --policy`）、request 檔案和回復方式請看[快速開始指南](docs/getting-started/workkeel.md)。
 
-## 風險等級與團隊
+## 風險等級
 
 | 等級 | 常見用途 | 驗收前需要 |
 | --- | --- | --- |
@@ -68,8 +68,8 @@ workkeel task close --id WK-0001 --actor builder --summary Accepted --rollback "
 | `high` | 認證、資料遷移、敏感資料 | 審查者來自另一個模型系列，並附上自己的審查報告；不能留有未解決問題；由核准的 Principal 驗收 |
 | `critical` | 部署、CI、正式環境設定 | `high` 的全部要求，再加上回復計畫和已 commit 的核准紀錄 |
 
-專案登記超過一位 Principal 就算團隊。這時 high 以上的核准、審查和驗收，都必須由實作者以外的人負責。
-要在團隊導入 Workkeel 之前，請先讀[團隊導入與風險分級](docs/operations/team-adoption-and-risk.md)。
+high 以上的工作不分一個人或多人，規則都一樣：由另一個模型系列的審查者審查，再由核准的 Principal 本人確認。
+導入 Workkeel 之前，請先讀[導入與風險分級](docs/operations/team-adoption-and-risk.md)。
 
 ## 已發布的 Beta.1
 

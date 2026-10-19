@@ -44,10 +44,10 @@ cd workkeel && npm ci --omit=optional --ignore-scripts
 alias workkeel="node $PWD/bin/workkeel.mjs"
 ```
 
-プロジェクトでは、1 人の責任者と `builder`、`reviewer` の 2 つの Agent で始めます。
+プロジェクトでは、`init` が 1 人の責任者と `builder`、`reviewer` の 2 つの Agent を作成します。
 
 ```sh
-workkeel init . --solo
+workkeel init .
 echo ".workkeel/" >> .gitignore && git add -A && git commit -m "Start Workkeel"
 workkeel task new --goal "Clarify the guide" --acceptance "The guide names its audience" --write docs --actor builder
 workkeel task claim --id WK-0001 --actor builder
@@ -58,9 +58,9 @@ workkeel task close --id WK-0001 --actor builder --summary Accepted --rollback "
 ```
 
 `workkeel start .` は何も書き込まずに設定手順をプレビューし、`workkeel help advanced` はリクエストファイル形式と任意のサブシステムを表示します。
-チームのポリシー、リクエストファイル、ロールバックは[クイックスタートガイド](docs/getting-started/workkeel.md)を参照してください。
+独自のポリシー（`init --policy`）、リクエストファイル、ロールバックは[クイックスタートガイド](docs/getting-started/workkeel.md)を参照してください。
 
-## リスクランクとチーム
+## リスクランク
 
 | ランク | 主な用途 | 受け入れ前に必要なもの |
 | --- | --- | --- |
@@ -69,9 +69,8 @@ workkeel task close --id WK-0001 --actor builder --summary Accepted --rollback "
 | `high` | 認証、データ移行、機密データ | 別のモデル系列のレビュアーと、その人自身のレビュー報告。未解決の問題は残せない。承認した Principal が受け入れる |
 | `critical` | デプロイ、CI、本番設定 | `high` のすべてに加えて、ロールバック計画とコミット済みの承認記録 |
 
-Principal を 2 人以上登録したプロジェクトはチームとして扱われます。その場合、high 以上の承認、レビュー、受け入れは
-実装者とは別の人が行う必要があります。チームに導入する前に
-[チーム導入とリスクランク](docs/operations/team-adoption-and-risk.md)を読んでください。
+high 以上の作業は、1 人でも複数人でも同じです。別のモデル系列のレビュアーが確認し、そのあと承認した Principal が人として確定します。
+導入する前に[導入とリスクランク](docs/operations/team-adoption-and-risk.md)を読んでください。
 
 ## 公開済みの Beta.1
 
