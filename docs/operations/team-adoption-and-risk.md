@@ -120,7 +120,9 @@ the manual lifecycle.
    `WORKKEEL.md` and `.ai-org/`, and ignore `.workkeel/`.
 2. **Mark the dangerous paths.** List deployment, CI, migrations, authentication
    and secret-handling paths under `high` or `critical`. Anything not listed
-   defaults to `standard`, which is the safe direction.
+   defaults to `standard`, except files under `docs/` and Markdown files, which
+   default to `low` wherever they are. List a documentation path under a higher
+   tier when its review must be stricter.
 3. **Pilot on low and standard work.** Run a few documentation and ordinary
    tasks to learn the claim, handoff, review and close steps before relying on
    the high-risk path.
