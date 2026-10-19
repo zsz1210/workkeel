@@ -12,6 +12,71 @@ dimensions and converts explicit retained attempts into this assessor's input.
 It separately attributes criterion statements to a current pinned distinct review;
 it does not change this assessor's authority or establish semantic coverage.
 
+## Independent QA and release gate
+
+This review procedure supplements the [risk tiers](team-adoption-and-risk.md#what-each-tier-requires).
+It specifies human/Agent judgment, not new CLI enforcement or assessor fields.
+Required checks, exact-candidate review and authorized close remain mandatory;
+passing QA does not authorize publication or deployment.
+
+### Finding disposition
+
+The lead merges duplicate findings and assigns every finding exactly one
+disposition, retaining its source model(s), evidence and a one-line rationale:
+
+| Disposition | Meaning |
+| --- | --- |
+| Must fix | Demonstrated defect that blocks this candidate under its risk tier |
+| Consider | Valid suggestion whose benefit may not justify the cost now |
+| Note | Known issue or follow-up outside the current fix scope |
+| Dismiss | Unsupported, incorrect or preference-only claim, with a reason |
+
+Dismiss nitpick padding when adversarial review finds no substantial issue;
+speculative null/edge concerns without a reachable execution path; premature
+abstraction without a concrete need; and "I would write it differently" without
+a demonstrated problem. An empty review is valid. Scrutinize concrete security
+and correctness evidence even when only one reviewer raises it.
+
+Apply the tier before deciding what blocks:
+
+- **Low:** only P1 defects and P2 defects affecting normal use may be **must fix**;
+  at most two reworks.
+- **Standard:** at most three reworks; P3 never triggers rework.
+- **Low and standard:** concurrency-only edge cases go to **note** as known issues
+  with a follow-up task. Escalate the tier first if the evidence shows high or
+  critical risk. A tighter approved goal/autonomy repair budget still applies.
+- **High and critical:** retain strict unresolved-issue, evidence, model-family
+  and human-close requirements. Do not use **consider** or **note** to hide an unresolved
+  defect: high review cannot pass with unresolved issues; critical handoff refuses
+  them. The low/standard exceptions do not apply.
+
+The gate passes only when the **must fix** set is empty and all existing tier and
+verification requirements pass. At a rework limit, stop for an authorized
+scope/budget decision; do not waive an outstanding blocker. Preserve failed-candidate
+reviews.
+
+### Cross-review
+
+Cross-review is mandatory for high/critical and optional below. Give Codex and
+Claude the same prompt, intent, exact candidate, relevant source/context and
+rubric. Each reviews read-only in a separate thread, independently and without
+seeing the other's findings before submission. Both reviewers must be distinct
+from the implementer; existing Principal separation still applies.
+
+Review **correctness** (does it meet the intent on a demonstrated path), **root
+cause** (does the fix address the cause rather than mask a symptom), and
+**structure** (does it fit the system without unnecessary complexity). Tag each
+finding with its actual source model. The lead's agreement/disagreement map records
+shared findings, Codex-only findings, Claude-only findings and explicit conflicts;
+silence is not disagreement. Down-weight single-model findings: assigning one to
+**must fix** requires the lead's explicit evidence-based justification under the risk tier.
+Agreement is a signal, not a substitute for evidence. Retain both reviews and the
+lead's dispositions with the exact candidate in the private review evidence.
+
+The disposition and cross-review guidance adapts pstack's `interrogate` Skill,
+MIT License, Copyright (c) 2026 Lauren Tan; see the
+[source and retained license](../../THIRD_PARTY_NOTICES.md#pstack-review-guidance).
+
 ## Start with the repository facts
 
 In an initialized native project with a claimed or delivered task:

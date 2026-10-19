@@ -113,6 +113,11 @@ a known issue, not a blocker. Past the rework limit, `rework` is refused and the
 work stops until a person re-scopes it, approves a new task or cancels it. A goal's
 `max_reworks` is clamped to the same limit for each component's risk.
 
+The [independent QA and release gate](workkeel-review-assessment.md#independent-qa-and-release-gate)
+specifies finding dispositions, bounded rework and mandatory Codex/Claude
+cross-review for high/critical work. These are review procedure requirements;
+the CLI's recorded model-family check does not establish that both reviews ran.
+
 ## Review scores (optional)
 
 A reviewer may add a `score` block to its own `workkeel.review-report/v1` file.
