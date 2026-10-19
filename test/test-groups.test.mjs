@@ -4,14 +4,17 @@ import os from "node:os";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
 import test from "node:test";
-import { testInventory, groupFor, fastFiles, dailyFiles, selectChangedTests, changedPaths, selectionOptions } from "../scripts/test-groups.mjs";
+import { testInventory, groupFor, fastFiles, dailyFiles, optionalFiles, selectChangedTests, changedPaths, selectionOptions } from "../scripts/test-groups.mjs";
 
 test("every discovered test belongs to exactly one group; new tests default to core", async () => {
   const inventory = await testInventory();
   assert.ok(inventory.length > 0);
   assert.equal(new Set(inventory).size, inventory.length);
-  assert.ok(inventory.every((file) => groupFor(file) === "core"));
+  assert.ok(inventory.every((file) => ["core", "optional"].includes(groupFor(file))));
   assert.equal(groupFor("test/new.test.mjs"), "core");
+  assert.ok(optionalFiles.every((file) => inventory.includes(file) && groupFor(file) === "optional"));
+  // Fast and daily runs, including the lifecycle end-to-end tests, stay core.
+  assert.ok(dailyFiles.every((file) => groupFor(file) === "core"));
   assert.ok(fastFiles.every((file) => inventory.includes(file)));
   assert.ok(dailyFiles.every((file) => inventory.includes(file)));
   assert.ok(fastFiles.every((file) => dailyFiles.includes(file)));

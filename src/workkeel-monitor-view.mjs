@@ -13,21 +13,6 @@ export function formatCount(metric) {
   return 'Unknown';
 }
 
-function isValidCost(value) {
-  return typeof value === 'number' && Number.isFinite(value) && value >= 0 && value < 1e12;
-}
-
-function formatDollar(value) {
-  return `$${value.toFixed(4)}`;
-}
-
-export function formatCost(metric) {
-  if (metric == null) return 'Unknown';
-  if (metric.complete === true && isValidCost(metric.total)) return formatDollar(metric.total);
-  if (isValidCost(metric.known_subtotal)) return `>= ${formatDollar(metric.known_subtotal)} (partial)`;
-  return 'Unknown';
-}
-
 export function formatDuration(ms) {
   if (typeof ms !== 'number' || !Number.isFinite(ms) || ms < 0 || ms > Number.MAX_SAFE_INTEGER) {
     return 'Unknown';
@@ -44,7 +29,6 @@ const additionalLabels = {review:'審查',created:'已建立',failed:'執行失�
 export const label = value => Object.hasOwn(additionalLabels,value)?additionalLabels[value]:Object.hasOwn(labels,value)?labels[value]:value??'未知';
 export const durationZh = ms => formatDuration(ms).replace('Unknown','未知').replace(' min ',' 分 ').replace(/ s$/, ' 秒');
 export const countZh = metric => formatCount(metric).replace('Unknown','未知').replace('(partial)','（部分紀錄）');
-export const costZh = metric => formatCost(metric).replace('Unknown','未知').replace('(partial)','（部分紀錄）');
 const actions = {
   'timing-unavailable':'無法確認完整耗時，請檢查事件時間或重新讀取。部分紀錄不能代表總耗時。',
   'approval-expired':'授權已過期：請透過新任務取得有效核准，再繼續執行。',

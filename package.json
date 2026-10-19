@@ -53,6 +53,7 @@
     "test:browser": "node scripts/verify-workkeel-monitor.mjs",
     "test:fast": "node scripts/test-groups.mjs fast",
     "test:core": "node scripts/test-groups.mjs core",
+    "test:optional": "node scripts/test-groups.mjs optional",
     "test:daily": "node scripts/test-groups.mjs daily",
     "test:changed": "node scripts/test-groups.mjs changed",
     "verify:changed": "npm run check && node scripts/test-groups.mjs changed",

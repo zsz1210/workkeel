@@ -63,7 +63,7 @@ workkeel task close --id WK-0001 --actor builder --summary Accepted --rollback "
 ```
 
 `workkeel start .` previews setup without writing anything, and
-`workkeel help advanced` lists every command. The
+`workkeel help advanced` lists the request-file forms and the optional subsystems. The
 [quick start guide](docs/getting-started/workkeel.md) covers team policies,
 request files and rollback.
 
@@ -90,6 +90,10 @@ evaluate that earlier release; see its [release notes](CHANGELOG.md#010-beta1).
 
 ## Optional components
 
+Everything except task coordination is optional. The short `workkeel help` leaves
+these subsystems out; `workkeel help advanced` lists them. They stay available and
+tested, and any that nobody uses may be removed in a later release.
+
 | Component | Default | Boundary |
 | --- | --- | --- |
 | Task coordination | Core | Contracts, claims, handoffs, review and acceptance; no server |
@@ -99,6 +103,7 @@ evaluate that earlier release; see its [release notes](CHANGELOG.md#010-beta1).
 | Native dispatch and model routing | Opt-in | Records the requested model and reason; the host reports what actually ran |
 | Headroom tool-output views | Off | Lossy views only on request; originals stay readable |
 | Learning and Skill versions | Optional records | Approval does not create or activate a Skill |
+| Host usage records and retention archives | Optional records | The host reports usage; archiving runs only on request |
 | Desktop workspace, whole goals, bounded autonomy | Experimental | Source CLI only; automatic work is limited to `low` and `standard` tasks |
 
 [Observer](docs/operations/workkeel-observer.md) ·

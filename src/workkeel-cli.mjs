@@ -16,14 +16,14 @@ workkeel task new [target] --goal text --acceptance text [--write path]
 workkeel task claim|handoff|review|close [target] --id task-id --actor id [--summary text] [--evidence path] [--judgment pass|fail] [--rollback text]
 workkeel status|doctor [target]
 workkeel upgrade [target] [--actor id]      move the project pin to this CLI
-workkeel monitor [target]
-workkeel help advanced                      every command, including request-file forms
+workkeel help advanced                      request-file forms and optional subsystems
 
 Commands print JSON. A different Agent reviews; an approving Principal closes.
 See docs/getting-started/workkeel.md.
 `;
 const ADVANCED_HELP = `Workkeel — repository-native task coordination for coding agents
 
+Core lifecycle, every form:
 workkeel start [target] [--request brief.json]
 workkeel init [target] --solo [--principal id] | --team --policy repository-policy.json
 workkeel policy show [target] | policy update [target] --policy repository-policy.json [--actor id]
@@ -32,51 +32,53 @@ workkeel upgrade [target] [--actor id]
 workkeel task new [target] --goal text --acceptance text [--acceptance text] [--write path] [--read path] [--risk tier] [--approval path] [--id id] [--actor id]
 workkeel task create [target] --source contract.json --request request.json
 workkeel task show [target] --id task-id
-workkeel task assess [target] --id task-id [--request assessment.json]
-workkeel task evidence-check [target] --id task-id --request completion-evidence.json
-workkeel task metrics [target] --id task-id
-workkeel task summary [target] --id task-id
-workkeel task observe [target] --id task-id --request observation.json
-workkeel usage bind|report|activity|close [target] --request usage-request.json
-workkeel usage collect [target] --id binding-id
-workkeel dispatch prepare|plan|bind [target] --request dispatch-request.json
-workkeel dispatch show [target] --id execution-id
-workkeel intake preview [target] --request brief.json
-workkeel intake apply [target] --request brief.json --fingerprint sha256
 workkeel task claim|release|handoff|review|rework|close|cancel [target] --id task-id [--actor id] [--summary text] [--evidence path] [--judgment pass|fail] [--revision sha] [--rollback text] [--expect version]
 workkeel task <operation> [target] --id task-id --request request.json   (integration form)
+workkeel intake preview [target] --request brief.json
+workkeel intake apply [target] --request brief.json --fingerprint sha256
+workkeel instructions preview|apply [target] [--fingerprint sha256]
+
+Read-only checks and reports:
+workkeel task assess [target] --id task-id [--request assessment.json]
+workkeel task evidence-check [target] --id task-id --request completion-evidence.json
+workkeel task metrics|summary [target] --id task-id
+workkeel task observe [target] --id task-id --request observation.json
 workkeel runtime plan [target] --id task-id
 workkeel context prepare [target] --id task-id --request material-request.json
-workkeel instructions preview|apply [target] [--fingerprint sha256]
-workkeel workflow plan [target] --request workflow-request.json
-workkeel workflow run [target] --request workflow-run.json
-workkeel workflow continuation-plan|continue [target] --request continuation.json
-workkeel workflow show [target] --id run-id
-workkeel workflow metrics [target] --id run-id
-workkeel workflow cancel|recover-lock [target] --id run-id --request actor.json
-workkeel headroom view|read [target] --request tool-view-request.json
 workkeel skills audit [target] --request skill-use.json
-workkeel learning list [target]
-workkeel learning capture|review|use|search|impact [target] --request learning-request.json
+
+Optional subsystems. The core lifecycle never needs them; each one is off until used:
+workkeel monitor [target]                                   local read-only observer
+workkeel workspace create|register|remove|integration [private state directory] --request request.json
+workkeel workspace show|serve [private state directory]
+workkeel workflow plan|run [target] --request workflow-request.json
+workkeel workflow continuation-plan|continue [target] --request continuation.json
+workkeel workflow show|metrics [target] --id run-id
+workkeel workflow cancel|recover-lock [target] --id run-id --request actor.json
+workkeel dispatch prepare|plan|bind [target] --request dispatch-request.json
+workkeel dispatch show [target] --id execution-id
+workkeel usage bind|report|activity|close [target] --request usage-request.json
+workkeel usage collect [target] --id binding-id
 workkeel model-policy show [target] --id policy-id
 workkeel model-policy draft|approve|preview [target] --request policy-request.json
+workkeel headroom view|read [target] --request tool-view-request.json
+workkeel learning list [target]
+workkeel learning capture|review|use|search|impact [target] --request learning-request.json
 workkeel skill-lifecycle list [target]
 workkeel skill-lifecycle candidate|evaluate|review|approve|policy|activate|suspend|rollback|revalidate|use|retrospective [target] --request request.json
-workkeel autonomy show [target]
-workkeel autonomy policy|enqueue|pause|resume|cancel|event|discover|resume-job [target] --request request.json
-workkeel autonomy tick|serve [target]
 workkeel goal list [target]
 workkeel goal show|tick|serve [target] --id goal-id
 workkeel goal create|pause|resume|cancel|recover|extend-admission [target] --request request.json
+workkeel autonomy show [target]
+workkeel autonomy policy|enqueue|pause|resume|cancel|event|discover|resume-job [target] --request request.json
+workkeel autonomy tick|serve [target]
 workkeel retention inventory|preview|archive|verify|usage [target] --request request.json
-workkeel workspace create|register|remove|integration [private state directory] --request request.json
-workkeel workspace show|serve [private state directory]
 
 All task commands return JSON. Lifecycle mutation requests contain operation_id,
 expected_version and actor; workflow requests use a stable run_id and active claim.
 A CLI with the pinned major version and not older than the pin is compatible.
 Otherwise reads warn on stderr and mutations stop until workkeel upgrade.
-See docs/getting-started/workkeel.md and docs/operations/workkeel-workflows.md.
+See docs/getting-started/workkeel.md and docs/README.md for the optional subsystems.
 Native host execution is the default. Runtime plans do not launch models or grant
 permissions. Workflow run explicitly launches the qualified Codex subscription host.
 `;

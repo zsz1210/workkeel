@@ -56,7 +56,7 @@ workkeel task review --id WK-0001 --actor reviewer --judgment pass --summary "Me
 workkeel task close --id WK-0001 --actor builder --summary Accepted --rollback "Revert the guide commit" --evidence .ai-org/artifacts/WK-0001/review.md
 ```
 
-`workkeel start .` 只預覽設定步驟，不會寫入任何檔案；`workkeel help advanced` 會列出所有指令。
+`workkeel start .` 只預覽設定步驟，不會寫入任何檔案；`workkeel help advanced` 會列出 request 檔案形式和選用子系統。
 團隊政策、request 檔案和回復方式請看[快速開始指南](docs/getting-started/workkeel.md)。
 
 ## 風險等級與團隊
@@ -79,6 +79,9 @@ npm `next` 通道上的 `@zsz1210/workkeel@0.1.0-beta.1` 是較早的版本，
 
 ## 選用元件
 
+除了任務協作，其他元件都是選用的。簡短的 `workkeel help` 不列出這些子系統，
+`workkeel help advanced` 才會列出。它們仍然可以使用，也都有測試；沒有人使用的部分，之後的版本可能會移除。
+
 | 元件 | 預設 | 範圍 |
 | --- | --- | --- |
 | 任務協作 | 核心 | 任務契約、認領、交接、審查與驗收；不需要伺服器 |
@@ -88,6 +91,7 @@ npm `next` 通道上的 `@zsz1210/workkeel@0.1.0-beta.1` 是較早的版本，
 | 原生派工與模型選擇 | 需要明確啟用 | 記錄要求的模型和理由；實際執行的模型由工具回報 |
 | Headroom 工具輸出檢視 | 關閉 | 只在要求時提供有損壓縮的檢視；原始內容仍可讀取 |
 | 學習紀錄與 Skill 版本 | 選用紀錄 | 核准不會自動建立或啟用 Skill |
+| 工具用量紀錄與保存封存 | 選用紀錄 | 用量由工具回報；封存只在要求時執行 |
 | 桌面工作區、整體目標、有限自主執行 | 實驗性 | 只能透過原始碼 CLI 使用；自動執行只限 `low` 和 `standard` 任務 |
 
 [觀察站](docs/operations/workkeel-observer.md) ·

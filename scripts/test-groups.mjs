@@ -13,9 +13,21 @@ export const dailyFiles = [...new Set([...fastFiles, ...[
   "workkeel-delivery-request", "workkeel-lifecycle", "workkeel-lock", "workkeel-review-recovery", "workkeel-risk-tiers"
 ].map((name) => `test/${name}.test.mjs`)])].sort();
 
-// Every product test is core; the group remains for changed-file selection.
-export function groupFor() {
-  return "core";
+// Tests of the optional subsystems listed by `workkeel help advanced`. The core
+// lifecycle never needs them; the full suite still runs them.
+export const optionalFiles = [
+  "headroom-adapter", "headroom-preservation", "workkeel-autonomy", "workkeel-background-collector", "workkeel-capture-observer",
+  "workkeel-desktop-product", "workkeel-dispatch", "workkeel-dispatch-classifier", "workkeel-dispatch-history",
+  "workkeel-execution-capture", "workkeel-execution-visuals", "workkeel-flow-browser", "workkeel-goal-runtime", "workkeel-goals",
+  "workkeel-host-observer", "workkeel-host-usage", "workkeel-improvement-cycle", "workkeel-learning", "workkeel-learning-lifecycle",
+  "workkeel-learning-observer", "workkeel-model-policy", "workkeel-model-routing", "workkeel-monitor", "workkeel-monitor-analytics",
+  "workkeel-monitor-catalogue", "workkeel-monitor-time", "workkeel-observer", "workkeel-observer-index", "workkeel-retention",
+  "workkeel-tailnet", "workkeel-usage-scope", "workkeel-workflows", "workkeel-workspace", "workkeel-workspace-hooks"
+].map((name) => `test/${name}.test.mjs`);
+
+// New tests default to core; the group also drives changed-file selection.
+export function groupFor(file) {
+  return optionalFiles.includes(file) ? "optional" : "core";
 }
 
 export async function testInventory(target = root) {
@@ -72,7 +84,7 @@ async function main(args) {
   if (group === "changed") {
     try { parsed = selectionOptions(group, options); selection = selectChangedTests(changedPaths(root, parsed.base), inventory); }
     catch (error) { selection = { mode: "full", reason: error.message, files: inventory }; }
-  } else if (["core", "fast", "daily", "full"].includes(group)) {
+  } else if (["core", "optional", "fast", "daily", "full"].includes(group)) {
     parsed = selectionOptions(group, options);
     selection = { mode: group, files: group === "fast" ? fastFiles : group === "daily" ? dailyFiles : inventory.filter((file) => group === "full" || groupFor(file) === group) };
   } else throw new Error(`Unknown test group: ${group}`);

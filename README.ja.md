@@ -57,7 +57,7 @@ workkeel task review --id WK-0001 --actor reviewer --judgment pass --summary "Me
 workkeel task close --id WK-0001 --actor builder --summary Accepted --rollback "Revert the guide commit" --evidence .ai-org/artifacts/WK-0001/review.md
 ```
 
-`workkeel start .` は何も書き込まずに設定手順をプレビューし、`workkeel help advanced` はすべてのコマンドを表示します。
+`workkeel start .` は何も書き込まずに設定手順をプレビューし、`workkeel help advanced` はリクエストファイル形式と任意のサブシステムを表示します。
 チームのポリシー、リクエストファイル、ロールバックは[クイックスタートガイド](docs/getting-started/workkeel.md)を参照してください。
 
 ## リスクランクとチーム
@@ -81,6 +81,9 @@ npm の `next` チャネルにある `@zsz1210/workkeel@0.1.0-beta.1` は以前�
 
 ## 任意のコンポーネント
 
+タスク連携以外はすべて任意です。短い `workkeel help` はこれらのサブシステムを表示せず、
+`workkeel help advanced` だけが表示します。引き続き使え、テストもありますが、使われていないものは今後のリリースで削除する場合があります。
+
 | コンポーネント | 既定 | 範囲 |
 | --- | --- | --- |
 | タスク連携 | 中核 | 契約、着手、引き継ぎ、レビュー、受け入れ。サーバー不要 |
@@ -90,6 +93,7 @@ npm の `next` チャネルにある `@zsz1210/workkeel@0.1.0-beta.1` は以前�
 | ネイティブディスパッチとモデル選択 | 明示的に有効化 | 要求したモデルと理由を記録し、実際に動いたモデルはホストが報告 |
 | Headroom のツール出力ビュー | オフ | 要求時だけ非可逆なビューを作る。元の出力は読める |
 | 学習記録と Skill のバージョン | 任意の記録 | 承認しても Skill は作成も有効化もされない |
+| ホストの使用量記録と保存アーカイブ | 任意の記録 | 使用量はホストが報告し、アーカイブは要求時だけ実行 |
 | デスクトップワークスペース、目標全体、範囲付き自律実行 | 実験的 | ソース版 CLI のみ。自動実行は `low` と `standard` のタスクに限る |
 
 [オブザーバー](docs/operations/workkeel-observer.md) ·

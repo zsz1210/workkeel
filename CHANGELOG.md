@@ -60,6 +60,12 @@ Unpublished source. Breaking: removes the Temple compatibility mode.
 - Known limitation: the CLI compatibility check runs before the mutation lock, so
   a write racing with a concurrent `workkeel upgrade` may pass it.
 - The monitor and workspace drop the pre-migration history and legacy Skill views.
+- The short help lists only the core lifecycle. `help advanced` groups the optional
+  subsystems (monitor, workspace, workflow, dispatch, usage, model policy,
+  Headroom, Learning, Skill versions, goals, autonomy and retention) apart from
+  the core forms; they keep working unchanged. Their tests form the `optional`
+  group (`npm run test:optional`); `test:core` leaves them out and the complete
+  suite runs both. Unused internal helpers are removed.
 
 - Native tasks now accept high, critical and sensitive work. Project policy
   `risk_paths` globs and data classification set a minimum tier that authors can

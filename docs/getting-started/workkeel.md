@@ -72,7 +72,8 @@ processes, or older and newer CLI versions, operate on the same task at the same
 time, edge cases remain; a command that cannot confirm its original claim or
 candidate stops instead of guessing. Hardening this is tracked separately. `--expect` and `--request` remain for
 integrations. Teams use `init --team --policy`, and `policy update` replaces the
-project policy. `workkeel help advanced` lists every command.
+project policy. `workkeel help advanced` lists every form, including the optional
+subsystems that the lifecycle below never needs.
 
 ## Initialize an existing repository
 
@@ -104,7 +105,7 @@ node /path/to/workkeel/bin/workkeel.mjs start /path/to/your/project --request br
 Inspect `intake_preview` and use its exact fingerprint with the returned
 `intake apply` arguments. `ready: true` means a preview was produced. It does not
 claim work, launch a model or accept a task. Continue through the lifecycle below;
-open `workkeel monitor .` when you want to inspect recorded progress and results.
+the optional `workkeel monitor .` observer shows recorded progress and results.
 An invalid brief returns exit code 1 with `mutation_status: no-write`; a valid
 guidance step returns exit code 0 even when there is more setup to do.
 

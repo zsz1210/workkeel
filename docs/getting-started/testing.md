@@ -28,11 +28,12 @@ For a wider edit, choose an explicit local group:
 
 | Command | Coverage |
 | --- | --- |
-| `npm run test:core` | Every product test; the same set as the complete suite |
+| `npm run test:core` | Every product test except the optional subsystems, including the lifecycle end-to-end tests |
+| `npm run test:optional` | Tests of the optional subsystems listed by `workkeel help advanced` |
 | `npm run test:daily` | Curated representative lifecycle, risk, recovery and JSON-RPC paths for a broad routine check |
 | `npm run test:fast` | Small contracts, package-validator edge cases, and evidence Git-read behavior |
 
-Every product test belongs to the core group, and new test files are core by default. Fast tests overlap these groups intentionally; they are not another full suite. Historical development experiment harnesses and their results belong in the private archive.
+Every product test belongs to the core or the optional group, and new test files are core by default. The optional group covers the monitor and desktop workspace, workflows, native dispatch, usage, model policy and routing, Headroom, Learning and Skill versions, whole goals, autonomy and retention. The complete suite runs both groups. Fast tests overlap these groups intentionally; they are not another full suite. Historical development experiment harnesses and their results belong in the private archive.
 
 Use `npm run verify:daily` for a broad routine check when the changed area needs more than the fast contracts. It covers representative production CLI, lifecycle, risk-tier, review recovery, delivery request, lock and JSON-RPC paths in one Node process. It is intentionally not an exhaustive matrix: changed test files still select their whole group, and every retained product test remains in the complete suite. A final behavioral candidate or Release still requires `npm run verify`.
 

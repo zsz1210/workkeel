@@ -1,7 +1,6 @@
 import fs from 'node:fs/promises';
 import {constants} from 'node:fs';
 import path from 'node:path';
-import os from 'node:os';
 import {createHash, randomUUID} from 'node:crypto';
 import {readTaskProject, readNativeGit} from './workkeel-project.mjs';
 import {readMonitorSnapshot} from './workkeel-monitor.mjs';
@@ -13,7 +12,6 @@ import {listNativeGoals} from './workkeel-goals.mjs';
 import {operationRows, aggregateRows, executionSummary, executionBreakdown} from './workkeel-monitor-analytics.mjs';
 
 export const WORKSPACE_SCHEMA = 'workkeel.workspace-registry/v1';
-export const defaultWorkspaceDirectory = () => path.join(os.homedir(), '.local', 'state', 'workkeel', 'workspace');
 const identifier = value => typeof value === 'string' && /^[A-Za-z0-9][A-Za-z0-9._-]{0,95}$/.test(value);
 const text = (value, max=240) => typeof value === 'string' && value.trim().length > 0 && value.length <= max;
 const digest = value => createHash('sha256').update(JSON.stringify(value)).digest('hex');

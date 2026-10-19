@@ -96,6 +96,14 @@ test("the short help lists only the everyday commands", async t => {
   const advanced = spawnSync(process.execPath, [cli, "help", "advanced"], { encoding: "utf8" }).stdout;
   assert.match(advanced, /workkeel task create \[target\] --source contract\.json --request request\.json/);
   assert.match(advanced, /policy update/);
+  // Optional subsystems stay out of the short help and are grouped in advanced help.
+  const optional = ["monitor", "workspace", "workflow", "dispatch", "usage", "model-policy", "headroom", "learning", "skill-lifecycle", "goal", "autonomy", "retention"];
+  const [core, extra] = advanced.split("Optional subsystems.");
+  for (const command of optional) {
+    assert.doesNotMatch(help.stdout, new RegExp(`workkeel ${command}\\b`));
+    assert.doesNotMatch(core, new RegExp(`^workkeel ${command}\\b`, "m"));
+    assert.match(extra, new RegExp(`^workkeel ${command}\\b`, "m"));
+  }
 });
 
 const fails = (root, ...args) => {

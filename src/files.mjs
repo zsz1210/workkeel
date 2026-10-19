@@ -112,54 +112,6 @@ export async function durableAtomicCreate(targetPath, content) {
   }
 }
 
-export async function durableChmod(targetPath, mode) {
-  const handle = await fs.open(targetPath, "r");
-  try {
-    await handle.chmod(mode);
-    await handle.sync();
-  } finally {
-    await handle.close();
-  }
-}
-
-export async function durableUnlink(targetPath) {
-  await fs.unlink(targetPath);
-  await syncDirectory(path.dirname(targetPath));
-}
-
-export async function durableRename(sourcePath, targetPath) {
-  await fs.rename(sourcePath, targetPath);
-  await syncDirectory(path.dirname(targetPath));
-  if (path.dirname(sourcePath) !== path.dirname(targetPath)) await syncDirectory(path.dirname(sourcePath));
-}
-
-export async function rollbackFileChanges(changes) {
-  const failures = [];
-  for (const change of [...changes].reverse()) {
-    try {
-      const exists = await pathExists(change.path);
-      if (change.afterHash === null) {
-        if (!exists) await atomicCreate(change.path, change.before);
-        else failures.push(`${change.path}: a new file blocks restoration`);
-        continue;
-      }
-      if (!exists) {
-        if (change.before !== null) await atomicCreate(change.path, change.before);
-        continue;
-      }
-      if ((await sha256File(change.path)) !== change.afterHash) {
-        failures.push(`${change.path}: content changed again after this operation wrote it`);
-        continue;
-      }
-      if (change.before === null) await fs.unlink(change.path);
-      else await atomicWrite(change.path, change.before);
-    } catch (error) {
-      failures.push(`${change.path}: ${error.message}`);
-    }
-  }
-  if (failures.length > 0) throw new Error(`Rollback could not safely restore every file:\n- ${failures.join("\n- ")}`);
-}
-
 export async function walkFiles(root) {
   const output = [];
 
@@ -203,8 +155,4 @@ export async function assertSafeTarget(inputPath) {
   }
 
   return target;
-}
-
-export function toPosix(relativePath) {
-  return relativePath.split(path.sep).join("/");
 }

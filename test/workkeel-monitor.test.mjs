@@ -8,7 +8,7 @@ import {createMonitorFixture} from '../scripts/workkeel-monitor-fixture.mjs';
 import {startTaskMonitor,readMonitorSnapshot,workflowNeedsAttention} from '../src/workkeel-monitor.mjs';
 import {mutateNativeTask} from '../src/workkeel-tasks.mjs';
 import {execFileSync} from 'node:child_process';
-import {formatCount,formatCost,formatDuration} from '../src/workkeel-monitor-view.mjs';
+import {formatCount,formatDuration} from '../src/workkeel-monitor-view.mjs';
 
 test('terminal closeout resolves old stopped attempts without hiding later or corrupt data',()=>{
  const at=n=>new Date(1700000000000+n).toISOString();
@@ -42,14 +42,12 @@ test('accepted interrupted fixture clears attention and is not re-verified after
  assert.equal(changed.needs_attention,false);assert.ok(!changed.attention_reasons.includes('evidence-unavailable'));
 });
 
-test('formatter preserves unknown, partial, zero, strict numbers and duration semantics',()=>{
+test('formatter preserves unknown, partial, strict numbers and duration semantics',()=>{
  assert.equal(formatCount({complete:true,total:12345}),'12,345');
  assert.equal(formatCount({complete:false,known_subtotal:0}),'>= 0 (partial)');
  assert.equal(formatCount({complete:true,total:null,known_subtotal:1200}),'>= 1,200 (partial)');
  for(const total of [null,'1',-1,0.2,Infinity,NaN,Number.MAX_SAFE_INTEGER+1])assert.equal(formatCount({complete:true,total}),'Unknown');
- assert.equal(formatCount(null),'Unknown');assert.equal(formatCost({complete:true,total:0}),'$0.0000');
- assert.equal(formatCost({complete:false,known_subtotal:0.01234}),'>= $0.0123 (partial)');
- for(const total of [null,'1',-1,Infinity,NaN,1e12])assert.equal(formatCost({complete:true,total}),'Unknown');
+ assert.equal(formatCount(null),'Unknown');
  assert.equal(formatDuration(1234),'1.2 s');assert.equal(formatDuration(60000),'1 min 0 s');assert.equal(formatDuration(119999),'1 min 59 s');
  for(const ms of [null,'1',-1,Infinity,NaN,Number.MAX_SAFE_INTEGER+1])assert.equal(formatDuration(ms),'Unknown');
 });
