@@ -24,6 +24,10 @@ Unpublished source. Breaking: removes the Temple compatibility mode.
   `domain-modeling`, `project-documentation` and `skill-authoring` Skills and the
   `project-overlay/` directory are removed; projects write their own Skills. The
   observer no longer labels any Skill as Workkeel-origin.
+- Adds optional review scores: a reviewer may append a `score` block (a `code`
+  or `non-code` rubric, 1-5 per criterion, P-level findings) to its own review
+  report, and the read-only `workkeel stats` lists average scores, rework rounds
+  and rework reasons by risk tier. Scores never trigger rework or block a close.
 - Known limitation: replay of flag commands relies on requests saved under the
   checkout's Git directory. Several processes or mixed CLI versions acting on the
   same task at once can still hit edge cases; such commands stop rather than act on

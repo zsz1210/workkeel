@@ -102,6 +102,44 @@ Optional automation (whole goals, bounded autonomy and automatic improvement)
 accepts only `low` and `standard` work. High and critical tasks always go through
 the manual lifecycle: another model family reviews, then a person confirms.
 
+## Review scores (optional)
+
+A reviewer may add a `score` block to its own `workkeel.review-report/v1` file.
+It is part of the same review, not another round. Scores are for statistics
+only: they never trigger rework or block a close. Whether work goes back for
+rework is decided by the risk tier and the findings, as before.
+
+```json
+"score": {
+  "model": "<implementing model or null>", "reasoning_effort": "<label or null>",
+  "external_score": {
+    "reviewer_model": "<reviewing model or null>", "rubric": "code",
+    "scores": {"requirements": 4, "correctness": 5, "tests": 4, "maintainability": 4}
+  },
+  "findings": [{"level": "P2", "note": "Total ignores discounts in ordinary use"}]
+}
+```
+
+- **Rubric by task type.** `code` scores `requirements` (does it do what the
+  contract asks), `correctness`, `tests` and `maintainability`. `non-code` scores
+  `requirements` only; visual judgment stays with the person at acceptance. Each
+  criterion is an integer from 1 to 5. An optional `total` must equal the sum.
+- **Score what matters.** Do not take points off for minor style issues, rare
+  cases or problems that only occur under concurrent use; record those as known
+  issues instead.
+- **Findings** give the reasons for a failed review as `P1` to `P3` with a short
+  note. `P3` findings are never counted as rework reasons.
+- **Self-evaluation** is reserved: `self_eval` defaults to `{"enabled": false, ...}`
+  because an externally reviewed task does not need one.
+
+`workkeel stats` reads these blocks and the task records without writing
+anything. Per task it reports `task_id`, `risk`, `model`, `reasoning_effort`,
+`self_eval`, `external_score` (with the review round, counted from the task
+history) and `rework` (rounds, and each round's reasons by P level; a round
+without findings uses the rework summary). Per tier it reports the average scores
+for each rubric, rework rounds and the distribution of rework reasons. A malformed
+score block is listed under `errors` and left out of the averages.
+
 ## Rolling out
 
 1. **Agree the policy first.** Start from `workkeel init .`, or write

@@ -43,6 +43,7 @@ Read-only checks and reports:
 workkeel task assess [target] --id task-id [--request assessment.json]
 workkeel task evidence-check [target] --id task-id --request completion-evidence.json
 workkeel task metrics|summary [target] --id task-id
+workkeel stats [target]                     review scores and rework by risk tier
 workkeel runtime plan [target] --id task-id
 workkeel context prepare [target] --id task-id --request material-request.json
 workkeel skills audit [target] --request skill-use.json
@@ -86,7 +87,7 @@ function required(options, key) { if (!options[key]) throw new Error(`Missing ${
 function allow(options, keys) { if (Object.keys(options).some(k => !keys.includes(k))) throw new Error("Option is not supported by this command"); }
 // Commands that never write project state. Everything else counts as a mutation.
 const READ_ONLY = {
-  start: null, status: null, doctor: null, policy: ["show"], runtime: ["plan"], context: ["prepare"], skills: ["audit"],
+  start: null, status: null, doctor: null, stats: null, policy: ["show"], runtime: ["plan"], context: ["prepare"], skills: ["audit"],
   task: ["show", "assess", "evidence-check", "metrics", "summary"], dispatch: ["show", "plan"], intake: ["preview"],
   "model-policy": ["show", "preview"], learning: ["list", "search", "impact"], headroom: ["read"], "skill-lifecycle": ["list"], autonomy: ["show"], goal: ["list", "show"],
   workflow: ["show", "metrics", "plan", "continuation-plan"], instructions: ["preview"], retention: ["inventory", "preview", "verify", "usage"]
@@ -164,6 +165,10 @@ async function runCommand(args) {
     output = command === "doctor" ? await diagnoseTaskProject(target) : {
       schema_version: "workkeel.status/v1", tasks: await listTaskItems(target), authority: "observation-only", mutation_status: "no-write"
     };
+  } else if (command === "stats") {
+    allow(options, []);
+    const { readScoreStats } = await import("./workkeel-scoring.mjs");
+    output = await readScoreStats(target);
   } else if(command==='retention') {
     allow(options,['--request']);const retention=await import('./workkeel-retention.mjs');const request=(await readTaskContractInput(target,required(options,'--request'))).document;
     if(action==='inventory')output=await retention.inventoryRetention(target,request);

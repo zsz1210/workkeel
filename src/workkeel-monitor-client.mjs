@@ -404,7 +404,7 @@ async function showDocument(id,reload=false){
 function learningPage(){
  if(!library)return empty(t('正在讀取學習與技能…','Reading local index…'));
  const box=node('div'),head=node('div',undefined,'section-head');head.append(node('h2',libraryMode==='skills'?t('技能庫','Skills'):t('學習紀錄','Lessons & practices')),
- help(t('學習與技能說明','About learning and Skills'),t('進度表示已完成並留下紀錄的階段。點開可查看各階段的條件；經驗不一定要製作成 Skill。技能庫包含框架內建、專案與啟動時指定的個人技能來源。','Milestones reflect recorded evidence, not time estimates. Open a record for the full criteria. Lessons do not all need to become Skills. The inventory includes bundled, project and explicitly configured personal Skill sources.'),'learning-help'));
+ help(t('學習與技能說明','About learning and Skills'),t('進度表示已完成並留下紀錄的階段。點開可查看各階段的條件；經驗不一定要製作成 Skill。技能庫包含專案與啟動時指定的個人技能來源。','Milestones reflect recorded evidence, not time estimates. Open a record for the full criteria. Lessons do not all need to become Skills. The inventory includes project and explicitly configured personal Skill sources.'),'learning-help'));
  box.append(head);
  const legacyLearning=library.errors.filter(e=>e.code==='legacy-learning-unsupported');
  // Unsupported pre-0.2 records are a refusal with an owner action, not a read failure.
