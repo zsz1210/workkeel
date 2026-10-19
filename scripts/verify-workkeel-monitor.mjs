@@ -487,6 +487,8 @@ try{
    await page.locator('.task-card[data-task-id="'+id+'"]').click();
    await openMeasurementDetails(page);assert.match(await page.locator('#lifecycle').innerText(),/各階段已記錄時間/);
    if(id==='WK-accepted')assert.match(await page.locator('#delivery').innerText(),/已驗收/);
+   if(id==='WK-review'){assert.match(await page.locator('#delivery-unresolved').innerText(),/交付時未解決事項[\s\S]*Synthetic open issue for the reviewer/);assert.match(await page.locator('#next-action').innerText(),/未解決事項/);assert.doesNotMatch(await page.locator('#next-action').innerText(),/未識別/);}
+   else assert.equal(await page.locator('#delivery-unresolved').count(),0);
    if(id==='WK-working'){
     const progress=page.locator('#delivery-progress');assert.match(await progress.innerText(),/200 \/ 200/);assert.match(await progress.innerText(),/未知/);assert.match(await progress.innerText(),/0 \/ 200/);assert.match(await progress.innerText(),/尚未正式交付/);
     const height=(await progress.boundingBox()).height;await progress.getByRole('button').click();assert.equal(await page.locator('.help-popover:popover-open').count(),1);assert.match(await page.locator('.help-popover:popover-open').innerText(),/測試次數不能換算/);assert.equal((await progress.boundingBox()).height,height);await page.keyboard.press('Escape');

@@ -38,9 +38,14 @@ async function exactRevision(target, revision) {
   if (!SHA.test(full) || !full.startsWith(revision)) throw new Error("Candidate must identify the commit itself");
   return full;
 }
-/** The delivered commit, named in full or by an abbreviation of it; null for anything else. */
-const deliveredRevision = (item, revision) => typeof revision === "string" && /^[a-f0-9]{4,64}$/.test(revision) &&
-  item.delivery?.revision.startsWith(revision) ? item.delivery.revision : null;
+/**
+ * The delivered commit, named in full or by an abbreviation Git resolves to that
+ * one commit; null for any other or ambiguous name.
+ */
+async function deliveredRevision(target, item, revision) {
+  if (!item.delivery || typeof revision !== "string" || !item.delivery.revision.startsWith(revision)) return null;
+  try { return await exactRevision(target, revision) === item.delivery.revision ? item.delivery.revision : null; } catch { return null; }
+}
 // `.ai-org/` holds the task store, reports and requests: administrative, never product.
 const administrative = file => file === ".ai-org" || file.startsWith(".ai-org/");
 /** HEAD, or null before the repository's first commit. */
@@ -314,7 +319,7 @@ export async function inspectTaskCandidate(targetInput, id, input) {
   const target=await fs.realpath(targetInput),item=await readNativeTask(target,id),request=input.request;
   if (request.expected_version!==item.version) throw new Error('Stale expected version; inspect current task before retrying');
   if (!Array.isArray(request.evidence) || request.evidence.length>64 || request.evidence.some(ref=>typeof ref!=='string')) throw new Error('Bounded evidence paths are required');
-  const revision=input.action==='handoff'?await exactRevision(target,request.revision):deliveredRevision(item,request.revision);
+  const revision=input.action==='handoff'?await exactRevision(target,request.revision):await deliveredRevision(target,item,request.revision);
   if (!revision) throw new Error('Candidate must match the delivered revision');
   const out=await candidateFiles(target,item,revision,{handoff:input.action==='handoff'});
   return {schema_version:'workkeel.candidate-files/v1',authority:'observation-only',mutation_status:'no-write',execution_authorized:false,
@@ -462,8 +467,8 @@ export async function mutateNativeTask(targetInput, id, action, request) {
       if (item.state !== "test" || item.review) throw new Error("Task is not awaiting a review");
       if (!["pass", "fail"].includes(request.judgment)) throw new Error("Review requires pass or fail");
       assertSeparation(item, request.actor, project.policy);
-      const revision = deliveredRevision(item, request.revision);
-      if (!revision) throw new Error("Review must match the exact delivered candidate");
+      const revision = await deliveredRevision(target, item, request.revision);
+      if (!revision) throw new Error("Review must match the exact delivered candidate; an abbreviation must name exactly one commit");
       // After a recovery, only the current completed attempt's reviewer can author
       // the verdict; a predecessor's late result is never accepted.
       const chain = await recoveryChain(target, item), attempt = chain.head;
@@ -494,7 +499,7 @@ export async function mutateNativeTask(targetInput, id, action, request) {
       item.delivery = null; item.review = null; item.claim = null; item.state = "intake"; item.dependency_pins = null;
     } else if (action === "close") {
       assertApprover(project.policy, request.actor);
-      const revision = deliveredRevision(item, request.revision);
+      const revision = await deliveredRevision(target, item, request.revision);
       if (item.state !== "release_gate" || item.review?.judgment !== "pass" || !revision) throw new Error("Close requires the independently accepted exact candidate");
       // The current recovery attempt must still be the completed one the review named, on the same commit.
       const attempt = (await recoveryChain(target, item)).head, reviewed = item.review;

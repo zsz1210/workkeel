@@ -32,7 +32,7 @@ export async function createMonitorFixture({empty=false,extended=false,rich=fals
    const revision=git('rev-parse','HEAD');
    const claimed=await mutateNativeTask(root,id,'claim',{operation_id:'claim',expected_version:1,actor,base_revision:revision});
    if(mode==='working')continue;
-   await mutateNativeTask(root,id,'handoff',{operation_id:'handoff',expected_version:2,actor,claim_id:claimed.claim.id,revision,summary:'Synthetic delivery',evidence:['docs/approval.md'],unresolved:[]});
+   await mutateNativeTask(root,id,'handoff',{operation_id:'handoff',expected_version:2,actor,claim_id:claimed.claim.id,revision,summary:'Synthetic delivery',evidence:['docs/approval.md'],unresolved:mode==='review'?['Synthetic open issue for the reviewer']:[]});
    if(mode==='accepted'){
     await mutateNativeTask(root,id,'review',{operation_id:'review',expected_version:3,actor:reviewer,revision,judgment:'pass',summary:'Synthetic review only',evidence:['docs/approval.md']});
     await mutateNativeTask(root,id,'close',{operation_id:'close',expected_version:4,actor,revision,summary:'Synthetic local acceptance',rollback:'Retain fixture only',evidence:['docs/approval.md']});

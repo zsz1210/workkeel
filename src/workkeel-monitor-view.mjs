@@ -53,6 +53,7 @@ const actions = {
   'observation-unavailable':'觀測紀錄無法驗證：檢查觀測檔案及其引用的證據。',
   'review-failed':'審查未通過：處理具體意見，取得同範圍修正核准。',
   'awaiting-review':'等待獨立審查：請另一位 Agent 核對交付的候選版本與證據。',
+  'unresolved-at-delivery':'交付時列有未解決事項：審查者須逐項判斷是否可接受；high 與 critical 任務不能帶著這些事項通過審查。',
   'awaiting-acceptance':'等待驗收：確認審查通過的候選版本，記錄驗收與回復方式。',
   'workflow-incomplete':'執行紀錄不完整或需處理：先檢查中斷、未確定的嘗試及恢復紀錄，勿直接重跑。'
 };
@@ -91,6 +92,7 @@ export function handoffText(task, readAt) {
     '候選版本：'+(task.candidate_revision??'尚未交付'),
     '任務狀態：'+label(task.task_state),
     '執行紀錄：'+(task.runs?.length?task.runs.map(r=>r.run_id+' / '+label(r.runner_state)).join('；'):'尚無可讀紀錄'),
+    '交付時未解決事項：'+list(task.delivery?.unresolved??[]),
     '候選審查：'+(task.review?label(task.review.judgment):'尚未審查'),
     '本機驗收：'+(task.quality?.locally_accepted==null?'未記錄':task.quality.locally_accepted?'已記錄':'尚未完成'),
     '證據：'+(task.evidence?.length?task.evidence.map(e=>label(e.stage)+' / '+label(e.status)+' / '+quote(e.path)+' / '+label(e.source??'workspace')).join('\n'):'尚無紀錄'),

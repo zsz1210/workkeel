@@ -88,8 +88,8 @@ export function deliveryOperationGuide(state,review) {
   return {action,input_fields:action?['task_id','action','actor','operation_id',...FIELDS[action]]:[],
     instructions:action?{
       claim:'Read the approved contract and required project instructions; confirm the current Git base before applying.',
-      handoff:'Commit and verify the exact candidate. Supply actual evidence and an explicit empty unresolved list only when work is ready.',
-      review:'The actual distinct reviewer inspects the delivered candidate and supplies its own judgment, summary and evidence.',
+      handoff:'Commit and verify the exact candidate. Supply actual evidence (optional for low risk) and list every open issue in unresolved; high and critical work cannot pass with open issues.',
+      review:'The actual distinct reviewer inspects the delivered candidate, decides on any listed unresolved issues and supplies its own judgment, summary and evidence; the summary alone may be the evidence below high risk.',
       close:'The authorized approver supplies the acceptance summary, rollback and evidence after independent review.'
     }[action]:'No supported preparation step; inspect the current task for explicit rework, cancellation or completed status.',
     required_reading:['Project instructions and WORKKEEL.md','Approved task contract and its referenced authority','Evidence needed for the current operation'],
@@ -119,8 +119,9 @@ export async function prepareDeliveryRequest(target,input) {
     if(!task.delivery||task.review?.judgment!=='pass'||task.review.revision!==task.delivery.revision)throw Error('Delivery: exact passing review required');
   }
   for(const field of ['summary','rollback'])if(Object.hasOwn(input,field))text(input[field]);
-  if(Object.hasOwn(input,'evidence')&&(!Array.isArray(input.evidence)||!input.evidence.length||input.evidence.some(ref=>typeof ref!=='string'||!ref.trim())))throw Error('Delivery: explicit evidence references required');
-  if(action==='handoff'&&(!Array.isArray(input.unresolved)||input.unresolved.length))throw Error('Delivery: resolve outstanding issues before preparing handoff');
+  // Shape only: whether evidence may be empty or issues remain open is the native task's risk decision.
+  if(Object.hasOwn(input,'evidence')&&(!Array.isArray(input.evidence)||input.evidence.length>64||input.evidence.some(ref=>typeof ref!=='string'||!ref.trim())))throw Error('Delivery: evidence must be a bounded list of repository paths');
+  if(action==='handoff'&&(!Array.isArray(input.unresolved)||input.unresolved.length>32||input.unresolved.some(x=>typeof x!=='string'||!x.trim()||x.length>1000)))throw Error('Delivery: unresolved must be an explicit bounded list of open issues');
   const request={operation_id:input.operation_id,expected_version:task.version,actor:{...input.actor}};
   if(action==='claim'||action==='handoff') {
     const {stdout}=await promisify(execFile)('git',['-C',target,'rev-parse','--verify','HEAD'],{maxBuffer:4096,timeout:5000});

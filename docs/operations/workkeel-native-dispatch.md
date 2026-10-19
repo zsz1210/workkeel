@@ -364,20 +364,23 @@ workkeel task handoff . --id WK-example --request .ai-org/artifacts/WK-example/h
 ```
 
 The example's private decision and prepared-output files are outside the product
-repository. A decision input is not a recorded native request. Placing it under
-task artifacts does not automatically exempt it from candidate checks. Preserve
-it only within authorized locations; where it is deliberately retained as task
-evidence, list the exact file in the applicable evidence references. Do not add
-ignore rules or delete evidence merely to get past a candidate rejection. Inspect
+repository. A decision input is not a recorded native request. Files under
+`.ai-org/` are administrative and never count as candidate drift, but that does not
+make them evidence. Preserve it only within authorized locations; where it is
+deliberately retained as task evidence, list the exact file in the applicable
+evidence references. Do not add ignore rules or delete evidence merely to get past
+a candidate rejection. Inspect
 the task and the file's purpose before retrying the identical saved request.
 
 | Action | Caller supplies, in addition to task, action, actor and operation ID | Derived fields |
 | --- | --- | --- |
 | `claim` | No decision fields | Current task version and Git HEAD |
-| `handoff` | Actual summary, evidence and explicit empty unresolved list | Current version, claim ID and Git HEAD |
-| `review` | Actual review judgment, summary and evidence | Current version and delivered revision |
+| `handoff` | Actual summary, evidence (may be empty for low risk) and an explicit `unresolved` list of open issues | Current version, claim ID and Git HEAD |
+| `review` | Actual review judgment, summary and evidence (may be empty below high risk) | Current version and delivered revision |
 | `close` | Actual acceptance summary, rollback and evidence | Current version and delivered revision |
 
+Preparation checks only the shape of these fields; the native task decides whether
+evidence may be empty and whether open issues can be delivered or pass review.
 Preparation neither runs checks nor validates all candidate/evidence conditions.
 `validation_status: native-apply-required` means the ordinary native command must
 still check authority, dependencies, version, candidate, scope, evidence and reviewer

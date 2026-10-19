@@ -29,7 +29,9 @@ Unpublished source. Breaking: removes the Temple compatibility mode.
   is a list of paths, read from the candidate commit when committed there and
   recorded without digests; low risk work may omit it. Revisions accept
   abbreviated commit IDs. `unresolved` may be non-empty: high and critical reviews
-  cannot pass with it, and critical work cannot deliver it. Drift is checked only
+  cannot pass with it, and critical work cannot deliver it. Open issues are listed in
+  the monitor's delivery block and the copied handoff. An abbreviation must name
+  exactly one commit. Drift is checked only
   inside the write roots, and all of `.ai-org/` is administrative. Every rework,
   including `evidence-only`, delivers a new commit. Review recovery links attempts
   by ID and binds the review to the attempt ID and commit

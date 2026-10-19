@@ -7,7 +7,7 @@ import { fileURLToPath } from "node:url";
 import test from "node:test";
 import { createHash } from "node:crypto";
 import { initializeTaskProject } from "../src/workkeel-project.mjs";
-import { createNativeTask, mutateNativeTask, readNativeTask, diagnoseTaskProject, listTaskItems } from "../src/workkeel-tasks.mjs";
+import { createNativeTask, mutateNativeTask, readNativeTask, diagnoseTaskProject, listTaskItems, evidenceStatus } from "../src/workkeel-tasks.mjs";
 
 const cli = fileURLToPath(new URL("../bin/workkeel.mjs", import.meta.url));
 const developer = { agent_id: "builder", principal_id: "owner" };
@@ -144,6 +144,35 @@ test("candidate guards cover outside roots, untracked product, evidence paths an
   assert.equal((await diagnoseTaskProject(root)).valid, true);
   await mutateNativeTask(root, "WK-one", "review", request(3, reviewer, { revision: short, judgment: "pass", summary: "Open issue judged acceptable", evidence: [] }));
   assert.equal((await readNativeTask(root, "WK-one")).review.revision, delivered.delivery.revision);
+  // A pre-change {path, sha256} entry reads as a working file; its digest is not compared.
+  assert.equal(await evidenceStatus(root, delivered.delivery.revision, { path: ref, sha256: "0".repeat(64) }), "present");
+  assert.equal(await evidenceStatus(root, delivered.delivery.revision, { path: ".ai-org/missing.md", sha256: "0".repeat(64) }), "unavailable");
+});
+
+test("review and close reject an abbreviation that names more than one commit", async t => {
+  const root = await fixture(t);
+  await createNativeTask(root, contract(), request(0));
+  const base = git(root, "rev-parse", "HEAD");
+  const claimed = await mutateNativeTask(root, "WK-one", "claim", request(1, developer, { base_revision: base }));
+  await write(root, "src/cart.mjs", "export const total = 2;\n"); git(root, "add", "src"); git(root, "commit", "-qm", "repair");
+  // Sibling commits of one tree until two share a four-digit prefix; deliver one of them.
+  const tree = git(root, "rev-parse", "HEAD^{tree}"), seen = new Map();
+  let pair = null;
+  for (let n = 0; !pair && n < 5000; n++) {
+    const commit = execFileSync("git", ["-C", root, "commit-tree", tree, "-p", base, "-m", `candidate ${n}`], { encoding: "utf8" }).trim();
+    const prefix = commit.slice(0, 4);
+    if (seen.has(prefix)) pair = [seen.get(prefix), commit]; else seen.set(prefix, commit);
+  }
+  assert.ok(pair, "found two commits sharing a prefix");
+  git(root, "reset", "-q", "--hard", pair[0]);
+  const ref = ".ai-org/artifacts/WK-one/developer.md"; await write(root, ref, "Verified.\n");
+  await mutateNativeTask(root, "WK-one", "handoff", request(2, developer, { claim_id: claimed.claim.id, revision: pair[0], summary: "Repair", evidence: [ref], unresolved: [] }));
+  const ambiguous = pair[0].slice(0, 4);
+  await assert.rejects(mutateNativeTask(root, "WK-one", "review", request(3, reviewer, { revision: ambiguous, judgment: "pass", summary: "Ambiguous", evidence: [] })), /exactly one commit/);
+  const unique = pair[0].slice(0, 12);
+  await mutateNativeTask(root, "WK-one", "review", request(3, reviewer, { operation_id: "unique-review", revision: unique, judgment: "pass", summary: "Reviewed", evidence: [] }));
+  await assert.rejects(mutateNativeTask(root, "WK-one", "close", request(4, developer, { revision: ambiguous, summary: "Accept", rollback: "Revert", evidence: [] })), /independently accepted/);
+  assert.equal((await mutateNativeTask(root, "WK-one", "close", request(4, developer, { operation_id: "unique-close", revision: unique, summary: "Accept", rollback: "Revert", evidence: [] }))).state, "done");
 });
 
 test("dependencies and overlapping active claims prevent premature or competing work", async t => {
