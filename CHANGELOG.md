@@ -50,9 +50,13 @@ Unpublished source. Breaking: removes the Temple compatibility mode.
   warn on stderr and mutations stop with a pointer to `workkeel upgrade`, which
   moves the pin to the running CLI and rewrites the launcher; it never downgrades
   and never converts task records. The launcher now reads the pin from
-  `workkeel.lock` instead of embedding a version. Unknown fields in the lock, task
-  requests and execution documents are ignored with a warning instead of
-  rejected; `schema_version` still decides major compatibility.
+  `workkeel.lock` instead of embedding a version and refuses a pin that is not an
+  exact version before running or downloading anything. Unknown top-level
+  `workkeel.lock` keys and unknown task lifecycle request fields are ignored with
+  a warning instead of rejected: requests keep only their known fields, so unknown
+  values are never stored or hashed, and upgrade preserves unknown lock keys.
+  `schema_version` still decides major compatibility. Task policy and execution
+  documents stay strict.
 - The monitor and workspace drop the pre-migration history and legacy Skill views.
 
 - Native tasks now accept high, critical and sensitive work. Project policy

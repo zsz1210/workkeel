@@ -86,7 +86,7 @@ function allow(options, keys) { if (Object.keys(options).some(k => !keys.include
 const READ_ONLY = {
   start: null, status: null, doctor: null, policy: ["show"], runtime: ["plan"], context: ["prepare"], skills: ["audit"],
   task: ["show", "assess", "evidence-check", "metrics", "summary"], dispatch: ["show", "plan"], intake: ["preview"],
-  "model-policy": ["show", "preview"], learning: ["list"], "skill-lifecycle": ["list"], autonomy: ["show"], goal: ["list", "show"],
+  "model-policy": ["show", "preview"], learning: ["list", "search", "impact"], headroom: ["read"], "skill-lifecycle": ["list"], autonomy: ["show"], goal: ["list", "show"],
   workflow: ["show", "metrics", "plan", "continuation-plan"], instructions: ["preview"], retention: ["inventory", "preview", "verify", "usage"]
 };
 const readOnly = (command, action) => Object.hasOwn(READ_ONLY, command) && (READ_ONLY[command] === null || READ_ONLY[command].includes(action));
@@ -100,12 +100,23 @@ async function checkCompatibility(target, command, action) {
 
 export async function workkeelMain(args) {
   try { return await runCommand(args); }
-  finally { for (const warning of drainCompatibilityWarnings()) console.error(JSON.stringify({ schema_version: "workkeel.warning/v1", ...warning })); }
+  finally { printWarnings(); }
+}
+function printWarnings() {
+  for (const warning of drainCompatibilityWarnings()) console.error(JSON.stringify({ schema_version: "workkeel.warning/v1", ...warning }));
 }
 
 async function runCommand(args) {
   if (!args.length || ["help", "--help", "-h"].includes(args[0])) { console.log(args[1] === "advanced" ? ADVANCED_HELP : HELP); return 0; }
   if (["version", "--version"].includes(args[0])) { console.log(TEMPLATE_VERSION); return 0; }
+  if (args[0] === "monitor") {
+    // The monitor runs until stopped, so its warning is printed before it starts.
+    const compatibility = await readProjectCompatibility(args[1] ?? ".");
+    if (compatibility) warnIncompatibleCli(compatibility);
+    printWarnings();
+    const { monitorMain } = await import("./workkeel-monitor.mjs");
+    return monitorMain(args.slice(1));
+  }
   const { command, action, target, options } = parseCommandLine(args);
   if (!["init", "workspace", "upgrade"].includes(command) && await existsEntry(target, "workkeel.lock")) await checkCompatibility(target, command, action);
   let output;

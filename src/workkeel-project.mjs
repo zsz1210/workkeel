@@ -133,7 +133,9 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 const root = path.dirname(fileURLToPath(import.meta.url));
 const pin = JSON.parse(fs.readFileSync(path.join(root, "workkeel.lock"), "utf8")).cli;
-if (pin?.package_name !== ${JSON.stringify(WORKKEEL_PACKAGE)} || typeof pin.version !== "string") throw Error("Workkeel pin is missing from workkeel.lock");
+// The exact-version pattern published by semver.org, checked before any spawn or download.
+const VERSION = /^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(?:-((?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\\.(?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\\+([0-9a-zA-Z-]+(?:\\.[0-9a-zA-Z-]+)*))?$/;
+if (pin?.package_name !== ${JSON.stringify(WORKKEEL_PACKAGE)} || typeof pin.version !== "string" || !VERSION.test(pin.version)) throw Error("workkeel.lock must pin an exact Workkeel version");
 const installed = path.join(root, "node_modules", "@zsz1210", "workkeel", "bin", "workkeel.mjs");
 const source = process.env.WORKKEEL_CLI_PATH || (fs.existsSync(installed) ? installed : null);
 if (source) {
@@ -198,6 +200,16 @@ export function soloPolicy(principal = "owner") {
   return policy;
 }
 
+/**
+ * The lock document exactly as stored, for writers. The read view's `digest` is
+ * file metadata and would shadow a document field of the same name.
+ */
+async function storedLock(target, project, verb) {
+  const input = await readTaskContractInput(target, "workkeel.lock");
+  if (input.digest !== project.digest) throw new Error(`workkeel.lock changed while ${verb}; retry`);
+  return input.document;
+}
+
 /** Replaces the project policy. Open tasks pinned to the old policy must be re-approved. */
 export async function updateProjectPolicy(targetInput, policy, actor) {
   const target = await fs.realpath(targetInput);
@@ -205,10 +217,8 @@ export async function updateProjectPolicy(targetInput, policy, actor) {
   return withProjectMutationLock(target, async () => {
     const project = await readTaskProject(target);
     assertApprover(project.policy, actor);
-    const { digest, ...lock } = project;
-    if (formatJson(lock.policy) === formatJson(policy)) return { schema_version: TASK_PROJECT_SCHEMA, updated: false, mutation_status: "already-applied" };
-    const current = await readTaskFile(target, "workkeel.lock");
-    if (current.digest !== digest) throw new Error("workkeel.lock changed while updating; retry");
+    if (formatJson(project.policy) === formatJson(policy)) return { schema_version: TASK_PROJECT_SCHEMA, updated: false, mutation_status: "already-applied" };
+    const lock = await storedLock(target, project, "updating");
     await durableAtomicWrite(path.join(target, "workkeel.lock"), formatJson({ ...lock, policy }));
     return { schema_version: TASK_PROJECT_SCHEMA, updated: true, mutation_status: "applied",
       limitations: ["Open tasks approved under the previous policy stop at their next operation until they are cancelled and re-created."] };
@@ -226,12 +236,12 @@ export async function upgradeTaskProject(targetInput, actor) {
     assertApprover(project.policy, actor);
     const compatibility = cliCompatibility(project.cli.version);
     if (compatibility.status === "cli-older") throw new Error(`Upgrade never downgrades the project pin. ${compatibility.next_action}`);
-    const { digest, ...lock } = project, launcher = launcherSource(), updated = [];
+    const launcher = launcherSource(), updated = [];
     const current = await existsEntry(target, "workkeelw.mjs") ? (await readTaskFile(target, "workkeelw.mjs")).digest : null;
     // The launcher reads the pin from the lock, so writing it first is safe if the lock write fails.
     if (current !== sha256(launcher)) { await durableAtomicWrite(path.join(target, "workkeelw.mjs"), launcher); updated.push("workkeelw.mjs"); }
-    if (lock.cli.version !== TEMPLATE_VERSION) {
-      if ((await readTaskFile(target, "workkeel.lock")).digest !== digest) throw new Error("workkeel.lock changed while upgrading; retry");
+    if (project.cli.version !== TEMPLATE_VERSION) {
+      const lock = await storedLock(target, project, "upgrading");
       await durableAtomicWrite(path.join(target, "workkeel.lock"), formatJson({ ...lock, cli: { ...lock.cli, version: TEMPLATE_VERSION } }));
       updated.push("workkeel.lock");
     }

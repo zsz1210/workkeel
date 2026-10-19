@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { execFileSync, spawnSync } from "node:child_process";
+import { execFileSync, spawn, spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import test from "node:test";
 import { initializeTaskProject, soloPolicy } from "../src/workkeel-project.mjs";
@@ -82,6 +82,48 @@ test("CLI 1.0.0 warns on reads, blocks mutations and recovers after workkeel upg
   assert.equal(JSON.parse(launch(root, cli, "upgrade", "--actor", "builder").stdout).mutation_status, "already-applied");
 });
 
+test("read-only learning and headroom reads run on CLI 1.0.0 with a warning; headroom view stays blocked", async t => {
+  const root = await fixture(t), cli = await cliAt(t, "1.0.0");
+  await fs.writeFile(path.join(root, "notes.txt"), "original\n");
+  for (const [name, body] of [["search.json", { query: "anything" }], ["impact.json", { source: "notes.txt" }],
+    ["original.json", { input: "notes.txt", sha256: "0".repeat(64) }], ["view.json", { input: "notes.txt", kind: "text" }]])
+    await fs.writeFile(path.join(root, name), JSON.stringify(body));
+  for (const args of [["learning", "search", "--request", "search.json"], ["learning", "impact", "--request", "impact.json"]]) {
+    const read = launch(root, cli, ...args);
+    assert.equal(read.status, 0, read.stderr); assert.equal(warnings(read)[0].code, "cli-major-mismatch");
+  }
+  // headroom read reaches its own checks (here: no stored original) instead of the version gate.
+  const original = launch(root, cli, "headroom", "read", "--request", "original.json");
+  assert.equal(warnings(original)[0].code, "cli-major-mismatch"); assert.doesNotMatch(original.stderr, /cannot change a project/);
+  const view = launch(root, cli, "headroom", "view", "--request", "view.json");
+  assert.equal(view.status, 1); assert.match(view.stderr, /cannot change a project pinned to 0\.2\.0/);
+});
+
+test("monitor prints the compatibility warning before it starts serving", async t => {
+  const root = await fixture(t), cli = await cliAt(t, "1.0.0");
+  const child = spawn(process.execPath, [cli, "monitor", root], { stdio: ["ignore", "pipe", "pipe"] });
+  t.after(() => child.kill());
+  let stderr = "";
+  child.stderr.on("data", chunk => { stderr += chunk; });
+  await new Promise((resolve, reject) => {
+    child.stdout.on("data", chunk => { if (String(chunk).includes("monitor")) resolve(); });
+    child.once("exit", code => reject(Error(`monitor exited ${code}: ${stderr}`)));
+  });
+  assert.equal(warnings({ stderr })[0].code, "cli-major-mismatch");
+});
+
+test("the launcher rejects a pin that is not an exact version before any download", async t => {
+  const root = await fixture(t, "latest");
+  const bin = path.join(root, ".fake-bin"), marker = path.join(root, "npm-called");
+  await fs.mkdir(bin);
+  await fs.writeFile(path.join(bin, "npm"), `#!/bin/sh\ntouch ${JSON.stringify(marker)}\n`, { mode: 0o755 });
+  const env = { ...process.env, PATH: `${bin}${path.delimiter}${process.env.PATH}`, WORKKEEL_ALLOW_PACKAGE_FETCH: "1" };
+  delete env.WORKKEEL_CLI_PATH;
+  const output = spawnSync(process.execPath, [path.join(root, "workkeelw.mjs"), "status"], { cwd: root, env, encoding: "utf8" });
+  assert.equal(output.status, 1); assert.match(output.stderr, /must pin an exact Workkeel version/);
+  await assert.rejects(fs.access(marker));
+});
+
 test("upgrade rewrites a stale launcher, needs an approver and never downgrades", async t => {
   const root = await fixture(t), cli = await cliAt(t, "0.2.3");
   await fs.writeFile(path.join(root, "workkeelw.mjs"), (await fs.readFile(path.join(root, "workkeelw.mjs"), "utf8")) + "// stale\n");
@@ -97,22 +139,38 @@ test("upgrade rewrites a stale launcher, needs an approver and never downgrades"
   assert.equal(unknown.status, 1); assert.match(unknown.stderr, /not registered/);
 });
 
-test("unknown lock and request fields only warn", async t => {
+test("unknown lock fields only warn and upgrade keeps them, including one named digest", async t => {
   const root = await fixture(t, "0.2.0-beta.0");
   const lock = await lockOf(root);
-  await fs.writeFile(path.join(root, "workkeel.lock"), JSON.stringify({ ...lock, future_setting: true }, null, 2) + "\n");
+  await fs.writeFile(path.join(root, "workkeel.lock"), JSON.stringify({ ...lock, future_setting: { kept: true }, digest: "future-data" }, null, 2) + "\n");
   drainCompatibilityWarnings();
   assert.equal((await diagnoseTaskProject(root)).valid, true);
-  assert.deepEqual(drainCompatibilityWarnings(), [{ code: "unknown-fields-ignored", context: "workkeel.lock", fields: ["future_setting"] }]);
+  assert.deepEqual(drainCompatibilityWarnings(), [{ code: "unknown-fields-ignored", context: "workkeel.lock", fields: ["future_setting", "digest"] }]);
   const doctor = spawnSync(process.execPath, [sourceCli, "doctor", root], { encoding: "utf8" });
-  assert.equal(doctor.status, 0); assert.deepEqual(warnings(doctor).map(w => w.fields), [["future_setting"]]);
+  assert.equal(doctor.status, 0); assert.deepEqual(warnings(doctor).map(w => w.fields), [["future_setting", "digest"]]);
+  const upgraded = launch(root, await cliAt(t, "0.2.3"), "upgrade", "--actor", "builder");
+  assert.equal(upgraded.status, 0, upgraded.stderr);
+  const after = await lockOf(root);
+  assert.equal(after.cli.version, "0.2.3"); assert.equal(after.digest, "future-data"); assert.deepEqual(after.future_setting, { kept: true });
+});
 
-  await runCreateFromFlags(root, { "--goal": "Unknown fields", "--acceptance": ["Only a warning"], "--id": "WK-one", "--actor": "builder" });
+test("unknown request fields warn and are neither stored, validated nor hashed", async t => {
+  const root = await fixture(t, "0.2.0-beta.0");
+  const flags = { "--goal": "Unknown fields", "--acceptance": ["Only a warning"], "--id": "WK-one", "--actor": "builder" };
+  const inject = value => ({ beforeMutation: request => Object.assign(request, { summary: value, note: { nested: value } }) });
   drainCompatibilityWarnings();
+  await runCreateFromFlags(root, flags, inject("private create text"));
+  assert.deepEqual(drainCompatibilityWarnings().filter(w => w.context === "request").map(w => w.fields), [["summary", "note"]]);
+  // A different unknown value still replays the same operation instead of conflicting.
+  assert.equal((await runCreateFromFlags(root, flags, inject("other text"))).replayed, true);
+
   const item = await readNativeTask(root, "WK-one");
-  const claimed = await mutateNativeTask(root, "WK-one", "claim", { operation_id: "claim-one", expected_version: item.version,
-    actor: { agent_id: "builder", principal_id: "owner" }, future_hint: "ignored",
-    base_revision: execFileSync("git", ["-C", root, "rev-parse", "HEAD"], { encoding: "utf8" }).trim() });
-  assert.equal(claimed.state, "build");
-  assert.deepEqual(drainCompatibilityWarnings().filter(w => w.context === "request"), [{ code: "unknown-fields-ignored", context: "request", fields: ["future_hint"] }]);
+  const claim = value => ({ operation_id: "claim-one", expected_version: item.version, actor: { agent_id: "builder", principal_id: "owner" },
+    base_revision: execFileSync("git", ["-C", root, "rev-parse", "HEAD"], { encoding: "utf8" }).trim(), summary: value, future_hint: { any: value } });
+  const claimed = await mutateNativeTask(root, "WK-one", "claim", claim("private claim text"));
+  assert.equal(claimed.state, "build"); assert.equal(claimed.replayed, false);
+  assert.equal((await mutateNativeTask(root, "WK-one", "claim", claim("changed text"))).replayed, true);
+  const stored = await fs.readFile(path.join(root, ".ai-org", "work-items", "WK-one.json"), "utf8");
+  assert.doesNotMatch(stored, /private|changed text|other text|future_hint|nested/);
+  assert.ok(JSON.parse(stored).history.every(event => !Object.hasOwn(event, "summary")));
 });

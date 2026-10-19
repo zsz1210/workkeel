@@ -23,10 +23,14 @@ const bodyHash = item => digest(Object.fromEntries(Object.entries(item).filter((
 const initiator = item => item.history[0]?.actor ?? null;
 const effectiveRisk = taskRisk;
 const under = (file, root) => root === "." || file === root || file.startsWith(`${root}/`);
-/** Unknown request fields are ignored with a compatibility warning. */
-function assertKeys(value, keys) {
+/**
+ * Unknown request fields are ignored with a compatibility warning: the copy holds
+ * only known fields, so unknown values never reach validation, hashes or records.
+ */
+function knownFields(value, keys) {
   if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error("A request object is required");
   warnUnknownFields(value, keys, "request");
+  return Object.fromEntries(keys.filter(key => Object.hasOwn(value, key)).map(key => [key, value[key]]));
 }
 function assertText(value) { if (typeof value !== "string" || !value.trim() || value.length > 8000) throw new Error("A bounded nonempty summary is required"); }
 
@@ -208,9 +212,11 @@ function append(item, action, request) {
   if (action === "review") event.judgment = request.judgment;
   item.history.push({ ...event, hash: digest(event) });
 }
-function assertRequest(request, fields) {
-  assertKeys(request, ["operation_id", "expected_version", "actor", ...fields]);
+/** The request's known fields, validated; use the returned copy, never the input. */
+function assertRequest(input, fields) {
+  const request = knownFields(input, ["operation_id", "expected_version", "actor", ...fields]);
   if (typeof request.operation_id !== "string" || !ID.test(request.operation_id) || !Number.isSafeInteger(request.expected_version) || request.expected_version < 0) throw new Error("Operation ID and expected version are required");
+  return request;
 }
 function replay(item, action, request) {
   const previous = item.history.find(e => e.operation_id === request.operation_id);
@@ -227,7 +233,7 @@ function result(item, replayed = false) {
 
 export async function createNativeTask(targetInput, draft, request, { expectedPolicyDigest = null, expectedAuthorityPins = null } = {}) {
   const target = await fs.realpath(targetInput);
-  assertRequest(request, []);
+  request = assertRequest(request, []);
   if (request.expected_version !== 0) throw new Error("Task creation expects version zero");
   const ref = fileRef(draft?.id);
   return withProjectMutationLock(target, async () => {
@@ -316,10 +322,10 @@ async function assertCandidate(target, item, revision, options = {}) {
 
 /** Read-only file diagnostics, not a rehearsal of authority, review or acceptance. */
 export async function inspectTaskCandidate(targetInput, id, input) {
-  assertKeys(input,['action','request']);
+  input=knownFields(input,['action','request']);
   if (!['handoff','review','close'].includes(input.action)) throw new Error('Candidate inspection action must be handoff, review or close');
-  assertRequest(input.request,FIELDS[input.action]);
-  const target=await fs.realpath(targetInput),item=await readNativeTask(target,id),request=input.request;
+  const request=assertRequest(input.request,FIELDS[input.action]);
+  const target=await fs.realpath(targetInput),item=await readNativeTask(target,id);
   if (request.expected_version!==item.version) throw new Error('Stale expected version; inspect current task before retrying');
   if (!Array.isArray(request.evidence) || request.evidence.length>64 || request.evidence.some(ref=>typeof ref!=='string')) throw new Error('Bounded evidence paths are required');
   const revision=input.action==='handoff'?await exactRevision(target,request.revision):await deliveredRevision(target,item,request.revision);
@@ -408,7 +414,7 @@ const FIELDS = {
 };
 export async function mutateNativeTask(targetInput, id, action, request) {
   if (!Object.hasOwn(FIELDS, action)) throw new Error("Unknown task operation");
-  assertRequest(request, FIELDS[action]);
+  request = assertRequest(request, FIELDS[action]);
   const target = await fs.realpath(targetInput);
   return withProjectMutationLock(target, async () => {
     const project = await readTaskProject(target);

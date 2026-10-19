@@ -1,13 +1,7 @@
 #!/usr/bin/env node
 import { workkeelMain } from "../src/workkeel-cli.mjs";
 try {
-  const args=process.argv.slice(2);
-  if(args[0]==="monitor") {
-    const {monitorMain}=await import("../src/workkeel-monitor.mjs");
-    process.exitCode=await monitorMain(args.slice(1));
-  } else {
-    process.exitCode = await workkeelMain(args);
-  }
+  process.exitCode = await workkeelMain(process.argv.slice(2));
 }
 catch (error) {
   console.error(JSON.stringify({ schema_version: "workkeel.operation-error/v1", message: error.message,

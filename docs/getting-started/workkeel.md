@@ -25,9 +25,10 @@ older than the pin works normally. With any other CLI, read commands such as
 `status` and `doctor` still run and print a warning on stderr, and commands that
 write stop. Run `workkeel upgrade [target] [--actor id]` with the newer CLI to
 move the pin to it and rewrite `workkeelw.mjs`; an approving Principal runs it,
-and it never downgrades the pin or converts task records. Unknown fields in the
-lock or in requests are ignored with a warning; `schema_version` decides
-major compatibility.
+and it never downgrades the pin or converts task records. Unknown top-level lock
+keys and unknown task request fields are ignored with a warning and never stored;
+task policy and execution documents stay strict. `schema_version` decides major
+compatibility.
 
 Tasks carry a low, standard, high or critical risk tier. Project policy
 `risk_paths` and sensitive data set a minimum tier, and high or critical work
