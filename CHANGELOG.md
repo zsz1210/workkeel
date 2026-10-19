@@ -57,6 +57,8 @@ Unpublished source. Breaking: removes the Temple compatibility mode.
   values are never stored or hashed, and upgrade preserves unknown lock keys.
   `schema_version` still decides major compatibility. Task policy and execution
   documents stay strict.
+- Known limitation: the CLI compatibility check runs before the mutation lock, so
+  a write racing with a concurrent `workkeel upgrade` may pass it.
 - The monitor and workspace drop the pre-migration history and legacy Skill views.
 
 - Native tasks now accept high, critical and sensitive work. Project policy

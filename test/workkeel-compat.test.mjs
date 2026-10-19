@@ -9,6 +9,7 @@ import { initializeTaskProject, soloPolicy } from "../src/workkeel-project.mjs";
 import { cliCompatibility, drainCompatibilityWarnings } from "../src/workkeel-compat.mjs";
 import { diagnoseTaskProject, mutateNativeTask, readNativeTask } from "../src/workkeel-tasks.mjs";
 import { runCreateFromFlags } from "../src/workkeel-cli-flags.mjs";
+import { formatJson, sha256 } from "../src/files.mjs";
 
 const repository = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const sourceCli = path.join(repository, "bin", "workkeel.mjs");
@@ -173,4 +174,17 @@ test("unknown request fields warn and are neither stored, validated nor hashed",
   const stored = await fs.readFile(path.join(root, ".ai-org", "work-items", "WK-one.json"), "utf8");
   assert.doesNotMatch(stored, /private|changed text|other text|future_hint|nested/);
   assert.ok(JSON.parse(stored).history.every(event => !Object.hasOwn(event, "summary")));
+});
+
+test("filtered requests keep the input key order, so hashes match records written before this version", async t => {
+  const root = await fixture(t, "0.2.0-beta.0");
+  await runCreateFromFlags(root, { "--goal": "Key order", "--acceptance": ["Replays"], "--id": "WK-one", "--actor": "builder" });
+  const item = await readNativeTask(root, "WK-one");
+  // Known fields in a non-canonical order, as an earlier CLI accepted and hashed them.
+  const request = { expected_version: item.version, base_revision: execFileSync("git", ["-C", root, "rev-parse", "HEAD"], { encoding: "utf8" }).trim(),
+    actor: { agent_id: "builder", principal_id: "owner" }, operation_id: "claim-ordered" };
+  await mutateNativeTask(root, "WK-one", "claim", request);
+  const event = (await readNativeTask(root, "WK-one")).history.at(-1);
+  assert.equal(event.request_sha256, sha256(formatJson({ action: "claim", request })));
+  assert.equal((await mutateNativeTask(root, "WK-one", "claim", { ...request, future_hint: "ignored" })).replayed, true);
 });

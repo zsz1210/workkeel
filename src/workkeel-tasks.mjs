@@ -30,7 +30,8 @@ const under = (file, root) => root === "." || file === root || file.startsWith(`
 function knownFields(value, keys) {
   if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error("A request object is required");
   warnUnknownFields(value, keys, "request");
-  return Object.fromEntries(keys.filter(key => Object.hasOwn(value, key)).map(key => [key, value[key]]));
+  // Keep the input's key order: request hashes are taken over the JSON as given.
+  return Object.fromEntries(Object.keys(value).filter(key => keys.includes(key)).map(key => [key, value[key]]));
 }
 function assertText(value) { if (typeof value !== "string" || !value.trim() || value.length > 8000) throw new Error("A bounded nonempty summary is required"); }
 
