@@ -7,7 +7,7 @@ import { fileURLToPath } from "node:url";
 import test from "node:test";
 import { initializeTaskProject } from "../src/workkeel-project.mjs";
 import { createNativeTask, mutateNativeTask, readNativeTask } from "../src/workkeel-tasks.mjs";
-import { readScoreStats, validateReviewScore } from "../src/workkeel-scoring.mjs";
+import { readScoreStats, taskScoreRecord, validateReviewScore } from "../src/workkeel-scoring.mjs";
 
 const cli = path.join(path.dirname(fileURLToPath(import.meta.url)), "../bin/workkeel.mjs");
 const builder = { agent_id: "builder", principal_id: "owner" };
@@ -44,6 +44,20 @@ test("a review score is a code or non-code rubric with 1-5 integers", () => {
     [{ external_score: { rubric: "non-code", scores: { requirements: 3 } }, findings: [{ level: "P0", note: "x" }] }, /P1-P3/],
     [{ external_score: { rubric: "non-code", scores: { requirements: 3 } }, self_eval: { enabled: true } }, /unknown field self_eval/]
   ]) assert.throws(() => validateReviewScore(bad), message);
+});
+
+test("historical self_eval is ignored without rewriting evidence or relaxing validation", async t => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), "workkeel-scoring-"));
+  t.after(() => fs.rm(root, { recursive: true, force: true }));
+  const ref = "review.json", revision = "a".repeat(40);
+  const score = codeScore({ requirements: 5, correctness: 4, tests: 3, maintainability: 4 }, { self_eval: { enabled: true } });
+  const content = JSON.stringify({ schema_version: "workkeel.review-report/v1", task_id: "WK-old", revision, reviewer, judgment: "pass", score });
+  await write(root, ref, content);
+  const errors = [], item = { id: "WK-old", contract: { verification: { risk_tier: "standard" } }, attempts: [], review: { revision, actor: reviewer, judgment: "pass", evidence: [{ path: ref }] } };
+  const record = await taskScoreRecord(root, item, errors);
+  assert.equal(record.external_score.total, 16);assert.equal(Object.hasOwn(record, "self_eval"), false);
+  assert.deepEqual(errors, []);assert.equal(await fs.readFile(path.join(root, ref), "utf8"), content);
+  assert.throws(() => validateReviewScore(score), /unknown field self_eval/);
 });
 
 test("stats report scores and rework reasons by risk tier without writing", async t => {

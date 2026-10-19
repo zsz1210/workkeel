@@ -67,6 +67,7 @@ async function reviewScore(target, item, review, errors) {
     try { report = JSON.parse(await readReviewEvidence(target, review, ref)); } catch { continue; }
     if (report?.schema_version !== "workkeel.review-report/v1" || report.task_id !== item.id || report.revision !== review.revision || report.score === undefined) continue;
     if (report.judgment !== review.judgment || report.reviewer?.agent_id !== review.actor?.agent_id || report.reviewer?.principal_id !== review.actor?.principal_id) continue;
+    if (isObject(report.score)) delete report.score.self_eval;
     try { found.push(validateReviewScore(report.score)); }
     catch (error) { errors.push({ task_id: item.id, path: ref.path, message: `Invalid score: ${error.message}` }); return null; }
   }

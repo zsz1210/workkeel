@@ -44,7 +44,7 @@ test('retired job and marker commands fail without changing state',async t=>{
   }
 });
 
-test('legacy jobs stay readable and unresolved jobs cannot enter goal delivery',async t=>{
+test('legacy jobs stay readable; only possibly live executions block tick and serve',async t=>{
   const f=await fixture(t);await mutateAutonomy(f.root,'event',await f.request({event_id:'approved-event'}));
   const ref=f.root+'/.ai-org/autonomy/state.json',state=await readAutonomy(f.root);
   const job={id:'legacy',origin:'assigned',direction:null,reason:'Synthetic historical work',task_id:f.task.id,request_ref:'docs/retired.json',request_sha256:'a'.repeat(64),depends_on:[],status:'running',attempts:1,execution_id:'frozen-operation',updated_at:new Date().toISOString(),error:null,retry_at:null};
@@ -52,11 +52,25 @@ test('legacy jobs stay readable and unresolved jobs cannot enter goal delivery',
   const save=()=>fs.writeFile(ref,JSON.stringify({state,sha256:executionDigest(state)}));await save();
   const before=await fs.readFile(ref,'utf8');
   assert.equal((await readAutonomy(f.root)).jobs[0].execution_id,'frozen-operation');
-  await assert.rejects(runAutonomyStep(f.root),/Legacy.*original runner/);assert.equal(await fs.readFile(ref,'utf8'),before);
+  for(const status of ['running','recovery-required']){
+    state.jobs[0].status=status;await save();
+    await assert.rejects(runAutonomyStep(f.root),/Legacy.*original runner.*before b7dd85b2\.\.f3f97d97.*autonomy tick\/cancel/);
+  }
+  state.jobs[0].status='running';await save();assert.equal(await fs.readFile(ref,'utf8'),before);
   state.paused=true;await save();assert.equal((await runAutonomyStep(f.root)).idle,'paused');
-  state.paused=false;state.jobs[0].status='completed';await save();
-  assert.equal((await runAutonomyStep(f.root)).idle,'improvement-disabled');
-  assert.equal((await readAutonomy(f.root)).jobs[0].status,'completed');
+  state.paused=false;
+  const cli=fileURLToPath(new URL('../bin/workkeel.mjs',import.meta.url));
+  for(const [status,execution_id] of [['awaiting-acceptance','frozen-operation'],['queued',null],['running',null],['recovery-required',null],['completed','frozen-operation']]){
+    state.jobs[0].status=status;state.jobs[0].execution_id=execution_id;await save();
+    const retained=await fs.readFile(ref,'utf8');
+    assert.equal((await runAutonomyStep(f.root)).idle,'improvement-disabled');
+    const output=execFileSync(process.execPath,[cli,'autonomy','tick',f.root],{encoding:'utf8'});
+    assert.equal(JSON.parse(output).idle,'improvement-disabled');
+    const settled=Promise.withResolvers(),service=await serveAutonomy(f.root,{debounce_ms:0,reconcile_ms:60000,watchFactory:()=>({close(){}}),onError:settled.reject,onStep:settled.resolve});
+    try{assert.equal((await settled.promise).idle,'improvement-disabled');}finally{service.close();}
+    assert.equal(await fs.readFile(ref,'utf8'),retained,'legacy jobs remain unchanged');
+    assert.equal((await readAutonomy(f.root)).jobs[0].status,status);
+  }
 });
 
 test('events and policy retain authority and integrity checks',async t=>{

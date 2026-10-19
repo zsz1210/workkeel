@@ -110,12 +110,12 @@ export async function mutateAutonomy(target,action,r){
   });
 }
 /** Autonomy selects bounded work; goals own every delivery operation. Legacy
- * jobs remain readable, but must be settled with their original runner first. */
+ * jobs with possibly live executions require reconciliation first. */
 export async function runAutonomyStep(target,{goalAdapter,signal}={}){
   if(signal?.aborted)return {idle:'aborted',model_called:false};
   const s=await readAutonomy(target);
   if(s.paused)return {idle:'paused',model_called:false};
-  if(s.jobs.some(j=>!['completed','failed','cancelled'].includes(j.status)))throw Error('Legacy autonomy jobs require reconciliation with their original runner before goal delivery');
+  if(s.jobs.some(j=>['running','recovery-required'].includes(j.status)&&j.execution_id!==null))throw Error('Legacy autonomy executions require reconciliation with their original runner: the CLI from before b7dd85b2..f3f97d97, using autonomy tick/cancel, before goal delivery');
   const {runImprovementCycle}=await import('./workkeel-improvement-cycle.mjs');
   return runImprovementCycle(target,{adapter:goalAdapter,signal});
 }

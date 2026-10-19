@@ -39,7 +39,7 @@ test('project overview prioritizes current goals and accepted results over cance
 
 test('observatory browser shows real lifecycle results, learning records and autonomy readiness without empty goals', {skip:process.env.WORKKEEL_WORKSPACE_BROWSER!=='1'},async t=>{
   const {chromium}=await import('playwright-core'),{state}=await setup(t,{extended:true});
-  const service=await startWorkspaceServer(state,{hooks:{learning:{read:async()=>({entries:[],lessons:[{id:'lesson-one',title:'Retain useful work',summary:'Show outcomes even when timing is absent',effective_state:'candidate',applicability:'Task views',exclusions:'Not a global instruction'}],lesson_status:'available',retrospectives:[{at:'2026-01-01T00:00:00Z',request:{summary:'A recorded inspection'}}],actions:[]})},autonomy:{read:async()=>({version:0,enabled:false,policy:{enabled:false,directions:[],max_jobs:20,max_attempts:2,cooldown_ms:1000},available_goals:[],service:{state:'not-confirmed-in-this-host'},jobs:[],admissions:[],proposals:[]})}}});t.after(()=>service.close());
+  const service=await startWorkspaceServer(state,{hooks:{learning:{read:async()=>({entries:[],lessons:[{id:'lesson-one',title:'Retain useful work',summary:'Show outcomes even when timing is absent',effective_state:'candidate',applicability:'Task views',exclusions:'Not a global instruction'}],lesson_status:'available',retrospectives:[{at:'2026-01-01T00:00:00Z',request:{summary:'A recorded inspection'}}],actions:[]})},autonomy:{read:async()=>({version:0,enabled:false,policy:{enabled:false,directions:[],max_jobs:20,max_attempts:2,cooldown_ms:1000},available_goals:[],service:{state:'not-confirmed-in-this-host'},jobs:['awaiting-acceptance','queued','running'].map(status=>({id:status,status,task_id:'WK-old'})),admissions:[],proposals:[]})}}});t.after(()=>service.close());
   const browser=await chromium.launch({channel:'chrome',headless:true});t.after(()=>browser.close());const page=await browser.newPage({viewport:{width:1440,height:1000}});page.setDefaultTimeout(8000);
   const errors=[];page.on('pageerror',error=>errors.push(error.message));
   await page.goto(service.url);await page.getByRole('heading',{name:'Your workspace',exact:true}).waitFor();
@@ -50,7 +50,7 @@ test('observatory browser shows real lifecycle results, learning records and aut
   await page.goto(service.origin+'/?view=task&project=alpha&task='+completed.id);await page.getByText('Delivered result',{exact:true}).waitFor();assert.ok((await page.locator('.outcome-summary').innerText()).includes(completed.delivery.summary));
   await page.getByRole('tab',{name:'Timeline',exact:true}).click();assert.equal(await page.locator('.timeline').isVisible(),true);
   await page.goto(service.origin+'/?view=learning&project=alpha');await page.getByRole('heading',{name:'Retain useful work',exact:true}).waitFor();assert.equal(await page.getByText('Awaiting review',{exact:true}).isVisible(),true);assert.equal(await page.getByRole('heading',{name:'Skills',exact:true}).isVisible(),true);
-  await page.goto(service.origin+'/?view=autonomy&project=alpha');await page.locator('[data-autonomy-state=unconfigured]').waitFor();assert.equal(await page.getByText(/View only/).isVisible(),true);assert.equal(await page.locator('#autonomy-form').isVisible(),false);assert.equal(await page.getByRole('heading',{name:'Request a plan change',exact:true}).isVisible(),true);
+  await page.goto(service.origin+'/?view=autonomy&project=alpha');await page.locator('[data-autonomy-state=unconfigured]').waitFor();assert.equal(await page.locator('#autonomy-jobs button,[data-job-cancel]').count(),0);assert.equal(await page.getByText('Legacy job · controls unavailable in this version.',{exact:true}).count(),3);assert.equal(await page.getByText(/View only/).isVisible(),true);assert.equal(await page.locator('#autonomy-form').isVisible(),false);assert.equal(await page.getByRole('heading',{name:'Request a plan change',exact:true}).isVisible(),true);
   await page.goto(service.origin+'/?view=analysis&project=alpha');await page.getByRole('heading',{name:'Usage & outcomes',exact:true}).waitFor();assert.equal(await page.locator('#analysis-project').count(),0);await page.getByRole('button',{name:'Switch project',exact:true}).click();const allProjects=page.waitForResponse(response=>new URL(response.url()).pathname==='/api/analysis'&&new URL(response.url()).searchParams.get('project')==='all');await page.locator('[data-project-select=""]').click();await allProjects;await page.locator('#analysis-project').waitFor();assert.equal(await page.locator('#analysis-project').inputValue(),'all');
   for(const view of ['project','learning','autonomy']){await page.goto(service.origin+'/?view='+view+'&project=alpha');await page.waitForFunction(()=>!document.getElementById('content').innerText.includes('Reading project'));await page.evaluate(()=>document.body.style.zoom='2');assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);}
   assert.deepEqual(errors,[]);
@@ -145,6 +145,15 @@ test('clearing the project selector immediately removes old controls and ignores
 });
 
 test('workspace browser module parses before deployment',()=>{new vm.Script('async function parseOnly(){'+workspaceClient+'}');});
+
+test('legacy autonomy rows explain unavailable controls without rendering cancel buttons',()=>{
+ const start=workspaceClient.indexOf(' const terminalJob='),source=workspaceClient.slice(start,workspaceClient.indexOf('\n return ',start));
+ const jobs=['queued','awaiting-acceptance','running','recovery-required','completed'].map(status=>({id:status,task_id:'WK-old',status}));
+ const html=vm.runInNewContext(source+';legacyJobs;',{jobs,t:en=>en,escape:value=>value,operationState:value=>value,may:()=>true});
+ assert.equal((html.match(/Legacy job · controls unavailable in this version\./g)||[]).length,jobs.length);
+ assert.doesNotMatch(html,/<button|data-job-cancel/);
+ for(const job of jobs)assert.ok(html.includes(job.status));
+});
 
 test('autonomy holds pending and unresolved controls across observation refreshes', {skip:process.env.WORKKEEL_WORKSPACE_BROWSER!=='1'},async t=>{
  const {chromium}=await import('playwright-core'),{state}=await setup(t);let reads=0,release,requested,posts=0;

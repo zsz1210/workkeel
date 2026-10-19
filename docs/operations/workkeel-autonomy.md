@@ -76,11 +76,16 @@ commands. They fail with guidance to use goals; they never dispatch work. There 
 no autonomy workflow adapter or TODO/FIXME scanner. Accepted discovery goals are
 the only source of new proposal inventory.
 
-Existing job records, recipes, receipts and reservations remain readable. Before
-upgrading a workspace with unresolved jobs, stop and reconcile those runs using
-their original runner. The new cycle refuses to deliver while any legacy job is
-unsettled; it never translates an old execution ID into a new goal or claims that
-an old process stopped. Retained terminal jobs continue to count toward capacity.
+Existing job records, recipes, receipts and reservations remain readable. Only
+legacy jobs in `running` or `recovery-required` with a non-null `execution_id`
+block the new cycle, because their executions may still have live side effects.
+Reconcile those runs with their original runner: the CLI from before
+`b7dd85b2..f3f97d97`, using `autonomy tick/cancel`, before continuing goal delivery.
+Jobs in `awaiting-acceptance`, never-dispatched `queued` jobs (`execution_id: null`)
+and other legacy records do not block delivery. They remain historical records;
+the cycle does not rewrite them, translate old execution IDs into goals or claim
+that an old process stopped. The desktop shows a legacy note instead of job
+cancellation controls. All retained jobs continue to count toward capacity.
 
 ## Opt-in continuous improvement
 

@@ -146,9 +146,10 @@ rework is decided by the risk tier and the findings, as before.
 - **Findings** give the reasons for a failed review as `P1` to `P3` with a short
   note. `P3` findings are never counted as rework reasons.
 
-The unused `self_eval` placeholder is no longer accepted in score blocks or
-emitted in statistics. Reports should contain the external reviewer score and
-findings only; a retired or unknown score field is reported as an invalid score.
+The unused `self_eval` placeholder is ignored when reading historical score blocks
+and is not emitted in statistics. New score blocks must omit it. Reports should
+contain the external reviewer score and findings only; other unknown score fields
+are reported as invalid scores.
 
 `workkeel stats` reads these blocks and the task records without writing
 anything. Per task it reports `task_id`, `risk`, `model`, `reasoning_effort`,
