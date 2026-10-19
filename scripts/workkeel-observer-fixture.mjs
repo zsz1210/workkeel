@@ -9,7 +9,7 @@ export async function createObserverFixture(){
  const files={
   '.agents/skills/custom-check/SKILL.md':'---\nname: custom-check\ndescription: A project-specific offline check.\n---\n# Custom check\n\nSearchable phrase: copper kestrel.\n<script>window.pwned=true</script>\n',
   '.agents/skills/external-check/SKILL.md':'---\nname: external-check\ndescription: A synthetic third-party example.\norigin: third-party\n---\n# External check\nSynthetic data only.\n',
-  '.agents/skills/workkeel-work/SKILL.md':await fs.readFile(new URL('../project-overlay/workkeel-skills/workkeel-work/SKILL.md',import.meta.url),'utf8')
+  '.agents/skills/workkeel-work/SKILL.md':await fs.readFile(new URL('../.agents/skills/workkeel-work/SKILL.md',import.meta.url),'utf8')
  };
  files['docs/learning-evidence.md']='Synthetic observer fixture evidence.\n';
  for(const [ref,body] of Object.entries(files)){await fs.mkdir(path.dirname(path.join(root,ref)),{recursive:true});await fs.writeFile(path.join(root,ref),body);}

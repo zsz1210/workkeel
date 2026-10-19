@@ -52,10 +52,10 @@ skill-use.json`. Example request:
 
 ```json
 {
-  "expected":[".agents/skills/project-documentation/SKILL.md"],
-  "selected":[".agents/skills/project-documentation/SKILL.md"],
+  "expected":[".agents/skills/readme-writing/SKILL.md"],
+  "selected":[".agents/skills/readme-writing/SKILL.md"],
   "records":[{
-    "skill":".agents/skills/project-documentation/SKILL.md",
+    "skill":".agents/skills/readme-writing/SKILL.md",
     "read_complete":true,
     "application_evidence":[".ai-org/artifacts/WK-docs/documentation-review.md"],
     "verification_evidence":[".ai-org/artifacts/WK-docs/link-and-render-check.md"]

@@ -22,8 +22,8 @@ test('analytics preserves partial, unknown and zero, deduplicates identities and
 });
 test('library searches content and invalidates derived cache without inferring Skill activation',async t=>{
  const root=await createObserverFixture();t.after(()=>fs.rm(root,{recursive:true,force:true}));const cache=createLibraryCache();
- const first=await readMonitorLibrary(root,{cache});assert.equal(first.skills.filter(x=>x.availability==='project').length,3);assert.ok(first.skills.some(x=>x.origin==='workkeel'&&x.availability==='not-added'));assert.deepEqual(first.learning.map(x=>x.completed_milestones),[1,2,3,1]);assert.equal(first.learning.at(-1).stopped,true);
- assert.equal(first.skills.find(x=>x.name==='workkeel-work').origin,'workkeel');assert.equal(first.skills.find(x=>x.name==='custom-check').origin,'project');
+ const first=await readMonitorLibrary(root,{cache});assert.equal(first.skills.filter(x=>x.availability==='project').length,3);assert.ok(!first.skills.some(x=>x.origin==='workkeel'));assert.deepEqual(first.learning.map(x=>x.completed_milestones),[1,2,3,1]);assert.equal(first.learning.at(-1).stopped,true);
+ assert.equal(first.skills.find(x=>x.name==='workkeel-work').origin,'project');assert.equal(first.skills.find(x=>x.name==='custom-check').origin,'project');
  assert.equal((await readMonitorLibrary(root,{cache,query:'copper kestrel'})).skills.length,1);assert.ok(cache.hits>0);
  const ref='.agents/skills/custom-check/SKILL.md';await fs.writeFile(path.join(root,ref),'# Changed\nSilver owl\n');
  assert.equal((await readMonitorLibrary(root,{cache,query:'copper kestrel'})).skills.length,0);

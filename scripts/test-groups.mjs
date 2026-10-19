@@ -6,7 +6,7 @@ import { spawnSync } from "node:child_process";
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 export const fastFiles = [
   "ci-scope", "doc-links", "import-boundary", "npm-release-workflow", "publication-audit", "publication-boundary",
-  "release-package", "skill-policy", "test-groups", "workkeel-visuals"
+  "release-package", "test-groups", "workkeel-visuals"
 ].map((name) => `test/${name}.test.mjs`);
 export const dailyFiles = [...new Set([...fastFiles, ...[
   "json-rpc-process-cleanup", "json-rpc-process-protocol", "task-contract", "workkeel-cli-flags", "workkeel-command-supervisor", "workkeel-daily-entry",

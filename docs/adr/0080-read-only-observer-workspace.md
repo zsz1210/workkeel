@@ -2,6 +2,8 @@
 
 - Status: Accepted
 - Date: 2026-09-26
+- Note (2026-10-19): Workkeel 0.2 no longer ships Skills, so the observer has no
+  bundled source to match; the bundled-source rule below has nothing to apply to.
 
 ## Decision
 

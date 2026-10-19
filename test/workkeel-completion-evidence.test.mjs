@@ -29,7 +29,6 @@ test('green test evidence cannot cover an omitted requirement or missing visual 
 test('installed native CLI exposes coverage checking and returns failure without lifecycle writes',async t=>{
   const {root,report}=await fixture(t),ref='.ai-org/artifacts/WK-working/completion.json',canonical=root+'/.ai-org/work-items/WK-working.json';
   assert.match(await fs.readFile(root+'/WORKKEEL.md','utf8'),/task evidence-check/,'new consumer projects receive the completion-review guidance');
-  assert.match(await fs.readFile(new URL('../project-overlay/workkeel-skills/workkeel-work/SKILL.md',import.meta.url),'utf8'),/task evidence-check/,'the distributed native Skill contains the same gate');
   const before=await fs.readFile(canonical);await fs.writeFile(root+'/'+ref,JSON.stringify(report));
   const run=()=>spawnSync(process.execPath,[fileURLToPath(new URL('../bin/workkeel.mjs',import.meta.url)),'task','evidence-check',root,'--id','WK-working','--request',ref],{encoding:'utf8'});
   const complete=run();assert.equal(complete.status,0,complete.stderr);assert.equal(JSON.parse(complete.stdout).coverage_consistent,true);

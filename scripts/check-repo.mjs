@@ -6,8 +6,7 @@ import { TEMPLATE_VERSION } from "../src/workkeel-version.mjs";
 import { pathExists, readJson, walkFiles } from "../src/files.mjs";
 import { documentationLanguageIssue } from "./documentation-policy.mjs";
 
-// Generic Skills shipped beside the two native Workkeel Skills.
-const BUNDLED_SKILLS = ["decision-interview", "domain-modeling", "project-documentation", "skill-authoring"];
+// Skills the repository itself uses; none is shipped in the package.
 const NATIVE_SKILLS = ["workkeel-work"];
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -41,25 +40,17 @@ for (const file of (await walkFiles(root)).filter(
   check(issue === null, issue);
 }
 
-const projectOverlayRoot = path.join(root, "project-overlay");
-const projectOverlayFiles = await walkFiles(projectOverlayRoot);
-check(projectOverlayFiles.every((file) => file.startsWith(".agents/skills/") || file.startsWith("workkeel-skills/")),
-  "project overlay may contain only bundled Skills");
-
-const skillRoot = path.join(projectOverlayRoot, ".agents/skills");
+const skillRoot = path.join(root, ".agents/skills");
 const installedSkills = (await fs.readdir(skillRoot, { withFileTypes: true }))
   .filter((entry) => entry.isDirectory())
   .map((entry) => entry.name)
   .sort();
 check(
-  JSON.stringify(installedSkills) === JSON.stringify([...BUNDLED_SKILLS].sort()),
-  `bundled Skills differ from the expected set: ${installedSkills.join(", ")}`
+  JSON.stringify(installedSkills) === JSON.stringify([...NATIVE_SKILLS].sort()),
+  `repository Skills differ from the expected set: ${installedSkills.join(", ")}`
 );
-for (const [skillName, skillPath] of [
-  ...BUNDLED_SKILLS.map((name) => [name, path.join(skillRoot, name, "SKILL.md")]),
-  ...NATIVE_SKILLS.map((name) => [name, path.join(projectOverlayRoot, "workkeel-skills", name, "SKILL.md")])
-]) {
-  check(await pathExists(skillPath), `missing bundled Skill: ${skillName}`);
+for (const [skillName, skillPath] of NATIVE_SKILLS.map((name) => [name, path.join(skillRoot, name, "SKILL.md")])) {
+  check(await pathExists(skillPath), `missing repository Skill: ${skillName}`);
   if (await pathExists(skillPath)) {
     const content = await fs.readFile(skillPath, "utf8");
     check(content.startsWith("---\n"), `${skillName} frontmatter is missing`);
@@ -84,5 +75,5 @@ if (failures.length > 0) {
   console.error(`Repository checks failed:\n- ${failures.join("\n- ")}`);
   process.exitCode = 1;
 } else {
-  console.log(`Repository checks passed (${projectOverlayFiles.length} overlay files).`);
+  console.log(`Repository checks passed (${installedSkills.length} repository Skills).`);
 }

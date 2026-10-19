@@ -22,7 +22,6 @@ export const REQUIRED_PACKAGE_PATHS = [
   "docs/operations/workkeel-native-dispatch.md",
   "docs/adr/0081-native-dispatch-and-reading-state.md",
   "src/workkeel-observer-index.mjs",
-  "project-overlay/workkeel-skills/workkeel-work/SKILL.md",
   "src/workkeel-monitor-time.mjs",
   "src/workkeel-monitor-data.mjs",
   "src/workkeel-monitor-analytics.mjs",
@@ -123,7 +122,7 @@ const ALLOWED_TOP_LEVEL_FILES = new Set([
   "THIRD_PARTY_NOTICES.md",
   "package.json"
 ]);
-const ALLOWED_TOP_LEVEL_DIRECTORIES = ["bin/", "docs/", "project-overlay/", "src/"];
+const ALLOWED_TOP_LEVEL_DIRECTORIES = ["bin/", "docs/", "src/"];
 // A bounded package catches accidental inclusion of new internal material.
 const MAX_FILE_COUNT = 260;
 const MAX_UNPACKED_SIZE = 4 * 1024 * 1024;

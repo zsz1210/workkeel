@@ -26,7 +26,7 @@ specific earlier record, the record number is given for Git-history lookup only.
 is not replaced by this record. Its rules are restated here so that they cannot
 be lost when reading this summary alone; where the two differ, ADR-0083 governs.
 
-- Publish framework code, generic project overlay, examples, documentation,
+- Publish framework code, examples, documentation,
   license notices, and reproducible tests in a fresh source history.
 - Keep actual task records, approvals, dispatch records, review evidence,
   raw execution output, machine settings, `.ai-org/`, and `workkeel.lock`
@@ -67,9 +67,8 @@ Two older rules point the same way and remain in force (ADR-0011, ADR-0048):
 - Repository checks reject CJK text in Markdown outside the localized README
   files. Identifiers, product names written in Latin characters, diagrams, and
   non-language typography are unaffected.
-- This policy covers the framework source only. The installed
-  `$project-documentation` Skill follows each target project's own language
-  policy and does not impose multilingual documentation on product repositories.
+- This policy covers the framework source only. It does not impose multilingual
+  documentation on product repositories.
 
 ### 3. Distribution, runtime support and CI (from ADR-0039, ADR-0043, ADR-0051)
 

@@ -20,6 +20,10 @@ Unpublished source. Breaking: removes the Temple compatibility mode.
   block, and init's suggested `.gitignore`. `start` points to `init` and
   `task new` instead of returning policy and brief drafts, and the
   `workkeel-init` Skill is removed.
+- The package ships no Skills. The generic `decision-interview`,
+  `domain-modeling`, `project-documentation` and `skill-authoring` Skills and the
+  `project-overlay/` directory are removed; projects write their own Skills. The
+  observer no longer labels any Skill as Workkeel-origin.
 - Known limitation: replay of flag commands relies on requests saved under the
   checkout's Git directory. Several processes or mixed CLI versions acting on the
   same task at once can still hit edge cases; such commands stop rather than act on

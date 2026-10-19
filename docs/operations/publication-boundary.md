@@ -11,8 +11,8 @@ Adding a file requires reviewing both its purpose and its contents, then adding
 its relative path to the manifest. Do not regenerate the manifest from arbitrary
 working files as a publication shortcut. Root `.ai-org/`, output, machine settings,
 legacy project instructions, and internal development reports are never public.
-Generic `project-overlay/` templates and synthetic product fixtures are deliberate
-exceptions to the distinction between runtime data and source templates.
+Synthetic product fixtures are deliberate exceptions to the distinction between
+runtime data and source templates.
 
 Two generic bootstrap files existed in the fresh source history before local
 initialization was separated. `historical_files` pins only those exact reviewed

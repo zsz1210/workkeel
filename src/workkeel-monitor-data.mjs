@@ -1,6 +1,5 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import {fileURLToPath} from 'node:url';
 import {createHash} from 'node:crypto';
 import {readTaskFile, readTaskContractInput} from './task-contract.mjs';
 import {readNativeTask, listTaskItems} from './workkeel-tasks.mjs';
@@ -60,19 +59,9 @@ async function skillPaths(root,refs=[]) {
   if(found.size>MAX_ENTRIES)throw Error('Skill inventory limit exceeded');
   return [...found].sort();
 }
-async function builtinDigest(ref) {
-  if(!/^\.agents\/skills\/[a-z0-9-]+\/SKILL\.md$/.test(ref))return null;
-  try{return (await readTaskFile(new URL('../project-overlay/',import.meta.url).pathname,ref)).digest;}catch{
-    try{return (await readTaskFile(new URL('../project-overlay/workkeel-skills/',import.meta.url).pathname,ref.replace('.agents/skills/',''))).digest;}catch{return null;}
-  }
-}
 async function catalogueSources(root,skillRefs,catalogRoots,errors=[]) {
   if(!Array.isArray(catalogRoots)||catalogRoots.length>64)throw Error('Skill source limit');
   const result=(await skillPaths(root,skillRefs)).map(ref=>({root,ref,source:'project',id:documentId(ref)}));
-  const bundled=fileURLToPath(new URL('../project-overlay/',import.meta.url));
-  for(const ref of await skillPaths(bundled))result.push({root:bundled,ref,source:'workkeel',id:documentId('bundled:'+ref)});
-  const native=path.join(bundled,'workkeel-skills');
-  for(const name of ['workkeel-work'])result.push({root:native,ref:name+'/SKILL.md',project_ref:'.agents/skills/'+name+'/SKILL.md',source:'workkeel',id:documentId('native:'+name)});
   for(const [index,source] of catalogRoots.entries()){
     if(!source||!path.isAbsolute(source.path)||!['user','third-party'].includes(source.origin))throw Error('Invalid Skill source');
     // Launch-selected Skill directories only; never discover account/config files.
@@ -91,20 +80,16 @@ async function catalogueSources(root,skillRefs,catalogRoots,errors=[]) {
 }
 export async function readMonitorLibrary(root,{cache=createLibraryCache(),query='',skillRefs=[],catalogRoots=[]}={}) {
   const skills=[],learning=[],errors=[];
-  const projectDigests=new Map();
   for(const source of await catalogueSources(root,skillRefs,catalogRoots,errors)) {
     const {ref}=source;
     try{
       const file=await readSource(source.root,ref,cache);
-      if(source.source==='project')projectDigests.set(ref,file.digest);
-      if(source.source==='workkeel'&&projectDigests.get(source.project_ref??ref)===file.digest)continue;
       const entry=indexed(cache,source.id,file,()=>({id:source.id,path:source.source==='project'?ref:path.join(source.root,ref),name:frontmatter(file.content,'name')??ref.split('/').at(-2),
         description:frontmatter(file.content,'description')??'',search:file.content.toLocaleLowerCase(),digest:file.digest}));
-      const builtIn=source.source==='project'?await builtinDigest(ref):null;
-      const origin=builtIn===file.digest?'workkeel':frontmatter(file.content,'origin')==='third-party'?'third-party':source.source;
+      const origin=frontmatter(file.content,'origin')==='third-party'?'third-party':source.source;
       if(!query||entry.search.includes(query.toLocaleLowerCase())){const {search,...publicEntry}=entry;skills.push({...publicEntry,origin,
-        source_label:source.label??source.source,availability:source.source==='project'?'project':source.source==='workkeel'&&projectDigests.has(source.project_ref??ref)?'different-version':'not-added',
-        origin_basis:origin==='workkeel'?'matches-bundled-source':origin==='third-party'?'declared-or-configured-source':'source-location-author-unrecorded'});}
+        source_label:source.label??source.source,availability:source.source==='project'?'project':'not-added',
+        origin_basis:origin==='third-party'?'declared-or-configured-source':'source-location-author-unrecorded'});}
     }catch{errors.push({path:ref,code:'skill-unavailable'});}
   }
   // Pre-0.2 Lesson/Practice/proposal stores are not read or converted; their

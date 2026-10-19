@@ -56,7 +56,7 @@ arbitrary files. Missing sources are reported while available sources remain vis
 | Usage analysis | Paired time/token bars, task scatter and daily/weekly trends; shared filters |
 | Activity | Recorded execution lanes over 24 hours or seven days; paged events on demand; gaps stay unknown |
 | Backlog | Searchable task/document history, 50 rows per page |
-| Learning & skills | Project learning, compact milestones, bundled/project/configured Skills and content search |
+| Learning & skills | Project learning, compact milestones, project/configured Skills and content search |
 | Settings | Language/timezone display preferences and read-only project/runtime policy explanations |
 | How Workkeel works | Task flow, component responsibilities and the optional learning path |
 
@@ -96,19 +96,17 @@ not inferred from task titles.
 ## Sources and privacy
 
 The observer reads the selected task format, referenced Markdown/text evidence,
-execution journals, project learning records, bundled/project Skills and explicitly
+execution journals, project learning records, project Skills and explicitly
 configured personal or plugin Skill directories. It does not
 scan user-wide credentials or model settings. Document bodies are requested on open;
 Skill/learning content is indexed locally for search. Documents remain at the opened
 version while reading; an update notice lets you choose when to reload.
 
-Skill origin is an exact bundled-source match, a declared/configured third-party
-source, or a project/personal location with unrecorded authorship. Installation
-location is not author proof. Source and project availability are separate fields:
-a bundled or personal Skill is not necessarily installed in this project. Identical
-bundled copies in the project appear once; different versions remain distinguishable.
-Native Workkeel setup/delivery Skills are available separately. Skills tied to the
-retired lifecycle are hidden by default and explicitly labelled as compatibility
+Skill origin is a declared/configured third-party source, or a project/personal
+location with unrecorded authorship. Workkeel ships no Skills, so no origin means
+"written by Workkeel". Installation location is not author proof. Source and project
+availability are separate fields: a personal Skill is not necessarily installed in
+this project. Skills tied to the retired lifecycle are hidden by default and explicitly labelled as compatibility
 material; their source identifiers and historical content are preserved.
 Task contract selection is shown separately from reading/application/verification;
 the current native task records do not store a unified application receipt, so those
