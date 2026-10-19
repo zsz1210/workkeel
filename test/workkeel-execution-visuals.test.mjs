@@ -77,7 +77,7 @@ test('paused autonomy guidance follows Resume capability in both languages witho
   const code=block('const t=','const states=')+block('const activityLabel=','const measuredTokens=')+block('const may=','function operatorContext(')+block('function selectedImprovementGoal(','function commandFeedback(')+'\nautonomyView("project");';
   const goal={id:'approved-goal',title:'Approved improvement',authority_current:true,grant:{enabled:true}};
   const accepted={id:'accepted-work',title:'Accepted work',root:'/fictional/accepted',project_id:'project',read_status:'available',state:'done',accepted:true,created_at:'2026-01-02T00:00:00Z'};
-  const historical={id:'historical-work',title:'Historical work',root:'/fictional/historical',project_id:'project',read_status:'available',state:'review-required',historically_accepted:true,accepted:false,created_at:'2026-01-01T00:00:00Z'};
+  const historical={id:'historical-work',title:'Historical work',root:'/fictional/historical',project_id:'project',read_status:'available',state:'done',historically_accepted:true,accepted:false,created_at:'2026-01-01T00:00:00Z'};
   const base={connected:true,writeToken:'operator',improvementGoal:goal.id,connectionError:null,
     snapshot:{projects:[{id:'project',name:'Example project',read_status:'available'}],goals:[accepted,historical],capabilities:{actions:['autonomy.policy','autonomy.resume']}},
     hookData:{enabled:true,paused:true,available_goals:[goal],policy:{admission:{enabled:true}},

@@ -8,7 +8,7 @@ import { readTaskContractInput, readTaskFile, validateTaskContract } from "./tas
 import { assertActor, assertApprover, readTaskProject, safeDirectory, existsEntry, readNativeGit } from "./workkeel-project.mjs";
 import {loadTaskRequirements, assertRequirementOutcomes} from './workkeel-requirements.mjs';
 import { completeTaskContract } from "./workkeel-task-draft.mjs";
-import { assertCriticalApprovalRecord, assertTaskRisk, candidateRisk, elevatedRisk, maxRisk, taskRisk } from "./workkeel-risk.mjs";
+import { MAX_REWORKS, assertCriticalApprovalRecord, assertTaskRisk, candidateRisk, elevatedRisk, maxRisk, taskRisk } from "./workkeel-risk.mjs";
 
 const ID = /^[A-Za-z0-9][A-Za-z0-9._-]{0,95}$/;
 const SHA = /^(?:[a-f0-9]{40}|[a-f0-9]{64})$/;
@@ -500,6 +500,8 @@ export async function mutateNativeTask(targetInput, id, action, request) {
       assertApprover(project.policy, request.actor); assertText(request.summary);
       if (request.mode !== undefined && !["source", "evidence-only"].includes(request.mode)) throw new Error("Unknown rework mode");
       if (item.state !== "test" || item.review?.judgment !== "fail") throw new Error("Rework requires a failed review and preserves the same approved contract");
+      const tier = effectiveRisk(item), rounds = item.attempts.filter(a => a.kind === "rejected").length;
+      if (rounds >= MAX_REWORKS[tier]) throw new Error(`Rework limit reached for ${tier} risk (${MAX_REWORKS[tier]} rounds); stop and ask the human to re-scope, approve a new task or cancel`);
       item.attempts.push({ kind: "rejected", base_revision: item.base_revision, delivery: item.delivery, review: item.review, summary: request.summary,
         ...(request.mode ? { rework_mode: request.mode } : {}) });
       item.delivery = null; item.review = null; item.claim = null; item.state = "intake"; item.dependency_pins = null;

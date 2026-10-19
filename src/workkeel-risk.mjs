@@ -8,6 +8,18 @@ const under = (file, root) => root === "." || file === root || file.startsWith(`
 // Dotfiles count: `deploy/**` must cover `deploy/.env`.
 const OPTIONS = { dot: true, windows: false };
 
+/** Review and rework policy by risk tier, shared by the review prompt, the native
+ * rework gate, goal rework and reports. Past the limit the work stops for a human
+ * decision. Scores never move these lines. */
+export const MAX_REWORKS = Object.freeze({ low: 2, standard: 3, high: 3, critical: 3 });
+export const REVIEW_RULES = Object.freeze({
+  low: "Fail only for P1, or a P2 that normal use will hit.",
+  standard: "Fail for P1 or P2 that normal use will hit.",
+  high: "Strict: fail for any P1 or P2; record P3.",
+  critical: "Strict: fail for any P1 or P2; record P3."
+});
+export const reviewRule = tier => `Risk ${tier}. ${REVIEW_RULES[tier]} An issue that only appears under concurrency is a known issue, not a blocker, below high risk.`;
+
 export function validRiskPattern(pattern) {
   return typeof pattern === "string" && pattern.length > 0 && pattern.length <= 256 && pattern.trim() === pattern &&
     !/[\\\x00-\x1f\x7f]/.test(pattern) && !pattern.startsWith("/") && !pattern.startsWith("!") &&

@@ -22,7 +22,7 @@ The private `workkeel.goal/v1` manifest has these required fields:
 | `integration` | Integration component and criteria; it depends on every other mandatory component |
 | `roles` | Registered implementer, distinct reviewer and authorized approver actor objects |
 | `models` | Approved provider/model/reasoning/service tuple for planning, implementation, verification, repair and review |
-| `limits` | Maximum operations, reworks, total reserved time and financial ceiling or null; optional per-operation timeout |
+| `limits` | Maximum operations, reworks (clamped per component to its risk-tier limit: low 2, standard 3), total reserved time and financial ceiling or null; optional per-operation timeout |
 | `control` | Explicit `release_parent` policy for the controller's original claim |
 
 Checks are `{id,command,args}` with approved explicit tool names. Integration cannot

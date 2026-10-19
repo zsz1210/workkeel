@@ -99,6 +99,8 @@ passing review of that commit.
 | Review evidence | Summary may suffice | Summary may suffice | Reviewer's own `workkeel.review-report/v1` record | Same as high |
 | Reviewer | Different Agent | Different Agent | Different Agent from a different model family | Same as high |
 | Unresolved issues listed at handoff | Reviewer decides | Reviewer decides | Review cannot pass | Handoff is refused |
+| Reviewer fails for | P1, or P2 hit in normal use | P1 or P2 hit in normal use | Any P1 or P2 | Same as high |
+| Rework rounds before a human decides | 2 | 3 | 3 | 3 |
 | Who closes | An approver | An approver | The task's approving Principal, as the human confirmation | Same as high |
 | Rollback plan at handoff | Optional | Optional | Optional | Required |
 | Approval record | Not required | Not required | Not required | A committed `--approval` record whose content in the candidate must match what was approved |
@@ -106,6 +108,10 @@ passing review of that commit.
 Optional automation (whole goals, bounded autonomy and automatic improvement)
 accepts only `low` and `standard` work. High and critical tasks always go through
 the manual lifecycle: another model family reviews, then a person confirms.
+Below high risk, an issue that only appears under concurrent use is recorded as
+a known issue, not a blocker. Past the rework limit, `rework` is refused and the
+work stops until a person re-scopes it, approves a new task or cancels it. A goal's
+`max_reworks` is clamped to the same limit for each component's risk.
 
 ## Review scores (optional)
 
@@ -143,7 +149,10 @@ anything. Per task it reports `task_id`, `risk`, `model`, `reasoning_effort`,
 history) and `rework` (rounds, and each round's reasons by P level; a round
 without findings uses the rework summary). Per tier it reports the average scores
 for each rubric, rework rounds and the distribution of rework reasons. A malformed
-score block is listed under `errors` and left out of the averages.
+score block is listed under `errors` and left out of the averages. A score counts
+only from the actual reviewer's own report for that candidate and judgment; an
+author's report or a delivered file is ignored, and two different reviewer scores
+for one review are left unknown.
 
 ## Rolling out
 

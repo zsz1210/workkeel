@@ -10,6 +10,7 @@ import {assertRequirementAssessment} from './workkeel-requirements.mjs';
 import {readTaskProject,assertActor,assertApprover,safeDirectory,readNativeGit} from './workkeel-project.mjs';
 import {assertTaskExecutionContext,readNativeTask,mutateNativeTask,evidenceStatus} from './workkeel-tasks.mjs';
 import {withProjectMutationLock} from './workkeel-lock.mjs';
+import {MAX_REWORKS,taskRisk} from './workkeel-risk.mjs';
 import {durableAtomicCreate,durableAtomicWrite,formatJson} from './files.mjs';
 
 const ROOT='.ai-org/goals',SCHEMA='workkeel.goal/v1',trustedAdapters=new WeakSet();
@@ -90,6 +91,8 @@ export async function assertNativeGoalAuthority(target,goalOrId,{actor:operator,
   if(execution)for(const c of m.components)await componentTask(s,c);
   return {id:s.id,manifest:m,manifest_sha256:s.manifest_sha256,controller:s.controller,approval_pin:s.approval_pin,roots:s.roots,standing_authorized:execution,authority:'sealed-standing-goal'};
 }
+// The manifest limit is clamped to the risk-tier limit of the component's task.
+const reworkLimit=(m,t)=>Math.min(m.limits.max_reworks,MAX_REWORKS[taskRisk(t)]);
 async function componentTask(s,c){
   const identity=s.roots.find(r=>r.root===c.root),current=await rootIdentity(c.root);
   if(!identity||identity.dev!==current.dev||identity.ino!==current.ino)fail('component repository identity changed');
@@ -170,7 +173,7 @@ export async function readNativeGoal(target,goalId){
   const historical=s.completion!==null,current=historical&&complete&&executionDigest(facts)===s.completion.candidate_set_sha256&&await evidenceCurrent(target,s.completion.pins);
   const discoveryReports=[];
   for(const c of components)if(c.purpose==='discovery'&&c.accepted&&c.progress?.review_proof){const operation=s.operations.filter(o=>o.input.component_id===c.id&&o.input.phase==='implementation'&&o.status==='completed'&&o.result?.proposal_report).at(-1);if(operation&&operation.result.report_pin&&await freshPin(c.root,operation.result.report_pin)&&await evidenceCurrent(c.root,operation.result.source_pins??[]))discoveryReports.push({component_id:c.id,root:c.root,task_id:c.task_id,task_version:c.task_version,candidate_revision:c.candidate_revision,operation_id:operation.id,report:operation.result.proposal_report,proposal_report:operation.result.proposal_report,report_pin:operation.result.report_pin,source_pins:operation.result.source_pins??[],usage:operation.result.usage,actual_actor:operation.result.actor,thread_id:operation.result.thread_id});}
-  return {...s,state:s.status,manifest:m,mandatory_components:components,completed_discovery_reports:discoveryReports,component_set_sha256:executionDigest(m.components),whole_acceptance:current&&authority_status==='current'?'accepted':historical?'stale':'not-accepted',status:s.status==='done'&&!current?'review-required':s.status,authority_status,authority:'observation-only',mutation_status:'no-write',model_calls:0,all_components_accepted:complete,integration:s.completion,accepted:current&&authority_status==='current',published:'not-performed',deployed:'not-performed'};
+  return {...s,state:s.status,manifest:m,mandatory_components:components,completed_discovery_reports:discoveryReports,component_set_sha256:executionDigest(m.components),whole_acceptance:current&&authority_status==='current'?'accepted':historical?'stale':'not-accepted',status:s.status,authority_status,authority:'observation-only',mutation_status:'no-write',model_calls:0,all_components_accepted:complete,integration:s.completion,accepted:current&&authority_status==='current',published:'not-performed',deployed:'not-performed'};
 }
 export async function listNativeGoals(target){let dir;try{dir=await safeDirectory(target,ROOT);}catch(e){if(e.code==='ENOENT')return [];throw e;}const names=(await fs.readdir(dir)).filter(n=>n!=='.gitignore').sort();if(names.length>200)fail('goal inventory bound');const items=[];for(const name of names){try{items.push(await readNativeGoal(target,name));}catch(e){items.push({id:name,read_status:'unavailable',accepted:false,reason:e.message});}}return items;}
 export async function controlNativeGoal(target,goalId,action,r){
@@ -237,7 +240,7 @@ async function reserve(target,goalId,adapter,signal){
         const input=nativeInput(s,m,c,t,'claim',p);input.request.base_revision=(await readNativeGit(c.root,['rev-parse','HEAD'])).trim();return add({kind:'native',phase:'claim',component_id:c.id,root:c.root,task_id:c.task_id,...input});
       }
       if(t.state==='test'&&t.review?.judgment==='fail'){
-        if(p.cycle>=m.limits.max_reworks){p.last_error='Bounded rework limit reached; original FAIL retained';continue;}
+        if(p.cycle>=reworkLimit(m,t)){p.last_error='Risk-tier rework limit reached; original FAIL retained; human decision required';continue;}
         return add({kind:'native',phase:'rework',component_id:c.id,root:c.root,task_id:c.task_id,...nativeInput(s,m,c,t,'rework',p)});
       }
       if(t.state==='release_gate'){
@@ -382,13 +385,12 @@ export async function runNativeGoalStep(target,goalId,{adapter,signal}={}){
         for(const ref of result.evidence)await readTaskFile(component.root,ref);
         p.verification={checks:result.checks,evidence:result.evidence,integration_pin:result.integration_pin??null};
         if(result.checks.every(c=>c.status==='pass'))p.phase='handoff';
-        else{p.failures.push({kind:'verification',operation_sha256:executionDigest(stored),revision:p.candidate});if(p.cycle>=m.limits.max_reworks)p.last_error='Verification rework budget exhausted';else{p.cycle++;p.phase='repair';}}
+        else{p.failures.push({kind:'verification',operation_sha256:executionDigest(stored),revision:p.candidate});if(p.cycle>=reworkLimit(m,await componentTask(current,component)))p.last_error='Verification rework budget exhausted';else{p.cycle++;p.phase='repair';}}
       }
       const cost=result.usage?.cost_usd;if(Number.isFinite(cost)&&cost>=0)current.known_cost_usd+=cost;else current.cost_complete=false;
       if(m.limits.max_cost_usd!==null&&(!current.cost_complete||current.known_cost_usd>m.limits.max_cost_usd))fail('enforced goal cost evidence unavailable or exceeded');
     }catch(e){stored.status='unknown';stored.result={status:'unknown',reason:e.message.slice(0,1000)};p.last_error=stored.result.reason;await save(target,current);return {operation:stored,status:'blocked',accepted:false};}
     }
-    if(!p.last_error||p.last_error==='Verification rework budget exhausted'&&p.cycle<m.limits.max_reworks)p.last_error=null;
     current.last_error=current.components.filter(c=>c.last_error).map(c=>c.id+': '+c.last_error).join('; ')||null;
     await save(target,current);return {operation:stored,status:current.status,accepted:false,model_called:op.kind==='runtime'&&reservation.mode==='execute'&&result.model_called!==false};
   });

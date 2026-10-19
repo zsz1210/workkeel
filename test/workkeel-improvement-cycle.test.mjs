@@ -10,7 +10,7 @@ import {createNativeGoal,readNativeGoal,runNativeGoalStep,createTrustedGoalAdapt
 import {readTaskFile} from '../src/task-contract.mjs';
 import {executionDigest} from '../src/workkeel-execution-policy.mjs';
 import {mutateAutonomy,readAutonomy,runAutonomyStep,serveAutonomy} from '../src/workkeel-autonomy.mjs';
-import {readGoalAdmissions,admitGoalImprovement,reconcileGoalAdmission,extendGoalAdmission,readGoalAdmissionAuthority} from '../src/workkeel-autonomy-admission.mjs';
+import {readGoalAdmissions,admitGoalImprovement,reconcileGoalAdmission,extendGoalAdmission,readGoalAdmissionAuthority,disposeGoalProposal} from '../src/workkeel-autonomy-admission.mjs';
 import {runImprovementCycle} from '../src/workkeel-improvement-cycle.mjs';
 import {createWorkspaceHooks} from '../src/workkeel-workspace-hooks.mjs';
 import {inventoryRetention} from '../src/workkeel-retention.mjs';
@@ -121,6 +121,18 @@ test('unresolved derived results remain visible while service listens and clear 
 
 test('known high-risk findings stop speculative discovery without spending another model turn',async t=>{
   const f=await fixture(t,{risk:'high',maxGoals:3});let result;for(let n=0;n<30;n++){result=await runImprovementCycle(f.root,{adapter:f.adapter});if(result.idle==='known-findings-need-attention')break;}assert.equal(result.manual_proposals,1);assert.equal(result.idle,'known-findings-need-attention');assert.equal((await readGoalAdmissions(f.root)).entries.length,1);const before=f.calls.length;await fs.appendFile(f.root+'/src/value.mjs','// changed\n');assert.equal((await runImprovementCycle(f.root,{adapter:f.adapter})).idle,'known-findings-need-attention');assert.equal(f.calls.length,before);assert.equal((await readGoalAdmissions(f.root)).entries.length,1);
+});
+
+test('an explicit proposal disposition releases blocked exploration without retrying the proposal',async t=>{
+  const f=await fixture(t,{risk:'high',maxGoals:3,maxRounds:3});let result;for(let n=0;n<30;n++){result=await runImprovementCycle(f.root,{adapter:f.adapter});if(result.idle==='known-findings-need-attention')break;}assert.equal(result.idle,'known-findings-need-attention');
+  const request={goal_id:f.manifest.id,actor,operation_id:'dismiss-high',expected_version:(await readGoalAdmissions(f.root)).version,proposal_id:(await readAutonomy(f.root)).proposals[0].id,disposition:'dismissed',reason:'Synthetic: out of the automatic risk scope'};
+  await assert.rejects(disposeGoalProposal(f.root,{...request,actor:reviewer}),/approver/);
+  await assert.rejects(disposeGoalProposal(f.root,{...request,disposition:'superseded'}),/superseded_by/);
+  const disposed=await disposeGoalProposal(f.root,request);assert.equal(disposed.disposition.disposition,'dismissed');assert.equal((await disposeGoalProposal(f.root,request)).replayed,true);
+  await assert.rejects(disposeGoalProposal(f.root,{...request,operation_id:'again',disposition:'needs-reevaluation'}),/different disposition/);
+  await fs.appendFile(f.root+'/src/value.mjs','// changed\n');result=await runImprovementCycle(f.root,{adapter:f.adapter});
+  assert.notEqual(result.idle,'known-findings-need-attention');assert.equal(result.progressed,true);
+  const journal=await readGoalAdmissions(f.root);assert.equal(journal.entries.filter(e=>e.kind==='execution').length,0);assert.equal(journal.entries.filter(e=>e.kind==='discovery').length,2);
 });
 
 test('derived admission preserves original decisions for assessment and inherits applicable delivery criteria',async t=>{

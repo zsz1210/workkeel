@@ -137,3 +137,30 @@ test("review evidence committed in the candidate is read from that revision, not
   assert.equal(stats.records.find(r => r.task_id === id).external_score, null);
   assert.deepEqual(stats.errors, []);
 });
+
+test("a score counts only from the actual reviewer, and conflicting reviewer scores stay unknown", async t => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), "workkeel-scoring-"));
+  t.after(() => fs.rm(root, { recursive: true, force: true }));
+  git(root, "init", "-q"); git(root, "config", "user.name", "Fixture"); git(root, "config", "user.email", "fixture@example.invalid");
+  await write(root, "docs/approval.md", "Approved synthetic fixture work.\n");
+  await initializeTaskProject(root, policy);
+  git(root, "add", "."); git(root, "commit", "-qm", "base");
+  const report = (id, revision, by, value) => JSON.stringify({ schema_version: "workkeel.review-report/v1", task_id: id, stage: "review", revision,
+    reviewer: by, judgment: "pass", summary: "Reviewed", score: { external_score: { rubric: "non-code", scores: { requirements: value } } } });
+  const reviewed = async (id, reports) => {
+    await createNativeTask(root, contract(id, "low", "docs"), request(0, builder));
+    const claim = await mutateNativeTask(root, id, "claim", request(1, builder, { base_revision: git(root, "rev-parse", "HEAD") }));
+    await write(root, `docs/${id}.md`, "Doc\n"); git(root, "add", "docs"); git(root, "commit", "-qm", id);
+    const revision = git(root, "rev-parse", "HEAD");
+    await mutateNativeTask(root, id, "handoff", request(2, builder, { claim_id: claim.claim.id, revision, summary: "Docs", evidence: [], unresolved: [] }));
+    const refs = [];
+    for (const [n, [by, value]] of reports.entries()) { const ref = `.ai-org/artifacts/${id}/report-${n}.json`; await write(root, ref, report(id, revision, by, value)); refs.push(ref); }
+    await mutateNativeTask(root, id, "review", request(3, reviewer, { revision, judgment: "pass", summary: "Fine", evidence: refs }));
+  };
+  await reviewed("WK-self", [[builder, 5], [reviewer, 2]]);
+  await reviewed("WK-conflict", [[reviewer, 5], [reviewer, 2]]);
+  const stats = await readScoreStats(root);
+  assert.equal(stats.records.find(r => r.task_id === "WK-self").external_score.total, 2);
+  assert.equal(stats.records.find(r => r.task_id === "WK-conflict").external_score, null);
+  assert.match(stats.errors.find(e => e.task_id === "WK-conflict").message, /Conflicting/);
+});

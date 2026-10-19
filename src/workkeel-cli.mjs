@@ -69,7 +69,7 @@ workkeel skill-lifecycle list [target]
 workkeel skill-lifecycle candidate|evaluate|review|approve|policy|activate|suspend|rollback|revalidate|use|retrospective [target] --request request.json
 workkeel goal list [target]
 workkeel goal show|tick|serve [target] --id goal-id
-workkeel goal create|pause|resume|cancel|recover|extend-admission [target] --request request.json
+workkeel goal create|pause|resume|cancel|recover|extend-admission|dispose-proposal [target] --request request.json
 workkeel autonomy show [target]
 workkeel autonomy policy|enqueue|pause|resume|cancel|event|discover|resume-job [target] --request request.json
 workkeel autonomy tick|serve [target]
@@ -200,6 +200,7 @@ async function runCommand(args) {
     }else{allow(options,['--request']);const request=(await readTaskContractInput(target,required(options,'--request'))).document;
       if(action==='create')output=await goals.createNativeGoal(target,request);
       else if(action==='extend-admission'){const {extendGoalAdmission}=await import('./workkeel-autonomy-admission.mjs');output=await extendGoalAdmission(target,request);}
+      else if(action==='dispose-proposal'){const {disposeGoalProposal}=await import('./workkeel-autonomy-admission.mjs');output=await disposeGoalProposal(target,request);}
       else {const {goal_id,...control}=request;output=await goals.controlNativeGoal(target,goal_id,action,control);}}
   } else if(command==='autonomy') {
     const autonomy=await import('./workkeel-autonomy.mjs');

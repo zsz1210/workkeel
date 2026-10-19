@@ -45,9 +45,11 @@ export async function runImprovementCycle(target,{adapter,signal}={}){
   if(waiting||entries.some(e=>e.status!=='created'))return idle('derived-goal-needs-attention',{goal_id:waiting?.id??null});
   const refreshed=await readAutonomy(target);
   const discoveredIds=new Set(entries.filter(e=>e.kind==='discovery').map(e=>e.intent.manifest.id));
+  // An explicit disposition settles a stale or equivalent proposal; it no longer blocks.
+  const disposed=new Set((journal.dispositions??[]).filter(d=>d.goal_id===source.id).map(d=>d.proposal_id));
   let manual=0;
   for(const proposal of refreshed.proposals.filter(p=>discoveredIds.has(p.origin_goal_id))){
-    if(entries.some(e=>e.kind==='execution'&&e.proposal_id===proposal.id))continue;
+    if(disposed.has(proposal.id)||entries.some(e=>e.kind==='execution'&&e.proposal_id===proposal.id))continue;
     if(!['low','standard'].includes(proposal.risk_tier)||!policy.directions.includes(proposal.direction)){manual++;continue;}
     if(proposal.scope.read_paths.some(p=>!policy.discovery?.read_paths.some(r=>under(p,r)))||proposal.scope.write_paths.some(p=>!policy.discovery?.write_paths.some(r=>under(p,r)))){manual++;continue;}
     if(entries.length+state.jobs.length>=policy.max_jobs)return idle('project-job-budget');

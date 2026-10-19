@@ -64,17 +64,25 @@ async function readReviewEvidence(target, review, ref) {
   return new TextDecoder("utf-8", { fatal: true }).decode(bytes);
 }
 
-/** The scored review report among one review's evidence, if any. */
+/**
+ * The scored review report among one review's evidence, if any. It must be the
+ * actual reviewer's record of this candidate and judgment; an author's report or
+ * a delivered file never counts. Two different scores for one review are unknown.
+ */
 async function reviewScore(target, item, review, errors) {
+  const delivered = new Set([item.delivery, ...item.attempts.map(a => a.delivery)].flatMap(d => d?.evidence ?? []).map(p => p.path));
+  const found = [];
   for (const ref of review?.evidence ?? []) {
-    if (!ref.path.endsWith(".json")) continue;
+    if (!ref.path.endsWith(".json") || delivered.has(ref.path)) continue;
     let report;
     try { report = JSON.parse(await readReviewEvidence(target, review, ref)); } catch { continue; }
     if (report?.schema_version !== "workkeel.review-report/v1" || report.task_id !== item.id || report.revision !== review.revision || report.score === undefined) continue;
-    try { return validateReviewScore(report.score); }
+    if (report.judgment !== review.judgment || report.reviewer?.agent_id !== review.actor?.agent_id || report.reviewer?.principal_id !== review.actor?.principal_id) continue;
+    try { found.push(validateReviewScore(report.score)); }
     catch (error) { errors.push({ task_id: item.id, path: ref.path, message: `Invalid score: ${error.message}` }); return null; }
   }
-  return null;
+  if (new Set(found.map(f => JSON.stringify(f))).size > 1) { errors.push({ task_id: item.id, message: "Conflicting reviewer scores; left unknown" }); return null; }
+  return found[0] ?? null;
 }
 
 /** One task's score record, or null when it has no review yet. */
@@ -126,5 +134,5 @@ export async function readScoreStats(target) {
   }
   return { schema_version: "workkeel.stats/v1", authority: "observation-only", mutation_status: "no-write", by_risk, records, errors,
     limitations: ["Scores are statistics only. They never trigger rework or block acceptance; the risk-tier review rules decide that.",
-      "Only reviews whose own workkeel.review-report/v1 file carries a score block are scored. Rework reasons without P-level findings use the rework summary."] };
+      "Only the actual reviewer's own workkeel.review-report/v1 file for that candidate and judgment is scored; author or delivered reports are ignored. Rework reasons without P-level findings use the rework summary."] };
 }

@@ -36,11 +36,14 @@ export function validateGoalAdmissionGrant(g){
   if(!cost(g.max_total_cost_usd)||!withinCost(g.max_cost_usd,g.max_total_cost_usd))fail('financial limit exceeds standing grant');
   if(g.source_refs.some(ref=>!g.read_paths.some(root=>under(ref,root))))fail('trigger sources exceed standing scope');return g;
 }
+export const PROPOSAL_DISPOSITIONS=Object.freeze(['superseded','dismissed','needs-reevaluation']);
+function disposition(d){exactKeys(d,['goal_id','proposal_id','disposition','superseded_by','reason','actor','operation_id','created_at']);id(d.goal_id);id(d.proposal_id);id(d.operation_id);exactKeys(d.actor,['agent_id','principal_id']);id(d.actor.agent_id);id(d.actor.principal_id);text(d.reason);if(!PROPOSAL_DISPOSITIONS.includes(d.disposition))fail('unknown proposal disposition');if(d.disposition==='superseded'?typeof d.superseded_by!=='string':d.superseded_by!==null)fail('superseded_by names the replacing proposal, and only for superseded');if(d.superseded_by!==null)id(d.superseded_by);if(!Number.isFinite(Date.parse(d.created_at)))fail('invalid disposition time');}
 const empty=()=>({schema_version:'workkeel.goal-admissions/v1',version:0,entries:[],receipts:[]});
 function validateStore(s){
-  exactKeys(s,['schema_version','version','entries','receipts'],['extensions']);if(s.schema_version!=='workkeel.goal-admissions/v1')fail('invalid journal');integer(s.version,0,1000);
+  exactKeys(s,['schema_version','version','entries','receipts'],['extensions','dispositions']);if(s.schema_version!=='workkeel.goal-admissions/v1')fail('invalid journal');integer(s.version,0,1000);
   if(s.extensions!==undefined){bounded(s.extensions,extensionRecord,0,32);if(new Set(s.extensions.map(e=>e.request.operation_id)).size!==s.extensions.length)fail('duplicate extension operation');}
   bounded(s.entries,e=>{exactKeys(e,['id','goal_id','kind','proposal_id','problem_sha256','input_sha256','source_manifest_sha256','status','reservation','intent','owner','updated_at','error']);id(e.id);id(e.goal_id);id(e.proposal_id);pin(e.problem_sha256);pin(e.input_sha256);pin(e.source_manifest_sha256);if(!['discovery','execution'].includes(e.kind)||!['reserved','created','recovery-required'].includes(e.status))fail('invalid admission status');exactKeys(e.reservation,['operations','max_runtime_ms','max_cost_usd']);integer(e.reservation.operations,1,10000);integer(e.reservation.max_runtime_ms,1,86400000);if(!cost(e.reservation.max_cost_usd))fail('invalid reservation');if(!e.intent||typeof e.intent!=='object'||Array.isArray(e.intent))fail('invalid frozen intake intent');if(e.owner){exactKeys(e.owner,['pid','host','token']);integer(e.owner.pid,1,Number.MAX_SAFE_INTEGER);text(e.owner.host);text(e.owner.token);}if(!Number.isFinite(Date.parse(e.updated_at)))fail('invalid admission timestamp');},0,200);
+  if(s.dispositions!==undefined){bounded(s.dispositions,disposition,0,1000);if(new Set(s.dispositions.map(d=>d.goal_id+':'+d.proposal_id)).size!==s.dispositions.length)fail('duplicate proposal disposition');}
   bounded(s.receipts,r=>{exactKeys(r,['operation_id','input_sha256','admission_id']);id(r.operation_id);id(r.admission_id);pin(r.input_sha256);},0,1000);return s;
 }
 export async function readGoalAdmissions(target){
@@ -219,4 +222,23 @@ export async function reconcileGoalAdmission(target,{admission_id,actor},{owner=
   }catch(error){
     await withProjectMutationLock(target,async()=>{const s=await readGoalAdmissions(target),e=s.entries.find(e=>e.id===entry.id);if(e.owner?.token!==entry.owner.token)fail('admission ownership changed');e.status='recovery-required';e.owner=null;e.error=String(error.message).slice(0,2000);e.updated_at=current();await save(target,s);});throw error;
   }
+}
+
+/** An explicit approver decision closes a stale or equivalent proposal so it no
+ * longer blocks exploration. The proposal, its evidence and any reservation stay;
+ * nothing is retried automatically. needs-reevaluation leaves a later discovery to
+ * propose it again from current sources. */
+export async function disposeGoalProposal(target,r){
+  exactKeys(r,['goal_id','actor','operation_id','expected_version','proposal_id','disposition','reason'],['superseded_by']);id(r.goal_id);id(r.operation_id);id(r.proposal_id);integer(r.expected_version,0,1000);
+  const record={goal_id:r.goal_id,proposal_id:r.proposal_id,disposition:r.disposition,superseded_by:r.superseded_by??null,reason:r.reason,actor:r.actor,operation_id:r.operation_id,created_at:current()};
+  disposition(record);if(record.superseded_by===record.proposal_id)fail('a proposal cannot supersede itself');
+  const {readNativeGoal}=await import('./workkeel-goals.mjs'),goal=await readNativeGoal(target,r.goal_id),project=await readTaskProject(target);
+  assertApprover(project.policy,r.actor);if(!sameActor(r.actor,goal.manifest.roles.approver))fail('only the standing goal approver can dispose a proposal');
+  return withProjectMutationLock(target,async()=>{
+    const s=await readGoalAdmissions(target),prior=(s.dispositions??[]).find(d=>d.goal_id===r.goal_id&&d.proposal_id===r.proposal_id);
+    if(prior){const same=['disposition','superseded_by','reason','operation_id'].every(k=>prior[k]===record[k])&&sameActor(prior.actor,record.actor);if(!same)fail('proposal already has a different disposition');return {version:s.version,disposition:prior,replayed:true};}
+    if(s.version!==r.expected_version)fail('journal version conflict');
+    if(s.entries.some(e=>e.goal_id===r.goal_id&&e.kind==='execution'&&e.proposal_id===r.proposal_id))fail('admitted proposals are settled through their derived goal');
+    s.dispositions??=[];if(s.dispositions.length>=1000)fail('journal capacity');s.dispositions.push(record);await save(target,s);return {version:s.version,disposition:record,replayed:false};
+  });
 }

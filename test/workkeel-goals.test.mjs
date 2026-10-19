@@ -42,7 +42,7 @@ async function fixture(t,{count=1,maxReworks=2,purpose='execution',release=false
   return {target,roots,manifest,request,directory};
 }
 async function artifact(ctx,kind,value){const ref='.ai-org/artifacts/'+ctx.task.id+'/goal-'+kind+'-'+ctx.operation_id+'.json';await fs.mkdir(path.dirname(ctx.component.root+'/'+ref),{recursive:true});await fs.writeFile(ctx.component.root+'/'+ref,JSON.stringify(value,null,2)+'\n');return {path:ref,sha256:(await readTaskFile(ctx.component.root,ref)).bytes_digest};}
-function fixtureAdapter({firstFail=true,onExecute=()=>{},wrongThread=false,interruptAfterNativeReview=false}={}){
+function fixtureAdapter({firstFail=true,alwaysFail=false,onExecute=()=>{},wrongThread=false,interruptAfterNativeReview=false}={}){
   const reviews=new Map(),receipts=new Map();
   return createTrustedGoalAdapter({id:'synthetic-goal-host',assertCapabilities:async()=>{},cancel:async()=>({status:'cancelled',reason:'Synthetic exact owned host stopped'}),reconcile:async ctx=>receipts.get(ctx.operation_id)??{status:'unknown',reason:'Synthetic effects are unknown'},
     execute:async ctx=>{
@@ -50,7 +50,7 @@ function fixtureAdapter({firstFail=true,onExecute=()=>{},wrongThread=false,inter
       const result={status:'completed',operation_id:ctx.operation_id,actor:ctx.input.actor,thread_id:thread,runtime_selection:ctx.input.model,product_access:['planning','review','verification'].includes(phase)||ctx.component.purpose==='discovery'?'read':'write',usage:{input_tokens:0,output_tokens:0,cost_usd:0}};
       if(phase==='planning'){await artifact(ctx,'planning',{synthetic_role:'builder',phase});}
       if(['implementation','repair'].includes(phase)){
-        await fs.writeFile(ctx.component.root+'/src/value.mjs','export const value="'+(phase==='repair'||!firstFail?'fixed':'first')+'";\n');git(ctx.component.root,'add','src/value.mjs');git(ctx.component.root,'commit','-qm','Synthetic exact '+ctx.operation_id);
+        await fs.writeFile(ctx.component.root+'/src/value.mjs','export const value="'+(alwaysFail?ctx.operation_id:phase==='repair'||!firstFail?'fixed':'first')+'";\n');git(ctx.component.root,'add','src/value.mjs');git(ctx.component.root,'commit','-qm','Synthetic exact '+ctx.operation_id);
         result.candidate_revision=git(ctx.component.root,'rev-parse','HEAD');await artifact(ctx,phase,{synthetic_role:'builder',actual_changed_file:'src/value.mjs'});
       }
       if(phase==='verification'){
@@ -62,7 +62,7 @@ function fixtureAdapter({firstFail=true,onExecute=()=>{},wrongThread=false,inter
       if(phase==='review'){
         const n=reviews.get(ctx.task.id)??0;reviews.set(ctx.task.id,n+1);
         const proofPath='.ai-org/artifacts/'+ctx.task.id+'/goal-review-'+ctx.operation_id+'.json';
-        const native_request={operation_id:ctx.operation_id,expected_version:ctx.task.version,actor:reviewer,revision:ctx.input.candidate,judgment:firstFail&&n===0?'fail':'pass',summary:firstFail&&n===0?'Synthetic distinct reviewer observes value first; acceptance requires fixed':'Synthetic distinct reviewer verified repaired exact candidate',evidence:[...ctx.input.verification.evidence,proofPath]};
+        const native_request={operation_id:ctx.operation_id,expected_version:ctx.task.version,actor:reviewer,revision:ctx.input.candidate,judgment:alwaysFail||firstFail&&n===0?'fail':'pass',summary:firstFail&&n===0?'Synthetic distinct reviewer observes value first; acceptance requires fixed':'Synthetic distinct reviewer verified repaired exact candidate',evidence:[...ctx.input.verification.evidence,proofPath]};
         result.authored_request_pin=await artifact(ctx,'review',{schema_version:'workkeel.goal-authored-review/v1',actor:reviewer,thread_id:thread,operation_id:ctx.operation_id,product_access:'read',runtime_selection:ctx.input.model,native_request});
         await mutateNativeTask(ctx.component.root,ctx.task.id,'review',native_request);
         receipts.set(ctx.operation_id,result);
@@ -161,6 +161,9 @@ test('explicit safe parent release preserves sealed standing authority while nat
 test('whole acceptance becomes stale when an approved interface differs from its reviewed Git candidate',async t=>{
   const f=await fixture(t),adapter=fixtureAdapter({firstFail:false});assert.equal((await finish(f,adapter)).accepted,true);
   await fs.appendFile(f.target+'/src/value.mjs','// Unreviewed interface change\n');const stale=await readNativeGoal(f.target,f.manifest.id);assert.equal(stale.accepted,false);assert.equal(stale.whole_acceptance,'stale');assert.equal(stale.mandatory_components[0].accepted,false);
+  // A stale historical acceptance is not an execution fault: the goal stays done and needs no recovery.
+  assert.equal(stale.status,'done');const registry={projects:[{id:'project-0',task_root:f.target,repositories:[{id:'repo-0',path:f.target,scope:'.'}]}]},projected=projectWorkspaceGoals([stale],registry,'project-0')[0];
+  assert.equal(projected.acceptance,'stale');assert.equal(projected.requires_recovery,false);
 });
 
 test('separate scheduler process cannot double-start an operation owned by a live process',async t=>{
@@ -243,4 +246,11 @@ test('successful exact reconciliation retains another component recovery reason'
   await runNativeGoalStep(f.target,f.manifest.id,{adapter});await runNativeGoalStep(f.target,f.manifest.id,{adapter});await runNativeGoalStep(f.target,f.manifest.id,{adapter});await runNativeGoalStep(f.target,f.manifest.id,{adapter});
   const result=await runNativeGoalStep(f.target,f.manifest.id,{adapter});assert.equal(result.operation.status,'completed');
   const view=await readNativeGoal(f.target,f.manifest.id);assert.equal(view.components[0].last_error,null);assert.match(view.components[1].last_error,/Other model unavailable/);assert.match(view.last_error,/Other model unavailable/);assert.doesNotMatch(view.last_error,/Lost planning response/);
+});
+
+test('goal rework is clamped to the risk-tier limit and then waits for a person',async t=>{
+  const f=await fixture(t,{maxReworks:10}),adapter=fixtureAdapter({alwaysFail:true});let view;
+  for(let n=0;n<60;n++){const step=await runNativeGoalStep(f.target,f.manifest.id,{adapter});view=await readNativeGoal(f.target,f.manifest.id);if(step.idle)break;}
+  assert.match(view.components[0].last_error,/Risk-tier rework limit reached/);
+  assert.equal((await readNativeTask(f.target,'WK-component-0')).attempts.filter(a=>a.kind==='rejected').length,3);
 });

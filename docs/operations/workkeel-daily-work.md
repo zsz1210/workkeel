@@ -367,7 +367,12 @@ reason. Assessment does not establish product fulfillment.
 The controller attempts eligible known proposals before new exploration.
 Unresolved scope or risk leaves `known-findings-need-attention`; waiting calls no
 model. Resolve the finding through authorized work instead of downgrading risk.
-There is no automatic dismissal of manual proposals. A separately approved repair
+There is no automatic dismissal of manual proposals. The standing goal approver can
+settle a stale or equivalent proposal with `goal dispose-proposal . --request
+request.json` (`goal_id`, `proposal_id`, `disposition` of `superseded`,
+`dismissed` or `needs-reevaluation`, `superseded_by` for `superseded`, and a
+`reason`). The proposal stops blocking exploration; its record, evidence and any
+reservation stay, and nothing is retried automatically. A separately approved repair
 and a newly accepted continuation goal can establish the next baseline; the prior
 proposal and its evidence remain historical. Changing source bytes alone is not
 proof that a finding was resolved.

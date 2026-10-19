@@ -296,3 +296,18 @@ test("existing .ai-org state is never converted at initialization", async t => {
   await assert.rejects(initializeTaskProject(root, policy()), /archived or removed/);
   await assert.rejects(fs.stat(path.join(root, "workkeel.lock")), { code: "ENOENT" });
 });
+
+test("rework stops for a human decision at the risk-tier limit", async t => {
+  const root = await fixture(t); let { revision, ref } = await deliver(root);
+  const v = async () => (await readNativeTask(root, "WK-one")).version;
+  for (let round = 1; round <= 3; round++) {
+    await mutateNativeTask(root, "WK-one", "review", request(await v(), reviewer, { revision, judgment: "fail", summary: `Round ${round} defect`, evidence: [ref] }));
+    await mutateNativeTask(root, "WK-one", "rework", request(await v(), developer, { summary: `Repair round ${round}` }));
+    const claim = await mutateNativeTask(root, "WK-one", "claim", request(await v(), developer, { base_revision: revision }));
+    await write(root, "src/cart.mjs", `export const total = ${round + 2};\n`); git(root, "add", "src"); git(root, "commit", "-qm", `round ${round}`);
+    revision = git(root, "rev-parse", "HEAD");
+    await mutateNativeTask(root, "WK-one", "handoff", request(await v(), developer, { claim_id: claim.claim.id, revision, summary: "Repaired", evidence: [ref], unresolved: [] }));
+  }
+  await mutateNativeTask(root, "WK-one", "review", request(await v(), reviewer, { revision, judgment: "fail", summary: "Still wrong", evidence: [ref] }));
+  await assert.rejects(mutateNativeTask(root, "WK-one", "rework", request(await v(), developer, { summary: "Fourth try" })), /Rework limit reached for standard risk \(3 rounds\)/);
+});
