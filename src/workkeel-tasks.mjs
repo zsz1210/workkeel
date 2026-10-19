@@ -3,6 +3,7 @@ import path from "node:path";
 import crypto from "node:crypto";
 import { durableAtomicCreate, durableAtomicWrite, formatJson, sha256 } from "./files.mjs";
 import { withProjectMutationLock } from "./workkeel-lock.mjs";
+import { warnUnknownFields } from "./workkeel-compat.mjs";
 import { readTaskContractInput, readTaskFile, validateTaskContract } from "./task-contract.mjs";
 import { assertActor, assertApprover, readTaskProject, safeDirectory, existsEntry, readNativeGit } from "./workkeel-project.mjs";
 import {loadTaskRequirements, assertRequirementOutcomes} from './workkeel-requirements.mjs';
@@ -22,8 +23,10 @@ const bodyHash = item => digest(Object.fromEntries(Object.entries(item).filter((
 const initiator = item => item.history[0]?.actor ?? null;
 const effectiveRisk = taskRisk;
 const under = (file, root) => root === "." || file === root || file.startsWith(`${root}/`);
+/** Unknown request fields are ignored with a compatibility warning. */
 function assertKeys(value, keys) {
-  if (!value || typeof value !== "object" || Array.isArray(value) || Object.keys(value).some(k => !keys.includes(k))) throw new Error("Unknown request fields are not permitted");
+  if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error("A request object is required");
+  warnUnknownFields(value, keys, "request");
 }
 function assertText(value) { if (typeof value !== "string" || !value.trim() || value.length > 8000) throw new Error("A bounded nonempty summary is required"); }
 

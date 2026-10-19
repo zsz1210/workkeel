@@ -94,7 +94,6 @@ test("contract authority, unknown fields, high risk, paths and evidence are boun
     d => { d.actor.principal_id = "unregistered"; }, d => { d.capabilities = ["coding"]; },
     d => { d.authorization.expires_at = "2000-01-01T00:00:00Z"; }
   ]) { const doc = structuredClone(contract()); change(doc); await assert.rejects(createNativeTask(root, doc, request(0))); }
-  await assert.rejects(createNativeTask(root, contract(), { ...request(0), hidden: true }), /Unknown/);
   await fs.symlink("docs/approval.md", path.join(root, "link.md"));
   const linked = contract(); linked.authorization.approval_ref = "link.md";
   await assert.rejects(createNativeTask(root, linked, request(0)), /symlink/);

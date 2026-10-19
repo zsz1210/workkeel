@@ -1,7 +1,8 @@
 import { createHash } from "node:crypto";
 import { TEMPLATE_VERSION } from "./workkeel-version.mjs";
 import { readTaskContractInput } from "./task-contract.mjs";
-import { initializeTaskProject, existsEntry, readTaskProject, soloPolicy, updateProjectPolicy } from "./workkeel-project.mjs";
+import { initializeTaskProject, existsEntry, readProjectCompatibility, readTaskProject, soloPolicy, updateProjectPolicy, upgradeTaskProject } from "./workkeel-project.mjs";
+import { assertMutationCompatible, cliCompatibility, drainCompatibilityWarnings, warnIncompatibleCli } from "./workkeel-compat.mjs";
 import { parseCommandLine, resolveActor, runLifecycleFromFlags, runCreateFromFlags } from "./workkeel-cli-flags.mjs";
 import { createNativeTask, mutateNativeTask, readNativeTask, listTaskItems, diagnoseTaskProject } from "./workkeel-tasks.mjs";
 import { planTaskRuntime } from "./workkeel-runtime.mjs";
@@ -14,6 +15,7 @@ workkeel init [target] --solo               one owner with builder and reviewer 
 workkeel task new [target] --goal text --acceptance text [--write path]
 workkeel task claim|handoff|review|close [target] --id task-id --actor id [--summary text] [--evidence path] [--judgment pass|fail] [--rollback text]
 workkeel status|doctor [target]
+workkeel upgrade [target] [--actor id]      move the project pin to this CLI
 workkeel monitor [target]
 workkeel help advanced                      every command, including request-file forms
 
@@ -26,6 +28,7 @@ workkeel start [target] [--request brief.json]
 workkeel init [target] --solo [--principal id] | --team --policy repository-policy.json
 workkeel policy show [target] | policy update [target] --policy repository-policy.json [--actor id]
 workkeel status|doctor [target]
+workkeel upgrade [target] [--actor id]
 workkeel task new [target] --goal text --acceptance text [--acceptance text] [--write path] [--read path] [--risk tier] [--approval path] [--id id] [--actor id]
 workkeel task create [target] --source contract.json --request request.json
 workkeel task show [target] --id task-id
@@ -71,17 +74,40 @@ workkeel workspace show|serve [private state directory]
 
 All task commands return JSON. Lifecycle mutation requests contain operation_id,
 expected_version and actor; workflow requests use a stable run_id and active claim.
+A CLI with the pinned major version and not older than the pin is compatible.
+Otherwise reads warn on stderr and mutations stop until workkeel upgrade.
 See docs/getting-started/workkeel.md and docs/operations/workkeel-workflows.md.
 Native host execution is the default. Runtime plans do not launch models or grant
 permissions. Workflow run explicitly launches the qualified Codex subscription host.
 `;
 function required(options, key) { if (!options[key]) throw new Error(`Missing ${key}`); return options[key]; }
 function allow(options, keys) { if (Object.keys(options).some(k => !keys.includes(k))) throw new Error("Option is not supported by this command"); }
+// Commands that never write project state. Everything else counts as a mutation.
+const READ_ONLY = {
+  start: null, status: null, doctor: null, policy: ["show"], runtime: ["plan"], context: ["prepare"], skills: ["audit"],
+  task: ["show", "assess", "evidence-check", "metrics", "summary"], dispatch: ["show", "plan"], intake: ["preview"],
+  "model-policy": ["show", "preview"], learning: ["list"], "skill-lifecycle": ["list"], autonomy: ["show"], goal: ["list", "show"],
+  workflow: ["show", "metrics", "plan", "continuation-plan"], instructions: ["preview"], retention: ["inventory", "preview", "verify", "usage"]
+};
+const readOnly = (command, action) => Object.hasOwn(READ_ONLY, command) && (READ_ONLY[command] === null || READ_ONLY[command].includes(action));
+/** Reads warn when this CLI is incompatible with the pin; mutations stop. */
+async function checkCompatibility(target, command, action) {
+  if (readOnly(command, action)) {
+    const compatibility = await readProjectCompatibility(target);
+    if (compatibility) warnIncompatibleCli(compatibility);
+  } else assertMutationCompatible(cliCompatibility((await readTaskProject(target)).cli.version));
+}
 
 export async function workkeelMain(args) {
+  try { return await runCommand(args); }
+  finally { for (const warning of drainCompatibilityWarnings()) console.error(JSON.stringify({ schema_version: "workkeel.warning/v1", ...warning })); }
+}
+
+async function runCommand(args) {
   if (!args.length || ["help", "--help", "-h"].includes(args[0])) { console.log(args[1] === "advanced" ? ADVANCED_HELP : HELP); return 0; }
   if (["version", "--version"].includes(args[0])) { console.log(TEMPLATE_VERSION); return 0; }
   const { command, action, target, options } = parseCommandLine(args);
+  if (!["init", "workspace", "upgrade"].includes(command) && await existsEntry(target, "workkeel.lock")) await checkCompatibility(target, command, action);
   let output;
   if (command === "start") {
     allow(options, ["--request"]);
@@ -109,6 +135,9 @@ export async function workkeelMain(args) {
     }
   } else if (!await existsEntry(target, "workkeel.lock")) {
     throw new Error("Initialize the project with workkeel init before using task commands");
+  } else if (command === "upgrade") {
+    allow(options, ["--actor"]);
+    output = await upgradeTaskProject(target, await resolveActor(target, await readTaskProject(target), options["--actor"]));
   } else if (command === "policy") {
     if (action === "show") { allow(options, []); output = (await readTaskProject(target)).policy; }
     else if (action === "update") {

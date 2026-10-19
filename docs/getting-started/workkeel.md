@@ -20,6 +20,15 @@ use `npx --no-install workkeel`; a reviewed source checkout provides
 alternative. Version 0.2 removed the earlier legacy mode; projects pinned to an
 older CLI keep that version, and there is no migration path.
 
+`workkeel.lock` pins a CLI version. A CLI with the same major version that is not
+older than the pin works normally. With any other CLI, read commands such as
+`status` and `doctor` still run and print a warning on stderr, and commands that
+write stop. Run `workkeel upgrade [target] [--actor id]` with the newer CLI to
+move the pin to it and rewrite `workkeelw.mjs`; an approving Principal runs it,
+and it never downgrades the pin or converts task records. Unknown fields in the
+lock or in requests are ignored with a warning; `schema_version` decides
+major compatibility.
+
 Tasks carry a low, standard, high or critical risk tier. Project policy
 `risk_paths` and sensitive data set a minimum tier, and high or critical work
 adds review by another model family and close by the approving Principal.
@@ -122,7 +131,8 @@ WORKKEEL_CLI_PATH=/path/to/workkeel/bin/workkeel.mjs node ./workkeelw.mjs doctor
 Init creates `workkeel.lock`, `workkeelw.mjs` and `WORKKEEL.md`, refusing existing
 framework files. It preserves native instructions. Preview and apply the additive
 [AGENTS/CLAUDE bridge](../extensions/workkeel-context.md#connect-native-instructions)
-so the coding agent can discover Workkeel. The source override is version-checked.
+so the coding agent can discover Workkeel. The source override must report a version,
+and the CLI checks it against the pin.
 The launcher uses a matching local package when present; it never silently fetches
 an unpublished package. Network package fetching requires the explicit
 `WORKKEEL_ALLOW_PACKAGE_FETCH=1` opt-in and an actually published pinned version.

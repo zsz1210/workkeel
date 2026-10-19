@@ -9,6 +9,7 @@ import { withProjectMutationLock } from "./workkeel-lock.mjs";
 import { readTaskContractInput, readTaskFile } from "./task-contract.mjs";
 import { PACKAGE_NAME, TEMPLATE_REPOSITORY, TEMPLATE_VERSION } from "./workkeel-version.mjs";
 import { RISK_TIERS, validRiskPattern } from "./workkeel-risk.mjs";
+import { cliCompatibility, warnIncompatibleCli, warnUnknownFields, withdrawCliWarnings } from "./workkeel-compat.mjs";
 
 export const WORKKEEL_PACKAGE = PACKAGE_NAME;
 export const TASK_PROJECT_SCHEMA = "workkeel.project/v2";
@@ -103,14 +104,50 @@ export async function safeDirectory(target, relative, { create = false } = {}) {
   }
   return current;
 }
+const LOCK_FIELDS = ["cli", "policy", "schema_version"];
 export async function readTaskProject(target) {
   await assertGitRoot(target);
   const input = await readTaskContractInput(target, "workkeel.lock");
   const p = input.document;
-  if (!p || Object.keys(p).sort().join(",") !== "cli,policy,schema_version" || p.schema_version !== TASK_PROJECT_SCHEMA ||
-      p.cli?.package_name !== WORKKEEL_PACKAGE || p.cli.version !== TEMPLATE_VERSION) throw new Error("Task-first project pin is unsupported; use the recorded Workkeel version");
+  if (!p || typeof p !== "object" || Array.isArray(p) || LOCK_FIELDS.some(key => !Object.hasOwn(p, key)) || p.schema_version !== TASK_PROJECT_SCHEMA ||
+      p.cli?.package_name !== WORKKEEL_PACKAGE || cliCompatibility(p.cli.version).status === "invalid") throw new Error("Task-first project pin is unsupported; use the recorded Workkeel version");
+  warnUnknownFields(p, LOCK_FIELDS, "workkeel.lock");
+  warnIncompatibleCli(cliCompatibility(p.cli.version));
   assertPolicy(p.policy);
   return { ...p, digest: input.digest };
+}
+/** This CLI's compatibility with the lock's pin, or null when the lock cannot be read. Never throws. */
+export async function readProjectCompatibility(target) {
+  try {
+    const compatibility = cliCompatibility((await readTaskContractInput(target, "workkeel.lock")).document?.cli?.version);
+    return compatibility.status === "invalid" ? null : compatibility;
+  } catch { return null; }
+}
+
+/** The project launcher. It reads the pinned version from workkeel.lock, so upgrades only rewrite the lock. */
+export function launcherSource() {
+  return `import { spawnSync } from "node:child_process";
+import { createRequire } from "node:module";
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+const root = path.dirname(fileURLToPath(import.meta.url));
+const pin = JSON.parse(fs.readFileSync(path.join(root, "workkeel.lock"), "utf8")).cli;
+if (pin?.package_name !== ${JSON.stringify(WORKKEEL_PACKAGE)} || typeof pin.version !== "string") throw Error("Workkeel pin is missing from workkeel.lock");
+const installed = path.join(root, "node_modules", "@zsz1210", "workkeel", "bin", "workkeel.mjs");
+const source = process.env.WORKKEEL_CLI_PATH || (fs.existsSync(installed) ? installed : null);
+if (source) {
+  // The CLI itself checks semver compatibility with the pin on every command.
+  const check = spawnSync(process.execPath, [source, "version"], { cwd: root, encoding: "utf8" });
+  if (check.status !== 0 || !createRequire(path.resolve(root, source))("semver").valid(check.stdout.trim())) throw Error("Workkeel override did not report a version");
+} else if (process.env.WORKKEEL_ALLOW_PACKAGE_FETCH !== "1") {
+  throw Error("Pinned Workkeel CLI is not installed. Set WORKKEEL_CLI_PATH to a compatible source bin/workkeel.mjs, or explicitly allow a published package fetch with WORKKEEL_ALLOW_PACKAGE_FETCH=1. No download was attempted.");
+}
+const run = source
+  ? spawnSync(process.execPath, [source, ...process.argv.slice(2)], { cwd: root, stdio: "inherit" })
+  : spawnSync("npm", ["exec", "--yes", "--package", pin.package_name + "@" + pin.version, "--", "workkeel", ...process.argv.slice(2)], { cwd: root, stdio: "inherit" });
+process.exitCode = run.status ?? 1;
+`;
 }
 
 export async function initializeTaskProject(targetInput, policy) {
@@ -122,26 +159,7 @@ export async function initializeTaskProject(targetInput, policy) {
     // Earlier task records are archived by their owners, never converted.
     if (await existsEntry(target, ".ai-org")) throw new Error("Existing .ai-org state must be archived or removed before initialization");
     const project = { schema_version: TASK_PROJECT_SCHEMA, cli: { package_name: WORKKEEL_PACKAGE, version: TEMPLATE_VERSION }, policy };
-    const launcher = `import { spawnSync } from "node:child_process";
-import fs from "node:fs";
-import path from "node:path";
-import { fileURLToPath } from "node:url";
-const root = path.dirname(fileURLToPath(import.meta.url));
-const pin = JSON.parse(fs.readFileSync(path.join(root, "workkeel.lock"), "utf8")).cli;
-if (pin.package_name !== ${JSON.stringify(WORKKEEL_PACKAGE)} || pin.version !== ${JSON.stringify(TEMPLATE_VERSION)}) throw Error("Workkeel pin mismatch");
-const installed = path.join(root, "node_modules", "@zsz1210", "workkeel", "bin", "workkeel.mjs");
-const source = process.env.WORKKEEL_CLI_PATH || (fs.existsSync(installed) ? installed : null);
-if (source) {
-  const check = spawnSync(process.execPath, [source, "version"], { cwd: root, encoding: "utf8" });
-  if (check.status !== 0 || check.stdout.trim() !== pin.version) throw Error("Workkeel override version mismatch");
-} else if (process.env.WORKKEEL_ALLOW_PACKAGE_FETCH !== "1") {
-  throw Error("Pinned Workkeel CLI is not installed. Set WORKKEEL_CLI_PATH to the matching source bin/workkeel.mjs, or explicitly allow a published package fetch with WORKKEEL_ALLOW_PACKAGE_FETCH=1. No download was attempted.");
-}
-const run = source
-  ? spawnSync(process.execPath, [source, ...process.argv.slice(2)], { cwd: root, stdio: "inherit" })
-  : spawnSync("npm", ["exec", "--yes", "--package", pin.package_name + "@" + pin.version, "--", "workkeel", ...process.argv.slice(2)], { cwd: root, stdio: "inherit" });
-process.exitCode = run.status ?? 1;
-`;
+    const launcher = launcherSource();
     const instructions = `# Workkeel project instructions
 
 Use the pinned \`node ./workkeelw.mjs\`; never hand-edit records under \`.ai-org/\`.
@@ -194,6 +212,33 @@ export async function updateProjectPolicy(targetInput, policy, actor) {
     await durableAtomicWrite(path.join(target, "workkeel.lock"), formatJson({ ...lock, policy }));
     return { schema_version: TASK_PROJECT_SCHEMA, updated: true, mutation_status: "applied",
       limitations: ["Open tasks approved under the previous policy stop at their next operation until they are cancelled and re-created."] };
+  });
+}
+
+/**
+ * Moves the project pin to this CLI's version and rewrites the launcher. Never
+ * downgrades and never converts task records; their schema_version governs them.
+ */
+export async function upgradeTaskProject(targetInput, actor) {
+  const target = await fs.realpath(targetInput);
+  return withProjectMutationLock(target, async () => {
+    const project = await readTaskProject(target);
+    assertApprover(project.policy, actor);
+    const compatibility = cliCompatibility(project.cli.version);
+    if (compatibility.status === "cli-older") throw new Error(`Upgrade never downgrades the project pin. ${compatibility.next_action}`);
+    const { digest, ...lock } = project, launcher = launcherSource(), updated = [];
+    const current = await existsEntry(target, "workkeelw.mjs") ? (await readTaskFile(target, "workkeelw.mjs")).digest : null;
+    // The launcher reads the pin from the lock, so writing it first is safe if the lock write fails.
+    if (current !== sha256(launcher)) { await durableAtomicWrite(path.join(target, "workkeelw.mjs"), launcher); updated.push("workkeelw.mjs"); }
+    if (lock.cli.version !== TEMPLATE_VERSION) {
+      if ((await readTaskFile(target, "workkeel.lock")).digest !== digest) throw new Error("workkeel.lock changed while upgrading; retry");
+      await durableAtomicWrite(path.join(target, "workkeel.lock"), formatJson({ ...lock, cli: { ...lock.cli, version: TEMPLATE_VERSION } }));
+      updated.push("workkeel.lock");
+    }
+    withdrawCliWarnings();
+    return { schema_version: "workkeel.upgrade/v1", from: project.cli.version, to: TEMPLATE_VERSION, updated,
+      mutation_status: updated.length ? "applied" : "already-applied", records_converted: false,
+      next_action: updated.length ? "Review and commit the updated files, then run workkeel doctor." : "The project already uses this Workkeel version." };
   });
 }
 

@@ -45,6 +45,14 @@ Unpublished source. Breaking: removes the Temple compatibility mode.
   `schema_version`) and task contracts to `workkeel.task-contract/v2` without the
   `legacy` field. The mutation lock, temporary files and remaining schema names use
   the `workkeel` prefix.
+- CLI compatibility follows semver (the `semver` package): a CLI with the pinned
+  major version and not older than the pin is compatible. Otherwise read commands
+  warn on stderr and mutations stop with a pointer to `workkeel upgrade`, which
+  moves the pin to the running CLI and rewrites the launcher; it never downgrades
+  and never converts task records. The launcher now reads the pin from
+  `workkeel.lock` instead of embedding a version. Unknown fields in the lock, task
+  requests and execution documents are ignored with a warning instead of
+  rejected; `schema_version` still decides major compatibility.
 - The monitor and workspace drop the pre-migration history and legacy Skill views.
 
 - Native tasks now accept high, critical and sensitive work. Project policy
