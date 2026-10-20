@@ -3,6 +3,8 @@ import {projectWorkspaceGoals} from '../src/workkeel-workspace.mjs';
 import {buildExecutionVisual} from '../src/workkeel-execution-visuals.mjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
+import fsSync from 'node:fs';
+import {syncBuiltinESMExports} from 'node:module';
 import path from 'node:path';
 import os from 'node:os';
 import {execFileSync,spawn} from 'node:child_process';
@@ -202,9 +204,61 @@ test('expiry prohibits new dispatch while frozen explicit cancellation still clo
 });
 
 test('service does not spin on its own uncertain result writes or invoke inference during idle reconciliation',async t=>{
+  let service;t.after(async()=>{await service?.close();});
   const f=await fixture(t);let calls=0,reconciliations=0;const errors=[];
+  t.mock.timers.enable({apis:['setInterval']});
   const adapter=createTrustedGoalAdapter({id:'bounded-watcher-fixture',assertCapabilities:async()=>{},execute:async()=>{calls++;return {status:'unknown',reason:'Synthetic unknown; never infer on poll'};},reconcile:async()=>{reconciliations++;return {status:'unknown',reason:'Still unknown'};},cancel:async()=>({status:'cancelled'})});
-  let ready;const observed=new Promise(r=>ready=r),service=await serveNativeGoal(f.target,f.manifest.id,{adapter,reconcile_ms:1000,onError:e=>errors.push(e),onStep:result=>{if(result.operation?.kind==='runtime')ready();}});t.after(()=>service.close());let timer;await Promise.race([observed,new Promise((_,reject)=>timer=setTimeout(()=>reject(Error('Service did not dispatch')),4000))]);clearTimeout(timer);await new Promise(r=>setTimeout(r,250));service.close();assert.equal(calls,1);assert.ok(reconciliations<=1);assert.deepEqual(errors.map(e=>e.message),[]);
+  const dispatched=Promise.withResolvers(),reconciled=Promise.withResolvers();
+  service=await serveNativeGoal(f.target,f.manifest.id,{adapter,reconcile_ms:1000,onError:e=>errors.push(e),onStep:result=>{if(result.operation?.kind==='runtime')(reconciliations?reconciled:dispatched).resolve();}});
+  let timer;try{
+    await Promise.race([(async()=>{
+      await dispatched.promise;
+      // Exercise one idle interval without letting slow fixture I/O add polls.
+      t.mock.timers.tick(1000);
+      await reconciled.promise;
+      await service.close();
+    })(),new Promise((_,reject)=>timer=setTimeout(()=>reject(Error('Service did not dispatch and reconcile')),10000))]);
+  }finally{clearTimeout(timer);}
+  assert.equal(calls,1);assert.equal(reconciliations,1);assert.deepEqual(errors.map(e=>e.message),[]);
+});
+
+test('service close drains the in-flight operation and callback and discards pending triggers',async t=>{
+  const entered=Promise.withResolvers(),release=Promise.withResolvers(),reported=Promise.withResolvers(),finishReport=Promise.withResolvers();
+  let service;t.after(async()=>{release.resolve();finishReport.resolve();await service?.close();});
+  const f=await fixture(t);let calls=0,reconciliations=0,settled=false;const errors=[];
+  t.mock.timers.enable({apis:['setInterval']});
+  const watchers=[],watchMock=t.mock.method(fsSync,'watch',(_dir,callback)=>{const watcher={callback,closed:false,close(){this.closed=true;}};watchers.push(watcher);return watcher;});
+  syncBuiltinESMExports();t.after(()=>{watchMock.mock.restore();syncBuiltinESMExports();});
+  const adapter=createTrustedGoalAdapter({id:'draining-service-fixture',assertCapabilities:async()=>{},execute:async()=>{calls++;entered.resolve();await release.promise;return {status:'unknown',reason:'Result persisted before close resolves'};},reconcile:async()=>{reconciliations++;return {status:'unknown'};},cancel:async()=>({status:'cancelled'})});
+  service=await serveNativeGoal(f.target,f.manifest.id,{adapter,reconcile_ms:1000,onError:e=>errors.push(e),onStep:async result=>{if(result.operation?.kind==='runtime'){reported.resolve();await finishReport.promise;}}});
+  let timer;try{
+    await Promise.race([(async()=>{
+      await entered.promise;
+      service.trigger();t.mock.timers.tick(1000);
+      const closing=service.close();assert.ok(closing instanceof Promise);assert.equal(service.close(),closing);
+      assert.ok(watchers.length>0);assert.ok(watchers.every(w=>w.closed),'watchers close synchronously');
+      watchers.forEach(w=>w.callback());
+      void closing.then(()=>{settled=true;});
+      await new Promise(r=>setImmediate(r));assert.equal(settled,false);
+      release.resolve();await reported.promise;
+      await new Promise(r=>setImmediate(r));assert.equal(settled,false,'close includes onStep and final state observation');
+      service.trigger();t.mock.timers.tick(5000);finishReport.resolve();await closing;
+      assert.equal(settled,true);assert.equal(service.close(),closing);
+    })(),new Promise((_,reject)=>timer=setTimeout(()=>reject(Error('Service did not drain')),10000))]);
+  }finally{clearTimeout(timer);}
+  const view=await readNativeGoal(f.target,f.manifest.id),runtime=view.operations.filter(op=>op.kind==='runtime');
+  assert.equal(runtime.length,1);assert.equal(runtime[0].result.reason,'Result persisted before close resolves');
+  assert.equal(calls,1);assert.equal(reconciliations,0);assert.deepEqual(errors.map(e=>e.message),[]);
+});
+
+test('service close synchronously clears a queued tick before any operation starts',async t=>{
+  let service;t.after(async()=>{await service?.close();});const f=await fixture(t);let calls=0;const errors=[];
+  t.mock.timers.enable({apis:['setTimeout','setInterval']});
+  const watchMock=t.mock.method(fsSync,'watch',()=>({close(){}}));syncBuiltinESMExports();t.after(()=>{watchMock.mock.restore();syncBuiltinESMExports();});
+  const adapter=createTrustedGoalAdapter({id:'closed-queued-service',assertCapabilities:async()=>{},execute:async()=>{calls++;return {status:'unknown'};},reconcile:async()=>{calls++;return {status:'unknown'};},cancel:async()=>({status:'cancelled'})});
+  service=await serveNativeGoal(f.target,f.manifest.id,{adapter,reconcile_ms:1000,onError:e=>errors.push(e)});
+  const closing=service.close();service.trigger();t.mock.timers.tick(5000);await closing;
+  assert.equal(calls,0);assert.equal((await readNativeGoal(f.target,f.manifest.id)).operations.length,0);assert.deepEqual(errors.map(e=>e.message),[]);
 });
 
 test('abort during capability qualification never dispatches or reserves model work',async t=>{

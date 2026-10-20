@@ -428,12 +428,18 @@ async function runGoalStep(target,goalId,{adapter,signal}={}){
 }
 export async function serveNativeGoal(target,goalId,{adapter,signal,onError=()=>{},onStep=()=>{},reconcile_ms=30000}={}){
   integer(reconcile_ms,10,60000);if(!adapter){const {createCodexGoalAdapter}=await import('./workkeel-goal-runtime.mjs');adapter=await createCodexGoalAdapter();}
-  const initial=await readNativeGoal(target,goalId);let closed=false,running=false,observing=false,pending=false,timer=null,lastObserved;
+  const initial=await readNativeGoal(target,goalId);let closed=false,running=false,observing=false,pending=false,timer=null,lastObserved,runningPromise=null,observingPromise=null,closePromise=null;
   const observation=view=>executionDigest({status:view.state,receipts:view.receipts,components:view.mandatory_components.map(c=>({id:c.id,version:c.task_version,read_status:c.read_status}))});lastObserved=observation(initial);
   const trigger=()=>{if(closed||signal?.aborted)return;if(running){pending=true;return;}if(timer)return;timer=setTimeout(()=>{timer=null;void tick();},20);};
-  const tick=async()=>{if(closed||running||signal?.aborted)return;if(observing){pending=true;return;}running=true;try{const result=await runNativeGoalStep(target,goalId,{adapter,signal});await onStep(result);const loop=await readLoopRun(target);if(isLoopRunActive(loop)&&(result.accepted||loop.stop.requested))close();else if(result.operation?.status==='completed')pending=true;}catch(e){onError(e);if((await readLoopRun(target))?.stop.requested)close();}finally{try{lastObserved=observation(await readNativeGoal(target,goalId));}catch(e){onError(e);}running=false;if(pending){pending=false;trigger();}}};
-  const observe=async()=>{if(closed||running||observing)return;observing=true;try{const next=observation(await readNativeGoal(target,goalId));if(next!==lastObserved){lastObserved=next;trigger();}}catch(e){onError(e);}finally{observing=false;if(pending){pending=false;trigger();}}};
+  const tick=()=>{if(closed||running||signal?.aborted)return;if(observing){pending=true;return;}running=true;return runningPromise=(async()=>{try{const result=await runNativeGoalStep(target,goalId,{adapter,signal});await onStep(result);const loop=await readLoopRun(target);if(isLoopRunActive(loop)&&(result.accepted||loop.stop.requested))close();else if(result.operation?.status==='completed')pending=true;}catch(e){onError(e);if((await readLoopRun(target))?.stop.requested)close();}finally{try{lastObserved=observation(await readNativeGoal(target,goalId));}catch(e){onError(e);}running=false;if(pending){pending=false;trigger();}}})();};
+  const observe=()=>{if(closed||running||observing)return;observing=true;return observingPromise=(async()=>{try{const next=observation(await readNativeGoal(target,goalId));if(next!==lastObserved){lastObserved=next;trigger();}}catch(e){onError(e);}finally{observing=false;if(pending){pending=false;trigger();}}})();};
   const {watch}=await import('node:fs'),watchers=[];for(const dir of new Set([path.join(target,ROOT,goalId),...initial.manifest.components.map(c=>path.join(c.root,'.ai-org/work-items'))]))try{watchers.push(watch(dir,()=>{void observe();}));}catch(e){if(e.code!=='ENOENT')throw e;}
-  const interval=setInterval(trigger,reconcile_ms),close=()=>{closed=true;if(timer)clearTimeout(timer);clearInterval(interval);watchers.forEach(w=>w.close());signal?.removeEventListener('abort',close);signal?.removeEventListener('abort',userStop);};
+  const interval=setInterval(trigger,reconcile_ms),close=()=>{
+    if(closed)return closePromise;
+    closed=true;if(timer)clearTimeout(timer);clearInterval(interval);watchers.forEach(w=>w.close());signal?.removeEventListener('abort',close);signal?.removeEventListener('abort',userStop);
+    // Stop scheduling synchronously, then drain state writes, callbacks and reads
+    // before callers remove the goal's files. Internal callers must not await this.
+    return closePromise=Promise.all([runningPromise,observingPromise]).then(()=>{});
+  };
   const userStop=()=>{void requestLoopStop(target,'user-requested').catch(onError);close();};signal?.addEventListener('abort',userStop,{once:true});if(signal?.aborted)userStop();else trigger();return {close,trigger};
 }
