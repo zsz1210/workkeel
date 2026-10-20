@@ -20,6 +20,9 @@ pinned CLI or archive their old records. No record migration is available.
   escalation. These tiers require another model family's exact-candidate review
   and closure by the approving Principal; critical work also requires a rollback
   plan and the committed approval record.
+- QA procedures require Must fix / Consider / Note / Dismiss finding dispositions
+  and independent Codex/Claude cross-review for high/critical work (optional below).
+  The CLI model-family check alone does not establish cross-review.
 - Optional review scores and read-only task statistics, including weekly reports
   with risk, rework, reviewer scores and missing-data coverage.
 - Opt-in source-only Codex and structured Claude review helpers; bounded goal-run
@@ -38,6 +41,10 @@ pinned CLI or archive their old records. No record migration is available.
   digest pins. Execution still checks the approval-time authority snapshot;
   every rework delivers a new commit. High and critical reviews cannot pass with
   unresolved issues, and critical deliveries cannot contain them.
+- Enforced rework caps: low 2; standard/high/critical 3. Tighter goal budgets still
+  apply; at the cap, work stops for a human decision.
+- Autonomy delegates all delivery to native goals; retires `autonomy enqueue`,
+  `autonomy cancel`, `autonomy resume-job` and marker-only `autonomy discover`.
 - Project locks and task contracts use v2 schemas. CLI compatibility follows
   semver; incompatible versions warn on reads and block mutations. Upgrade
   refreshes the pin and launcher without converting tasks or downgrading.
