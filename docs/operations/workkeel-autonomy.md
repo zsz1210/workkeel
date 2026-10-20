@@ -85,7 +85,12 @@ Jobs in `awaiting-acceptance`, never-dispatched `queued` jobs (`execution_id: nu
 and other legacy records do not block delivery. They remain historical records;
 the cycle does not rewrite them, translate old execution IDs into goals or claim
 that an old process stopped. The desktop shows a legacy note instead of job
-cancellation controls. All retained jobs continue to count toward capacity.
+cancellation controls. Settled or never-dispatched jobs display as legacy records,
+without awaiting-acceptance or reconciliation prompts. A `running` or
+`recovery-required` job with an execution ID still displays a reconciliation
+warning; a legacy label never confirms that an old process stopped. These are
+read-only projections and do not rewrite job state or add an execution path.
+All retained jobs continue to count toward capacity.
 
 ## Opt-in continuous improvement
 

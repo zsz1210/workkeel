@@ -206,6 +206,7 @@ test("stats --report turns repeated reasons, low scores and missing scores into 
   await run("WK-c", [["pass", codeScore({ requirements: 2, correctness: 4, tests: 4, maintainability: 4 })]]);
 
   const { readStatsReport, formatStatsReport, REPORT_RULES_VERSION } = await import("../src/workkeel-stats-report.mjs");
+  assert.equal(REPORT_RULES_VERSION, 'workkeel.stats-report-rules/3');
   const before = git(root, "status", "--porcelain");
   const cutoff = new Date(Date.now() + 60000).toISOString(), settings = { cutoff, timezone: "Asia/Tokyo" };
   const report = await readStatsReport(root, settings);

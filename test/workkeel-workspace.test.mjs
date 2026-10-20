@@ -146,13 +146,18 @@ test('clearing the project selector immediately removes old controls and ignores
 
 test('workspace browser module parses before deployment',()=>{new vm.Script('async function parseOnly(){'+workspaceClient+'}');});
 
-test('legacy autonomy rows explain unavailable controls without rendering cancel buttons',()=>{
+test('legacy autonomy rows settle historical statuses and retain possibly live warnings without controls',()=>{
  const start=workspaceClient.indexOf(' const terminalJob='),source=workspaceClient.slice(start,workspaceClient.indexOf('\n return ',start));
- const jobs=['queued','awaiting-acceptance','running','recovery-required','completed'].map(status=>({id:status,task_id:'WK-old',status}));
+ const jobs=['queued','awaiting-acceptance','running','recovery-required','completed'].map(status=>({id:status,task_id:'WK-old',status,execution_id:null}));
  const html=vm.runInNewContext(source+';legacyJobs;',{jobs,t:en=>en,escape:value=>value,operationState:value=>value,may:()=>true});
  assert.equal((html.match(/Legacy job · controls unavailable in this version\./g)||[]).length,jobs.length);
  assert.doesNotMatch(html,/<button|data-job-cancel/);
- for(const job of jobs)assert.ok(html.includes(job.status));
+ assert.equal((html.match(/>Legacy record</g)||[]).length,jobs.length-1);
+ assert.doesNotMatch(html,/<p class="small">(?:awaiting-acceptance|recovery-required|running)</);
+ assert.doesNotMatch(html, /class="autonomy-history" open/);
+ jobs[2].execution_id='possibly-live';
+ const live=vm.runInNewContext(source+';legacyJobs;',{jobs,t:en=>en,escape:value=>value,operationState:value=>value});
+ assert.match(live, /class="autonomy-history" open/);assert.match(live,/>recovery-required</);
 });
 
 test('autonomy holds pending and unresolved controls across observation refreshes', {skip:process.env.WORKKEEL_WORKSPACE_BROWSER!=='1'},async t=>{
@@ -260,7 +265,7 @@ test('autonomy next steps preserve controls, reveal detail and recover from unkn
  for(const expired of ['expired','missing']){phase=expired;await page.reload();await page.locator('[data-autonomy-state=unconfigured]').waitFor();assert.equal(await page.getByRole('heading',{name:'Choose what Workkeel may improve',exact:true}).isVisible(),true);assert.equal(await page.getByText('Allowed within scope',{exact:true}).count(),0);assert.equal(await page.locator('[data-control="autonomy.start-service"]').count(),0);}
  phase='running';await page.reload();await page.locator('[data-autonomy-state=recorded]').waitFor();await page.getByRole('button',{name:'View current work',exact:true}).click();assert.equal(await page.locator('#autonomy-work').evaluate(node=>node===document.activeElement),true);assert.equal(await page.getByRole('heading',{name:'Synthetic active work',exact:true}).isVisible(),true);assert.equal(await page.getByRole('heading',{name:'Synthetic cancelled work',exact:true}).isVisible(),false);
  assert.equal(await page.getByRole('button',{name:'Pause new execution',exact:true}).isEnabled(),true);await page.getByRole('button',{name:'Pause new execution',exact:true}).click();await page.getByText('Host confirmed the request. Reload to inspect effective canonical state.',{exact:true}).waitFor();assert.deepEqual(writes,['autonomy.pause']);
- phase='legacy-review';await page.reload();await page.locator('[data-autonomy-state=review]').waitFor();await page.getByRole('button',{name:'View results to review',exact:true}).click();assert.equal(await page.locator('#autonomy-jobs>summary').evaluate(node=>node===document.activeElement),true);assert.equal(await page.getByRole('heading',{name:'Synthetic result to review',exact:true}).isVisible(),true);
+ phase='legacy-review';await page.reload();await page.locator('[data-autonomy-state=ready]').waitFor();assert.equal(await page.getByRole('button',{name:'View results to review',exact:true}).count(),0);await page.locator('#autonomy-jobs>summary').click();assert.equal(await page.getByRole('heading',{name:'Synthetic result to review',exact:true}).isVisible(),true);assert.equal(await page.getByText('Legacy record',{exact:true}).isVisible(),true);
  phase='paused';await page.reload();await page.locator('[data-autonomy-state=paused]').waitFor();assert.equal(await page.getByRole('button',{name:'Resume new execution',exact:true}).isEnabled(),true);
  assert.equal(await page.locator('.autonomy-next').getByText('Existing work is not cancelled.',{exact:true}).isVisible(),true);
  const readOnly=await browser.newPage({viewport:{width:1440,height:1000},colorScheme:'dark',reducedMotion:'reduce'});readOnly.on('pageerror',error=>errors.push(error.message));
@@ -557,13 +562,16 @@ test('actual browser directs a stalled goal to recovery instead of the calm over
   blocked=false;await page.getByRole('button',{name:'重新整理',exact:true}).click();await page.getByText('已啟用交付',{exact:true}).waitFor();assert.equal(await page.getByRole('heading',{name:'交付需要恢復',exact:true}).count(),0,'resolving this goal removes only its decision; unrelated task decisions remain');
 });
 
-test('project autonomy distinguishes off, idle and recorded execution; corruption stays unknown',async t=>{
+test('project autonomy distinguishes legacy history from possibly live execution; corruption stays unknown',async t=>{
   const base={policy:{enabled:false},paused:false,jobs:[],discovery_runs:[],proposals:[]};
   assert.equal(workspaceAutonomySummary(base).state,'off');
   assert.equal(workspaceAutonomySummary({...base,policy:{enabled:true}}).state,'idle');
-  const job={origin:'improvement',status:'running',updated_at:'2026-01-01T00:00:00.000Z'};
+  const job={origin:'improvement',status:'running',execution_id:'possibly-live',updated_at:'2026-01-01T00:00:00.000Z'};
   const recorded=workspaceAutonomySummary({...base,policy:{enabled:true},jobs:[job]});
-  assert.equal(recorded.state,'execution-recorded');assert.equal(recorded.live_activity,'unconfirmed');assert.equal(recorded.last_updated,job.updated_at);
+  assert.equal(recorded.state,'needs-reconciliation');assert.equal(recorded.live_activity,'unconfirmed');assert.equal(recorded.last_updated,job.updated_at);
+  for(const [status,execution_id] of [['awaiting-acceptance','old-result'],['queued',null],['running',null],['recovery-required',null],['completed','old-result']]){
+    assert.equal(workspaceAutonomySummary({...base,policy:{enabled:true},jobs:[{...job,status,execution_id}]}).state,'legacy');
+  }
   const {state,repo}=await setup(t);
   assert.equal((await readWorkspaceSnapshot(state)).projects[0].autonomy.state,'off');
   await fs.mkdir(path.join(repo,'.ai-org/autonomy'));await fs.writeFile(path.join(repo,'.ai-org/autonomy/state.json'),'synthetic malformed state');

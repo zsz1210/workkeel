@@ -8,7 +8,7 @@ import { executionDigest } from './workkeel-execution-policy.mjs';
 import { taskObservationRecord, projectReworkIterations, REWORK_CATEGORIES } from './workkeel-scoring.mjs';
 import { RISK_TIERS } from './workkeel-risk.mjs';
 
-export const REPORT_RULES_VERSION = 'workkeel.stats-report-rules/2';
+export const REPORT_RULES_VERSION = 'workkeel.stats-report-rules/3';
 export const DEFAULT_REPORT_DAYS = 7;
 const sha256 = value => createHash('sha256').update(JSON.stringify(value)).digest('hex');
 const avg = xs => xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : null;

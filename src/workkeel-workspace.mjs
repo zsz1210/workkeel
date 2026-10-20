@@ -149,7 +149,8 @@ export function workspaceWorkSummary(tasks, rows=[]) {
 export function workspaceAutonomySummary(value) {
   const jobs=(value.jobs??[]).filter(job=>job.origin==='improvement');
   const times=[...jobs.map(job=>job.updated_at),...(value.discovery_runs??[]).map(run=>run.at),...(value.proposals??[]).map(proposal=>proposal.created_at)].filter(at=>Number.isFinite(Date.parse(at))).sort();
-  const state=!value.policy.enabled?'off':value.paused?'paused':jobs.some(job=>job.status==='recovery-required')?'needs-reconciliation':jobs.some(job=>job.status==='running')?'execution-recorded':jobs.some(job=>job.status==='queued')?'queued':jobs.some(job=>job.status==='awaiting-acceptance')?'awaiting-acceptance':jobs.some(job=>job.status==='failed')?'failure-recorded':'idle';
+  const live=jobs.some(job=>['running','recovery-required'].includes(job.status)&&job.execution_id!=null);
+  const state=live?'needs-reconciliation':!value.policy.enabled?'off':value.paused?'paused':jobs.length?'legacy':'idle';
   return {enabled:value.policy.enabled,state,last_updated:times.at(-1)??null,read_status:'available',live_activity:'unconfirmed'};
 }
 

@@ -14,6 +14,19 @@ import {createWorkspace,registerWorkspaceProject} from '../src/workkeel-workspac
 import {startWorkspaceServer} from '../src/workkeel-workspace-server.mjs';
 import {readModelPolicy} from '../src/workkeel-model-policy.mjs';
 import {captureNativeLearning} from '../src/workkeel-learning.mjs';
+import {executionDigest} from '../src/workkeel-execution-policy.mjs';
+
+test('autonomy hook displays settled legacy jobs without rewriting them or hiding live execution warnings',async t=>{
+ const f=await fixture(t),state=await readAutonomy(f.root),ref=f.root+'/.ai-org/autonomy/state.json';
+ const job={id:'legacy',origin:'improvement',direction:'quality',reason:'Synthetic historical work',task_id:f.task.id,request_ref:'docs/old.json',request_sha256:'a'.repeat(64),depends_on:[],status:'awaiting-acceptance',attempts:1,execution_id:'old-operation',updated_at:new Date().toISOString(),error:null,retry_at:null};
+ state.jobs=[job];await fs.mkdir(path.dirname(ref),{recursive:true});
+ for(const [status,execution_id,expected] of [['awaiting-acceptance','old-operation','legacy'],['queued',null,'legacy'],['running',null,'legacy'],['recovery-required',null,'legacy'],['completed','old-operation','legacy'],['running','old-operation','needs-reconciliation'],['recovery-required','old-operation','needs-reconciliation']]){
+  Object.assign(job,{status,execution_id});const bytes=JSON.stringify({state,sha256:executionDigest(state)});await fs.writeFile(ref,bytes);
+  const view=await f.hooks.autonomy.read({project:f.project,actor:f.actor});
+  assert.equal(view.state,expected);assert.equal(view.jobs[0].status,status);assert.equal(view.jobs[0].execution_id,execution_id);
+  assert.equal(await fs.readFile(ref,'utf8'),bytes);
+ }
+});
 
 test('observatory native hooks retain lessons before Skill promotion and isolate unreadable learning',async t=>{
   const f=await fixture(t,{learning:true});

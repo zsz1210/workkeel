@@ -197,7 +197,9 @@ retain task IDs, candidates, rounds, source events and evidence references.
 A low score alone does not authorize work.
 
 Markdown embeds the entire JSON record, so both formats contain identical data.
-The report includes rules and filter settings in its input fingerprint. Stop
+The report includes rules and filter settings in its input fingerprint. Rules
+version `workkeel.stats-report-rules/3` identifies the current L1 accounting; reports
+using earlier rules do not share its fingerprint, even with identical inputs. Stop
 reasons include `complete`, `no-input`, `unchanged` and `no-candidate`; all are
 normal outcomes. Missing data never becomes a pass or a measured zero. The only
 suggested follow-up is to submit one L2 proposal for explicit user approval.

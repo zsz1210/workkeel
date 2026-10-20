@@ -1,5 +1,6 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import os from 'node:os';
 import assert from 'node:assert/strict';
 import {chromium} from 'playwright-core';
 import {createObserverFixture} from './workkeel-observer-fixture.mjs';
@@ -351,6 +352,10 @@ async function verifyObserverFollowup(page,monitor){
 
 const output=path.resolve('output/playwright/workkeel-monitor');await fs.mkdir(output,{recursive:true});
 const root=await createObserverFixture(),empty=await createMonitorFixture({empty:true});
+// A launch-selected personal Skill source, so the catalogue shows a Skill that is not added to the project.
+const personal=await fs.mkdtemp(path.join(os.tmpdir(),'workkeel-browser-personal-'));
+await fs.mkdir(path.join(personal,'external-check'),{recursive:true});
+await fs.writeFile(path.join(personal,'external-check','SKILL.md'),'---\nname: external-check\ndescription: Personal fixture Skill.\n---\nPersonal fixture Skill.\n');
 const progressTask=await readNativeTask(root,'WK-working');
 await recordTaskObservation(root,progressTask.id,{
  schema_version:'workkeel.task-observation/v1',task_id:progressTask.id,task_version:progressTask.version,actor:progressTask.contract.actor,
@@ -360,7 +365,7 @@ await recordTaskObservation(root,progressTask.id,{
 });
 let monitor,emptyMonitor,browser,page,paginationIndex;const checks=[],external=[],errors=[];
 try{
- monitor=await startTaskMonitor(root);emptyMonitor=await startTaskMonitor(empty);
+ monitor=await startTaskMonitor(root,{catalogRoots:[{path:personal,origin:'user',label:'Personal'}]});emptyMonitor=await startTaskMonitor(empty);
  browser=await chromium.launch({channel:'chrome',headless:true});
  for(const viewport of (focusedOnly?[]:process.env.OBSERVER_DESKTOP_ONLY==='1'?[{width:1440,height:1000}]:[{width:1440,height:1000},{width:390,height:844}])){
   const context=await browser.newContext({viewport,reducedMotion:'reduce',colorScheme:'dark'});
@@ -553,4 +558,4 @@ try{
  await fs.writeFile(path.join(output,liveOnly?'live-state-report.json':followupOnly?'followup-report.json':clarityOnly?'clarity-report.json':regressionsOnly?'regressions-report.json':'report.json'),JSON.stringify({passed:true,mode:liveOnly?'focused-desktop-live-state':followupOnly?'focused-desktop-followup':clarityOnly?'focused-desktop-clarity':regressionsOnly?'focused-desktop-regressions':'browser-gate',checks,errors,external_requests:external.length,model_calls:0,fixture:liveOnly?'Native offline fixture with changed workspace/detail/document API projections and a held background response; no model calls or narrow-screen checks.':followupOnly?'Native offline fixture; UI projections of explicit zero, three token-only bound reports, health states and authenticated proxy transport. No identity-validation or live Tailscale claim.':clarityOnly?'Generated native task/workflow journals and persisted event reasons with deterministic offline adapters; injected task-detail stage intervals and failed/passed review events; actual query index with injected 120-operation/event projection.':'Generated native task/workflow journals with deterministic offline adapters; real malformed fixture workkeel.lock and recovery; injected task-detail stage intervals and review events; actual query index with injected 120-operation/event projection. The full gate also uses synthetic learning records and injected visibility/503 failures and focused followup UI projections.'},null,2)+'\n');
  console.log(JSON.stringify({passed:true,checks:checks.length,external_requests:external.length,output}));
 }catch(error){if(page&&!page.isClosed())await page.screenshot({path:path.join(output,'failure.png'),fullPage:true}).catch(()=>{});throw error;}
-finally{await browser?.close();await paginationIndex?.close();await monitor?.close();await emptyMonitor?.close();await fs.rm(root,{recursive:true,force:true});await fs.rm(empty,{recursive:true,force:true});}
+finally{await browser?.close();await paginationIndex?.close();await monitor?.close();await emptyMonitor?.close();await fs.rm(root,{recursive:true,force:true});await fs.rm(personal,{recursive:true,force:true});await fs.rm(empty,{recursive:true,force:true});}
