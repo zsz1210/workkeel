@@ -72,6 +72,13 @@ workkeel task close --id WK-0001 --actor builder --summary Accepted --rollback "
 high 以上の作業は、1 人でも複数人でも同じです。別のモデル系列のレビュアーが確認し、そのあと承認した Principal が人として確定します。
 導入する前に[導入とリスクランク](docs/operations/team-adoption-and-risk.md)を読んでください。
 
+手戻りの上限は `low` が 2 回、`standard`、`high`、`critical` が 3 回です。上限に達したら停止し、人の判断を求めます。
+任意のレビュースコア欄は[統計](docs/operations/team-adoption-and-risk.md#review-scores-optional)用に保持し、
+差し戻しや受け入れの条件には使いません。
+[QA 手順](docs/operations/workkeel-review-assessment.md#independent-qa-and-release-gate)では、
+指摘を Must fix（修正必須）／Consider（検討）／Note（記録）／Dismiss（不採用）に分類し、
+`high` と `critical` では Codex と Claude による独立したクロスレビューを必須とします。
+
 ## 公開済みの Beta.1
 
 npm の `next` チャネルにある `@zsz1210/workkeel@0.1.0-beta.1` は以前の系統です。
@@ -88,6 +95,7 @@ npm の `next` チャネルにある `@zsz1210/workkeel@0.1.0-beta.1` は以前�
 | タスク連携 | 中核 | 契約、着手、引き継ぎ、レビュー、受け入れ。サーバー不要 |
 | コーディングツールとモデル | 既存のホスト | Workkeel はグローバルなモデル設定を変更しない |
 | オブザーバー（`workkeel monitor`） | オフ | ローカルかつ読み取り専用。モデル呼び出しはゼロ |
+| オブザーバトリー／ワークスペース UI（`workkeel workspace serve`） | 任意 | 中核の作業・受け入れフローには不要 |
 | ワークフロー実行 | 明示的に有効化 | 任意の LangGraph 依存関係と、承認済みのグラフおよびモデルポリシー |
 | ネイティブディスパッチとモデル選択 | 明示的に有効化 | 要求したモデルと理由を記録し、実際に動いたモデルはホストが報告 |
 | Headroom のツール出力ビュー | オフ | 要求時だけ非可逆なビューを作る。元の出力は読める |
@@ -98,7 +106,15 @@ npm の `next` チャネルにある `@zsz1210/workkeel@0.1.0-beta.1` は以前�
 [オブザーバー](docs/operations/workkeel-observer.md) ·
 [ワークフロー](docs/operations/workkeel-workflows.md) ·
 [ネイティブディスパッチ](docs/operations/workkeel-native-dispatch.md) ·
+[ワークスペース UI](docs/operations/workkeel-workspace.md) ·
 [プロジェクトの文脈と Skill](docs/extensions/workkeel-context.md)
+
+任意の [Workkeel Loop](docs/operations/loop-trial.md) は、モデル／API 支出ゼロで L1 の週次読み取り専用レポート
+（`workkeel stats --report`）を提供します。試行用の実行ガードは、待機時間を含めて 60 操作・2 時間を上限とし、
+停止フラグはユーザーが解除するまで保持します。L2 の比較記録はデータのみで、作業の実行や承認は行いません。
+
+プロジェクト Bot、Claude Code、Codex を 3 つの人による確認段階と組み合わせる任意の構成は、
+[参考の使い方：Bot レイヤー](docs/operations/reference-usage-bot-layer.md)を参照してください。フレームワークの中核には含まれません。
 
 ## アーキテクチャ
 

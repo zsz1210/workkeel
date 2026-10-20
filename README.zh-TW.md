@@ -71,6 +71,13 @@ workkeel task close --id WK-0001 --actor builder --summary Accepted --rollback "
 high 以上的工作不分一個人或多人，規則都一樣：由另一個模型系列的審查者審查，再由核准的 Principal 本人確認。
 導入 Workkeel 之前，請先讀[導入與風險分級](docs/operations/team-adoption-and-risk.md)。
 
+重做上限為 `low` 兩輪，`standard`、`high`、`critical` 三輪；到上限就停下來，交由人決定。
+選填的審查分數欄位會保留供[統計](docs/operations/team-adoption-and-risk.md#review-scores-optional)使用，
+不作為退回重做或驗收的門檻。
+[QA 流程](docs/operations/workkeel-review-assessment.md#independent-qa-and-release-gate)
+將發現分為 Must fix（必須修正）／Consider（考慮採用）／Note（備註）／Dismiss（不採納），
+`high` 和 `critical` 任務必須由 Codex／Claude 各自獨立交叉審查。
+
 ## 已發布的 Beta.1
 
 npm `next` 通道上的 `@zsz1210/workkeel@0.1.0-beta.1` 是較早的版本，
@@ -87,6 +94,7 @@ npm `next` 通道上的 `@zsz1210/workkeel@0.1.0-beta.1` 是較早的版本，
 | 任務協作 | 核心 | 任務契約、認領、交接、審查與驗收；不需要伺服器 |
 | 開發工具與模型 | 沿用你現有的工具 | Workkeel 不更改任何全域模型設定 |
 | 觀察站（`workkeel monitor`） | 關閉 | 本機、唯讀，完全不呼叫模型 |
+| 觀測台／工作區介面（`workkeel workspace serve`） | 選用 | 核心交付流程不依賴它 |
 | 工作流程執行 | 需要明確啟用 | 選用的 LangGraph 相依套件，以及已批准的流程圖和模型政策 |
 | 原生派工與模型選擇 | 需要明確啟用 | 記錄要求的模型和理由；實際執行的模型由工具回報 |
 | Headroom 工具輸出檢視 | 關閉 | 只在要求時提供有損壓縮的檢視；原始內容仍可讀取 |
@@ -97,7 +105,16 @@ npm `next` 通道上的 `@zsz1210/workkeel@0.1.0-beta.1` 是較早的版本，
 [觀察站](docs/operations/workkeel-observer.md) ·
 [工作流程](docs/operations/workkeel-workflows.md) ·
 [原生派工](docs/operations/workkeel-native-dispatch.md) ·
+[工作區介面](docs/operations/workkeel-workspace.md) ·
 [專案脈絡與 Skill](docs/extensions/workkeel-context.md)
+
+選用的 [Workkeel Loop](docs/operations/loop-trial.md) 提供 L1 每週唯讀報告
+（`workkeel stats --report`），模型／API 支出為零。試行的執行防護限制為 60 次操作、
+兩小時（含等待時間），停止旗標會持續保留，只有使用者能清除。
+L2 比較紀錄只有資料，不會執行工作或核准工作。
+
+若想參考專案 Bot、Claude Code 和 Codex 如何分工，搭配三個人工關卡，請看
+[選用用法：Bot 層](docs/operations/reference-usage-bot-layer.md)。這套配置不屬於框架核心。
 
 ## 架構
 

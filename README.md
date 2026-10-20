@@ -81,6 +81,14 @@ model family, then confirmation by a person, the approving Principal. Read
 [adoption and risk tiers](docs/operations/team-adoption-and-risk.md) before
 rolling Workkeel out.
 
+Rework is capped at two rounds for `low` and three for `standard`, `high` and
+`critical`; at the cap, stop and ask a person. Optional review score fields are
+retained for [statistics](docs/operations/team-adoption-and-risk.md#review-scores-optional),
+never as rework or acceptance gates. The
+[QA procedure](docs/operations/workkeel-review-assessment.md#independent-qa-and-release-gate)
+classifies findings as Must fix / Consider / Note / Dismiss and requires
+independent Codex/Claude cross-review for `high` and `critical` tasks.
+
 ## Published Beta.1
 
 The npm package `@zsz1210/workkeel@0.1.0-beta.1` on the `next` channel is an
@@ -99,6 +107,7 @@ tested, and any that nobody uses may be removed in a later release.
 | Task coordination | Core | Contracts, claims, handoffs, review and acceptance; no server |
 | Coding tool and model | Your existing host | Workkeel changes no global model setting |
 | Observer (`workkeel monitor`) | Off | Local and read-only; makes zero model calls |
+| Observatory / workspace UI (`workkeel workspace serve`) | Optional | Core delivery does not depend on it |
 | Workflow execution | Opt-in | Optional LangGraph dependencies and an approved graph and model policy |
 | Native dispatch and model routing | Opt-in | Records the requested model and reason; the host reports what actually ran |
 | Headroom tool-output views | Off | Lossy views only on request; originals stay readable |
@@ -109,7 +118,18 @@ tested, and any that nobody uses may be removed in a later release.
 [Observer](docs/operations/workkeel-observer.md) ·
 [Workflows](docs/operations/workkeel-workflows.md) ·
 [Native dispatch](docs/operations/workkeel-native-dispatch.md) ·
+[Workspace UI](docs/operations/workkeel-workspace.md) ·
 [Project context and Skills](docs/extensions/workkeel-context.md)
+
+Optional [Workkeel Loop](docs/operations/loop-trial.md) provides an L1 weekly
+read-only report (`workkeel stats --report`) with zero model/API spend. The trial
+run guard caps work at 60 operations and two hours, including waits, with a
+persistent stop flag only the user can clear. L2 comparison records are data only;
+they do not run work or approve it.
+
+For one optional way to organize project Bots, Claude Code and Codex around three
+human gates, see [reference usage: Bot layer](docs/operations/reference-usage-bot-layer.md).
+This setup is outside the framework core.
 
 ## Architecture
 
