@@ -43,7 +43,7 @@ Workkeel 把任務授權和證據綁到 commit；相較於 agent framework，
 ## 30 秒示範
 
 先依下方步驟安裝原始碼 CLI，再到既有 Git 專案操作。輸出僅列出部分 JSON 欄位。
-`init` 會在同一位 `owner` 下註冊 `builder` 與 `reviewer`；
+`init` 會在同一位 `owner` 下註冊 `builder` 與 `reviewer`，模型家族預設分別為 `claude` 與 `codex`，可用 `--builder <family>` 與 `--reviewer <family>` 指定。
 owner 核准任務與驗收，兩個 Agent 各自完成實作和審查。
 
 ```text

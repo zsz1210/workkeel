@@ -43,7 +43,7 @@ Workkeel はサンドボックスでもエージェントランタイムでも�
 ## 30 秒デモ
 
 下の手順でソース版 CLI を用意し、既存の Git プロジェクトで操作します。出力は JSON の一部のフィールドです。
-`init` は 1 人の `owner` の下に `builder` と `reviewer` を登録します。
+`init` は 1 人の `owner` の下に `builder` と `reviewer` を登録し、モデルファミリーはそれぞれ `claude` と `codex` が既定値で、`--builder <family>` と `--reviewer <family>` で変更できます。
 owner がタスクと受け入れを承認し、2 つの Agent がそれぞれ実装とレビューを行います。
 
 ```text

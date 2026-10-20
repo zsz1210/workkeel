@@ -29,7 +29,7 @@ export async function readStartGuide(target, { requestRef = null } = {}) {
         if (await existsEntry(root, ref)) throw Error(`Existing ${ref} requires inspection before initialization; no files were overwritten`);
       }
       if (await existsEntry(root, ".ai-org")) throw Error("Existing .ai-org requires inspection before initialization; no files were overwritten");
-      return step("init", "Initialize explicitly. init registers one owner Principal with a claude builder and a codex reviewer Agent; add --policy file only for a reviewed custom policy.", ["init", "."]);
+      return step("init", "Initialize explicitly. init defaults to a claude builder and a codex reviewer Agent under one owner Principal; override with --builder <family> and --reviewer <family>, or use --policy file for a reviewed custom policy.", ["init", "."]);
     }
     const project = await readTaskProject(root);
     guide.identity_choices = project.policy;

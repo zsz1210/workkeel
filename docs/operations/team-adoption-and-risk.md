@@ -13,7 +13,7 @@ a sandbox or run your tests. Identities are attributed, not verified accounts.
 
 `workkeel init .` registers one Principal (a person accountable for approvals),
 `owner`, with two Agents: `builder` (model family `claude`) and `reviewer`
-(model family `codex`). To register other people or
+(model family `codex`) by default; override with `--builder <family>` and `--reviewer <family>`. To register other people or
 Agents, write a reviewed policy file and use `workkeel init . --policy task-policy.json`
 instead, or replace the policy later with `workkeel policy update`. Open tasks
 pinned to the old policy must then be approved again. The rules below are the

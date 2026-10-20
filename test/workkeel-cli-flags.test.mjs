@@ -6,6 +6,7 @@ import { execFileSync, spawn, spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import test from "node:test";
 import { readNativeTask } from "../src/workkeel-tasks.mjs";
+import { defaultPolicy } from "../src/workkeel-project.mjs";
 import { runLifecycleFromFlags, runCreateFromFlags, lifecycleRequestFromFlags } from "../src/workkeel-cli-flags.mjs";
 
 const cli = fileURLToPath(new URL("../bin/workkeel.mjs", import.meta.url));
@@ -29,6 +30,40 @@ const fails = (root, ...args) => {
 };
 const jsonFiles = async root => (await fs.readdir(root, { recursive: true }))
   .filter(name => name.endsWith(".json") && !name.startsWith(".git/") && !name.startsWith(".ai-org/")).sort();
+
+test("defaultPolicy defaults model families and validates overrides as identifiers", () => {
+  assert.deepEqual(defaultPolicy().agents.map(agent => agent.model_family), ["claude", "codex"]);
+  assert.deepEqual(defaultPolicy("maria", { builder: "family-a", reviewer: "family-b" }).agents, [
+    { agent_id: "builder", principal_id: "maria", model_family: "family-a" },
+    { agent_id: "reviewer", principal_id: "maria", model_family: "family-b" }
+  ]);
+  for (const role of ["builder", "reviewer"]) for (const invalid of ["bad/family", "two words", "", "x".repeat(97)]) {
+    assert.throws(() => defaultPolicy("owner", { [role]: invalid }), /Invalid task policy/);
+  }
+});
+
+test("init allows independent model family overrides and refuses to rewrite an initialized project", async t => {
+  for (const overrides of [{ builder: "family-a" }, { reviewer: "family-b" }, { builder: "family-a", reviewer: "family-b" }]) {
+    const root = await repository(t);
+    workkeel(root, "init", ".", "--principal", "maria", ...Object.entries(overrides).flatMap(([role, family]) => [`--${role}`, family]));
+    assert.deepEqual(workkeel(root, "policy", "show").agents, defaultPolicy("maria", overrides).agents);
+    const lock = await fs.readFile(path.join(root, "workkeel.lock"));
+    for (const args of [[], ["--builder", "replacement", "--reviewer", "replacement"]]) {
+      assert.match(fails(root, "init", ...args), /never overwrites/);
+      assert.deepEqual(await fs.readFile(path.join(root, "workkeel.lock")), lock);
+    }
+  }
+});
+
+test("init rejects invalid model families and model overrides alongside --policy", async t => {
+  const root = await repository(t);
+  for (const role of ["builder", "reviewer"]) {
+    assert.match(fails(root, "init", `--${role}`, "bad/family"), /Invalid task policy/);
+    assert.match(fails(root, "init", "--policy", "policy.json", `--${role}`, "family-a"), /not supported/);
+    assert.match(fails(root, "init", `--${role}`, "family-a", `--${role}`, "family-b"), /repeated/);
+  }
+  await assert.rejects(fs.stat(path.join(root, "workkeel.lock")), { code: "ENOENT" });
+});
 
 test("plain init creates builder and reviewer, and a low task completes using only flags, without writing JSON", async t => {
   const root = await repository(t);

@@ -9,7 +9,7 @@ import { durableAtomicCreate } from "./files.mjs";
 const GROUPS = ["task", "usage", "dispatch", "intake", "runtime", "instructions", "workflow", "headroom", "skills", "context",
   "learning", "workspace", "model-policy", "skill-lifecycle", "autonomy", "retention", "goal", "policy"];
 const SINGLE = ["policy", "source", "request", "id", "fingerprint", "actor", "revision", "base", "claim", "summary",
-  "judgment", "rollback", "mode", "expect", "goal", "risk", "principal", "attempt", "approval", "days", "previous", "cutoff", "timezone"];
+  "judgment", "rollback", "mode", "expect", "goal", "risk", "principal", "builder", "reviewer", "attempt", "approval", "days", "previous", "cutoff", "timezone"];
 const MULTIPLE = ["evidence", "acceptance", "write", "read", "include", "exclude", "unresolved"];
 const BOOLEAN = ["json", "report"];
 

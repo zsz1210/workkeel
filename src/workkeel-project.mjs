@@ -192,13 +192,13 @@ Details: https://github.com/${TEMPLATE_REPOSITORY}/blob/main/docs/getting-starte
 export const LOCAL_SETTINGS_DIRECTORY = ".workkeel";
 
 /**
- * One Principal with a claude builder and a codex reviewer Agent. Implementer and
- * reviewer stay distinct, and the two model families let high-risk review run at once.
+ * One Principal with distinct builder and reviewer Agents, defaulting to claude
+ * and codex model families so high-risk review can run right away.
  */
-export function defaultPolicy(principal = "owner") {
+export function defaultPolicy(principal = "owner", { builder = "claude", reviewer = "codex" } = {}) {
   const policy = { schema_version: "workkeel.task-policy/v1", principals: [principal],
-    agents: [{ agent_id: "builder", principal_id: principal, model_family: "claude" },
-      { agent_id: "reviewer", principal_id: principal, model_family: "codex" }],
+    agents: [{ agent_id: "builder", principal_id: principal, model_family: builder },
+      { agent_id: "reviewer", principal_id: principal, model_family: reviewer }],
     approvers: [principal], review_separation: "distinct-agent" };
   assertPolicy(policy);
   return policy;

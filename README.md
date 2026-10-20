@@ -44,8 +44,9 @@ Principal closes it after review by a different model family and the required cr
 ## 30-second demo
 
 In an existing Git project, after installing the source CLI below. Output shows
-selected JSON fields. `init` registers `builder` and `reviewer` under one `owner`;
-the owner approves the task and acceptance, and the two Agents do their own work.
+selected JSON fields. `init` registers `builder` and `reviewer` under one `owner`,
+defaulting to `claude` and `codex`; override their model families with `--builder <family>` and `--reviewer <family>`.
+The owner approves the task and acceptance, and the two Agents do their own work.
 
 ```text
 $ workkeel init .

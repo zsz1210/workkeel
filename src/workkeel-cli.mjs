@@ -11,7 +11,7 @@ import { previewInstructions, applyInstructions, readStartGuide } from "./workke
 const HELP = `Workkeel — repository-native task coordination for coding agents
 
 workkeel start [target]                     read-only next-step guidance
-workkeel init [target]                      create claude builder and codex reviewer Agents
+workkeel init [target] [--builder family] [--reviewer family]  defaults: claude builder, codex reviewer
 workkeel task new [target] --goal text --acceptance text [--write path]
 workkeel task claim|handoff|review|close [target] --id task-id --actor id [--summary text] [--evidence path] [--judgment pass|fail] [--rollback text]
 workkeel status|doctor [target]
@@ -25,7 +25,7 @@ const ADVANCED_HELP = `Workkeel — repository-native task coordination for codi
 
 Core lifecycle, every form:
 workkeel start [target] [--request brief.json]
-workkeel init [target] [--principal id] | [--policy repository-policy.json]
+workkeel init [target] [--principal id] [--builder family] [--reviewer family] | [--policy repository-policy.json]  defaults: claude builder, codex reviewer
 workkeel policy show [target] | policy update [target] --policy repository-policy.json [--actor id]
 workkeel status|doctor [target]
 workkeel upgrade [target] [--actor id]
@@ -129,9 +129,12 @@ async function runCommand(args) {
     allow(options, ["--request"]);
     output = await readStartGuide(target, { requestRef: options["--request"] ?? null });
   } else if (command === "init") {
-    // Without --policy, one owner Principal gets a claude builder and a codex reviewer Agent.
+    // Without --policy, model families default to claude for builder and codex for reviewer.
     if (options["--policy"]) { allow(options, ["--policy"]); output = await initializeTaskProject(target, (await readTaskContractInput(target, options["--policy"])).document); }
-    else { allow(options, ["--principal"]); output = await initializeTaskProject(target, defaultPolicy(options["--principal"])); }
+    else {
+      allow(options, ["--principal", "--builder", "--reviewer"]);
+      output = await initializeTaskProject(target, defaultPolicy(options["--principal"], { builder: options["--builder"], reviewer: options["--reviewer"] }));
+    }
   } else if(command==='workspace') {
     const workspace=await import('./workkeel-workspace.mjs');
     if(action==='show'){allow(options,[]);output=await workspace.readWorkspaceSnapshot(target);}

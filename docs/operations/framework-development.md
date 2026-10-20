@@ -39,7 +39,7 @@ records and evidence uncommitted, even here; preserve them in a separate private
 backup. Never push this workspace wholesale to either public or private remotes.
 Backups preserve state separately from the framework's source history.
 
-`init .` registers the `builder` and `reviewer` Agents described in the
+`init .` defaults to a `claude` builder and a `codex` reviewer; override with `--builder <family>` and `--reviewer <family>`, as described in the
 [native setup guide](../getting-started/workkeel.md). To use a different reviewed
 policy instead, save it as `.workkeel-private/policy.json` **inside the private
 workspace** and run `node bin/workkeel.mjs init . --policy .workkeel-private/policy.json`.
