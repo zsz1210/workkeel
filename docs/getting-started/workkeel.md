@@ -18,8 +18,8 @@ Use Node.js 24.15 or newer and run the current source as in the
 [earlier line](../../CHANGELOG.md#010-beta1). Installed projects can
 use `npx --no-install workkeel`; a reviewed source checkout provides
 `node bin/workkeel.mjs`. Examples below using a source path remain the source
-alternative. Version 0.2 removed the earlier legacy mode; projects pinned to an
-older CLI keep that version, and there is no migration path.
+alternative. Version 0.2 removed the earlier Temple mode; Temple projects pinned
+to an older CLI keep that version, and there is no migration path for their records.
 
 `workkeel.lock` pins a CLI version. A CLI with the same major version that is not
 older than the pin works normally. With any other CLI, read commands such as
@@ -33,6 +33,10 @@ never stored. Task policy and execution documents stay strict. `schema_version`
 decides major compatibility. The compatibility check runs before the mutation
 lock is taken, so an upgrade running at the same moment as another write may not
 stop that write.
+
+Native projects pinned to `0.2.0-beta.0` can use the `1.0.0` source CLI for reads
+with a compatibility warning. Run `workkeel upgrade` with that CLI and an
+approving Principal to enable mutations; task records are not converted.
 
 Tasks carry a low, standard, high or critical risk tier. Project policy
 `risk_paths` and sensitive data set a minimum tier, and high or critical work

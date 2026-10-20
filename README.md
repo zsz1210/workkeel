@@ -9,7 +9,7 @@ English · [繁體中文](README.zh-TW.md) · [日本語](README.ja.md)
 
 [![CI](https://github.com/zsz1210/workkeel/actions/workflows/ci.yml/badge.svg)](https://github.com/zsz1210/workkeel/actions/workflows/ci.yml)
 
-0.2.0-beta.0 unpublished source · Node.js 24.15+ · [MIT](LICENSE)
+1.0.0 unpublished source · Node.js 24.15+ · [MIT](LICENSE)
 
 ## Why Workkeel
 
@@ -116,7 +116,7 @@ Find these and other optional parts in the [documentation index](docs/README.md)
 
 ## Limits
 
-- Experimental beta: recovery from every interruption and fresh-machine installation are not fully qualified.
+- Recovery from every interruption and fresh-machine installation are not fully qualified.
 - Principals and Agents are attributed names, not authenticated accounts. Workkeel cannot prove two Principals are two people or which model ran.
 - Local locks do not coordinate multiple machines. Native host usage data exists only when the host records it.
 

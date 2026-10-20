@@ -9,6 +9,7 @@ import { initializeTaskProject, defaultPolicy } from "../src/workkeel-project.mj
 import { cliCompatibility, drainCompatibilityWarnings } from "../src/workkeel-compat.mjs";
 import { diagnoseTaskProject, mutateNativeTask, readNativeTask } from "../src/workkeel-tasks.mjs";
 import { runCreateFromFlags } from "../src/workkeel-cli-flags.mjs";
+import { TEMPLATE_VERSION } from "../src/workkeel-version.mjs";
 import { formatJson, sha256 } from "../src/files.mjs";
 
 const repository = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -46,6 +47,8 @@ test("compatibility needs the pinned major version and a CLI not older than the 
   assert.equal(cliCompatibility("0.2.0", "0.2.3").status, "compatible");
   assert.equal(cliCompatibility("0.2.0", "0.3.1").status, "compatible");
   assert.equal(cliCompatibility("0.2.0-beta.0", "0.2.0").status, "compatible");
+  assert.equal(cliCompatibility("1.0.0", "1.0.3").status, "compatible");
+  assert.equal(cliCompatibility("1.0.0", "1.1.0").status, "compatible");
   const major = cliCompatibility("0.2.0", "1.0.0");
   assert.equal(major.status, "major-mismatch"); assert.match(major.next_action, /workkeel upgrade/);
   assert.equal(cliCompatibility("0.2.3", "0.2.0").status, "cli-older");
@@ -62,21 +65,24 @@ test("lock 0.2.0 runs on CLI 0.2.3 through the launcher override", async t => {
   assert.equal(created.status, 0, created.stderr); assert.equal((await taskFiles(root)).length, 1);
 });
 
-test("CLI 1.0.0 warns on reads, blocks mutations and recovers after workkeel upgrade", async t => {
-  const root = await fixture(t), cli = await cliAt(t, "1.0.0");
+for (const pin of ["0.2.0", "0.2.0-beta.0"]) test(`source CLI upgrades pin ${pin} after warning on reads and blocking mutations`, async t => {
+  const root = await fixture(t, pin), cli = sourceCli;
   const doctor = launch(root, cli, "doctor");
   assert.equal(doctor.status, 0, doctor.stderr); assert.equal(JSON.parse(doctor.stdout).valid, true);
   const [warning] = warnings(doctor);
-  assert.equal(warning.code, "cli-major-mismatch"); assert.equal(warning.lock_version, "0.2.0"); assert.match(warning.next_action, /workkeel upgrade/);
+  assert.equal(warning.code, "cli-major-mismatch"); assert.equal(warning.lock_version, pin);
+  assert.equal(warning.cli_version, TEMPLATE_VERSION); assert.match(warning.next_action, /workkeel upgrade/);
   const blocked = launch(root, cli, "task", "new", "--goal", "Blocked write", "--acceptance", "Nothing is written", "--actor", "builder");
-  assert.equal(blocked.status, 1); assert.match(blocked.stderr, /cannot change a project pinned to 0\.2\.0.*workkeel upgrade/);
+  assert.equal(blocked.status, 1); assert.ok(blocked.stderr.includes(`cannot change a project pinned to ${pin}.`));
+  assert.match(blocked.stderr, /workkeel upgrade/);
   assert.deepEqual(await taskFiles(root), []);
 
   const upgraded = launch(root, cli, "upgrade", "--actor", "builder");
   assert.equal(upgraded.status, 0, upgraded.stderr); assert.deepEqual(warnings(upgraded), []);
   const result = JSON.parse(upgraded.stdout);
-  assert.deepEqual([result.from, result.to, result.updated], ["0.2.0", "1.0.0", ["workkeel.lock"]]);
-  assert.equal((await lockOf(root)).cli.version, "1.0.0");
+  assert.deepEqual([result.from, result.to, result.updated], [pin, TEMPLATE_VERSION, ["workkeel.lock"]]);
+  assert.equal(result.records_converted, false);
+  assert.equal((await lockOf(root)).cli.version, TEMPLATE_VERSION);
   const after = launch(root, cli, "doctor");
   assert.equal(after.status, 0, after.stderr); assert.equal(JSON.parse(after.stdout).valid, true); assert.deepEqual(warnings(after), []);
   assert.equal(launch(root, cli, "task", "new", "--goal", "Now allowed", "--acceptance", "A task exists", "--actor", "builder").status, 0);
@@ -126,12 +132,12 @@ test("the launcher rejects a pin that is not an exact version before any downloa
 });
 
 test("upgrade rewrites a stale launcher, needs an approver and never downgrades", async t => {
-  const root = await fixture(t), cli = await cliAt(t, "0.2.3");
+  const root = await fixture(t, TEMPLATE_VERSION), cli = await cliAt(t, "1.0.1");
   await fs.writeFile(path.join(root, "workkeelw.mjs"), (await fs.readFile(path.join(root, "workkeelw.mjs"), "utf8")) + "// stale\n");
   const result = JSON.parse(launch(root, cli, "upgrade", "--actor", "builder").stdout);
   assert.deepEqual(result.updated, ["workkeelw.mjs", "workkeel.lock"]);
-  assert.doesNotMatch(await fs.readFile(path.join(root, "workkeelw.mjs"), "utf8"), /stale|0\.2\.3/);
-  // The source CLI (0.2.0-beta.0) is older than the 0.2.3 pin.
+  assert.doesNotMatch(await fs.readFile(path.join(root, "workkeelw.mjs"), "utf8"), /stale|1\.0\.1/);
+  // The source CLI (1.0.0) is older than the 1.0.1 pin.
   const lock = await fs.readFile(path.join(root, "workkeel.lock"));
   const older = spawnSync(process.execPath, [sourceCli, "upgrade", root, "--actor", "builder"], { encoding: "utf8" });
   assert.equal(older.status, 1); assert.match(older.stderr, /never downgrades/);
@@ -141,7 +147,7 @@ test("upgrade rewrites a stale launcher, needs an approver and never downgrades"
 });
 
 test("unknown lock fields only warn and upgrade keeps them, including one named digest", async t => {
-  const root = await fixture(t, "0.2.0-beta.0");
+  const root = await fixture(t, TEMPLATE_VERSION);
   const lock = await lockOf(root);
   await fs.writeFile(path.join(root, "workkeel.lock"), JSON.stringify({ ...lock, future_setting: { kept: true }, digest: "future-data" }, null, 2) + "\n");
   drainCompatibilityWarnings();
@@ -149,14 +155,14 @@ test("unknown lock fields only warn and upgrade keeps them, including one named 
   assert.deepEqual(drainCompatibilityWarnings(), [{ code: "unknown-fields-ignored", context: "workkeel.lock", fields: ["future_setting", "digest"] }]);
   const doctor = spawnSync(process.execPath, [sourceCli, "doctor", root], { encoding: "utf8" });
   assert.equal(doctor.status, 0); assert.deepEqual(warnings(doctor).map(w => w.fields), [["future_setting", "digest"]]);
-  const upgraded = launch(root, await cliAt(t, "0.2.3"), "upgrade", "--actor", "builder");
+  const upgraded = launch(root, await cliAt(t, "1.0.1"), "upgrade", "--actor", "builder");
   assert.equal(upgraded.status, 0, upgraded.stderr);
   const after = await lockOf(root);
-  assert.equal(after.cli.version, "0.2.3"); assert.equal(after.digest, "future-data"); assert.deepEqual(after.future_setting, { kept: true });
+  assert.equal(after.cli.version, "1.0.1"); assert.equal(after.digest, "future-data"); assert.deepEqual(after.future_setting, { kept: true });
 });
 
 test("unknown request fields warn and are neither stored, validated nor hashed", async t => {
-  const root = await fixture(t, "0.2.0-beta.0");
+  const root = await fixture(t, TEMPLATE_VERSION);
   const flags = { "--goal": "Unknown fields", "--acceptance": ["Only a warning"], "--id": "WK-one", "--actor": "builder" };
   const inject = value => ({ beforeMutation: request => Object.assign(request, { summary: value, note: { nested: value } }) });
   drainCompatibilityWarnings();
@@ -177,7 +183,7 @@ test("unknown request fields warn and are neither stored, validated nor hashed",
 });
 
 test("filtered requests keep the input key order, so hashes match records written before this version", async t => {
-  const root = await fixture(t, "0.2.0-beta.0");
+  const root = await fixture(t, TEMPLATE_VERSION);
   await runCreateFromFlags(root, { "--goal": "Key order", "--acceptance": ["Replays"], "--id": "WK-one", "--actor": "builder" });
   const item = await readNativeTask(root, "WK-one");
   // Known fields in a non-canonical order, as an earlier CLI accepted and hashed them.

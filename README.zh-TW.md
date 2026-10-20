@@ -9,7 +9,7 @@
 
 [![CI](https://github.com/zsz1210/workkeel/actions/workflows/ci.yml/badge.svg)](https://github.com/zsz1210/workkeel/actions/workflows/ci.yml)
 
-0.2.0-beta.0 未發布原始碼 · Node.js 24.15+ · [MIT](LICENSE)
+1.0.0 未發布原始碼 · Node.js 24.15+ · [MIT](LICENSE)
 
 ## 為什麼用 Workkeel
 
@@ -111,7 +111,7 @@ CLI 會檢查已註冊的模型家族，但這項檢查本身不能證明交叉�
 
 ## 限制
 
-- 仍是實驗性 beta，尚未完整驗證所有中斷復原情境及全新機器安裝。
+- 尚未完整驗證所有中斷復原情境及全新機器安裝。
 - Principal 與 Agent 是署名，不是經過身分驗證的帳號。Workkeel 無法證明兩個 Principal 就是兩個人，也無法證明實際用了哪個模型。
 - 本機鎖無法協調多台機器；原生 host 用量資料只有在 host 有記錄時才存在。
 

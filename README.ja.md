@@ -9,7 +9,7 @@
 
 [![CI](https://github.com/zsz1210/workkeel/actions/workflows/ci.yml/badge.svg)](https://github.com/zsz1210/workkeel/actions/workflows/ci.yml)
 
-0.2.0-beta.0 未公開ソース · Node.js 24.15+ · [MIT](LICENSE)
+1.0.0 未公開ソース · Node.js 24.15+ · [MIT](LICENSE)
 
 ## Workkeel を使う理由
 
@@ -112,7 +112,7 @@ CLI は登録済みのモデルファミリーを検査しますが、それだ�
 
 ## 制限
 
-- 実験的なベータ版です。あらゆる中断からの復旧や、新しいマシンへのインストールは十分に検証できていません。
+- あらゆる中断からの復旧や、新しいマシンへのインストールは十分に検証できていません。
 - Principal と Agent は記録上の名前であり、認証済みアカウントではありません。Workkeel は 2 つの Principal が別人であることや、実際に使ったモデルを証明できません。
 - ローカルロックは複数マシン間の調整には使えません。ネイティブホストの使用量データは、ホストが記録した場合にだけ残ります。
 
