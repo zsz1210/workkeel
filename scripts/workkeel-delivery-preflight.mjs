@@ -99,7 +99,7 @@ export async function readDeliveryPreflight(target,request) {
   // Recheck HEAD after reads so candidate movement during inspection is visible.
   try {if((await git(root,'rev-parse','HEAD')).toString().trim()!==request.candidate_revision&&!candidateIssues.includes('candidate-not-head'))candidateIssues.push('candidate-not-head');}
   catch {if(!candidateIssues.includes('candidate-unavailable'))candidateIssues.push('candidate-unavailable');}
-  const contextWarnings=context.evidence.filter(item=>item.status!=='verified');
+  const contextWarnings=context.evidence.filter(item=>item.status==='unavailable');
   return {schema_version:'workkeel.delivery-preflight/v1',authority:'observation-only',mutation_status:'no-write',execution_authorized:false,
     task_id:context.task_id,candidate_revision:request.candidate_revision,candidate_issues:candidateIssues,
     evidence_preflight_passed:candidateIssues.length===0&&evidence.every(row=>row.status==='matched')&&contextWarnings.length===0,
@@ -146,7 +146,7 @@ export function renderDeliveryReport(result) {
   lines.push('','## Warnings','',`- Unlisted bindings: ${result.reports.unlisted_binding_count}.`);
   for(const issue of result.candidate_issues)lines.push(`- Candidate: ${literal(issue)}.`);
   for(const issue of result.context_attention_reasons)lines.push(`- Context: ${literal(issue)}.`);
-  for(const row of result.context_evidence.filter(item=>item.status!=='verified'))lines.push(`- Recorded evidence: ${literal(row.path??row.ref??'unknown')}, ${literal(row.status)}.`);
+  for(const row of result.context_evidence.filter(item=>item.status==='unavailable'))lines.push(`- Recorded evidence: ${literal(row.path??row.ref??'unknown')}, ${literal(row.status)}.`);
   for(const issue of result.reports.inventory_errors)lines.push(`- Inventory: ${literal(JSON.stringify(issue))}.`);
   for(const row of result.reports.expected_operations)for(const issue of row.issues)lines.push(`- ${literal(row.label)}: ${literal(issue)}.`);
   lines.push('','No verification, review, acceptance, source collection or lifecycle mutation was performed.','');

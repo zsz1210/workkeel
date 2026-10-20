@@ -1,5 +1,62 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1216" height="540" viewBox="0 0 1216 540" role="img" aria-labelledby="title desc">
-<title id="title">Workkeel task lifecycle</title><desc id="desc">Five task states: intake, build, test, release_gate and done. Review failure returns to intake. Optional execution states are distinct from acceptance.</desc>
-<defs><marker id="arrow" markerWidth="9" markerHeight="9" refX="8" refY="4" orient="auto"><path d="M0 0L8 4L0 8" fill="none" stroke="#536a7c" stroke-width="1.5"/></marker></defs>
-<rect width="100%" height="100%" fill="#fff"/>
-<g font-family="system-ui,-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif"><text x="32" y="49" font-size="30" font-weight="600" fill="#1d3041">From an approved task to an accepted change</text><text x="32" y="82" font-size="22" font-weight="400" fill="#1d3041">Task state is separate from the coding agent's activity.</text><rect x="32" y="120" width="208" height="192" rx="16" fill="#edf3fa" stroke="#c8d3dc"/><text x="50" y="153" font-size="20" font-weight="500" fill="#285b8b">01</text><text x="50" y="192" font-size="26" font-weight="600" fill="#1d3041">Agree</text><text x="50" y="224" font-size="19" font-weight="500" fill="#285b8b">intake</text><text x="50" y="260" font-size="18" font-weight="400" fill="#1d3041">Scope, permissions</text><text x="50" y="285" font-size="18" font-weight="400" fill="#1d3041">and acceptance</text><path d="M242 216H264" fill="none" stroke="#536a7c" stroke-width="2" marker-end="url(#arrow)"/><rect x="268" y="120" width="208" height="192" rx="16" fill="#edf3fa" stroke="#c8d3dc"/><text x="286" y="153" font-size="20" font-weight="500" fill="#285b8b">02</text><text x="286" y="192" font-size="26" font-weight="600" fill="#1d3041">Implement</text><text x="286" y="224" font-size="19" font-weight="500" fill="#285b8b">build</text><text x="286" y="260" font-size="18" font-weight="400" fill="#1d3041">Claim work; use your</text><text x="286" y="285" font-size="18" font-weight="400" fill="#1d3041">agent or a graph</text><path d="M478 216H500" fill="none" stroke="#536a7c" stroke-width="2" marker-end="url(#arrow)"/><rect x="504" y="120" width="208" height="192" rx="16" fill="#edf3fa" stroke="#c8d3dc"/><text x="522" y="153" font-size="20" font-weight="500" fill="#285b8b">03</text><text x="522" y="192" font-size="26" font-weight="600" fill="#1d3041">Review</text><text x="522" y="224" font-size="19" font-weight="500" fill="#285b8b">test</text><text x="522" y="260" font-size="18" font-weight="400" fill="#1d3041">Check the exact</text><text x="522" y="285" font-size="18" font-weight="400" fill="#1d3041">candidate + evidence</text><path d="M714 216H736" fill="none" stroke="#536a7c" stroke-width="2" marker-end="url(#arrow)"/><rect x="740" y="120" width="208" height="192" rx="16" fill="#edf3fa" stroke="#c8d3dc"/><text x="758" y="153" font-size="20" font-weight="500" fill="#285b8b">04</text><text x="758" y="192" font-size="26" font-weight="600" fill="#1d3041">Accept</text><text x="758" y="224" font-size="19" font-weight="500" fill="#285b8b">release_gate</text><text x="758" y="260" font-size="18" font-weight="400" fill="#1d3041">Confirm review and</text><text x="758" y="285" font-size="18" font-weight="400" fill="#1d3041">required approvals</text><path d="M950 216H972" fill="none" stroke="#536a7c" stroke-width="2" marker-end="url(#arrow)"/><rect x="976" y="120" width="208" height="192" rx="16" fill="#e6f3ec" stroke="#c8d3dc"/><text x="994" y="153" font-size="20" font-weight="500" fill="#285b8b">05</text><text x="994" y="192" font-size="26" font-weight="600" fill="#1d3041">Done</text><text x="994" y="224" font-size="19" font-weight="500" fill="#285b8b">done</text><text x="994" y="260" font-size="18" font-weight="400" fill="#1d3041">Record the accepted</text><text x="994" y="285" font-size="18" font-weight="400" fill="#1d3041">revision; no deploy</text><path d="M608 315V345H136V315" fill="none" stroke="#536a7c" stroke-width="2" marker-end="url(#arrow)"/><text x="154" y="378" font-size="21" font-weight="400" fill="#1d3041">Review fails → preserve evidence → return to intake → claim again</text><rect x="32" y="407" width="1152" height="106" rx="16" fill="#fff1df" stroke="#c8d3dc"/><text x="52" y="444" font-size="23" font-weight="500" fill="#1d3041">Inside build: use your existing coding agent, or opt into a graph.</text><text x="52" y="480" font-size="19" font-weight="400" fill="#1d3041">Graph: running → awaiting-approval / paused / blocked → completed. Completion still needs review.</text></g></svg>
+<svg xmlns="http://www.w3.org/2000/svg" width="1216" height="620" viewBox="0 0 1216 620" role="img" aria-labelledby="title desc">
+  <title id="title">Workkeel task lifecycle</title>
+  <desc id="desc">Agree scope and risk tier in intake. Claim and build with your coding tool. A different Agent reviews the exact commit in test; high and critical require a different model family and cross-review. A failed review stays in test until the approver runs task rework: preserve the failed attempt and return to intake under the same contract. Rework cap: low 2, others 3, then stop and ask a person. After a pass, accept in release_gate; the approving Principal closes high and critical work. Done records acceptance, not deployment. Must fix blocks; Consider, Note and Dismiss are recorded.</desc>
+  <defs>
+    <marker id="arrow" markerWidth="9" markerHeight="9" refX="8" refY="4" orient="auto"><path d="M0 0L8 4L0 8" fill="none" stroke="#536a7c" stroke-width="1.5"/></marker>
+    <style>
+      text{font-family:system-ui,-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif;fill:#1d3041}
+      .card{fill:#edf3fa;stroke:#c8d3dc}.number{font-size:20px;font-weight:500;fill:#285b8b}
+      .heading{font-size:26px;font-weight:600}.state{font-size:19px;font-weight:500;fill:#285b8b}
+      .body{font-size:18px}.detail{font-size:16px}.arrow{fill:none;stroke:#536a7c;stroke-width:2;marker-end:url(#arrow)}
+    </style>
+  </defs>
+  <rect width="100%" height="100%" fill="#fff"/>
+  <text x="32" y="49" font-size="30" font-weight="600">From an approved task to an accepted change</text>
+  <text x="32" y="82" font-size="22">Task state is separate from the coding agent's activity.</text>
+  <g transform="translate(32 120)">
+    <rect class="card" width="208" height="300" rx="16"/>
+    <text class="number" x="18" y="33">01</text><text class="heading" x="18" y="72">Agree</text>
+    <text class="state" x="18" y="104">intake</text>
+    <text class="body" x="18" y="143">Scope, permissions</text><text class="body" x="18" y="170">and acceptance</text>
+    <text class="body" x="18" y="212" font-weight="500">Set risk tier</text>
+  </g>
+  <path class="arrow" d="M242 224H264"/>
+  <g transform="translate(268 120)">
+    <rect class="card" width="208" height="300" rx="16"/>
+    <text class="number" x="18" y="33">02</text><text class="heading" x="18" y="72">Build</text>
+    <text class="state" x="18" y="104">build</text>
+    <text class="body" x="18" y="143">Claim first</text><text class="body" x="18" y="170">Use your coding tool</text>
+    <text class="body" x="18" y="212">Commit + handoff</text>
+  </g>
+  <path class="arrow" d="M478 224H500"/>
+  <g transform="translate(504 120)">
+    <rect class="card" width="208" height="300" rx="16"/>
+    <text class="number" x="18" y="33">03</text><text class="heading" x="18" y="72">Review</text>
+    <text class="state" x="18" y="104">test</text>
+    <text class="body" x="18" y="143">Exact commit</text><text class="body" x="18" y="170">+ evidence</text>
+    <text class="body" x="18" y="197">Different Agent</text>
+    <text class="detail" x="18" y="225">high / critical:</text><text class="detail" x="18" y="250">Different model family</text>
+    <rect x="18" y="262" width="172" height="27" rx="8" fill="#fff1df" stroke="#c8d3dc"/>
+    <text class="detail" x="104" y="281" text-anchor="middle" font-weight="500">Cross-review</text>
+  </g>
+  <path class="arrow" d="M714 224H736"/>
+  <g transform="translate(740 120)">
+    <rect class="card" width="208" height="300" rx="16"/>
+    <text class="number" x="18" y="33">04</text><text class="heading" x="18" y="72">Accept</text>
+    <text class="state" x="18" y="104">release_gate</text>
+    <text class="body" x="18" y="143">Authorized approver</text><text class="body" x="18" y="170">closes after a pass</text>
+    <text class="detail" x="18" y="225">high / critical:</text><text class="detail" x="18" y="250">Approving Principal</text><text class="detail" x="18" y="275">closes</text>
+  </g>
+  <path class="arrow" d="M950 224H972"/>
+  <g transform="translate(976 120)">
+    <rect width="208" height="300" rx="16" fill="#e6f3ec" stroke="#c8d3dc"/>
+    <text class="number" x="18" y="33">05</text><text class="heading" x="18" y="72">Done</text>
+    <text class="state" x="18" y="104">done</text>
+    <text class="body" x="18" y="143">Record the accepted</text><text class="body" x="18" y="170">revision; no deploy</text>
+  </g>
+  <path class="arrow" d="M608 423V451H136V423"/>
+  <text x="32" y="491" font-size="21">Failed review stays in test → approver task rework → intake, same contract; claim again</text>
+  <text x="32" y="527" font-size="21">Rework cap: low 2 / others 3, then stop and ask a person</text>
+  <rect x="32" y="555" width="1152" height="43" rx="12" fill="#fff1df" stroke="#c8d3dc"/>
+  <text x="52" y="583" font-size="19">Must fix blocks; Consider / Note / Dismiss recorded</text>
+</svg>

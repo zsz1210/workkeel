@@ -150,7 +150,7 @@ async function readBoundedFile(filename) {
 export async function runHeadroomWorker({ content, query, python, modelReadback, modelNotice }) {
   if (process.platform !== "darwin") return { failure: "unsupported-platform" };
   if (typeof python !== "string" || !path.isAbsolute(python)) return { failure: "runtime-unconfigured" };
-  const scratch = await fs.mkdtemp(path.join(os.tmpdir(), "temple-headroom-"));
+  const scratch = await fs.mkdtemp(path.join(os.tmpdir(), "workkeel-headroom-"));
   try {
     const realScratch = await fs.realpath(scratch);
     const profile = `(version 1)(allow default)(deny network*)(deny process-fork)(deny file-write*)(allow file-write* (subpath ${JSON.stringify(realScratch)}) (literal "/dev/null"))`;
@@ -229,7 +229,7 @@ async function buildHeadroomView({ input, kind, enabled = false, python, snapsho
   const content = bytes.toString("utf8");
   const originalHash = digest(bytes);
   const output = {
-    schema_version: "temple.tool-output-view/v1", status: "original", reason: "disabled",
+    schema_version: "workkeel.tool-output-view/v1", status: "original", reason: "disabled",
     content, source_sha256: originalHash, readback: null,
     compression_policy: allowLossy ? "allow-lossy" : "lossless-only", preservation: "original",
     metrics: { input_bytes: bytes.length, output_bytes: bytes.length, worker_attempts: 0,
@@ -242,7 +242,7 @@ async function buildHeadroomView({ input, kind, enabled = false, python, snapsho
   };
   if (enabled !== true) return finish();
   const physicalInput = await fs.realpath(input);
-  if (!safeSnapshot(physicalInput) || ["WORKKEEL.MD", "AGENTS.MD", "TEMPLE.MD", "CLAUDE.MD"].includes(path.basename(physicalInput).toUpperCase())) {
+  if (!safeSnapshot(physicalInput) || ["WORKKEEL.MD", "AGENTS.MD", "CLAUDE.MD"].includes(path.basename(physicalInput).toUpperCase())) {
     output.reason = "protected-source"; return finish();
   }
   if (!["log", "json"].includes(kind)) { output.reason = "unsupported-kind"; return finish(); }
@@ -337,7 +337,7 @@ export async function readHeadroomOriginal({ input, sha256 }) {
   const started = performance.now();
   const bytes = await readBoundedFile(input);
   if (digest(bytes) !== sha256) throw new Error("Original snapshot changed; refusing mismatched readback");
-  return { schema_version: "temple.tool-output-readback/v1", content: bytes.toString("utf8"),
+  return { schema_version: "workkeel.tool-output-readback/v1", content: bytes.toString("utf8"),
     source_sha256: sha256, metrics: { output_bytes: bytes.length, total_ms: performance.now() - started,
       model_usage: null, provider_calls_by_adapter: 0 } };
 }

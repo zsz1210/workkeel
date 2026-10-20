@@ -5,7 +5,6 @@ import os from "node:os";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
 import test from "node:test";
-import { fileURLToPath } from "node:url";
 import {
   defaultEvidenceProfiles,
   ensureEvidenceProfiles,
@@ -14,8 +13,6 @@ import {
 } from "../src/evidence-profiles.mjs";
 import { buildPublicationAudit } from "../src/publication-audit.mjs";
 
-const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const cli = path.join(repositoryRoot, "bin/temple.mjs");
 
 function git(target, args) {
   const result = spawnSync("git", ["-C", target, ...args], { encoding: "utf8" });
@@ -23,12 +20,8 @@ function git(target, args) {
   return result.stdout.trim();
 }
 
-function runCli(args) {
-  return spawnSync(process.execPath, [cli, ...args], { encoding: "utf8" });
-}
-
 async function repositoryFixture(context, name) {
-  const target = await fs.mkdtemp(path.join(os.tmpdir(), `temple-publication-${name}-`));
+  const target = await fs.mkdtemp(path.join(os.tmpdir(), `workkeel-publication-${name}-`));
   context.after(() => fs.rm(target, { recursive: true, force: true }));
   git(target, ["init", "-q"]);
   git(target, ["config", "user.email", "publication@example.invalid"]);
@@ -42,7 +35,7 @@ async function repositoryFixture(context, name) {
 }
 
 test("Evidence Profiles default safely and reject weakened profile floors", async (context) => {
-  const target = await fs.mkdtemp(path.join(os.tmpdir(), "temple-evidence-profile-"));
+  const target = await fs.mkdtemp(path.join(os.tmpdir(), "workkeel-evidence-profile-"));
   context.after(() => fs.rm(target, { recursive: true, force: true }));
   const policy = defaultEvidenceProfiles();
   assert.equal(policy.active_profile, "private");
@@ -220,22 +213,18 @@ test("reviewed adapter fixture never excuses secret material", async (context) =
   assert.ok(result.surfaces[0].findings.some((entry) => entry.rule_id === "openai-api-key" && entry.classification === "blocked"));
 });
 
-test("publication CLI is read-only and rejects an unknown surface", async (context) => {
+test("publication audit is read-only and rejects an unknown surface", async (context) => {
   const { target } = await repositoryFixture(context, "cli");
   await fs.writeFile(path.join(target, "README.md"), "Public fixture\n");
   git(target, ["add", "."]);
   const before = git(target, ["status", "--porcelain=v1"]);
 
-  const result = runCli(["publication", "audit", target, "--surface", "repository", "--json"]);
-  assert.equal(result.status, 0, result.stderr || result.stdout);
-  const report = JSON.parse(result.stdout);
+  const report = await buildPublicationAudit(target, { surface: "repository" });
   assert.equal(report.status, "allowed");
   assert.equal(report.authority.canonical_state_changed, false);
   assert.equal(git(target, ["status", "--porcelain=v1"]), before);
 
-  const invalid = runCli(["publication", "audit", target, "--surface", "remote"]);
-  assert.equal(invalid.status, 1);
-  assert.match(invalid.stderr, /Unknown publication surface/);
+  await assert.rejects(buildPublicationAudit(target, { surface: "remote" }), /Unknown publication surface/);
 });
 
 test("oversized current text streams exact matches, lines, UTF-8, and CIDR exceptions", async (context) => {

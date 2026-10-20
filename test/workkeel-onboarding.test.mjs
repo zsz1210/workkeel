@@ -30,10 +30,22 @@ test("instruction preview preserves existing bytes, rejects drift, imports WORKK
   const fresh = await previewInstructions(root);
   await applyInstructions(root, fresh.fingerprint);
   assert.ok((await fs.readFile(path.join(root, "AGENTS.md"), "utf8")).startsWith(original));
-  assert.match(await fs.readFile(path.join(root, "CLAUDE.md"), "utf8"), /@WORKKEEL.md/);
+  const claude = await fs.readFile(path.join(root, "CLAUDE.md"), "utf8");
+  assert.match(claude, /<!-- workkeel:begin -->\n@AGENTS\.md\n<!-- workkeel:end -->/); assert.doesNotMatch(claude, /@WORKKEEL\.md/);
   assert.equal((await previewInstructions(root)).files.length, 0);
   const again = await previewInstructions(root);
   assert.equal((await applyInstructions(root, again.fingerprint)).mutation_status, "already-applied");
+});
+test("an earlier generated CLAUDE.md block is upgraded in place; edited blocks stay manual", async t => {
+  const root = await fixture(t);
+  const previous = "<!-- workkeel:begin -->\n@WORKKEEL.md\n\nUse this project's AGENTS.md instructions when present. Match and read applicable Skills before acting; report applied steps and verification, not merely which files were read.\n<!-- workkeel:end -->";
+  await fs.writeFile(path.join(root, "CLAUDE.md"), `# Mine\n\n${previous}\n\nKeep this.\n`);
+  const preview = await previewInstructions(root), claude = preview.files.find(file => file.path === "CLAUDE.md");
+  assert.equal(claude.upgrade, "replaces-previous-workkeel-block");
+  await applyInstructions(root, preview.fingerprint);
+  assert.equal(await fs.readFile(path.join(root, "CLAUDE.md"), "utf8"), "# Mine\n\n<!-- workkeel:begin -->\n@AGENTS.md\n<!-- workkeel:end -->\n\nKeep this.\n");
+  await fs.writeFile(path.join(root, "CLAUDE.md"), "<!-- workkeel:begin -->\n@AGENTS.md edited\n<!-- workkeel:end -->\n");
+  await assert.rejects(previewInstructions(root), /review it manually/);
 });
 test("new source launcher does not silently fetch an unpublished package", async t => {
   const root = await fixture(t);

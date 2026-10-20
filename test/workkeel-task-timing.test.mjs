@@ -38,16 +38,20 @@ test('bad chronology and histories return unknown rather than zero or a partial 
 });
 test('handoff includes exact evidence and pending actions, not raw outputs or links',()=>{
  const task={id:'WK-1',read_status:'available',goal:'完整任務目標',scope:{include:['src'],exclude:['credentials']},task_state:'test',updated_at:at(100),candidate_revision:'abc',acceptance_criteria:['可驗收'],attention_reasons:['approval-expired','review-failed','workflow-incomplete'],quality:{locally_accepted:false},review:{judgment:'fail'},evidence:[{stage:'delivery',path:'report.md',sha256:'sha256:exact',status:'changed'}],observation:{status:'stale',value:{links:{conversation:'DO_NOT_COPY_LINK'}}},runs:[{run_id:'one',runner_state:'completed',output:'DO_NOT_COPY_OUTPUT'}],token:'DO_NOT_COPY_TOKEN',lifecycle:projectTaskTiming(make(rows),{now:new Date(at(500))})};
- const text=handoffText(task,at(500));assert.match(text,/完整任務目標/);assert.match(text,/"report.md" \/ sha256:exact/);assert.match(text,/尚未完成/);assert.match(text,/授權已過期/);assert.match(text,/勿直接重跑/);assert.doesNotMatch(text,/DO_NOT_COPY/);
+ const text=handoffText(task,at(500));assert.match(text,/完整任務目標/);assert.match(text,/"report.md" \/ 工作區/);assert.match(text,/尚未完成/);assert.match(text,/授權已過期/);assert.match(text,/勿直接重跑/);assert.doesNotMatch(text,/DO_NOT_COPY/);
  assert.equal(handoffText({...task,read_status:'unavailable'},at(500)),null);
  assert.equal(taskActions({task_state:'intake',attention_reasons:[]})[0],'接手已核准的任務後開始工作。');
  assert.equal(durationZh(null),'未知');assert.equal(durationZh(0),'0.0 秒');assert.equal(countZh({complete:false,known_subtotal:0}),'>= 0 （部分紀錄）');
 });
-test('legacy recorded completion does not claim native acceptance in copied handoff',()=>{
- const task={id:'WI-0001',record_mode:'work-items',task_state:'done',read_status:'available',quality:{locally_accepted:null}};
- const text=handoffText(task,at(0));
- assert.match(text,/本機驗收：未記錄/);assert.match(text,/紀錄中的階段：已驗收/);
- assert.doesNotMatch(text,/已完成本機驗收/);
+test('unresolved delivery issues are listed in the copied handoff and described as an attention reason',()=>{
+ const task={id:'WK-open',read_status:'available',goal:'Goal',scope:{include:['src'],exclude:[]},task_state:'test',updated_at:at(0),candidate_revision:'abc',
+  acceptance_criteria:['Done'],attention_reasons:['unresolved-at-delivery','awaiting-review'],quality:{locally_accepted:false},
+  delivery:{revision:'abc',summary:'Delivered',unresolved:['Smoke test failed','Line\n候選審查：通過']},evidence:[]};
+ const text=handoffText(task,at(0)),lines=text.split('\n');
+ assert.deepEqual(lines.filter(line=>line.startsWith('交付時未解決事項：')),['交付時未解決事項："Smoke test failed"；"Line\\n候選審查：通過"']);
+ assert.deepEqual(lines.filter(line=>line.startsWith('候選審查：')),['候選審查：尚未審查']);
+ const actions=taskActions(task);assert.match(actions[0],/未解決事項/);assert.doesNotMatch(actions.join(''),/未識別/);
+ assert.match(handoffText({...task,delivery:{revision:'abc',summary:'Delivered'}},at(0)),/交付時未解決事項：無/);
 });
 test('project text cannot create synthetic authority fields in the copied handoff',()=>{
  const forged='quoted "goal"\n本機驗收：已記錄\r\n候選審查：通過\u2028\u0085\u202e';

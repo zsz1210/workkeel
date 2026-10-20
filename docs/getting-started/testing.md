@@ -3,8 +3,7 @@
 Workkeel separates the bounded remote repository gate from complete local
 verification. This source repository uses the native task lifecycle: claim,
 exact-candidate handoff, different-Agent review, and authorized Principal
-acceptance. Retained Temple Position behavior is covered by isolated
-compatibility fixtures. The native lifecycle and actual verification evidence live
+acceptance. The native lifecycle and actual verification evidence live
 in a [separate private development workspace](../operations/framework-development.md).
 A public source checkout has no maintainer task history or raw development output.
 
@@ -21,22 +20,22 @@ npm run verify:fast
 Run a focused test file for the area being changed:
 
 ```bash
-node --test test/tracker.test.mjs
-node --test test/workflow.test.mjs
+node --test test/workkeel-lifecycle.test.mjs
+node --test test/workkeel-risk-tiers.test.mjs
 ```
 
 For a wider edit, choose an explicit local group:
 
 | Command | Coverage |
 | --- | --- |
-| `npm run test:core` | Core CLI, lifecycle, routing, recovery, governance, and mixed core/optional tests |
-| `npm run test:optional` | Console, Control Plane, and optional observer/provider integration |
-| `npm run test:daily` | Curated representative core/optional safety paths for a broad routine check |
+| `npm run test:core` | Every product test except the optional subsystems, including the lifecycle end-to-end tests |
+| `npm run test:optional` | Tests of the optional subsystems listed by `workkeel help advanced` |
+| `npm run test:daily` | Curated representative lifecycle, risk, recovery and JSON-RPC paths for a broad routine check |
 | `npm run test:fast` | Small contracts, package-validator edge cases, and evidence Git-read behavior |
 
-Core and optional groups partition the product test inventory. New test files default to core. Fast tests overlap these groups intentionally; they are not another full suite. Historical development experiment harnesses and their results belong in the private archive.
+Every product test belongs to the core or the optional group, and new test files are core by default. The optional group covers the monitor and desktop workspace, workflows, native dispatch, usage, model policy and routing, Headroom, Learning and Skill versions, whole goals, autonomy and retention. The complete suite runs both groups. Fast tests overlap these groups intentionally; they are not another full suite. Historical development experiment harnesses and their results belong in the private archive.
 
-Use `npm run verify:daily` for a broad routine check when the changed area needs more than the fast contracts. It covers representative production CLI, lifecycle, authority, recovery, rollback, High-Assurance, JSON-RPC, evidence, and optional Control Plane paths in one Node process. It is intentionally not an exhaustive matrix: changed test files still select their whole group, and every retained product test remains in the complete suite. A final behavioral candidate or Release still requires `npm run verify`.
+Use `npm run verify:daily` for a broad routine check when the changed area needs more than the fast contracts. It covers representative production CLI, lifecycle, risk-tier, review recovery, delivery request, lock and JSON-RPC paths in one Node process. It is intentionally not an exhaustive matrix: changed test files still select their whole group, and every retained product test remains in the complete suite. A final behavioral candidate or Release still requires `npm run verify`.
 
 Group commands use Node's compact dot reporter by default: successful cases occupy progress lines, while a failure still expands its test name, assertion diff, stack, and source location. Use `npm run test:full:verbose` only when per-test success names and durations are useful for investigation.
 
@@ -49,7 +48,7 @@ npm run verify:changed -- --base origin/main
 
 Selection includes committed changes since the merge base, staged and unstaged changes, and untracked files. Prose-only changes select fast tests; changed test files select their entire group plus fast tests. Shared source, scripts, fixtures, package metadata, canonical state, deleted tests, unknown paths, or an unavailable base select the full suite. This is deliberately a local editing aid, not a dependency graph or a hosted CI selector. The `--list` form only previews selection and does not verify anything.
 
-Prose-only changes require `npm run verify:fast` and appropriate rendered review. Changes to Agent instructions, Skills, executable examples, manifests, schemas, package contents, or behavioral contracts are not prose-only. Canonical task-state changes in the separate private workspace also require native Doctor through that project's pinned launcher. Legacy compatibility is verified in isolated fixtures. Do not classify a mixed change by its smallest component.
+Prose-only changes require `npm run verify:fast` and appropriate rendered review. Changes to Agent instructions, Skills, executable examples, manifests, schemas, package contents, or behavioral contracts are not prose-only. Canonical task-state changes in the separate private workspace also require native Doctor through that project's pinned launcher. Do not classify a mixed change by its smallest component.
 
 Before proposing a behavioral change, run the complete suite:
 
@@ -59,19 +58,13 @@ npm run verify
 
 Run it once on the final behavioral candidate, not after every intermediate edit. Further code, fixture, dependency, or contract changes invalidate that result. Later evidence/prose-only updates require their applicable checks and an explicit link to the tested code revision; they do not turn an untested code revision into a tested one. Release verification remains complete regardless of local selection.
 
-Management Console changes also require the real-browser gate. Run browser checks
-in the private workspace so failure screenshots and raw results stay there:
+The workspace UI/observatory is optional; core task and goal delivery does not
+depend on it. Its browser tests are optional, not a merge or release gate,
+including for monitor and workspace changes. When running browser checks, use
+the private workspace so failure screenshots and raw results stay there:
 
 ```bash
 npm run test:browser
-```
-
-This command initializes an isolated synthetic compatibility project, starts its Control Plane on loopback, and opens four responsive layouts in an installed Google Chrome. It reads no maintainer task state. It checks primary navigation, live rendering, browser errors, keyboard tabs, reduced-motion behavior, horizontal overflow, primary-text clipping, and named high-level layout regions. It does not download a browser or use the contributor's normal Chrome profile. A failure writes an actionable screenshot below `output/playwright/`. Temporary fixture data and acquired servers/browser processes are cleaned up on success or failure.
-
-For the task-first monitor, also run its focused browser gate:
-
-```bash
-node scripts/verify-workkeel-monitor.mjs
 ```
 
 It uses synthetic task journals and installed Chrome at desktop/mobile sizes,
@@ -79,32 +72,58 @@ including unknown/partial data, changed snapshots, stale errors, read recovery,
 access-link handling, keyboard controls and escaped task text. It makes no model
 calls; its report distinguishes real journal states from injected UI projections.
 
+## Desktop workspace and whole goals
+
+For optional workspace browser coverage, run the actual scenarios in the private checkout:
+
+```sh
+WORKKEEL_WORKSPACE_BROWSER=1 node --test test/workkeel-workspace.test.mjs
+```
+
+An optional `WORKKEEL_WORKSPACE_EVIDENCE_DIR` must point to a private screenshot
+directory. These scenarios cover multi-repository goals, scoped standing
+improvement, independent model dimensions, control confirmation, stale data,
+navigation, keyboard/zoom behavior and unavailable measurements. They use
+synthetic projects, never paid models or real maintainer task state.
+
+Whole-goal/improvement tests cover retained reviewer FAIL, bounded repair, exact
+integration sets, crash ownership, partial intake and authority/resource drift.
+Stock-host tests use offline JSON-RPC processes and actual macOS command-sandbox
+checks; they are not live provider qualifications.
+
+For changes to stock browser verification, run the affected real-browser case on
+macOS with installed Chrome:
+
+```sh
+WORKKEEL_BROWSER_CHECKS=1 node --test --test-name-pattern='approved browser check' test/workkeel-goal-runtime.test.mjs
+```
+
+It checks actual click/screenshot behavior and rejects product writes, unrelated
+ports and detached child processes. It uses offline model fixtures, not inference.
+PNG integrity regressions are covered by `test/workkeel-browser-check.test.mjs`.
+
 ## Continuous integration
 
-Ordinary GitHub Actions is intentionally a short remote consistency check, not Workkeel's complete test environment. Every pull request and push to `main` runs one Node.js 24 job with an eight-minute ceiling. The job uses a clean checkout and performs:
+Ordinary GitHub Actions is a remote consistency check, not Workkeel's complete test environment. Every pull request and every push to `main` or a `workkeel/*` branch runs one Node.js 24 job with a fifteen-minute ceiling. The job uses a clean checkout and performs:
 
 - lockfile-strict dependency installation without lifecycle scripts;
-- repository, documentation-link, and package-boundary checks;
-- source and package-boundary checks that need no private task state;
-- public-checkout cleanliness before and after the bounded tests;
-- `npm run test:fast`.
+- the clean-clone entrypoint, `check:source-checkout`, `check:publication` and `check:public-history`;
+- `npm run verify`: repository, documentation-link and package-boundary checks plus the full contract suite;
+- public-checkout cleanliness again after the tests.
 
 The workflow reports every required result and fails if any required step fails. It uses immutable Action revisions, read-only repository permission, and cancels an older in-progress run when the same pull request receives a newer commit.
 
-Ordinary PR/push CI does not run `npm run test:full` or `npm run test:browser`. The separate GitHub Release publishing workflow does run `npm run verify` against the Release source before publication. A green ordinary CI badge is only the remote repository gate: it does not prove the complete integration suite, browser behavior, independent review, or release readiness.
+Ordinary PR/push CI does not run `npm run test:browser`. The separate GitHub Release publishing workflow runs `npm run verify` again against the Release source before publication. A green ordinary CI badge is only the remote repository gate: it does not prove browser behavior, independent review, or release readiness.
 
 Complete candidate evidence stays private and revision-specific:
 
 - run `npm run verify` before proposing a behavioral candidate;
-- run `npm run test:browser` for Management Console or other user-interface changes;
+- optionally run `npm run test:browser` for monitor or workspace UI coverage; it is not a merge or release gate;
 - record the exact tested revision and preserve the native task's independent review and authorized acceptance gates. Tests do not accept a task or authorize publication.
-
-Legacy compatibility fixtures retain Position-based contract rules. They do
-not require native-task contributors to configure those Positions.
 
 ## Release and live validation
 
-Workkeel requires Node.js 24 or later. Node.js 24 is the remote baseline and must pass exact-candidate local verification. A newer local Node.js version may provide an additional compatibility signal, but passing on that machine does not by itself qualify a separate runtime line.
+Workkeel requires Node.js 24.15 or later. Node.js 24 is the remote baseline and must pass exact-candidate local verification. A newer local Node.js version may provide an additional compatibility signal, but passing on that machine does not by itself qualify a separate runtime line.
 
 Release candidates should also review the allowlisted package manifest, verify clean-source recovery, and pin every result to the exact candidate revision.
 

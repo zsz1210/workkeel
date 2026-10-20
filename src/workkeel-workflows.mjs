@@ -10,7 +10,10 @@ import { executionDigest, exactKeys, EXECUTION_ID, validateExecutionPolicy, sele
 import { validateWorkflow } from "./workkeel-workflow-schema.mjs";
 import { validateExecutionObservation } from "./workkeel-measurements.mjs";
 import { validateTaskMaterial } from "./workkeel-material.mjs";
+import {loadTaskRequirements, requirementInstructions} from './workkeel-requirements.mjs';
 import { captureContinuationState } from "./workkeel-continuation-state.mjs";
+import {validateDispatchCapabilities} from './workkeel-dispatch.mjs';
+import {resolveWorkflowModelRouting, assertWorkflowRuntimeSelection} from './workkeel-model-routing.mjs';
 
 const runRef = id => {
   if (!EXECUTION_ID.test(id ?? "") || ["constructor", "prototype"].includes(id)) throw new Error("Invalid workflow run ID");
@@ -18,11 +21,23 @@ const runRef = id => {
 };
 const envelope = value => formatJson({ value, sha256: executionDigest(value) });
 const sameActor = (one, two) => one.agent_id === two.agent_id && one.principal_id === two.principal_id;
+function assertRoutedResult(selection, result) {
+  if (result.status === 'not-started') return;
+  assertWorkflowRuntimeSelection(selection, result.runtime_selection);
+  if (selection.model_snapshot && result.runtime_model != null && result.runtime_model !== selection.runtime_selection.model)
+    throw Error('Runtime model contradicts its acknowledged layered selection');
+}
 async function boundedCompatibility(adapter, context, signal) {
   signal?.throwIfAborted();
   let timer, abort;
   try {
-    await Promise.race([adapter.assertCompatible({ ...context, signal }), new Promise((_, reject) => {
+    await Promise.race([(async () => {
+      await adapter.assertCompatible({ ...context, signal });
+      if (context.selection.model_snapshot) {
+        if (typeof adapter.assertModelSelection !== 'function') throw Error('Runtime cannot enforce the selected model/reasoning/service tuple');
+        assertWorkflowRuntimeSelection(context.selection, await adapter.assertModelSelection({...context, signal}));
+      }
+    })(), new Promise((_, reject) => {
       timer = setTimeout(() => reject(new Error("Runtime compatibility check timed out")), 5000);
       abort = () => reject(new Error("Workflow cancelled during compatibility check"));
       signal?.addEventListener("abort", abort, { once: true });
@@ -55,7 +70,7 @@ export async function lockWorkflowDirectory(directory) {
   };
 }
 const lockRun = lockWorkflowDirectory;
-async function loadInputs(target, request) {
+async function loadInputs(target, request, {historical = false} = {}) {
   const task = await assertTaskExecutionContext(target, request.task_id, request);
   const { contract } = task;
   if (contract.execution.runtime.kind !== "adapter") throw new Error("Automatic workflows require an approved adapter runtime");
@@ -63,6 +78,13 @@ async function loadInputs(target, request) {
   const workflow = await readTaskContractInput(target, request.workflow_ref);
   const policy = await readTaskContractInput(target, request.policy_ref);
   validateExecutionPolicy(policy.document); validateWorkflow(workflow.document, policy.document);
+  if ((request.model_policy !== undefined || request.capabilities !== undefined) && !policy.document.model_policy) throw Error('Workflow request lacks an approved layered policy bridge');
+  if (policy.document.model_policy) {
+    validateDispatchCapabilities(request.capabilities);
+    if (policy.document.fallbacks?.length) throw Error('Layered workflow selection cannot silently fall back to another tuple');
+    if (policy.document.model_contexts?.some(c => !workflow.document.nodes.some(n => n.id === c.node && n.kind === 'runtime'))) throw Error('Model context names an absent runtime node');
+    if (contract.execution.model_connection.kind !== 'policy') throw Error('Layered workflow routing requires a pinned execution policy connection');
+  }
   const under = (file, root) => root === "." || file === root || file.startsWith(`${root}/`);
   const nodeContracts = {}, canonicalRoots = {};
   for (const node of workflow.document.nodes) {
@@ -100,7 +122,8 @@ async function loadInputs(target, request) {
   for (const node of workflow.document.nodes.filter(n => n.kind === "runtime")) {
     const select = explicit => selectNodeModel(policy.document, { node: node.id, explicit, dataClass: contract.environment.data.classification,
       modelAccess: contract.environment.data.model_access, network: contract.environment.network });
-    selections[node.id] = select(node.model ?? null);
+    selections[node.id] = policy.document.model_policy ? (await resolveWorkflowModelRouting(target, task, policy.document,
+      {model_policy: request.model_policy, capabilities: request.capabilities, node}, {historical})).selection : select(node.model ?? null);
     const fallback = policy.document.fallbacks?.find(entry => entry.node === node.id);
     if (fallback) {
       if (fallback.models[0] !== selections[node.id].id) throw new Error("Fallback sequence must start with the selected model");
@@ -119,11 +142,14 @@ async function loadInputs(target, request) {
   }
   return { task, nodeContracts, materials, definition: workflow.document, policy: policy.document, selections, fallbacks,
     pins: { contract: task.contract_sha256, workflow: workflow.digest, policy: policy.digest,
+      ...(policy.document.model_policy ? {model_policy: {policy_id: policy.document.model_policy.policy_id, version: policy.document.model_policy.version,
+        sha256: policy.document.model_policy.sha256}, capabilities: executionDigest(request.capabilities)} : {}),
       ...(request.material_refs !== undefined ? { materials: materialPins } : {}) } };
 }
 
 export async function planWorkflow(target, request, adapters = []) {
-  exactKeys(request, ["task_id", "actor", "claim_id", "workflow_ref", "policy_ref"], ["material_refs"]);
+  exactKeys(request, ["task_id", "actor", "claim_id", "workflow_ref", "policy_ref"], ["material_refs", "model_policy", "capabilities"]);
+  request=structuredClone(request);
   const input = await loadInputs(target, request);
   const adapter = adapters.find(a => a.id === input.task.contract.execution.runtime.adapter_id);
   if (adapter) {
@@ -168,11 +194,15 @@ export async function recoverWorkflowLock(target, id, actor) {
 
 /** Run a real LangGraph with trusted runtime adapters. No dynamic executable imports from JSON. */
 export async function executeWorkflow(targetInput, request, { adapters = [], signal: externalSignal, approvals = {}, reconciliations = [] } = {}) {
-  exactKeys(request, ["run_id", "task_id", "actor", "claim_id", "workflow_ref", "policy_ref"], ["material_refs"]);
+  exactKeys(request, ["run_id", "task_id", "actor", "claim_id", "workflow_ref", "policy_ref"], ["material_refs", "model_policy", "capabilities"]);
+  request=structuredClone(request);
   const target = await fs.realpath(targetInput);
   const ref = runRef(request.run_id);
-  const input = await loadInputs(target, request);
+  const priorRun = await optionalRecord(target, `${ref}/run.json`);
+  const input = await loadInputs(target, request, {historical: Boolean(priorRun)});
   const adapter = validateRuntimeAdapter(adapters.find(a => a.id === input.task.contract.execution.runtime.adapter_id));
+  if (input.policy.model_policy) for (const selection of Object.values(input.selections))
+    await boundedCompatibility(adapter, {target, contract: input.task.contract, policy: input.policy, selection}, externalSignal);
   externalSignal?.throwIfAborted();
   for (const name of ["LANGSMITH_TRACING", "LANGCHAIN_TRACING", "LANGCHAIN_TRACING_V2"]) {
     if (process.env[name] && !["false", "0"].includes(process.env[name].toLowerCase())) throw new Error("External graph tracing is not approved; disable tracing in this runner environment");
@@ -216,7 +246,7 @@ export async function executeWorkflow(targetInput, request, { adapters = [], sig
       await durableAtomicCreate(path.join(directory, "run.json"), envelope(run));
     }
     const previousStatus = await optionalRecord(target, `${ref}/status.json`);
-    if (["completed", "cancelled", "rejected"].includes(previousStatus?.state)) return readWorkflowRun(target, request.run_id);
+    const terminalStatus = ["completed", "cancelled", "rejected"].includes(previousStatus?.state);
     writeStatus = value => durableAtomicWrite(path.join(directory, "status.json"), envelope({ ...value, at: new Date().toISOString() }));
     const operationsDir = await safeDirectory(target, `${ref}/operations`, { create: true });
     operations = new Map();
@@ -228,9 +258,15 @@ export async function executeWorkflow(targetInput, request, { adapters = [], sig
       if (!/^[a-z][a-z0-9-]*\.json$/.test(name)) throw new Error("Unexpected operation journal entry");
       const record = await readRecord(target, `${ref}/operations/${name}`);
       if (`${record.id}.json` !== name || record.run_id !== request.run_id || executionDigest(record.pins) !== executionDigest(input.pins)) throw new Error("Operation journal does not match this run");
+      const selection = input.selections[record.node];
+      if (input.policy.model_policy && (!selection || record.model_id !== selection.id || record.model_fingerprint !== selection.fingerprint ||
+        record.model_snapshot_sha256 !== executionDigest(selection.model_snapshot) || record.capability_sha256 !== selection.capability_sha256 ||
+        executionDigest(record.runtime_selection) !== executionDigest(selection.runtime_selection))) throw Error('Operation layered model snapshot changed');
+      if (selection?.model_snapshot && record.result) {validateRuntimeResult(record.result); assertRoutedResult(selection, record.result);}
       operations.set(record.id, record);
     }
     if (inventory.length !== operations.size || inventory.some(id => !operations.has(id))) throw new Error("Missing or unexpected operation journal entry; automatic replay is prohibited");
+    if (terminalStatus) return readWorkflowRun(target, request.run_id);
     let journalWrite = Promise.resolve();
     const createIntent = record => {
       journalWrite = journalWrite.then(async () => {
@@ -246,6 +282,7 @@ export async function executeWorkflow(targetInput, request, { adapters = [], sig
       const record = operations.get(decision.operation_id);
       if (!record || record.result) throw new Error("Reconciliation requires an unresolved dispatch intent");
       validateRuntimeResult(decision.result);
+      assertRoutedResult(input.selections[record.node], decision.result);
       const evidence = await readTaskFile(target, decision.evidence_ref);
       if (!evidence.content.trim()) throw new Error("Reconciliation requires nonempty host evidence");
       const updated = { ...record, result: decision.result, reconciliation: { actor: request.actor, evidence_ref: decision.evidence_ref, sha256: evidence.digest } };
@@ -293,19 +330,24 @@ export async function executeWorkflow(targetInput, request, { adapters = [], sig
         const id = `${node.id}-${visit}-${attempt}`;
         const instruction = input.materials[node.id] ? await validateTaskMaterial(target, input.task.contract,
           input.materials[node.id], input.nodeContracts[node.id].environment.write_paths) : node.input;
-        const nodeInput = { instruction, previous_results: state.results };
+        const requirements = await loadTaskRequirements(target, input.task.contract);
+        if (requirements.documents.length && !input.materials[node.id]) throw new Error('Guarded workflow nodes require prepared decision-aligned material');
+        const nodeInput = { instruction: instruction + (requirements.documents.length ? '\n' + requirementInstructions(requirements) : ''), previous_results: state.results };
         if (Buffer.byteLength(formatJson(nodeInput)) > 262144) throw new Error("Node input exceeds 256 KiB; reduce retained outputs");
         const inputHash = executionDigest(nodeInput);
         const previous = operations.get(id);
         if (previous) {
-          if (previous.input_sha256 !== inputHash || previous.model_fingerprint !== selection.fingerprint || !previous.result) throw new Error("Operation replay is uncertain or mismatched");
+          if (previous.input_sha256 !== inputHash || previous.model_fingerprint !== selection.fingerprint || !previous.result ||
+            selection.model_snapshot && previous.model_snapshot_sha256 !== executionDigest(selection.model_snapshot)) throw new Error("Operation replay is uncertain or mismatched");
           result = previous.result;
         } else {
           if (operations.size >= input.policy.limits.steps) throw new Error("Workflow dispatch limit reached");
           const record = { id, run_id: request.run_id, node: node.id, visit, attempt, pins: input.pins,
             model_fingerprint: selection.fingerprint, requested_model: selection.connection.model ?? null,
             model_id: selection.id, selection_reason: selection.reason,
-            input_sha256: inputHash, dispatched_at: new Date().toISOString(), result: null };
+            input_sha256: inputHash, dispatched_at: new Date().toISOString(), result: null,
+            ...(selection.model_snapshot ? {model_snapshot_sha256: executionDigest(selection.model_snapshot), runtime_selection: selection.runtime_selection,
+              capability_sha256: selection.capability_sha256} : {})};
           operations.set(id, record);
           await createIntent(record);
           const handle = { operation_id: `${request.run_id}:${id}`, conversation_id: conversationId };
@@ -337,6 +379,7 @@ export async function executeWorkflow(targetInput, request, { adapters = [], sig
               return workflowToolView(context, viewRequest);
             };
             result = validateRuntimeResult(await (conversationId ? adapter.resume(context) : adapter.start(context)));
+            assertRoutedResult(selection, result);
             acceptingObservations = false;
             const elapsed = performance.now() - started;
             await observationWrite;
@@ -349,11 +392,13 @@ export async function executeWorkflow(targetInput, request, { adapters = [], sig
             const elapsed = performance.now() - started;
             await observationWrite;
             measurement = { ...measurement, adapter_elapsed_ms: elapsed, ended_at: new Date().toISOString() };
-            const updated = { ...record, measurement };
+            const updated = { ...record, measurement, ...(selection.model_snapshot ? {unconfirmed_runtime_selection: result?.runtime_selection ?? null} : {}) };
             await durableAtomicWrite(path.join(operationsDir, `${id}.json`), envelope(updated)); operations.set(id, updated);
             throw error;
           } finally { active.delete(id); controller.signal.removeEventListener("abort", onAbort); }
         }
+        validateRuntimeResult(result);
+        assertRoutedResult(selection, result);
         if (conversationId && result.conversation_id !== conversationId) throw new Error("Runtime changed the pinned conversation on resume");
         if (runtimeModel && result.runtime_model && runtimeModel !== result.runtime_model || observedModel && result.observed_model && observedModel !== result.observed_model) throw new Error("Runtime changed the pinned conversation model");
         if (selection.connection.kind === "codex-subscription" && result.runtime_model && result.runtime_model !== selection.connection.model) throw new Error("Runtime-confirmed model differs from selected subscription model");

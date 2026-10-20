@@ -4,7 +4,7 @@ import path from 'node:path';
 import {pathToFileURL} from 'node:url';
 import {createHash} from 'node:crypto';
 import {safeDirectory,existsEntry} from '../src/workkeel-project.mjs';
-import {withProjectMutationLock} from '../src/project.mjs';
+import {withProjectMutationLock} from '../src/workkeel-lock.mjs';
 import {durableAtomicCreate,durableAtomicWrite,formatJson} from '../src/files.mjs';
 import {exactKeys,executionDigest} from '../src/workkeel-execution-policy.mjs';
 import {assertTaskExecutionContext} from '../src/workkeel-tasks.mjs';

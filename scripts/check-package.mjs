@@ -13,8 +13,7 @@ export const REQUIRED_PACKAGE_PATHS = [
   "docs/operations/workkeel-review-assessment.md",
   "docs/adr/0082-advisory-review-assessment.md",
   "src/workkeel-iteration.mjs",
-  "docs/operations/workkeel-iteration-quality.md",
-  "docs/operations/workkeel-evidence-availability.md",
+  "docs/operations/workkeel-evidence.md",
   "src/workkeel-learning.mjs",
   "docs/extensions/workkeel-learning.md",
   "src/workkeel-dispatch.mjs",
@@ -23,10 +22,7 @@ export const REQUIRED_PACKAGE_PATHS = [
   "docs/operations/workkeel-native-dispatch.md",
   "docs/adr/0081-native-dispatch-and-reading-state.md",
   "src/workkeel-observer-index.mjs",
-  "project-overlay/workkeel-skills/workkeel-init/SKILL.md",
-  "project-overlay/workkeel-skills/workkeel-work/SKILL.md",
   "src/workkeel-monitor-time.mjs",
-  "src/workkeel-monitor-work-items.mjs",
   "src/workkeel-monitor-data.mjs",
   "src/workkeel-monitor-analytics.mjs",
   "src/workkeel-monitor-style.css",
@@ -36,7 +32,6 @@ export const REQUIRED_PACKAGE_PATHS = [
   "src/workkeel-material.mjs",
   "src/workkeel-continuation.mjs",
   "src/workkeel-continuation-state.mjs",
-  "docs/operations/workkeel-material-and-continuation.md",
   "docs/adr/0079-stage-material-and-confirmed-continuation.md",
   "bin/workkeel.mjs",
   "src/workkeel-cli.mjs",
@@ -55,7 +50,6 @@ export const REQUIRED_PACKAGE_PATHS = [
   "src/workkeel-measurements.mjs",
   "src/workkeel-host-usage.mjs",
   "src/workkeel-tailnet.mjs",
-  "docs/operations/workkeel-native-usage.md",
   "src/workkeel-monitor.mjs",
   "src/workkeel-monitor-view.mjs",
   "src/workkeel-monitor-page.mjs",
@@ -68,12 +62,10 @@ export const REQUIRED_PACKAGE_PATHS = [
   "docs/adr/0076-explicit-evidence-artifact-sources.md",
   "docs/adr/0077-first-use-guidance.md",
   "docs/adr/0078-observer-task-lifecycle-measurements.md",
-  "docs/operations/evidence-source-recovery.md",
   "docs/adr/0074-on-demand-task-monitor.md",
   "docs/adr/0073-opt-in-workflow-execution.md",
   "docs/extensions/workkeel-context.md",
   "docs/operations/workkeel-workflows.md",
-  "docs/operations/workkeel-measurements.md",
   "docs/assets/workkeel-workflow.svg",
   "docs/assets/workkeel-workflow-mobile.svg",
   "docs/assets/workkeel-architecture.svg",
@@ -83,47 +75,20 @@ export const REQUIRED_PACKAGE_PATHS = [
   "docs/getting-started/workkeel.md",
   "src/task-contract.mjs",
   "docs/concepts/task-contract.md",
-  "docs/adr/0071-workkeel-task-contract.md",
-  "docs/getting-started/team-entry.md",
+  "docs/adr/0090-workkeel-task-contract.md",
+  "docs/adr/0091-foundations.md",
+  "docs/operations/team-adoption-and-risk.md",
   "LICENSE",
   "README.md",
   "README.ja.md",
   "README.zh-TW.md",
   "package.json",
-  "bin/temple.mjs",
-  "src/cli.mjs",
   "src/headroom-adapter.mjs",
   "src/headroom-worker.py",
-  "docs/extensions/headroom-adapter.md",
-  "src/evidence-view.mjs",
-  "docs/operations/compact-evidence.md",
-  "docs/adr/0070-compact-evidence-reading-view.md",
-  "src/learning-review.mjs",
-  "src/completion-diagnostics.mjs",
-  "src/portable-finish-diagnostics.mjs",
-  "docs/adr/0068-collaborative-completion-recovery.md",
-  "project-overlay/.ai-org/core/schemas/learning-review.schema.json",
-  "project-overlay/.ai-org/templates/learning-review.json",
-  "docs/adr/0066-demand-driven-learning-review-coverage.md",
-  "src/daily-delivery.mjs",
-  "src/delivery-ledger.mjs",
-  "src/delivery-check.mjs",
-  "src/delivery-check-worker.mjs",
-  "src/workflow-completion.mjs",
-  "src/confined-check.mjs",
-  "docs/operations/autonomous-delivery.md",
-  "docs/adr/0065-unified-autonomous-delivery.md",
-  "docs/operations/daily-delivery.md",
-  "docs/adr/0064-daily-core-delivery.md",
-  "project-overlay/.agents/skills/temple-work/references/daily-delivery.md",
-  "project-overlay/TEMPLE.md",
-  "project-overlay/templew.mjs",
-  "project-overlay/.ai-org/core/policies.json",
-  "project-overlay/.agents/skills/temple-work/SKILL.md",
-  "project-overlay/.agents/skills/temple-work/references/read-only-support.md",
-  "docs/adr/0059-proportionate-work-routes.md",
-  "packs/build-quality/manifest.json",
-  "docs/getting-started/testing.md"
+  "docs/getting-started/testing.md",
+  "src/workkeel-risk.mjs",
+  "src/workkeel-command-supervisor.mjs",
+  "src/workkeel-command-worker.mjs"
 ];
 
 export const FORBIDDEN_PACKAGE_PREFIXES = [
@@ -157,10 +122,10 @@ const ALLOWED_TOP_LEVEL_FILES = new Set([
   "THIRD_PARTY_NOTICES.md",
   "package.json"
 ]);
-const ALLOWED_TOP_LEVEL_DIRECTORIES = ["bin/", "docs/", "packs/", "project-overlay/", "src/"];
+const ALLOWED_TOP_LEVEL_DIRECTORIES = ["bin/", "docs/", "src/"];
 // A bounded package catches accidental inclusion of new internal material.
-const MAX_FILE_COUNT = 539;
-const MAX_UNPACKED_SIZE = 8 * 1024 * 1024;
+const MAX_FILE_COUNT = 260;
+const MAX_UNPACKED_SIZE = 4 * 1024 * 1024;
 
 export function validatePackageDryRun(pack) {
   const failures = [];

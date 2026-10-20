@@ -1,4 +1,4 @@
-# Advisory review assessment
+# Review: advisory assessment and recovery
 
 Use this read-only report to focus a native task's independent review and inspect
 measurement coverage. It does not accept work, run tests, launch a model, change
@@ -11,6 +11,71 @@ For fresh authorized Node checks, the optional source-only
 dimensions and converts explicit retained attempts into this assessor's input.
 It separately attributes criterion statements to a current pinned distinct review;
 it does not change this assessor's authority or establish semantic coverage.
+
+## Independent QA and release gate
+
+This review procedure supplements the [risk tiers](team-adoption-and-risk.md#what-each-tier-requires).
+It specifies human/Agent judgment, not new CLI enforcement or assessor fields.
+Required checks, exact-candidate review and authorized close remain mandatory;
+passing QA does not authorize publication or deployment.
+
+### Finding disposition
+
+The lead merges duplicate findings and assigns every finding exactly one
+disposition, retaining its source model(s), evidence and a one-line rationale:
+
+| Disposition | Meaning |
+| --- | --- |
+| Must fix | Demonstrated defect that blocks this candidate under its risk tier |
+| Consider | Valid suggestion whose benefit may not justify the cost now |
+| Note | Known issue or follow-up outside the current fix scope |
+| Dismiss | Unsupported, incorrect or preference-only claim, with a reason |
+
+Dismiss nitpick padding when adversarial review finds no substantial issue;
+speculative null/edge concerns without a reachable execution path; premature
+abstraction without a concrete need; and "I would write it differently" without
+a demonstrated problem. An empty review is valid. Scrutinize concrete security
+and correctness evidence even when only one reviewer raises it.
+
+Apply the tier before deciding what blocks:
+
+- **Low:** only P1 defects and P2 defects affecting normal use may be **must fix**;
+  at most two reworks.
+- **Standard:** at most three reworks; P3 never triggers rework.
+- **Low and standard:** concurrency-only edge cases go to **note** as known issues
+  with a follow-up task. Escalate the tier first if the evidence shows high or
+  critical risk. A tighter approved goal/autonomy repair budget still applies.
+- **High and critical:** retain strict unresolved-issue, evidence, model-family
+  and human-close requirements. Do not use **consider** or **note** to hide an unresolved
+  defect: high review cannot pass with unresolved issues; critical handoff refuses
+  them. The low/standard exceptions do not apply.
+
+The gate passes only when the **must fix** set is empty and all existing tier and
+verification requirements pass. At a rework limit, stop for an authorized
+scope/budget decision; do not waive an outstanding blocker. Preserve failed-candidate
+reviews.
+
+### Cross-review
+
+Cross-review is mandatory for high/critical and optional below. Give Codex and
+Claude the same prompt, intent, exact candidate, relevant source/context and
+rubric. Each reviews read-only in a separate thread, independently and without
+seeing the other's findings before submission. Both reviewers must be distinct
+from the implementer; existing Principal separation still applies.
+
+Review **correctness** (does it meet the intent on a demonstrated path), **root
+cause** (does the fix address the cause rather than mask a symptom), and
+**structure** (does it fit the system without unnecessary complexity). Tag each
+finding with its actual source model. The lead's agreement/disagreement map records
+shared findings, Codex-only findings, Claude-only findings and explicit conflicts;
+silence is not disagreement. Down-weight single-model findings: assigning one to
+**must fix** requires the lead's explicit evidence-based justification under the risk tier.
+Agreement is a signal, not a substitute for evidence. Retain both reviews and the
+lead's dispositions with the exact candidate in the private review evidence.
+
+The disposition and cross-review guidance adapts pstack's `interrogate` Skill,
+MIT License, Copyright (c) 2026 Lauren Tan; see the
+[source and retained license](../../THIRD_PARTY_NOTICES.md#pstack-review-guidance).
 
 ## Start with the repository facts
 
@@ -63,9 +128,10 @@ data-policy references **before task creation**, so the normal task writer pins 
 
 Permitted impact values are `none`, `material` and `unknown`. The Principal must
 match the task's approved authority and current project approvers. This is an
-attributed declaration, not authenticated proof that a human participated. Do not
-edit an existing pinned approval to add it: that creates authority drift. Existing
-tasks without the statement can still obtain the conservative blocked report.
+attributed declaration, not authenticated proof that a human participated. The
+statement must match the approval-time snapshot of a task authority file, so add it
+before the task is created. Existing tasks without the statement can still obtain
+the conservative blocked report.
 
 The optional request is strictly versioned:
 
@@ -88,7 +154,7 @@ For inline read-only requests, use the API below instead of creating a file.
 
 ## Complete API example: inspect incomplete evidence
 
-Run this from the Workkeel source checkout using Node.js 24 or later. The target is
+Run this from the Workkeel source checkout using Node.js 24.15 or later. The target is
 an existing native project, with a delivered `WK-example` task and `approval.json`
 already pinned as above. Its approved criterion is `Value equals two`. The four
 named evidence files must already exist in its candidate or exact task evidence.
@@ -171,9 +237,11 @@ revision and `current` or `historical` candidate status. Criterion
 `failed_measurements` contains current-candidate failures;
 `historical_failed_measurements` retains older failures without labeling current
 green coverage as failed. Optional `blockers` records further declared unresolved
-defects. The assessor cannot detect undisclosed failures.
+defects. Issues the delivery itself lists as `unresolved` are reported as
+`unresolved-at-delivery`, blocking only for high and critical work. The assessor
+cannot detect undisclosed failures.
 
-Routes are `blocked`, `established-assurance` or `focused-independent-review`.
+Routes are `blocked`, `elevated-independent-review` or `focused-independent-review`.
 The current task/project separation floor is always included. Mechanical owner
 acceptance remains unsupported in v1. No result authorizes execution or release.
 
@@ -196,7 +264,7 @@ assessor schema change. Existing execution and review guards retain authority.
 
 `scripts/workkeel-check-evidence.mjs` and the delivery script are source utilities,
 not npm package exports. Use an existing source checkout on a POSIX host with
-Node 24 or later. No model, new dependency, external service or provider is used.
+Node 24.15 or later. No model, new dependency, external service or provider is used.
 The approved native task must already have a current build claim. Its environment
 must allow Node, root execution, the selected input reads and both reads and writes
 under its task artifact directory. The host still enforces those boundaries.
@@ -345,8 +413,8 @@ path, plus each supporting evidence path, to the **existing native review**:
 
 Use real immutable commit/digest values and actual review findings. Add the
 document's byte pin as optional `confirmation` in the assessment request. It is
-usable only when that document and its support are pinned in the current native
-review, matching the exact task, candidate, contract and reviewer separation.
+usable only when that document and its support are named in the current native
+review's evidence, matching the exact task, candidate, contract and reviewer separation.
 An author cannot manufacture review authority by supplying a different name in
 this document. Review identity records themselves remain local attribution, not
 provider authentication or proof of independent thought.
@@ -355,8 +423,8 @@ Each criterion is reported as `confirmed`, `partial`, `contradicted` or `unknown
 Missing or invalid binding leaves unknown. A valid negative or partial finding
 stays visible when red or a failed independent review blocks the main route.
 `confirmation_binding` explains whether the statement is bound to the current
-pinned distinct review. Changed or unavailable authority, candidate or review
-evidence withholds the statement, including drift already present when assessment
+pinned distinct review. An unavailable candidate or review evidence path, or a
+document whose bytes differ from the request pin, withholds the statement, including drift already present when assessment
 begins. Plain failed tests still retain correctly bound negative findings.
 Before/after rechecks are not atomic.
 
@@ -364,3 +432,234 @@ Confirmation never upgrades the assessor route or changes measurement coverage
 into acceptance. Required suites, distinct judgment and the existing authorized
 closeout remain separate operations. This adapter measures no throughput, cost
 savings, defect-rate improvement or framework-wide review benefit.
+
+## Role preflight and interrupted review recovery
+
+Both features are JavaScript APIs for trusted embedding code. Neither adds a CLI
+command, network dependency or new integration. Examples use fictional names.
+
+### Role preflight
+
+A role contract states requirements. It cannot claim that a sandbox is enforced
+or that a tool exists:
+
+```json
+{
+  "schema_version": "workkeel.role-contract/v1",
+  "role": "implementation",
+  "product_access": "write",
+  "tests": "coordinator",
+  "edit_tools": ["apply_patch"],
+  "model": { "provider": "example-provider", "model": "example-model", "effort": "high" },
+  "usage": { "fields": ["input_tokens", "output_tokens"] }
+}
+```
+
+Roles are `planning`, `implementation`, `repair`, `review` and `verification`.
+Implementation and repair need write access and an editing tool; the others are
+read-only and cannot require one. `tests` is `role`, `coordinator` or `none`, and
+must agree with the coordinator's check ownership.
+
+Application code registers the host that answers the probe:
+
+```js
+import { createTrustedRoleHost, runRolePreflight } from "./src/workkeel-role-preflight.mjs";
+
+const host = createTrustedRoleHost({ id: "example-host", probe: async role => inspectExampleHost(role) });
+const receipt = await runRolePreflight({ role, host,
+  context: { approved_tools: ["apply_patch", "shell"], coordinator_checks: ["git", "tests"] } });
+```
+
+The probe inspects the actual host and catalogue without starting inference and
+returns:
+
+```json
+{
+  "host": "example-host",
+  "enforcement": { "sandbox": "enforced", "product_access": "write", "network": "disabled", "test_scratch": "none" },
+  "tools": ["apply_patch", "shell"],
+  "models": [{ "provider": "example-provider", "model": "example-model", "efforts": ["high"] }],
+  "usage": { "fields": ["input_tokens", "output_tokens"], "unknown": "null" }
+}
+```
+
+Preflight fails before inference on an unregistered or serialized host, a failed
+probe, unproven sandbox or network isolation, mismatched product access, a
+read-only role running tests without host-private scratch, a missing or
+unapproved editing tool, contradictory test ownership, an unavailable exact model
+and effort, missing usage fields, unknown counters not reported as null, unknown
+fields, or sparse arrays. The receipt is an observation, not authority.
+
+`createCodexRuntime(host, { coordinatorChecks, role: { contract, host: roleHost } })`
+runs the preflight before opening a Codex process and also requires the selected
+connection to match the role's model and effort. Without `role`, behavior is
+unchanged.
+
+### Interrupted review recovery
+
+Use this when a dispatched independent review stopped before its reviewer
+authored a verdict. The task must be in `test` with the delivered candidate and
+no review. The original review binding must be closed with status `interrupted`,
+`stopped`, `cancelled` or `error`, and no other usage collection may be open.
+
+Inspect the current chain first. This reads only:
+
+```js
+const view = await readReviewRecovery("/work/example-project", "WK-example");
+```
+
+An approving Principal's Agent then supplies an explicit request:
+
+```json
+{
+  "schema_version": "workkeel.review-recovery-request/v2",
+  "operation_id": "retry-review-1",
+  "task_id": "WK-example",
+  "expected_version": 3,
+  "expected_head_attempt_id": null,
+  "revision": "<exact delivered full revision>",
+  "actor": { "agent_id": "coordinator", "principal_id": "owner" },
+  "reviewer": { "agent_id": "reviewer", "principal_id": "owner" },
+  "predecessor": { "kind": "host-binding", "id": "<review execution UUID>", "sha256": "<binding.json SHA-256>" },
+  "policy_ref": "docs/dispatch.json",
+  "model": { "provider": "example-provider", "model": "example-model", "reasoning": "high" },
+  "source": { "thread_id": "fresh-thread", "turn_id": "fresh-turn" }
+}
+```
+
+```js
+const host = createTrustedRoleHost({ id: "example-host", probe, runtimeState, launch });
+const result = await recoverInterruptedReview("/work/example-project", request, { host });
+```
+
+- `probe` runs the read-only review role preflight.
+- `runtimeState` must return exactly `{ "state": "stopped" }` for the named
+  predecessor. `active`, any other value or an error rejects the request.
+- `launch` starts the fresh reviewer with product read-only access and returns
+  `status`, `usage`, `runtime_model`, `reasoning` and `output`.
+
+The launch specification contains a frozen execution contract whose
+`environment.read_paths` are exactly the original dispatch node's read roots
+and whose `environment.write_paths` are empty. Its `dispatch` carries the
+original execution ID and the same read-only node. Hosts must enforce these
+roots; the broader canonical task contract is unchanged and does not expand
+the retry's access. Delivery evidence stays the recorded paths of the delivery.
+
+The request is copied and validated before the first await; later changes to the
+caller's object do not affect the reservation, the launch or the replay digest.
+The source thread and turn must be fresh across the whole workspace: no retained
+host binding of any task and no recovery attempt of any chain may share either
+ID, and ordinary host binding rejects sources reserved by recovery attempts.
+Both stores form one source inventory guarded by the host-usage writer lock.
+Ordinary binding checks and records its source under that lock alone, so a
+caller that already holds the project mutation lock, such as execution capture,
+can still bind. Recovery takes the same writer lock inside its project-locked
+reservation phase (order: project, then host), rechecks both stores and creates
+the attempt, then releases it before launch. Concurrent claims on one source
+therefore have exactly one winner. Neither lock is held while the model runs.
+Pre-probe checks and binding readiness are observations, not reservations.
+
+Ordinary dispatch and recovery also share execution capacity and read/write
+conflict checks under that writer lock. A pending recovery consumes one slot
+and reserves its original read roots, whether it starts before or after another
+dispatch. Disjoint work may run within the policy's parallelism limit. The
+checks repeat after host probes, before an attempt is durably reserved.
+Result publication uses the same lock, so an admission cannot read a partially
+published result.
+
+Valid terminal host results and `not-launched` outcomes release the slot.
+Missing results, `launch-unconfirmed`, `invalid-host-result`, task cancellation
+and authorization expiry do not prove that a process stopped. Those attempts
+keep their reservation. A retry may replace its predecessor's reservation only
+after its trusted host confirms that predecessor stopped. Completed historical
+records retain their source IDs but do not occupy capacity or require their old
+model policy to remain current.
+
+New attempts pin their narrowed `execution_scope` against the original ticket.
+An unresolved older attempt without that field keeps the full original task
+read scope reserved: the new sandbox restriction cannot retroactively change a
+process already launched by the old version. Its host must confirm it stopped
+before that broader reservation can be released or replaced.
+
+For an unresolved process that will not be retried, including a cancelled task,
+the original approving actor can explicitly record a stop observation:
+
+```js
+const stopped = await confirmReviewRecoveryStopped("/work/example-project", {
+  operation_id: "confirm-review-stopped",
+  task_id: "WK-example",
+  attempt_id: "<exact attempt ID>",
+  attempt_sha256: "<exact attempt file SHA-256>",
+  actor: { agent_id: "coordinator", principal_id: "owner" }
+}, { host });
+```
+
+The actor must still be a registered approving Principal's Agent. The trusted
+host must match the attempt's original host ID and return exactly
+`{ state: "stopped" }` for that attempt and source. The API rechecks authority
+and exact bytes after the probe. It never launches work or edits the task,
+attempt or result; it releases only that process reservation. Identical replay
+does not probe again. A changed request or mismatched observation is rejected.
+Observations are immutable, Git-ignored records under
+`.ai-org/review-recovery-stops/<attempt ID>.json`. Source IDs remain reserved.
+
+Later retries name the chain head by ID: `{ "kind": "review-attempt", "id": ... }`,
+with the current `expected_head_attempt_id` from `readReviewRecovery`. Each attempt
+links to its predecessor by `previous_attempt_id`. A chain holds at most three
+attempts.
+
+The result reports `completed`, `failed`, `interrupted` or `not-launched`, and
+always `acceptance: "not-performed"`. After `completed`, the named reviewer
+records ordinary `task review` with `review_attempt_id`. The review is rejected
+for any other attempt, reviewer or revision. The review stores the attempt ID and
+that attempt's commit (`attempt_revision`). Close is rejected unless the chain head
+is still that attempt, its result is still `completed` and its commit is still the
+delivered candidate. Close does not compare result digests, so rewritten result
+notes alone do not block acceptance.
+
+### Failure behavior
+
+| Situation | Behavior |
+| --- | --- |
+| Wrong revision, stale version, stale chain, unknown fields | Rejected; nothing recorded or launched |
+| Reviewer equals implementer or approver, or is unregistered | Rejected before any probe |
+| Changed candidate or drift inside the write roots | Rejected; no attempt |
+| Different model, policy reference or data scope | Rejected; no fallback |
+| Authored PASS or FAIL, `release_gate`, `done`, `cancelled` | Rejected; FAIL uses ordinary rework |
+| Predecessor active, unknown, open or already recovered | Rejected; no launch |
+| Expiry, cancellation or drift while a probe is awaited | Rejected under the lock; no attempt |
+| Expiry or candidate drift after reservation, before launch | Attempt recorded as `not-launched`; no launch |
+| Same operation ID and input | Returns the recorded attempt; no second launch |
+| Same operation ID with other input, racing retries | One winner; others rejected |
+| Result after supersession or cancellation | Not recorded; attempt stays `unrecorded` |
+| Fourth attempt | Rejected; preserve evidence and obtain a new decision |
+| Attempt or result with unknown fields, invalid status or negative measurements | Chain read rejected, even with a matching envelope digest |
+| Reused thread or turn from any binding or recovery attempt | Rejected; nothing recorded or launched |
+| Shared execution limit reached or conflicting active scope | Rejected before launch; recovery and ordinary dispatch use the same gate |
+| Unknown runtime or cancelled task without a terminal result | Capacity remains reserved until explicit trusted stop confirmation |
+| Blank, multi-line or malformed reported model or effort | Recorded as `interrupted` with `invalid-host-result` and unknown usage; retry remains possible |
+| Completed result whose model or effort differs from the pinned selection | Chain read, review and close rejected, even when rehashed |
+| Attempt selection, policy reference or dispatch identity rewritten together with its result | Chain read, review and close rejected, even when both are rehashed |
+| Result status changed from `completed` or result removed after the authored review | Close rejected |
+
+Records live under `.ai-org/review-recovery/<task>/<delivery claim>/` as
+`attempt-NNN.json` and `attempt-NNN-result.json`, created exclusively and never
+rewritten. The store is Git-ignored. Original binding and attempt bytes are
+preserved and are rechecked whenever the chain is read. Envelope digests detect
+changed bytes only; every persisted field is also validated against its schema
+and the current delivery. An attempt's own fields never grant authority: the
+first attempt's dispatch identity must equal the one recorded in its pinned
+predecessor binding, later attempts must keep that same identity, and each
+attempt's policy reference, provider, model and effort must equal the validated
+approved review dispatch ticket. Another valid ticket cannot be substituted.
+`readReviewRecovery`, replay checks and record creation
+all run under the project mutation lock, so a reader never observes a record
+while it is still being published.
+
+### Trust limitations
+
+The checks are only as strong as the registered host code. Workkeel cannot verify
+that a probe tells the truth, and a receipt describes one instant. Known usage is
+recorded and unknown counters stay null; complete future token reports are not
+promised. Recovery is local to one workspace and does not support distributed
+identity or high-risk workflows.

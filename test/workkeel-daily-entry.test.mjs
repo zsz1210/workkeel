@@ -2,7 +2,6 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import {createHash} from 'node:crypto';
 import os from 'node:os';
 import {execFileSync} from 'node:child_process';
 import {initializeTaskProject} from '../src/workkeel-project.mjs';
@@ -28,7 +27,7 @@ test('one brief previews without writes, applies idempotently and rejects stale 
 });
 test('brief does not invent actors, acceptance, permissions or path authority',async t=>{
  const root=await fixture(t),input=await brief(root);
- for(const changed of [{acceptance:[]},{actor:{agent_id:'other',principal_id:'owner'}},{authorization:null},{environment:{...input.environment,write_paths:['../escape']}},{risk_tier:'high'},{extra:'not allowed'}])await assert.rejects(previewTaskIntake(root,{...input,...changed}));
+ for(const changed of [{acceptance:[]},{actor:{agent_id:'other',principal_id:'owner'}},{authorization:null},{environment:{...input.environment,write_paths:['../escape']}},{risk_tier:'low'},{extra:'not allowed'}])await assert.rejects(previewTaskIntake(root,{...input,...changed}));
 });
 test('expired active authority requires attention and cannot be claimed',async t=>{
  const root=await fixture(t),input=await brief(root);input.authorization={...input.authorization,expires_at:new Date(Date.now()+60000).toISOString()};
@@ -79,8 +78,9 @@ test('observations are bounded idempotent metadata, never acceptance; changed ev
  await fs.writeFile(path.join(root,'.ai-org/observations/.gitignore'),'*\n');
  await fs.appendFile(path.join(root,'docs/approval.md'),' drift');
  const drift=await readTaskSummary(root,value.task_id);
- assert.equal(drift.observation.status,'unavailable');assert.equal(drift.quality.evidence_current,false);
- assert.match(drift.next_action,/exact recorded evidence/);assert.equal((await readMonitorSnapshot(root)).complete,false);
+ // The observation's own pinned bytes changed; the task's approval edit alone is not stale evidence.
+ assert.equal(drift.observation.status,'unavailable');assert.equal(drift.quality.evidence_current,true);
+ assert.match(drift.next_action,/observation record/);assert.equal((await readMonitorSnapshot(root)).complete,false);
 });
 test('unsafe links, stale versions, unknown actors and invalid observation references reject',async t=>{
  const root=await fixture(t),value=await observed(root);
@@ -101,14 +101,6 @@ test('observer reads execution inventory once and isolates attributable corrupti
  snapshot=await readMonitorSnapshot(root);assert.equal(snapshot.tasks.find(t=>t.id==='WK-unobserved').read_status,'unavailable');
  assert.equal(snapshot.tasks.find(t=>t.id==='WK-interrupted').read_status,'available');
 });
-test('retained legacy history does not consume native monitor limit',async t=>{
- const root=await fixture(t),lock=JSON.parse(await fs.readFile(path.join(root,'workkeel.lock')));lock.legacy_manifest=[];
- // Inject retained-history fixture records, not production lifecycle writes.
- for(let i=1;i<=201;i++){const id='WI-'+String(i).padStart(4,'0'),ref='.ai-org/work-items/'+id+'.json';const bytes=JSON.stringify({id,schema_version:'temple.work-item/v1',title:'Historical task',state:'done'});await fs.writeFile(path.join(root,ref),bytes);lock.legacy_manifest.push({path:ref,sha256:createHash('sha256').update(bytes).digest('hex')});}
- await fs.writeFile(path.join(root,'workkeel.lock'),JSON.stringify(lock));
- const snapshot=await readMonitorSnapshot(root);assert.equal(snapshot.legacy_tasks_excluded,201);assert.equal(snapshot.tasks.length,3);
-});
-
 test('observer keeps summaries ordered and revalidates changed evidence across concurrent reads',async t=>{
  const root=await fixture(t),input=await brief(root);
  for(let i=0;i<10;i++){
@@ -133,7 +125,7 @@ test('observer keeps summaries ordered and revalidates changed evidence across c
  await fs.writeFile(file,original);
  assert.equal((await readMonitorSnapshot(root)).tasks.find(task=>task.id==='WK-batch-0').read_status,'available');
  await fs.appendFile(path.join(root,'docs/approval.md'),' Changed authority.');
+ // Approval is the Principal plus its commit: an edited approval file leaves evidence current.
  const changed=await readMonitorSnapshot(root);
- assert.equal(changed.complete,false);
- assert.ok(changed.tasks.every(task=>task.quality.evidence_current===false&&task.needs_attention));
+ assert.ok(changed.tasks.every(task=>task.quality.evidence_current===true),JSON.stringify(changed.tasks.map(task=>task.attention_reasons)));
 });

@@ -1,5 +1,48 @@
 # Third-party notices
 
+## pstack review guidance
+
+- Project: [Cursor pstack](https://github.com/cursor/plugins/tree/main/pstack)
+- Material: `interrogate` Skill, reviewer prompt, review rubric and lead judgment
+- License: MIT
+- Copyright (c) 2026 Lauren Tan
+
+The [independent QA and release gate](docs/operations/workkeel-review-assessment.md#independent-qa-and-release-gate)
+adapts finding dispositions, evidence filtering and independent multi-model review
+to Workkeel's risk tiers and acceptance boundaries. No pstack runtime or Skill is
+installed or invoked. The upstream license follows:
+
+MIT License
+
+Copyright (c) 2026 Lauren Tan
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+## Product identification marks
+
+The workspace embeds official Codex and Claude Code product icons solely to
+identify the reported execution tool. These marks remain the property of OpenAI
+and Anthropic respectively; Workkeel's MIT license does not license their brands
+or imply endorsement. Images are not recolored or redrawn. Exact source versions,
+byte digests and the single proportional resize are documented in
+[tool identity provenance](docs/concepts/tool-identity.md).
+
 ## Runtime dependencies
 
 The npm lockfile resolves these core runtime packages. They are installed as separate dependencies and are not copied into Workkeel's source files.
@@ -11,7 +54,9 @@ The npm lockfile resolves these core runtime packages. They are installed as sep
 | `fast-deep-equal` | 3.1.3 | MIT |
 | `fast-uri` | 3.1.6 | BSD-3-Clause |
 | `json-schema-traverse` | 1.0.0 | MIT |
+| `picomatch` | 4.0.7 | MIT |
 | `require-from-string` | 2.0.2 | MIT |
+| `semver` | 7.8.5 | ISC |
 
 The dependency packages retain their own copyright and license files in an installed dependency tree. Review this inventory together with `package-lock.json` before each public release.
 
@@ -82,6 +127,24 @@ does not certify a service deployment or grant commercial permissions.
 
 Workkeel uses Playwright Core only for repository development and browser checks. It launches an already installed Google Chrome with an ephemeral automation profile. Workkeel does not download, vendor, redistribute, or include a browser binary in its npm package or runtime dependency tree.
 
+### Acorn
+
+- Project: <https://github.com/acornjs/acorn>
+- Package: `acorn`
+- Pinned version: `8.19.0`
+- License: MIT
+
+Workkeel uses Acorn only in the repository import boundary check, to parse its own source modules. Acorn is not imported by Workkeel's runtime source, vendored, or included in its npm package or runtime dependency tree.
+
+### validate-npm-package-name
+
+- Project: <https://github.com/npm/validate-npm-package-name>
+- Package: `validate-npm-package-name`
+- Pinned version: `8.0.0`
+- License: ISC
+
+Workkeel uses validate-npm-package-name only in the repository import boundary check, to validate package names in its own source modules. It is not imported by Workkeel's runtime source, vendored, or included in its npm package or runtime dependency tree.
+
 ## Mermaid README diagrams
 
 - Projects: <https://github.com/mermaid-js/mermaid> and <https://github.com/mermaid-js/mermaid-cli>
@@ -103,7 +166,7 @@ installed Python environment. No Headroom/tokenizer source, environment or model
 weights are vendored, downloaded or installed by Workkeel. The upstream LICENSE and
 NOTICE were reviewed; the operator must retain the environment's licenses, notices
 and dependency lock. Default-off operation needs no Python packages. The version
-pin is not a full environment integrity attestation. See the [adapter guide](docs/extensions/headroom-adapter.md).
+pin is not a full environment integrity attestation. See the [context guide](docs/extensions/workkeel-context.md).
 
 ## Archify
 
@@ -130,7 +193,7 @@ source of task authority.
 - Reviewed commit: `6654f6b60cd9d5be8b54c6fafe44346dabeb3b76`
 - Upstream copyright: Copyright (c) 2026 Matt Pocock
 
-The `grill-me`, `grill-with-docs`, `domain-modeling`, `tdd`, `diagnosing-bugs`, `codebase-design`, `code-review`, `prototype`, `retro`, `writing-great-skills`, and related development Skills were reviewed as product and maintenance inspiration. Workkeel's Skills, including `$skill-authoring`, are independent implementations written for repository-persisted decisions, project ownership boundaries, and delivery. No upstream Skill source is vendored, loaded, or wrapped at runtime.
+The `grill-me`, `grill-with-docs`, `domain-modeling`, `tdd`, `diagnosing-bugs`, `codebase-design`, `code-review`, `prototype`, `retro`, `writing-great-skills`, and related development Skills were reviewed as product and maintenance inspiration. Workkeel's former bundled Skills, including `$skill-authoring`, were independent implementations written for repository-persisted decisions, project ownership boundaries, and delivery; Workkeel 0.2 no longer ships them. No upstream Skill source is vendored, loaded, or wrapped at runtime.
 
 If future versions copy or adapt upstream source, they must include the applicable MIT copyright and permission notice with the distributed copy or substantial portion.
 
@@ -139,7 +202,7 @@ If future versions copy or adapt upstream source, they must include the applicab
 - Hypergiant Agent Skills, `accelint-readme-writer`: <https://github.com/gohypergiant/agent-skills/tree/459a846a65544cf311164059f2ea4623ec443b02/skills/accelint-readme-writer> — Apache-2.0, reviewed commit `459a846a65544cf311164059f2ea4623ec443b02`.
 - AsyrafHussin Agent Skills, `project-docs`: <https://github.com/AsyrafHussin/agent-skills/tree/1aa0ff717c10309226c9e678f00873976450fd76/skills/project-docs> — MIT, reviewed commit `1aa0ff717c10309226c9e678f00873976450fd76`.
 
-Workkeel used these as design references for its independently implemented `project-documentation` Skill. Neither source is copied, loaded, or invoked by Workkeel; the distributed Skill is original text grounded in its own repository-evidence and authority model.
+Workkeel used these as design references for its former, independently implemented `project-documentation` Skill, which 0.2 no longer ships. Neither source is copied, loaded, or invoked by Workkeel; that Skill was original text grounded in its own repository-evidence and authority model.
 
 ## Security review inspiration
 

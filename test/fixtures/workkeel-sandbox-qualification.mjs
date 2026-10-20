@@ -5,7 +5,7 @@ import path from "node:path";
 import http from "node:http";
 import crypto from "node:crypto";
 import { execFileSync } from "node:child_process";
-import { createJsonRpcProcess } from "../../src/codex-app-server-provider.mjs";
+import { createJsonRpcProcess } from "../../src/workkeel-json-rpc.mjs";
 import { codexPermissionsForContract, codexPermissionProfileArgs } from "../../src/workkeel-codex-runtime.mjs";
 import { durableAtomicCreate, formatJson, sha256 } from "../../src/files.mjs";
 

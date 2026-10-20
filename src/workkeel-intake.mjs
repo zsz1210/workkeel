@@ -3,6 +3,8 @@ import { readTaskProject, assertActor, assertApprover } from './workkeel-project
 import { createNativeTask } from './workkeel-tasks.mjs';
 import { exactKeys, executionDigest } from './workkeel-execution-policy.mjs';
 import { formatJson, sha256 } from './files.mjs';
+import {loadTaskRequirements} from './workkeel-requirements.mjs';
+import {assertTaskRisk} from './workkeel-risk.mjs';
 
 /** A brief reduces repeated structure; it does not infer approval or tool grants. */
 export async function previewTaskIntake(target, brief) {
@@ -13,20 +15,21 @@ export async function previewTaskIntake(target, brief) {
   assertActor(project.policy, brief.actor);
   assertApprover(project.policy, brief.actor);
   const contract = {
-    schema_version: 'workkeel.task-contract/v1', id: brief.id, goal: brief.goal,
+    schema_version: 'workkeel.task-contract/v2', id: brief.id, goal: brief.goal,
     actor: brief.actor, state: 'intake', scope: {include: brief.include ?? [brief.goal], exclude: brief.exclude ?? []},
     dependencies: brief.dependencies ?? [], acceptance: {criteria: brief.acceptance, evidence: []},
     verification: {risk_tier: brief.risk_tier ?? 'standard', separation: project.policy.review_separation,
       implementer: null, reviewer: null, candidate_revision: null}, handoff: null,
     environment: brief.environment, authorization: brief.authorization, skills: brief.skills ?? [],
-    execution: brief.execution ?? {runtime: {kind: 'host-owned', adapter_id: null, required_features: []}, model_connection: {kind: 'native'}},
-    legacy: null
+    execution: brief.execution ?? {runtime: {kind: 'host-owned', adapter_id: null, required_features: []}, model_connection: {kind: 'native'}}
   };
   const validation = validateTaskContract(contract);
   if (!validation.contract_complete) throw Error('Incomplete brief: '+[...validation.errors,...validation.incomplete_fields].join('; '));
-  if (!['low','standard'].includes(contract.verification.risk_tier) || contract.environment.data.classification === 'sensitive') throw Error('Use the established assurance workflow for high-risk or sensitive tasks');
+  if ((project.policy.requirements_refs ?? []).some(ref => !contract.environment.data.policy_refs.includes(ref))) throw Error('Required project decision source omitted from task');
+  await loadTaskRequirements(target, contract, {requiredRefs: project.policy.requirements_refs ?? []});
+  assertTaskRisk(project.policy, contract);
   if (contract.authorization.approved_by !== brief.actor.principal_id) throw Error('Brief actor must be its registered approving Principal');
-  const refs = [...new Set([contract.authorization.approval_ref,...contract.environment.data.policy_refs,...contract.skills])];
+  const refs = [...new Set([contract.authorization.approval_ref,...contract.environment.data.policy_refs,...contract.skills])].filter(ref => ref !== null);
   const pins = [];
   for (const ref of refs) {
     const file = await readTaskFile(target, ref);

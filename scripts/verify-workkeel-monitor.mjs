@@ -1,5 +1,6 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import os from 'node:os';
 import assert from 'node:assert/strict';
 import {chromium} from 'playwright-core';
 import {createObserverFixture} from './workkeel-observer-fixture.mjs';
@@ -9,6 +10,7 @@ import {createObserverIndex} from '../src/workkeel-observer-index.mjs';
 import {verifyExecutionClarity} from './workkeel-execution-clarity-browser.mjs';
 import {verifyObserverRelease} from './workkeel-observer-release-browser.mjs';
 import {verifyAnalysisUI} from './workkeel-analysis-ui-browser.mjs';
+async function openMeasurementDetails(page){const box=page.locator('#delivery-measurement-details');await box.waitFor({state:'attached'});if(!await box.evaluate(element=>element.open))await box.locator(':scope > summary').click();await page.locator('#lifecycle').waitFor();}
 async function openSearchFilters(page){if(!await page.locator('#search-filters').evaluate(el=>el.open))await page.locator('#search-filters > summary').click();}
 import {execFileSync} from 'node:child_process';
 import {readNativeTask} from '../src/workkeel-tasks.mjs';
@@ -34,7 +36,7 @@ async function verifyLiveState(page,monitor,root){
  await page.locator('#nav-board').click();await page.locator('[data-task-id="WK-unobserved"]').click();await page.locator('#handoff-details').waitFor();
  await page.locator('#handoff-details summary').click();
  await page.evaluate(()=>{const input=document.querySelector('#handoff-text');input.hidden=false;input.value='retained selection';input.focus();input.setSelectionRange(2,8);});
- await page.locator('#lifecycle .help button').click();
+ await openMeasurementDetails(page);await page.locator('#lifecycle .help button').click();
  await page.evaluate(()=>{const input=document.querySelector('#handoff-text');input.focus({preventScroll:true});input.setSelectionRange(2,8);window.liveNodes={details:document.querySelector('#handoff-details'),input,pop:document.querySelector('.help-popover:popover-open'),surface:document.querySelector('#detail-surface'),scroll:document.querySelector('#drawer').scrollTop};});
  const initialRequests=workspaceRequests;await page.waitForTimeout(2300);assert.equal(workspaceRequests,initialRequests,'unchanged heartbeat must not reload workspace');
  version++;await page.waitForFunction(()=>document.querySelector('#detail-content').textContent.includes('live-change-1'));
@@ -88,11 +90,11 @@ async function verifyObserverRegressions(page,monitor,root,index){
  await page.goto(monitor.url);await page.waitForFunction(()=>document.querySelector('#connection').dataset.health==='healthy');
 
  await page.locator('#nav-board').click();await openSearchFilters(page);await page.locator('#search').fill('Unobserved');
- await page.locator('.task-card').click();await page.locator('#lifecycle').waitFor();
+ await page.locator('.task-card').click();await openMeasurementDetails(page);
  await page.locator('#expand-task').click();await page.locator('.task-full-page').waitFor();
  await page.locator('#nav-backlog').click();await openSearchFilters(page);await page.locator('#state-filter').selectOption('test');
  await openSearchFilters(page);await page.locator('#search').fill('review');await waitText('#content tbody','WK-review');
- await page.locator('#content tbody button').first().click();await page.locator('#lifecycle').waitFor();
+ await page.locator('#content tbody button').first().click();await openMeasurementDetails(page);
  await page.locator('#expand-task').click();await page.locator('.task-full-page').waitFor();
  assert.match(await page.locator('.back-link').innerText(),/任務文件/);
  await page.locator('.back-link').click();await page.waitForFunction(()=>!document.querySelector('.task-full-page'));
@@ -117,11 +119,11 @@ async function verifyObserverRegressions(page,monitor,root,index){
  }
  assert.equal(await page.locator('#content').getByText(/[＊*].*部分/).isVisible(),true,'visible Backlog guidance explains the partial marker');
 
- await page.locator('#nav-board').click();await page.locator('.task-card[data-task-id="WK-interrupted"]').click();await page.locator('#lifecycle').waitFor();
+ await page.locator('#nav-board').click();await page.locator('.task-card[data-task-id="WK-interrupted"]').click();await openMeasurementDetails(page);
  await page.keyboard.press('Escape');await page.locator('#connection').click();
  const validatedBefore=await healthField('來源核對').innerText();assert.doesNotMatch(validatedBefore,/尚未確認|未知/);
  await page.keyboard.press('Escape');
- await page.locator('.task-card[data-task-id="WK-interrupted"]').click();await page.locator('#lifecycle').waitFor();
+ await page.locator('.task-card[data-task-id="WK-interrupted"]').click();await openMeasurementDetails(page);
  const lock=path.join(root,'workkeel.lock'),saved=await fs.readFile(lock);
  let sourceFailure;
  try{
@@ -179,16 +181,13 @@ async function verifyPagination(page,index){
 
 async function verifyObserverClarity(page,monitor,index){
  const waitText=(selector,text)=>page.waitForFunction(({selector,text})=>document.querySelector(selector)?.textContent.includes(text),{selector,text});
- const openTask=async id=>{await page.locator('#nav-board').click();await page.locator('.task-card[data-task-id="'+id+'"]').click();await page.locator('#lifecycle').waitFor();};
+ const openTask=async id=>{await page.locator('#nav-board').click();await page.locator('.task-card[data-task-id="'+id+'"]').click();await openMeasurementDetails(page);};
  const language=async value=>{await page.locator('#nav-settings').click();await page.getByLabel('Language',{exact:true}).selectOption(value);};
  await page.goto(monitor.url);await page.waitForFunction(()=>document.querySelector('#connection').dataset.health==='healthy');await language('en');
 
  await page.locator('#nav-backlog').click();await waitText('#content tbody','WK-accepted');
- const current=page.getByRole('button',{name:'Current tasks 6',exact:true}),retained=page.getByRole('button',{name:'Retained history 0',exact:true});
- assert.equal(await current.getAttribute('aria-pressed'),'true');assert.equal(await retained.getAttribute('aria-pressed'),'false');
- await retained.click();await page.waitForFunction(()=>!document.querySelector('#content tbody'));
- assert.equal(await retained.getAttribute('aria-pressed'),'true');assert.match(await page.locator('#content').innerText(),/Read-only history/);
- await current.click();await waitText('#content tbody','WK-accepted');
+ // Removed pre-migration history: the backlog has no history switch.
+ assert.equal(await page.getByRole('button',{name:/Retained history/}).count(),0);
  const acceptedRow=page.locator('#content tbody tr').filter({hasText:'WK-accepted'});
  await acceptedRow.getByRole('button',{name:/^\d+ documents$/}).click();
  await page.locator('#detail-tabs button[aria-current="page"]').filter({hasText:'Documents'}).waitFor();
@@ -315,7 +314,7 @@ async function verifyObserverFollowup(page,monitor){
  assert.equal(await page.locator('#connection').getAttribute('data-health'),'healthy');assert.equal(await page.locator('#recent-tasks tbody tr').count(),6);
  await page.locator('#connection').click();assert.match(await page.locator('#connection-detail').innerText(),/Validating/);await page.keyboard.press('Escape');
  healthMode='healthy';
- await page.locator('#recent-tasks [data-task-id="WK-accepted"]').click();await page.locator('#lifecycle').waitFor();
+ await page.locator('#recent-tasks [data-task-id="WK-accepted"]').click();await openMeasurementDetails(page);
  assert.match(await page.locator('#next-action').innerText(),/Done\s+Completion summary: Synthetic local acceptance/);assert.doesNotMatch(await page.locator('#next-action').innerText(),/merge|release.*observation/i);
  assert.equal(await page.locator('#handoff-details').evaluate(el=>el.open),false);assert.equal(await page.locator('#copy-handoff').isVisible(),false);
  await page.locator('#handoff-details summary').click();assert.match(await page.locator('#handoff-details').innerText(),/next executor.*read-only snapshot/s);
@@ -323,7 +322,7 @@ async function verifyObserverFollowup(page,monitor){
  assert.match(await page.evaluate(()=>navigator.clipboard.readText()),/WK-accepted/);await page.locator('#close-drawer').click();
  // Three token-only bound reports: completeness 0/3 is not zero execution time.
  await page.route('**/api/task?id=WK-unobserved',async route=>{const response=await route.fetch(),task=await response.json();task.execution={execution_ms:null,time_complete:false,tokens:120,tokens_complete:false,recorded_operations:3,measured_intervals:0};task.runs=[{run_id:'token-only',operations:Array.from({length:3},(_,i)=>({operation_id:'token-only-'+i,result_recorded:true,state:'completed',runtime_model:'fixture-token-only',usage:{input_tokens:30,output_tokens:10}}))}];await route.fulfill({response,json:task});});
- await page.locator('#recent-tasks [data-task-id="WK-unobserved"]').click();await page.locator('#lifecycle').waitFor();
+ await page.locator('#recent-tasks [data-task-id="WK-unobserved"]').click();await openMeasurementDetails(page);
  const timing=page.locator('#detail-content .panel').filter({has:page.getByRole('heading',{name:/^Tool execution time/})});
  assert.equal(await timing.locator('.setting').first().locator('dd').innerText(),'Unreported');
  assert.equal(await timing.locator('.setting').nth(1).locator('dd').innerText(),'Unknown · 0 / 3');
@@ -353,6 +352,10 @@ async function verifyObserverFollowup(page,monitor){
 
 const output=path.resolve('output/playwright/workkeel-monitor');await fs.mkdir(output,{recursive:true});
 const root=await createObserverFixture(),empty=await createMonitorFixture({empty:true});
+// A launch-selected personal Skill source, so the catalogue shows a Skill that is not added to the project.
+const personal=await fs.mkdtemp(path.join(os.tmpdir(),'workkeel-browser-personal-'));
+await fs.mkdir(path.join(personal,'external-check'),{recursive:true});
+await fs.writeFile(path.join(personal,'external-check','SKILL.md'),'---\nname: external-check\ndescription: Personal fixture Skill.\n---\nPersonal fixture Skill.\n');
 const progressTask=await readNativeTask(root,'WK-working');
 await recordTaskObservation(root,progressTask.id,{
  schema_version:'workkeel.task-observation/v1',task_id:progressTask.id,task_version:progressTask.version,actor:progressTask.contract.actor,
@@ -362,7 +365,7 @@ await recordTaskObservation(root,progressTask.id,{
 });
 let monitor,emptyMonitor,browser,page,paginationIndex;const checks=[],external=[],errors=[];
 try{
- monitor=await startTaskMonitor(root);emptyMonitor=await startTaskMonitor(empty);
+ monitor=await startTaskMonitor(root,{catalogRoots:[{path:personal,origin:'user',label:'Personal'}]});emptyMonitor=await startTaskMonitor(empty);
  browser=await chromium.launch({channel:'chrome',headless:true});
  for(const viewport of (focusedOnly?[]:process.env.OBSERVER_DESKTOP_ONLY==='1'?[{width:1440,height:1000}]:[{width:1440,height:1000},{width:390,height:844}])){
   const context=await browser.newContext({viewport,reducedMotion:'reduce',colorScheme:'dark'});
@@ -416,8 +419,15 @@ try{
     await page.getByRole('button',{name:'已驗證',exact:true}).click();assert.equal(await page.locator('.learning-row').count(),1);
     await page.getByRole('button',{name:'全部',exact:true}).click();assert.equal(await page.locator('.learning-row').count(),4);
     assert.ok((await page.locator('.segments').first().boundingBox()).width<=120);
-    await page.locator('.learning-row').nth(2).click();assert.match(await page.locator('#detail-content').innerText(),/還有 4 個階段尚未記錄完成/);
+    await page.locator('.learning-row').nth(2).click();{const detail=await page.locator('#detail-content').innerText();assert.match(detail,/已採用/);assert.match(detail,/轉為 Skill 的條件/);}
     await page.keyboard.press('Escape');
+    assert.equal(await page.locator('.legacy-learning-notice').count(),0);
+    // A leftover pre-0.2 folder is refused with its path and the owner's archive action.
+    const legacyDir=path.join(root,'.ai-org/learning/lessons');await fs.mkdir(legacyDir,{recursive:true});await fs.writeFile(path.join(legacyDir,'LESSON-0001.md'),'# Old\n');
+    await page.locator('#nav-board').click();await page.locator('#nav-learning').click();
+    const notice=page.locator('.legacy-learning-notice');await notice.waitFor();
+    assert.match(await notice.innerText(),/\.ai-org\/learning\/lessons/);assert.match(await notice.innerText(),/自行封存/);
+    await fs.rm(legacyDir,{recursive:true,force:true});
    }
    if(name==='settings'){
     const info=page.getByRole('button',{name:'審查安排',exact:true});const before=await page.locator('.settings-grid').boundingBox();
@@ -452,17 +462,17 @@ try{
   await page.locator('#nav-settings').click();await page.getByLabel('Language',{exact:true}).selectOption('zh-TW');
   await page.locator('#nav-board').click();await openSearchFilters(page);await page.getByLabel('搜尋',{exact:true}).fill('Unobserved');
   assert.equal(await page.locator('.task-card').count(),1);await page.locator('.task-card').click();
-  await page.locator('#detail-content #lifecycle').waitFor();
+  await openMeasurementDetails(page);
   await page.getByRole('button',{name:/各階段已記錄時間/}).click();
   assert.equal(await page.locator('.help-popover:popover-open').count(),1);
   assert.match(await page.locator('.help-popover:popover-open').innerText(),/待開始|等待/);
   await page.keyboard.press('Escape');assert.equal(await page.locator('#drawer').evaluate(e=>e.open),true);
   await page.locator('#expand-task').click();await page.locator('.task-full-page').waitFor();
   assert.match(page.url(),/view=task&task=WK-unobserved/);assert.equal(await page.locator('.sidebar').count(),1);
-  await page.reload();await page.locator('.task-full-page #lifecycle').waitFor();
+  await page.reload();await openMeasurementDetails(page);
   await page.goBack();await page.locator('.task-card').waitFor();
   assert.equal(await page.getByLabel('搜尋',{exact:true}).inputValue(),'Unobserved');
-  await page.locator('.task-card').click();await page.locator('#lifecycle').waitFor();
+  await page.locator('.task-card').click();await openMeasurementDetails(page);
   await page.locator('#detail-title').click();assert.equal(await page.locator('#drawer').evaluate(e=>e.open),true);
   const drawer=await page.locator('#drawer').boundingBox();await page.mouse.move(drawer.x+30,drawer.y+30);await page.mouse.down();await page.mouse.move(2,100);await page.mouse.up();assert.equal(await page.locator('#drawer').evaluate(e=>e.open),true,'drag from inside does not dismiss');
   await page.mouse.click(2,100);assert.equal(await page.locator('#drawer').evaluate(e=>e.open),false,'outside click dismisses drawer');
@@ -480,8 +490,10 @@ try{
   await page.keyboard.press('Escape');await openSearchFilters(page);await page.getByLabel('搜尋',{exact:true}).fill('');
   for(const id of ['WK-completed','WK-interrupted','WK-review','WK-accepted','WK-working']){
    await page.locator('.task-card[data-task-id="'+id+'"]').click();
-   await page.locator('#lifecycle').waitFor();assert.match(await page.locator('#lifecycle').innerText(),/各階段已記錄時間/);
+   await openMeasurementDetails(page);assert.match(await page.locator('#lifecycle').innerText(),/各階段已記錄時間/);
    if(id==='WK-accepted')assert.match(await page.locator('#delivery').innerText(),/已驗收/);
+   if(id==='WK-review'){assert.match(await page.locator('#delivery-unresolved').innerText(),/交付時未解決事項[\s\S]*Synthetic open issue for the reviewer/);assert.match(await page.locator('#next-action').innerText(),/未解決事項/);assert.doesNotMatch(await page.locator('#next-action').innerText(),/未識別/);}
+   else assert.equal(await page.locator('#delivery-unresolved').count(),0);
    if(id==='WK-working'){
     const progress=page.locator('#delivery-progress');assert.match(await progress.innerText(),/200 \/ 200/);assert.match(await progress.innerText(),/未知/);assert.match(await progress.innerText(),/0 \/ 200/);assert.match(await progress.innerText(),/尚未正式交付/);
     const height=(await progress.boundingBox()).height;await progress.getByRole('button').click();assert.equal(await page.locator('.help-popover:popover-open').count(),1);assert.match(await page.locator('.help-popover:popover-open').innerText(),/測試次數不能換算/);assert.equal((await progress.boundingBox()).height,height);await page.keyboard.press('Escape');
@@ -546,4 +558,4 @@ try{
  await fs.writeFile(path.join(output,liveOnly?'live-state-report.json':followupOnly?'followup-report.json':clarityOnly?'clarity-report.json':regressionsOnly?'regressions-report.json':'report.json'),JSON.stringify({passed:true,mode:liveOnly?'focused-desktop-live-state':followupOnly?'focused-desktop-followup':clarityOnly?'focused-desktop-clarity':regressionsOnly?'focused-desktop-regressions':'browser-gate',checks,errors,external_requests:external.length,model_calls:0,fixture:liveOnly?'Native offline fixture with changed workspace/detail/document API projections and a held background response; no model calls or narrow-screen checks.':followupOnly?'Native offline fixture; UI projections of explicit zero, three token-only bound reports, health states and authenticated proxy transport. No identity-validation or live Tailscale claim.':clarityOnly?'Generated native task/workflow journals and persisted event reasons with deterministic offline adapters; injected task-detail stage intervals and failed/passed review events; actual query index with injected 120-operation/event projection.':'Generated native task/workflow journals with deterministic offline adapters; real malformed fixture workkeel.lock and recovery; injected task-detail stage intervals and review events; actual query index with injected 120-operation/event projection. The full gate also uses synthetic learning records and injected visibility/503 failures and focused followup UI projections.'},null,2)+'\n');
  console.log(JSON.stringify({passed:true,checks:checks.length,external_requests:external.length,output}));
 }catch(error){if(page&&!page.isClosed())await page.screenshot({path:path.join(output,'failure.png'),fullPage:true}).catch(()=>{});throw error;}
-finally{await browser?.close();await paginationIndex?.close();await monitor?.close();await emptyMonitor?.close();await fs.rm(root,{recursive:true,force:true});await fs.rm(empty,{recursive:true,force:true});}
+finally{await browser?.close();await paginationIndex?.close();await monitor?.close();await emptyMonitor?.close();await fs.rm(root,{recursive:true,force:true});await fs.rm(personal,{recursive:true,force:true});await fs.rm(empty,{recursive:true,force:true});}

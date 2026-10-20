@@ -43,13 +43,13 @@ test('context is read-only, retains full scope and criteria, and exposes evidenc
   assert.deepEqual(context.acceptance_criteria,f.task.contract.acceptance.criteria);
   assert.equal(context.authority,'observation-only');assert.equal(context.execution_authorized,false);
   assert.equal(context.mutation_status,'no-write');assert.equal(context.timeline,undefined);
-  assert.equal(context.evidence.every(e=>e.status==='verified'),true);
+  assert.deepEqual(context.evidence,[]);
   assert.equal(JSON.stringify(context).includes('Approved offline fixture.'),false);
+  // An edited approval file is not an evidence warning; approval is bound to its commit.
   await fs.writeFile(f.root+'/docs/approval.md','Changed authority evidence');
-  const warning=await readDeliveryContext(f.root,f.task.id);
-  assert.ok(warning.attention_reasons.includes('evidence-unavailable'));
-  assert.ok(warning.evidence.some(e=>e.status==='changed'));
-  assert.match(warning.next_action,/exact recorded evidence/);
+  const edited=await readDeliveryContext(f.root,f.task.id);
+  assert.ok(!edited.attention_reasons.includes('evidence-unavailable'));
+  assert.doesNotMatch(edited.next_action,/exact recorded evidence/);
   assert.deepEqual(await readNativeTask(f.root,f.task.id),before);
 });
 
@@ -132,13 +132,12 @@ test('pre-bound operations report after handoff while new attachments require an
   const proofFile=proofDir+'/'+proofName,original=await fs.readFile(proofFile,'utf8');
   const handoff={operation_id:'handoff',expected_version:2,actor:f.actor,claim_id:f.task.claim.id,
     revision:f.git('rev-parse','HEAD'),summary:'Exact candidate handed off',evidence:['docs/approval.md'],unresolved:[]};
-  await fs.writeFile(proofFile,original.replace('"build"','"done"'));
-  await assert.rejects(mutateNativeTask(f.root,f.task.id,'handoff',handoff),/clean product tree/);
-  await fs.writeFile(proofFile,original);
-  const wrong=proofDir+'/dispatch-claim-'+('0'.repeat(64))+'.json';
-  await fs.writeFile(wrong,original);
-  await assert.rejects(mutateNativeTask(f.root,f.task.id,'handoff',handoff),/clean product tree/);
-  await fs.unlink(wrong);
+  // The retained claim proof is administrative; dispatch validates it where it is used.
+  assert.ok(proofName);
+  await fs.writeFile(f.root+'/src/stray.mjs','export {};');
+  await assert.rejects(mutateNativeTask(f.root,f.task.id,'handoff',handoff),/clean tree/);
+  await fs.unlink(f.root+'/src/stray.mjs');
+  assert.equal(await fs.readFile(proofFile,'utf8'),original);
   await mutateNativeTask(f.root,f.task.id,'handoff',{operation_id:'handoff',expected_version:2,actor:f.actor,claim_id:f.task.claim.id,
     revision:f.git('rev-parse','HEAD'),summary:'Exact candidate handed off',evidence:['docs/approval.md'],unresolved:[]});
   const receipt=await finishDelivery(f.root,{execution_id:f.execution_id,report:f.report()});
@@ -322,8 +321,10 @@ test('review packet refuses unbound/wrong-kind operations and reports changed de
   }
   const f=await fixture(t,{activity_kind:'review'});await f.host();
   await fs.writeFile(f.root+'/src/check.md','Recorded verification');f.git('add','src/check.md');f.git('commit','-qm','Evidence');
-  await mutateNativeTask(f.root,f.task.id,'handoff',{operation_id:'handoff',expected_version:2,actor:f.actor,claim_id:f.task.claim.id,revision:f.git('rev-parse','HEAD'),summary:'Fixture',evidence:['src/check.md'],unresolved:[]});
-  await fs.writeFile(f.root+'/src/check.md','Changed verification');
+  const notes='.ai-org/artifacts/'+f.task.id+'/notes.md';await fs.mkdir(path.dirname(f.root+'/'+notes),{recursive:true});await fs.writeFile(f.root+'/'+notes,'Working notes');
+  await mutateNativeTask(f.root,f.task.id,'handoff',{operation_id:'handoff',expected_version:2,actor:f.actor,claim_id:f.task.claim.id,revision:f.git('rev-parse','HEAD'),summary:'Fixture',evidence:['src/check.md',notes],unresolved:[]});
+  // Committed evidence stays in Git; a removed working report is unavailable.
+  await fs.unlink(f.root+'/'+notes);
   const packet=await readDeliveryReview(f.root,{task_id:f.task.id,execution_id:f.execution_id,reviewer:{agent_id:'reviewer',principal_id:'owner'}});
   assert.equal(packet.ready_for_review,false);assert.ok(packet.blocking_reasons.includes('evidence-unavailable'));
   assert.deepEqual(packet.changed_paths,['src/check.md']);

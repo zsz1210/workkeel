@@ -8,7 +8,7 @@ import {createMonitorFixture} from '../scripts/workkeel-monitor-fixture.mjs';
 import {startTaskMonitor,readMonitorSnapshot,workflowNeedsAttention} from '../src/workkeel-monitor.mjs';
 import {mutateNativeTask} from '../src/workkeel-tasks.mjs';
 import {execFileSync} from 'node:child_process';
-import {formatCount,formatCost,formatDuration} from '../src/workkeel-monitor-view.mjs';
+import {formatCount,formatDuration} from '../src/workkeel-monitor-view.mjs';
 
 test('terminal closeout resolves old stopped attempts without hiding later or corrupt data',()=>{
  const at=n=>new Date(1700000000000+n).toISOString();
@@ -23,7 +23,7 @@ test('terminal closeout resolves old stopped attempts without hiding later or co
  assert.equal(workflowNeedsAttention({...summary,timeline:[]},measured),true);
 });
 
-test('accepted interrupted fixture leaves attention but retains history and evidence checks',async t=>{
+test('accepted interrupted fixture clears attention and is not re-verified after evidence edits',async t=>{
  const root=await createMonitorFixture();t.after(()=>fs.rm(root,{recursive:true,force:true}));
  const env=Object.fromEntries(Object.entries(process.env).filter(([key])=>!key.startsWith('GIT_')));
  for(const args of [['add','.'],['-c','core.hooksPath=/dev/null','-c','commit.gpgsign=false','commit','-qm','Pin terminal attention fixture']])execFileSync('git',['-C',root,...args],{env});
@@ -36,19 +36,18 @@ test('accepted interrupted fixture leaves attention but retains history and evid
  const accepted=(await readMonitorSnapshot(root)).tasks.find(t=>t.id===id);
  assert.equal(accepted.task_state,'done');assert.equal(accepted.needs_attention,false);assert.equal(accepted.continuation,null);
  assert.equal(accepted.runs[0].runner_state,'blocked');
+ // Closed tasks are not re-verified: editing their evidence leaves them settled.
  await fs.writeFile(path.join(root,'docs/approval.md'),'Changed evidence');
  const changed=(await readMonitorSnapshot(root)).tasks.find(t=>t.id===id);
- assert.equal(changed.needs_attention,true);assert.ok(changed.attention_reasons.includes('evidence-unavailable'));
+ assert.equal(changed.needs_attention,false);assert.ok(!changed.attention_reasons.includes('evidence-unavailable'));
 });
 
-test('formatter preserves unknown, partial, zero, strict numbers and duration semantics',()=>{
+test('formatter preserves unknown, partial, strict numbers and duration semantics',()=>{
  assert.equal(formatCount({complete:true,total:12345}),'12,345');
  assert.equal(formatCount({complete:false,known_subtotal:0}),'>= 0 (partial)');
  assert.equal(formatCount({complete:true,total:null,known_subtotal:1200}),'>= 1,200 (partial)');
  for(const total of [null,'1',-1,0.2,Infinity,NaN,Number.MAX_SAFE_INTEGER+1])assert.equal(formatCount({complete:true,total}),'Unknown');
- assert.equal(formatCount(null),'Unknown');assert.equal(formatCost({complete:true,total:0}),'$0.0000');
- assert.equal(formatCost({complete:false,known_subtotal:0.01234}),'>= $0.0123 (partial)');
- for(const total of [null,'1',-1,Infinity,NaN,1e12])assert.equal(formatCost({complete:true,total}),'Unknown');
+ assert.equal(formatCount(null),'Unknown');
  assert.equal(formatDuration(1234),'1.2 s');assert.equal(formatDuration(60000),'1 min 0 s');assert.equal(formatDuration(119999),'1 min 59 s');
  for(const ms of [null,'1',-1,Infinity,NaN,Number.MAX_SAFE_INTEGER+1])assert.equal(formatDuration(ms),'Unknown');
 });

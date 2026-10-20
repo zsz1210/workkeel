@@ -5,15 +5,15 @@ import { promisify } from "node:util";
 import { durableAtomicCreate, durableAtomicWrite, formatJson, sha256 } from "./files.mjs";
 import { readTaskProject, existsEntry } from "./workkeel-project.mjs";
 import { readTaskFile, readTaskContractInput } from "./task-contract.mjs";
-import { withProjectMutationLock } from "./project.mjs";
+import { withProjectMutationLock } from "./workkeel-lock.mjs";
 
 const exec = promisify(execFile);
 
-/** First-use navigation only. Drafts intentionally cannot grant authority. */
+/** First-use navigation only. It never writes, chooses an actor or grants authority. */
 export async function readStartGuide(target, { requestRef = null } = {}) {
   const guide = { schema_version: "workkeel.start/v1", mutation_status: "no-write",
     execution_authorized: false, ready: false, stage: "project", required: [],
-    next_action: "", next_command: null, drafts: {}, errors: [],
+    next_action: "", next_command: null, errors: [],
     limitation: "Readiness is an intake preview, not a claim, model dispatch or acceptance. Commands are argv relative to this project; inspect before running." };
   const step = (stage, next_action, next_command, required = []) =>
     Object.assign(guide, { stage, next_action, next_command, required });
@@ -28,10 +28,8 @@ export async function readStartGuide(target, { requestRef = null } = {}) {
       for (const ref of ["WORKKEEL.md", "workkeelw.mjs"]) {
         if (await existsEntry(root, ref)) throw Error(`Existing ${ref} requires inspection before initialization; no files were overwritten`);
       }
-      if (await existsEntry(root, "temple.lock")) return step("legacy", "Continue with this project's pinned Temple launcher. Migration requires a separate reviewed preview.", null);
       if (await existsEntry(root, ".ai-org")) throw Error("Existing .ai-org requires inspection before initialization; no files were overwritten");
-      guide.drafts.policy = { schema_version: "workkeel.task-policy/v1", principals: [], agents: [], approvers: [], review_separation: null };
-      return step("policy", "Agree on identities and review separation, complete drafts.policy and save it as task-policy.json. Then initialize explicitly.", ["init", ".", "--policy", "task-policy.json"], ["Principal IDs", "Agent-to-Principal mappings", "Approvers", "Review separation"]);
+      return step("init", "Initialize explicitly. init defaults to a claude builder and a codex reviewer Agent under one owner Principal; override with --builder <family> and --reviewer <family>, or use --policy file for a reviewed custom policy.", ["init", "."]);
     }
     const project = await readTaskProject(root);
     guide.identity_choices = project.policy;
@@ -42,16 +40,10 @@ export async function readStartGuide(target, { requestRef = null } = {}) {
       guide.instruction_preview = instructions;
       return step("instructions", "Inspect the additive instruction preview, then apply its fingerprint. Existing instructions are preserved.", ["instructions", "apply", ".", "--fingerprint", instructions.fingerprint]);
     }
-    guide.stage = "brief";
-    if (requestRef === null) {
-      guide.drafts.brief = { schema_version: "workkeel.task-brief/v1", id: null, goal: null,
-        actor: { agent_id: null, principal_id: null }, acceptance: [], exclude: [],
-        environment: { cwd: ".", read_paths: [], write_paths: [], tools: [], resources: [],
-          network: { mode: "none", hosts: [] }, external_actions: [],
-          data: { classification: null, model_access: "none", policy_refs: [] } },
-        authorization: { approved_by: null, approval_ref: null, operations: [], expires_at: null } };
-      return step("brief", "Complete drafts.brief from the approved goal and boundaries, save it as brief.json, and record the actual approval and data policy in referenced files.", ["start", ".", "--request", "brief.json"], ["Task ID and goal", "Registered actor", "Acceptance criteria", "Paths and tools", "Data classification and policy", "Actual approval and operations"]);
-    }
+    guide.stage = "task";
+    if (requestRef === null)
+      return step("task", "Create a task from the approved goal with task new, replacing each <...> value; choose the actor from identity_choices and add --write path to narrow the write scope. Then follow claim, handoff, review and close in the quick start.",
+        ["task", "new", ".", "--goal", "<goal>", "--acceptance", "<acceptance criterion>", "--actor", "<agent id>"], ["Approved goal", "Acceptance criteria", "Registered actor"]);
     const { previewTaskIntake } = await import("./workkeel-intake.mjs");
     guide.intake_preview = await previewTaskIntake(root, (await readTaskContractInput(root, requestRef)).document);
     guide.ready = true;
@@ -66,7 +58,12 @@ export async function readStartGuide(target, { requestRef = null } = {}) {
 
 const bridges = {
   "AGENTS.md": "<!-- workkeel:begin -->\nRead [WORKKEEL.md](WORKKEEL.md) for this project's task and verification workflow. Before acting, match the task to the available Skills, read the applicable Skill instructions, and report what was applied and verified. Read only task-relevant material; do not load the whole catalog.\n<!-- workkeel:end -->",
-  "CLAUDE.md": "<!-- workkeel:begin -->\n@WORKKEEL.md\n\nUse this project's AGENTS.md instructions when present. Match and read applicable Skills before acting; report applied steps and verification, not merely which files were read.\n<!-- workkeel:end -->"
+  "CLAUDE.md": "<!-- workkeel:begin -->\n@AGENTS.md\n<!-- workkeel:end -->"
+};
+
+// Earlier generated blocks that preview may replace exactly; any other edit stays manual.
+const previousBridges = {
+  "CLAUDE.md": ["<!-- workkeel:begin -->\n@WORKKEEL.md\n\nUse this project's AGENTS.md instructions when present. Match and read applicable Skills before acting; report applied steps and verification, not merely which files were read.\n<!-- workkeel:end -->"]
 };
 
 export async function previewInstructions(target) {
@@ -75,7 +72,12 @@ export async function previewInstructions(target) {
   for (const [ref, block] of Object.entries(bridges)) {
     const before = await existsEntry(target, ref) ? await readTaskFile(target, ref, { preserveBom: true }) : null;
     if (before?.content.includes("<!-- workkeel:begin -->") || before?.content.includes("<!-- workkeel:end -->")) {
-      if (!before.content.includes(block) || before.content.split("<!-- workkeel:begin -->").length !== 2 || before.content.split("<!-- workkeel:end -->").length !== 2) throw new Error("Existing Workkeel instruction block differs; review it manually instead of overwriting");
+      const single = before.content.split("<!-- workkeel:begin -->").length === 2 && before.content.split("<!-- workkeel:end -->").length === 2;
+      if (single && before.content.includes(block)) continue;
+      const previous = (previousBridges[ref] ?? []).find(old => before.content.includes(old));
+      if (!single || !previous) throw new Error("Existing Workkeel instruction block differs; review it manually instead of overwriting");
+      const content = before.content.replace(previous, block);
+      files.push({ path: ref, before_sha256: before.digest, after_sha256: sha256(content), content, upgrade: "replaces-previous-workkeel-block" });
       continue;
     }
     const content = before ? `${before.content}${before.content.endsWith("\n") ? "\n" : "\n\n"}${block}\n` : `# Project instructions\n\n${block}\n`;

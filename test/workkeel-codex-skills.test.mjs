@@ -3,8 +3,14 @@ import assert from "node:assert/strict";
 import fs from "node:fs/promises";
 import path from "node:path";
 import os from "node:os";
-import { codexSkillPolicy, assertCodexSkills } from "../src/workkeel-codex-host.mjs";
+import { codexSkillPolicy, assertCodexSkills, assertCodexSourceReviewControls } from "../src/workkeel-codex-host.mjs";
 import { codexPermissionsForContract } from "../src/workkeel-codex-runtime.mjs";
+
+test('source-review tool overrides require confirmed false values, not absence or strings',()=>{
+ const names=['shell_tool','unified_exec','view_image','sleep_tool','code_mode_host','in_app_browser','in_app_chat','realtime_conversation','request_permissions_tool'];
+ const features=Object.fromEntries(names.map(n=>[n,false]));assertCodexSourceReviewControls({features});
+ for(const name of names)for(const value of [true,undefined,'false'])assert.throws(()=>assertCodexSourceReviewControls({features:{...features,[name]:value}}),/not disabled/);
+});
 
 async function fixture(t) {
   const temp = await fs.realpath(await fs.mkdtemp(path.join(os.tmpdir(), "workkeel-skills-")));
@@ -65,6 +71,50 @@ test("original enabled project Skills must remain present and enabled before dis
   await assert.rejects(assertCodexSkills(rpc, root, policy), /lost an enabled project Skill/);
   skills.push({...local,enabled:true});
   await assertCodexSkills(rpc, root, policy); // Order is not part of the contract.
+});
+
+test("configured disables survive missing discovery and reject a restored enabled Skill", async t => {
+  const {root, skills, rpc} = await fixture(t);
+  const restored = path.join(root, "restored/SKILL.md"), local = skills[0];
+  skills.splice(0, skills.length, local);
+  const configuredSkills = Object.freeze([
+    Object.freeze({path:restored, enabled:false}),
+    Object.freeze({path:local.path, enabled:false})
+  ]);
+  const policy = await codexSkillPolicy(rpc, root, {configuredSkills});
+  assert.deepEqual(new Set(policy.disabledPaths), new Set([restored, local.path]));
+  assert.deepEqual(policy.enabledPaths, []);
+  local.enabled = false;
+  await assertCodexSkills(rpc, root, policy); // An absent disabled file is valid.
+  await fs.mkdir(path.dirname(restored), {recursive:true});
+  await fs.writeFile(restored, "Restored project Skill");
+  skills.push({path:restored, enabled:true});
+  await assert.rejects(assertCodexSkills(rpc, root, policy), /disabled Skill/);
+  skills.at(-1).enabled = false;
+  await assertCodexSkills(rpc, root, policy);
+});
+
+test("malformed or ambiguous configured Skill overrides fail before discovery", async t => {
+  const {root, skills} = await fixture(t);
+  const item = {path:skills[0].path, enabled:false};
+  for (const configuredSkills of [null, {}, [null], new Array(1),
+    [{...item,path:'relative'}], [{...item,path:root+'/../SKILL.md'}],
+    [{...item,path:root+'/bad\0path'}], [{path:item.path}],
+    [{...item,enabled:'false'}], [item,item], [item,{...item,enabled:true}]]) {
+    let calls = 0;
+    const rpc = {request:async()=>{calls++;return {data:[{cwd:root,errors:[],skills:[]}]};}};
+    await assert.rejects(codexSkillPolicy(rpc, root, {configuredSkills}), /configured Skill/);
+    assert.equal(calls, 0);
+  }
+});
+
+test("source-only review excludes every discovered Skill and retains absent configured disables", async t => {
+  const {root, skills, rpc} = await fixture(t), absent=path.join(root,'later/SKILL.md');
+  const policy=await codexSkillPolicy(rpc,root,{sourceReview:true,configuredSkills:[{path:absent,enabled:false}]});
+  assert.deepEqual(new Set(policy.disabledPaths),new Set([absent,...skills.map(s=>s.path)]));
+  assert.deepEqual(policy.enabledPaths,[]);
+  for(const skill of skills)skill.enabled=false;
+  await assertCodexSkills(rpc,root,policy);
 });
 
 test("incomplete, malformed and ambiguous catalogues are not silently treated as empty", async t => {

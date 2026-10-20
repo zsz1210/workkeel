@@ -4,27 +4,30 @@ import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const optional = new Set([
-  "console-browser-contract", "control-plane-foundation", "control-plane-inbox", "control-plane-live",
-  "control-plane-private-viewer", "github-control-plane", "local-observer-service", "optional-console-collector"
-].map((name) => `test/${name}.test.mjs`));
 export const fastFiles = [
-  "ci-scope", "doc-links", "evidence-git", "model", "npm-release-workflow", "publication-audit", "publication-boundary",
-  "release-package", "skill-policy", "specifications", "test-groups", "workkeel-visuals"
+  "ci-scope", "doc-links", "import-boundary", "npm-release-workflow", "publication-audit", "publication-boundary",
+  "release-package", "test-groups", "workkeel-visuals"
 ].map((name) => `test/${name}.test.mjs`);
 export const dailyFiles = [...new Set([...fastFiles, ...[
-  "app-server-protocol-replay", "audit-export", "autonomous-delivery", "cli", "collaboration-governance",
-  "collaborative-recovery", "console-browser-contract", "console-delivery-summary", "context",
-  "control-plane-foundation", "control-plane-inbox", "control-plane-live", "control-plane-private-viewer",
-  "daily-delivery", "delivery-entry", "evidence-observer", "evidence-view",
-  "execution-routing", "federation", "field-readiness", "field-verification", "github-control-plane",
-  "handoff-revision", "high-assurance", "json-rpc-process-cleanup", "json-rpc-process-protocol",
-  "learning-operations", "local-observer-service", "optional-console-collector", "recovery",
-  "runtime-coordination", "schema-validation-isolation", "tracker", "workflow"
+  "json-rpc-process-cleanup", "json-rpc-process-protocol", "task-contract", "workkeel-cli-flags", "workkeel-command-supervisor", "workkeel-daily-entry",
+  "workkeel-delivery-request", "workkeel-lifecycle", "workkeel-lock", "workkeel-review-recovery", "workkeel-risk-tiers"
 ].map((name) => `test/${name}.test.mjs`)])].sort();
 
+// Tests of the optional subsystems listed by `workkeel help advanced`. The core
+// lifecycle never needs them; the full suite still runs them.
+export const optionalFiles = [
+  "headroom-adapter", "headroom-preservation", "workkeel-autonomy", "workkeel-background-collector", "workkeel-capture-observer",
+  "workkeel-desktop-product", "workkeel-dispatch", "workkeel-dispatch-classifier", "workkeel-dispatch-history",
+  "workkeel-execution-capture", "workkeel-execution-visuals", "workkeel-flow-browser", "workkeel-goal-runtime", "workkeel-goals",
+  "workkeel-host-observer", "workkeel-host-usage", "workkeel-improvement-cycle", "workkeel-learning", "workkeel-learning-lifecycle",
+  "workkeel-learning-observer", "workkeel-learning-receipts", "workkeel-model-policy", "workkeel-model-routing", "workkeel-monitor", "workkeel-monitor-analytics",
+  "workkeel-monitor-catalogue", "workkeel-monitor-time", "workkeel-observer", "workkeel-observer-index", "workkeel-retention", "workkeel-scoring",
+  "workkeel-tailnet", "workkeel-usage-scope", "workkeel-workflows", "workkeel-workspace", "workkeel-workspace-hooks"
+].map((name) => `test/${name}.test.mjs`);
+
+// New tests default to core; the group also drives changed-file selection.
 export function groupFor(file) {
-  return optional.has(file) ? "optional" : "core";
+  return optionalFiles.includes(file) ? "optional" : "core";
 }
 
 export async function testInventory(target = root) {

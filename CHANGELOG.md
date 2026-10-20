@@ -5,7 +5,87 @@ line. Historical release entries describe their own versions, not current-main
 qualification. Actual development tasks and validation records stay private;
 repository migration does not republish old tags, archives or npm versions.
 
+## 0.2.0-beta.0
+
+Unpublished source since 0.1.0-beta.1. Requires Node.js 24.15+.
+Breaking: removes Temple compatibility; existing Temple projects must keep their
+pinned CLI or archive their old records. No record migration is available.
+
+### Added
+
+- Flags-only task creation and lifecycle commands, short task contracts,
+  `policy show|update`, and `workkeel upgrade`; request files remain available
+  for integrations.
+- High and critical risk tiers, path- and data-derived minimum risk, and handoff
+  escalation. These tiers require another model family's exact-candidate review
+  and closure by the approving Principal; critical work also requires a rollback
+  plan and the committed approval record.
+- QA procedures require Must fix / Consider / Note / Dismiss finding dispositions
+  and independent Codex/Claude cross-review for high/critical work (optional below).
+  The CLI model-family check alone does not establish cross-review.
+- Optional review scores and read-only task statistics, including weekly reports
+  with risk, rework, reviewer scores and missing-data coverage.
+- Opt-in source-only Codex and structured Claude review helpers; bounded goal-run
+  controls and sealed comparison-record validation through trusted hosts.
+- Optional desktop project/repository navigation, model controls and execution
+  details; bounded goals and opt-in improvement discovery; versioned project
+  Skill learning and verified evidence archives. Access these extensions through
+  `help advanced`; the CLI task lifecycle remains the core.
+
+### Changed
+
+- Plain `init` creates one owner with Claude-family builder and Codex-family
+  reviewer defaults. Custom policies remain explicit. Setup guidance, generated
+  instructions and the three README editions now focus on the core lifecycle.
+- Approval and evidence now use Git revisions and evidence paths instead of
+  digest pins. Execution still checks the approval-time authority snapshot;
+  every rework delivers a new commit. High and critical reviews cannot pass with
+  unresolved issues, and critical deliveries cannot contain them.
+- Enforced rework caps: low 2; standard/high/critical 3. Tighter goal budgets still
+  apply; at the cap, work stops for a human decision.
+- Autonomy delegates all delivery to native goals; retires `autonomy enqueue`,
+  `autonomy cancel`, `autonomy resume-job` and marker-only `autonomy discover`.
+- Project locks and task contracts use v2 schemas. CLI compatibility follows
+  semver; incompatible versions warn on reads and block mutations. Upgrade
+  refreshes the pin and launcher without converting tasks or downgrading.
+  Unknown lock keys and lifecycle request fields produce warnings; upgrade
+  preserves unknown lock keys.
+- Optional subsystems and their tests are separate from core help and tests.
+  The workspace observatory and browser tests are optional.
+- Model routing respects approved model, reasoning and service settings;
+  dispatch and workflow retain policy snapshots and block unsupported fixed settings.
+
+### Removed
+
+- The `temple` executable, legacy/migration commands and history views, project
+  overlay and bundled packs and Skills. Projects maintain their own Skills.
+
+### Fixed
+
+- Retried lifecycle commands validate their claim, target and candidate;
+  ambiguous abbreviated revisions fail, and handoffs expose unresolved issues.
+- Recovery and dispatch preserve scope, capacity reservations, evidence and
+  configured Skill disables; command results and cancellation require confirmation.
+- Optional workspace views preserve navigation, edits and pending controls while
+  showing recorded activity, usage, dependencies and waiting states. Goal delivery
+  and improvement recovery retain authority, stop limits and acceptance boundaries;
+  loop guards preserve accounting and weekly reports retain review history.
+
+### Security
+
+- Hardened module import boundaries, recovery-journal validation and execution
+  preflight snapshots; closed risk-tier approval bypasses.
+
+Known limitations: concurrent or mixed-version flag commands may stop on replay
+conflicts, and the compatibility check can race with a concurrent upgrade.
+Publication and deployment remain pending.
+
 ## 0.1.0-beta.1
+
+> Published Beta.1: the npm package `@zsz1210/workkeel@0.1.0-beta.1` on the
+> `next` channel is an earlier line. It retains the Temple compatibility mode
+> removed from 0.2 source and has neither the flag commands nor the high and
+> critical risk tiers. Use it only to evaluate that earlier release.
 
 Workkeel Beta.1 experimental prerelease for internal and early adopter evaluation.
 Published on npm's `next` channel on 2026-10-06 (Japan time;
@@ -79,7 +159,7 @@ Published as a GitHub prerelease and on npm's `next` channel on 2026-09-16.
 - Corrected task risk defaults and actual Developer/reviewer provenance. No hosting permissions, external publication authority, membership expiry or historical evidence is silently rewritten.
 - Reduced redundant test setup and decorative snapshot checks while retaining semantic and boundary coverage. Batched Git blob reads in continuity validation and reused eligible Doctor schema compiler setup within one call; validation results are not cached across calls.
 - Synchronized the Console refresh test with actual watcher readiness and bounded stream cleanup while retaining assertions for both subsequent project changes. This fixes a reproduced test-startup race, not a claim that every historical timeout has the same cause.
-- Prepared exact-package initialization and Alpha.32 upgrade qualification. Existing project-owned actor policies are preserved; adopting ordinary attribution in a legacy installation remains an explicit preview/apply decision. Original package-qualification evidence is retained privately; current compatibility instructions are in the [usage guide](docs/getting-started/usage.md).
+- Prepared exact-package initialization and Alpha.32 upgrade qualification. Existing project-owned actor policies are preserved; adopting ordinary attribution in a legacy installation remains an explicit preview/apply decision. Original package-qualification evidence is retained privately; current compatibility instructions are in the usage guide.
 - Retains Alpha trial limits: local fixtures and measured improvements do not establish universal cost savings, production readiness, or mature multi-machine collaboration.
 
 ## 0.1.0-alpha.32

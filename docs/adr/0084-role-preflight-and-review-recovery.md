@@ -26,6 +26,11 @@ malformed, sparse or contradictory values fail before any model turn. Codex
 dispatch uses the preflight only when a caller opts in with a role; a read-only
 role then makes approved write roots read-only in the host permission profile.
 
+Preflight snapshots the caller's role and task context before checking them or
+awaiting the host. The probe receives a separate copy, so caller or probe-request
+mutations cannot change the requirements used for result validation and the
+observation receipt. This does not grant execution authority or freeze caller data.
+
 Add `recoverInterruptedReview`, a trusted embedding API rather than a CLI command,
 because a stopped predecessor and read-only enforcement can only be proven by
 host code. It retries a review on the same task and exact delivered candidate
@@ -72,5 +77,5 @@ a superseded or cancelled attempt is rejected rather than recorded. A recovery
 chain is local to one workspace and adds no distributed identity or high-risk
 workflow support.
 
-See the [operation guide](../operations/workkeel-review-recovery.md) and the
+See the [operation guide](../operations/workkeel-review-assessment.md#role-preflight-and-interrupted-review-recovery) and the
 [native dispatch decision](0081-native-dispatch-and-reading-state.md).

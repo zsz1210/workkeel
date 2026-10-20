@@ -4,6 +4,28 @@ The main conversation keeps the user's selected model. Newly delegated operation
 get explicit selections, bounded scopes and generated execution IDs. Nicknames are
 optional. Registered actors remain accountability keys, separate from models.
 
+## Supplied-source review
+
+Trusted embedding code can opt into
+`createLocalCodexSubscriptionRuntime(target, { sourceReview: true })` when the
+coordinator has supplied the complete source packet and applicable requirements.
+This is separate from repository review, which may need file-reading tools. It
+does not become the default for every review activity.
+
+This mode requires a fresh conversation, no write roots, named Skills, external
+resources or tool networking. The local host checks the installed protocol version,
+disables executable/image/browser tool features and Skill discovery, and the
+runtime sends empty environment/capability lists. Effective configuration must
+confirm restrictions before inference. Unexpected tool or unknown operation events
+fail the review. Permissions, model identity, expiry and usage checks still apply.
+
+The model receives the supplied packet without instructions to discover repository
+files or append lifecycle reporting fields. The requested answer format is retained
+inside the normal runtime result's `output`; the coordinator records checks, Skill
+use, provenance and acceptance separately. Missing source context needs attention,
+not an inferred clean review. Resume and combinations with repository-role contracts
+are rejected. Existing ordinary coding callers retain their behavior.
+
 ## Project policy
 
 Save the reviewed policy and include its path in a new task brief's
@@ -25,6 +47,47 @@ Names above are placeholders. Use models approved and actually supported by the
 host. There is no framework default vendor, paid API requirement or universal
 reasoning scale. Host capabilities and permitted data classes must match.
 
+### Layered settings for new operations
+
+The desktop policy editor independently configures model, reasoning and service
+as inherited, automatic or fixed. It can narrow the model catalog already approved
+for the task. A saved draft needs exact-version approval; neither save nor approval
+starts an operation. See [desktop settings](workkeel-workspace.md).
+
+To authorize runtime adoption, a new pinned dispatch policy may include:
+
+```json
+{"model_policy":{"policy_id":"project-routing","version":1,"sha256":"exact-approved-policy-digest","min_quality":0}}
+```
+
+This is an additional field on the existing dispatch policy, not a complete policy
+file. Each approved model entry can additionally declare `reasoning_efforts` and
+`service_tiers`. Those explicit lists constrain the selected tuple; absence does
+not authorize overriding scalar reasoning or inventing service support. Approve
+the policy bytes through a new native task contract before dispatch. Existing
+immutable contracts and tickets cannot adopt changed policy files.
+
+New `dispatch prepare` requests optionally include `model_policy` with the exact
+`policy_id`, `version`, `sha256` and optional `context:{role}`. The pinned bridge
+also applies when the request omits this field. Task, node and activity context
+comes from the actual task and dispatch node. Model allowlist, data classification,
+risk, approved quality floor and actual host support are hard constraints. High
+risk retains the conservative alias constraint. Cost/quota preferences cannot lower
+those constraints. Same-layer conflicts and unavailable fixed values fail explicitly.
+
+Layered capabilities include each model's `service_tiers` as well as its reasoning
+list. The resulting immutable ticket contains `model_snapshot`, the policy pin and
+the exact capability fingerprint. Requested, selected and reported values remain
+distinct. New operations require the active exact approved policy version; already
+prepared tickets retain their historical approved version after later activation.
+
+For a layered ticket, `dispatch bind` also requires `capabilities` and an attributed
+`runtime_selection:{provider,model,reasoning,service}` matching that exact tuple.
+Direct `usage bind` must supply the same proof in `routing_ack`; it cannot bypass
+the routing guard. A capability declaration alone is not execution proof, and local
+acknowledgements are not provider-authenticated records. The host must genuinely
+select and enforce the declared settings before reporting them.
+
 ## Dispatch sequence
 
 1. Claim the task. Split work into nodes with `id`, `activity_kind`, `depends_on`,
@@ -41,7 +104,7 @@ reasoning scale. Host capabilities and permitted data classes must match.
    host's agent-start tool with only necessary context and approved scope. If the
    host cannot select that tuple, report the mismatch; never silently inherit the
    coordinator model. The host still enforces filesystem, tools and networking.
-5. Before product work, use the [capture helper](workkeel-native-usage.md#capture-an-operation-from-start-to-finish)
+5. Before product work, use the [capture helper](workkeel-observer.md#capture-an-operation-from-start-to-finish)
    to bind the returned exact thread/turn and start its activity clock. Hosts that
    already measure intervals can use `dispatch bind` with `{execution_id,source}`.
    Binding rechecks active dependency/conflict limits. A local runner or
@@ -119,7 +182,7 @@ the observer serves no raw prompt, private source path or credential.
 Usage analysis sums operation durations; task execution time takes their interval
 union. Parallel operations can overlap, including across kinds. Explicit activity
 labels take precedence over old lifecycle attribution. Unknown, partial and measured
-zero remain distinct. See [native reporting](workkeel-native-usage.md).
+zero remain distinct. See [native reporting](workkeel-observer.md#native-execution-reports).
 
 Hosts must actually consume tickets and report execution. Workkeel cannot intercept
 arbitrary desktop tool calls. Repository instructions require this path for new
@@ -301,20 +364,23 @@ workkeel task handoff . --id WK-example --request .ai-org/artifacts/WK-example/h
 ```
 
 The example's private decision and prepared-output files are outside the product
-repository. A decision input is not a recorded native request. Placing it under
-task artifacts does not automatically exempt it from candidate checks. Preserve
-it only within authorized locations; where it is deliberately retained as task
-evidence, list the exact file in the applicable evidence references. Do not add
-ignore rules or delete evidence merely to get past a candidate rejection. Inspect
+repository. A decision input is not a recorded native request. Files under
+`.ai-org/` are administrative and never count as candidate drift, but that does not
+make them evidence. Preserve it only within authorized locations; where it is
+deliberately retained as task evidence, list the exact file in the applicable
+evidence references. Do not add ignore rules or delete evidence merely to get past
+a candidate rejection. Inspect
 the task and the file's purpose before retrying the identical saved request.
 
 | Action | Caller supplies, in addition to task, action, actor and operation ID | Derived fields |
 | --- | --- | --- |
 | `claim` | No decision fields | Current task version and Git HEAD |
-| `handoff` | Actual summary, evidence and explicit empty unresolved list | Current version, claim ID and Git HEAD |
-| `review` | Actual review judgment, summary and evidence | Current version and delivered revision |
+| `handoff` | Actual summary, evidence (may be empty for low risk) and an explicit `unresolved` list of open issues | Current version, claim ID and Git HEAD |
+| `review` | Actual review judgment, summary and evidence (may be empty below high risk) | Current version and delivered revision |
 | `close` | Actual acceptance summary, rollback and evidence | Current version and delivered revision |
 
+Preparation checks only the shape of these fields; the native task decides whether
+evidence may be empty and whether open issues can be delivered or pass review.
 Preparation neither runs checks nor validates all candidate/evidence conditions.
 `validation_status: native-apply-required` means the ordinary native command must
 still check authority, dependencies, version, candidate, scope, evidence and reviewer
@@ -517,7 +583,7 @@ before the authorized coordinator records local acceptance.
 
 If that review is interrupted before a verdict, do not cancel or recreate the
 task. Close its usage collection as stopped and follow
-[interrupted review recovery](workkeel-review-recovery.md), which also describes
+[interrupted review recovery](workkeel-review-assessment.md#role-preflight-and-interrupted-review-recovery), which also describes
 the opt-in role preflight for dispatched roles.
 
 For future real product work, record the same fields and review/repair outcomes.
@@ -592,7 +658,11 @@ Logs are created exclusively under `.ai-org/artifacts/<task>/<name>.log`. Use
 separate names for `red-test`, `green-test` and any `candidate-test`; old evidence
 is never overwritten. Include every retained log in handoff evidence. A failed
 test returns a nonzero CLI status; that is expected for a genuine RED run. A
-timeout, output overflow or failed cleanup is an instrumentation failure. Changed
+timeout, output overflow or failed cleanup is an instrumentation failure. The
+supervisor must also confirm the command's actual terminal result over IPC.
+A missing result, signal termination or supervisor/result disagreement is an
+instrumentation failure, even if a process exited. An absent exit code is never
+converted to a failing test. Changed
 declared files or task context invalidate the result. A log ending with only its
 running header has no completed result. Preserve it and use a new name if an
 authorized retry is needed.
@@ -616,6 +686,51 @@ requirement. A receipt is evidence for the recorded command and listed inputs;
 it does not prove the whole task or grant acceptance. Private comparison runs
 are outside this public source repository.
 
+
+### Optional Claude supplied-source review protocol
+
+For an already authorized source-only review host, `src/workkeel-claude-review.mjs`
+exports `prepareClaudeSourceReview`. It prepares arguments and parses results;
+it does not launch Claude, initialize an integration or change routing. The
+[qualification decision](../adr/0088-structured-source-review-protocol.md) pins
+Claude Code 2.1.287 and describes its external-license boundary.
+
+```js
+const protocol = prepareClaudeSourceReview({
+  files: { 'src/example.mjs': 'export const value = 1;\n' },
+  version: installedVersion,
+  model: approvedAlias,
+  expected_model: approvedResolvedModel,
+  reasoning: approvedReasoning,
+  session_id: freshSessionUuid
+});
+// Approved host: launch the qualified executable with protocol.args (shell:false),
+// feed only the approved packet on stdin, retain raw stdout/stderr, and supervise it.
+const result = protocol.parse(rawStdout, {
+  exit_code: actualExitCode,
+  timed_out: deadlineExceeded,
+  process_exit_confirmed: ownedProcessGroupExited,
+  execution_started: commandStartupConfirmed,
+  instrument_error: supervisionError, // explicitly null only when supervision succeeded
+  surviving_descendants: ownedDescendantsRemain
+});
+```
+
+The native schema is sent with `--json-schema`; only `structured_output` is used
+for findings. The `result` prose field is never scraped. Local validation rejects
+unknown files, invalid line ranges, extra fields and empty descriptions. A fresh
+session, explicit model/effort and disabled tools/customizations are part of the
+prepared arguments. The host must use an isolated working directory and enforce
+the actual task scope; metadata and flags alone are not a sandbox.
+
+Check `status === 'completed'` before using findings. Errors, missing structured
+output, model/session mismatches, timeouts, supervision errors and unconfirmed
+startup or cleanup return no
+findings, while preserving available usage. Input includes noncached input plus
+cache reads and creation exactly once; reasoning is a subset of output. Missing
+optional counters remain null and conflicting reasoning counts carry warnings.
+Keep raw failure records. A successful protocol result is neither independent
+acceptance nor evidence that all defects were found.
 
 ### Next improvement boundary
 

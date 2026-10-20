@@ -12,7 +12,7 @@ import {prepareDeliveryRequest,recordDeliveryCheck} from '../scripts/workkeel-de
 import {readDeliveryGuide} from '../scripts/workkeel-delivery.mjs';
 
 const actor={agent_id:'builder',principal_id:'owner'},reviewer={agent_id:'reviewer',principal_id:'owner'};
-async function fixture(t,write_paths=['src']) {
+async function fixture(t,write_paths=['src'],risk_tier=undefined) {
   const root=await fs.realpath(await fs.mkdtemp(path.join(os.tmpdir(),'delivery-request-')));
   t.after(()=>fs.rm(root,{recursive:true,force:true}));
   const git=(...args)=>execFileSync('git',['-C',root,...args],{encoding:'utf8',stdio:['ignore','pipe','pipe']}).trim();
@@ -21,7 +21,7 @@ async function fixture(t,write_paths=['src']) {
   await fs.mkdir(root+'/docs');await fs.mkdir(root+'/src');
   await fs.writeFile(root+'/docs/approval.md','Approved fixture');await fs.writeFile(root+'/src/a.txt','baseline');
   git('add','.');git('commit','-qm','Baseline');
-  const brief={schema_version:'workkeel.task-brief/v1',id:'WK-entry',goal:'Delivery request fixture',actor,acceptance:['Preserve native guards'],
+  const brief={schema_version:'workkeel.task-brief/v1',id:'WK-entry',goal:'Delivery request fixture',actor,acceptance:['Preserve native guards'],...(risk_tier?{risk_tier}:{}),
     environment:{cwd:'.',read_paths:['.'],write_paths,tools:['node'],resources:[],network:{mode:'none',hosts:[]},external_actions:[],data:{classification:'internal',model_access:'none',policy_refs:['docs/approval.md']}},
     authorization:{approved_by:'owner',approval_ref:'docs/approval.md',operations:['read','write','execute'],expires_at:null}};
   const preview=await previewTaskIntake(root,brief);await applyTaskIntake(root,brief,preview.fingerprint);
@@ -50,10 +50,10 @@ test('generated requests complete the unchanged lifecycle with explicit decision
   assert.equal((await f.read()).state,'done');assert.equal((await readDeliveryGuide(f.root,'WK-entry')).operation.action,null);
 });
 
-test('preparation rejects overrides, missing decisions and false resolution without writing',async t=>{
+test('preparation rejects overrides, missing decisions and malformed lists without writing',async t=>{
   const f=await fixture(t);await f.apply(await f.prepare('claim'));const before=await f.read();
-  for(const fields of [{},{summary:'x',evidence:['docs/approval.md']},{summary:'x',evidence:[],unresolved:[]},{summary:'x',evidence:['docs/approval.md'],unresolved:['bug']},
-    {summary:'x',evidence:['docs/approval.md'],unresolved:[],expected_version:1}])await assert.rejects(f.prepare('handoff',fields));
+  for(const fields of [{},{summary:'x',evidence:['docs/approval.md']},{summary:'x',evidence:[''],unresolved:[]},{summary:'x',evidence:['docs/approval.md'],unresolved:['']},
+    {summary:'x',evidence:'docs/approval.md',unresolved:[]},{summary:'x',evidence:['docs/approval.md'],unresolved:[],expected_version:1}])await assert.rejects(f.prepare('handoff',fields));
   await assert.rejects(f.prepare('handoff',{summary:'x',evidence:['docs/approval.md'],unresolved:[],actor:reviewer}),/matching implementation claim/);
   await assert.rejects(prepareDeliveryRequest(f.root,f.input('cancel',{summary:'x',evidence:['docs/approval.md']})),/unsupported/);
   assert.deepEqual(await f.read(),before);
@@ -74,6 +74,23 @@ test('native apply rejects HEAD changes after request preparation',async t=>{
   await assert.rejects(f.apply(handoff),/current commit/);assert.equal((await f.read()).state,'build');
 });
 
+test('risk gates are decided by the native task, not by preparation',async t=>{
+  // Standard: open issues are prepared and delivered for the reviewer; empty evidence is refused natively.
+  const f=await fixture(t);await f.apply(await f.prepare('claim'));
+  const empty=await f.prepare('handoff',{summary:'x',evidence:[],unresolved:[]});
+  await assert.rejects(f.apply(empty),/needs evidence/);assert.equal((await f.read()).state,'build');
+  await f.apply(await f.prepare('handoff',{summary:'Delivered with an open issue',evidence:['docs/approval.md'],unresolved:['Smoke test failed']}));
+  assert.deepEqual((await f.read()).delivery.unresolved,['Smoke test failed']);
+  assert.match((await readDeliveryGuide(f.root,'WK-entry')).operation.instructions,/unresolved/);
+  // A summary-only review is prepared without evidence.
+  await f.apply(await f.prepare('review',{judgment:'pass',summary:'Open issue judged acceptable',evidence:[]}));
+  assert.equal((await f.read()).state,'release_gate');
+  // Low: evidence may be omitted entirely.
+  const low=await fixture(t,['docs'],'low');await low.apply(await low.prepare('claim'));
+  await low.apply(await low.prepare('handoff',{summary:'Docs only',evidence:[],unresolved:[]}));
+  assert.deepEqual((await low.read()).delivery.evidence,[]);
+});
+
 test('native apply rejects out-of-scope candidates and missing evidence',async t=>{
   const f=await fixture(t);await f.apply(await f.prepare('claim'));
   await assert.rejects(f.deliver(['docs/missing.md']));assert.equal((await f.read()).state,'build');
@@ -81,12 +98,12 @@ test('native apply rejects out-of-scope candidates and missing evidence',async t
   await assert.rejects(f.deliver(),/outside approved write roots/);assert.equal((await f.read()).state,'build');
 });
 
-test('native apply refuses product drift and changed pinned authority',async t=>{
+test('native apply refuses product drift but not an edited approval file',async t=>{
   const f=await fixture(t);await f.apply(await f.prepare('claim'));
   const handoff=await f.prepare('handoff',{summary:'x',evidence:['docs/approval.md'],unresolved:[]});
-  await fs.writeFile(f.root+'/src/a.txt','uncommitted');await assert.rejects(f.apply(handoff),/clean product tree/i);
+  await fs.writeFile(f.root+'/src/a.txt','uncommitted');await assert.rejects(f.apply(handoff),/clean tree/i);assert.equal((await f.read()).state,'build');
   await fs.writeFile(f.root+'/src/a.txt','baseline');await fs.writeFile(f.root+'/docs/approval.md','Changed approval');
-  await assert.rejects(f.apply(handoff),/evidence|approval|changed/i);assert.equal((await f.read()).state,'build');
+  await f.apply(handoff);assert.equal((await f.read()).state,'test');
 });
 
 test('review requires a distinct actual actor and explicit verdict; fail cannot become close',async t=>{
@@ -101,20 +118,20 @@ test('review requires a distinct actual actor and explicit verdict; fail cannot 
   assert.equal((await readDeliveryGuide(f.root,'WK-entry')).operation.action,null);
 });
 
-test('close rechecks review evidence after preparation',async t=>{
+test('close is not blocked by review evidence edited after preparation',async t=>{
   const f=await fixture(t);await f.apply(await f.prepare('claim'));await f.deliver();
   await fs.mkdir(f.root+'/.ai-org/artifacts/WK-entry',{recursive:true});
   const ref='.ai-org/artifacts/WK-entry/review.md';await fs.writeFile(f.root+'/'+ref,'Actual fixture review');
   await f.apply(await f.prepare('review',{judgment:'pass',summary:'Reviewed',evidence:[ref]}));
   const close=await f.prepare('close',{summary:'Accept',rollback:'Revert',evidence:['docs/approval.md']});
-  await fs.writeFile(f.root+'/'+ref,'Changed judgment');await assert.rejects(f.apply(close),/changed|evidence/i);
-  assert.equal((await f.read()).state,'release_gate');
+  await fs.writeFile(f.root+'/'+ref,'Changed judgment');await f.apply(close);
+  assert.equal((await f.read()).state,'done');
 });
 
-test('guide retains authority warnings and full scope after authority changes',async t=>{
+test('guide keeps full scope and raises no evidence warning after an approval edit',async t=>{
   const f=await fixture(t);await fs.writeFile(f.root+'/docs/approval.md','Changed');
   const guide=await readDeliveryGuide(f.root,'WK-entry');
-  assert.ok(guide.context.attention_reasons.includes('evidence-unavailable'));
+  assert.ok(!guide.context.attention_reasons.includes('evidence-unavailable'));
   assert.deepEqual(guide.context.execution_scope.write_paths,['src']);assert.equal(guide.execution_authorized,false);
 });
 
@@ -176,7 +193,7 @@ test('record-check does not report a supervisor startup failure as a RED test',a
   // Fault injection: the real supervisor child receives the start request but
   // exits before starting the test command or acknowledging it over IPC.
   childProcess.spawn=function(executable,args,options) {
-    if(args[0]?.endsWith('/delivery-check-worker.mjs'))args=['-e',"process.on('message',()=>process.exit(2))"];
+    if(args[0]?.endsWith('/workkeel-command-worker.mjs'))args=['-e',"process.on('message',()=>process.exit(2))"];
     return spawn.call(this,executable,args,options);
   };
   syncBuiltinESMExports();
@@ -186,6 +203,27 @@ test('record-check does not report a supervisor startup failure as a RED test',a
     assert.equal(result.status,'instrument-failure');assert.equal(result.instrument_error,'command-start-unconfirmed');
     assert.equal(result.process_exit_confirmed,true);
     assert.match(await fs.readFile(f.root+'/'+result.log_ref,'utf8'),/Status: instrument-failure/);
+  } finally {childProcess.spawn=spawn;syncBuiltinESMExports();}
+});
+
+test('record-check preserves an interrupted supervisor as unknown execution, not a RED test',async t=>{
+  const f=await checkFixture(t),spawn=childProcess.spawn;let acknowledged=false,pid;
+  await fs.writeFile(f.root+'/src/check.test.mjs','await new Promise(resolve=>setTimeout(resolve,30000));\n');
+  childProcess.spawn=function(executable,args,options) {
+    const child=spawn.call(this,executable,args,options);
+    if(args[0]?.endsWith('/workkeel-command-worker.mjs'))child.on('message',message=>{
+      if(message?.action==='command-started'){acknowledged=true;pid=child.pid;process.kill(pid,'SIGKILL');}
+    });
+    return child;
+  };
+  syncBuiltinESMExports();
+  try {
+    const result=await f.check('interrupted-supervisor');
+    assert.equal(acknowledged,true);assert.equal(result.execution_started,true);assert.equal(result.exit_code,null);
+    assert.equal(result.status,'instrument-failure');assert.equal(result.instrument_error,'command-exit-unconfirmed');
+    assert.equal(result.process_exit_confirmed,true);assert.throws(()=>process.kill(-pid,0),error=>error.code==='ESRCH');
+    assert.match(await fs.readFile(f.root+'/'+result.log_ref,'utf8'),/Exit code: unknown\nStatus: instrument-failure/);
+    assert.equal((await f.read()).state,'build');
   } finally {childProcess.spawn=spawn;syncBuiltinESMExports();}
 });
 

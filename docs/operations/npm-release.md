@@ -75,7 +75,7 @@ Use the official Node **24.20.0** distribution from
 `SHASUMS256.txt`, with npm **11.19.0** and zlib **1.3.2.1-motley-42c2f19**. Put that
 distribution's `bin` directory first on `PATH` for these commands. The release
 workflow pins the same official Node version through `actions/setup-node`.
-This requirement is for framework release maintainers; consumer Node >=24 support
+This requirement is for framework release maintainers; consumer Node >=24.15 support
 and ordinary development/CI are unchanged.
 
 Node/npm version strings alone are insufficient: distributions can produce different

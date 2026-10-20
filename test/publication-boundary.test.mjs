@@ -61,7 +61,7 @@ test('nested ignored output cannot bypass the public-checkout or pre-push guard'
  fs.mkdirSync(path.join(cwd,'scripts'));
  for(const file of ['check-source-checkout.mjs','check-publication.mjs'])fs.copyFileSync(path.join(root,'scripts',file),path.join(cwd,'scripts',file));
  const oid=git('rev-parse','HEAD');
- const pushed=spawnSync('sh',[path.join(root,'.githooks/pre-push')],{cwd,input:`refs/heads/main ${oid} refs/heads/main ${'0'.repeat(40)}\n`,encoding:'utf8'});
+ const pushed=spawnSync('sh',[path.join(root,'.githooks/pre-push')],{cwd,input:`refs/heads/workkeel/x ${oid} refs/heads/workkeel/x ${'0'.repeat(40)}\n`,encoding:'utf8'});
  assert.equal(pushed.status,1);assert.match(pushed.stdout,/docs\/output/);
 });
 test('private paths and undeclared files fail even if force-staged',t=>{
@@ -150,11 +150,27 @@ test('pre-push runs history verification and refuses its failure',t=>{
  fs.copyFileSync(path.join(root,'scripts/check-source-checkout.mjs'),path.join(cwd,'scripts/check-source-checkout.mjs'));
  fs.writeFileSync(path.join(cwd,'scripts/check-publication.mjs'),"export function readAllowlist(){return new Set(['README.md','public-files.json']);}\nif(process.argv.includes('--history'))process.exit(17);");
  const oid=git('rev-parse','HEAD'),hook=path.join(root,'.githooks/pre-push');
- const r=spawnSync('sh',[hook],{cwd,input:`refs/heads/main ${oid} refs/heads/main ${'0'.repeat(40)}\n`,encoding:'utf8'});
+ const r=spawnSync('sh',[hook],{cwd,input:`refs/heads/workkeel/x ${oid} refs/heads/workkeel/x ${'0'.repeat(40)}\n`,encoding:'utf8'});
  assert.equal(r.status,17);
  fs.mkdirSync(path.join(cwd,'.ai-org'));
- const privateState=spawnSync('sh',[hook],{cwd,input:`refs/heads/main ${oid} refs/heads/main ${'0'.repeat(40)}\n`,encoding:'utf8'});
+ const privateState=spawnSync('sh',[hook],{cwd,input:`refs/heads/workkeel/x ${oid} refs/heads/workkeel/x ${'0'.repeat(40)}\n`,encoding:'utf8'});
  assert.equal(privateState.status,1);assert.match(privateState.stdout,/private-state-in-public-checkout/);
- const removed=spawnSync('sh',[hook],{cwd,input:`(delete) ${'0'.repeat(40)} refs/heads/old ${oid}\n`,encoding:'utf8'});
+ const removed=spawnSync('sh',[hook],{cwd,input:`(delete) ${'0'.repeat(40)} refs/heads/workkeel/old ${oid}\n`,encoding:'utf8'});
  assert.equal(removed.status,0);
+});
+test('pre-push refuses every ref except workkeel/* branches before any check runs',t=>{
+ const {cwd,git}=fixture(t);fs.mkdirSync(path.join(cwd,'scripts'));
+ for(const file of ['check-source-checkout.mjs','check-publication.mjs'])fs.writeFileSync(path.join(cwd,'scripts',file),"process.exit(0);");
+ const oid=git('rev-parse','HEAD'),zero='0'.repeat(40),hook=path.join(root,'.githooks/pre-push');
+ const push=line=>spawnSync('sh',[hook],{cwd,input:line+'\n',encoding:'utf8'});
+ for(const ref of ['refs/heads/main','refs/heads/workkeel','refs/heads/workkeel/','refs/heads/feature/workkeel/x','refs/tags/v1.0.0','refs/heads/codex/x']){
+  const refused=push(`refs/heads/workkeel/x ${oid} ${ref} ${zero}`);
+  assert.equal(refused.status,1,ref);assert.match(refused.stderr,/only workkeel\/\* branches/);
+ }
+ const deleted=push(`(delete) ${zero} refs/heads/main ${oid}`);
+ assert.equal(deleted.status,1,'deleting main is refused too');
+ const mixed=push(`refs/heads/workkeel/x ${oid} refs/heads/workkeel/x ${zero}\nrefs/heads/main ${oid} refs/heads/main ${zero}`);
+ assert.equal(mixed.status,1,'one forbidden ref refuses the whole push');
+ const allowed=push(`refs/heads/workkeel/x ${oid} refs/heads/workkeel/x ${zero}`);
+ assert.equal(allowed.status,0,allowed.stderr);
 });

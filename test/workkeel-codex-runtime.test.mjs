@@ -18,7 +18,7 @@ async function context(t) {
     selection: { connection: { kind: "gateway", provider: "litellm", base_url: "http://localhost:4000/v1", model: "fixture-fixed", selection: "fixed", credential_env: "FIXTURE_KEY" } },
     input: { instruction: "Offline protocol fixture", previous_results: {} } };
 }
-function fixtureHost({ reroute = false, earlyReroute = false, approval = false, neverComplete = false, account = "chatgpt", available = true, permissionMismatch = false, effortMismatch = false, earlyApproval = false, dirtyTerminals = false, wrongCwd = false, attention = false, delayedStart = false, hideStarted = false, onStart = () => {}, onTurn = () => {}, onStarted = () => {}, onInterrupt = () => {} } = {}) {
+function fixtureHost({ reroute = false, earlyReroute = false, approval = false, neverComplete = false, account = "chatgpt", available = true, permissionMismatch = false, effortMismatch = false, serviceMismatch = false, earlyApproval = false, dirtyTerminals = false, wrongCwd = false, attention = false, prelude = false, malformed = false, delayedStart = false, hideStarted = false, onStart = () => {}, onTurn = () => {}, onStarted = () => {}, onInterrupt = () => {} } = {}) {
   const source = `import readline from 'node:readline';
     const send = x => process.stdout.write(JSON.stringify(x)+'\\n');
     const reply = (id,result) => send({id,result});
@@ -28,12 +28,12 @@ function fixtureHost({ reroute = false, earlyReroute = false, approval = false, 
       if(m.method==='account/read') reply(m.id,{account:{type:${JSON.stringify(account)}}});
       if(m.method==='model/list') reply(m.id,{data:${available ? "[{model:'gpt-6-luna',supportedReasoningEfforts:[{reasoningEffort:'low'}]}]" : "[]"}});
       if(m.method==='thread/start'||m.method==='thread/resume') {
-        send({method:'fixture/started',params:{}});
+        send({method:'fixture/started',params:m.params});
         if(m.method==='thread/start'&&m.params.allowProviderModelFallback!==false) process.exit(4);
         if(m.params.config.web_search!=='disabled'||m.params.approvalPolicy!=='never') process.exit(2);
         const profile=m.params.config.permissions[m.params.permissions];
         if(profile.filesystem[':root']!=='deny'||profile.network.enabled!==false) process.exit(3);
-        reply(m.id,{thread:{id:'thread-one',turns:[]},cwd:${wrongCwd ? "'/wrong'" : "m.params.cwd"},approvalPolicy:'never',instructionSources:[],runtimeWorkspaceRoots:[m.params.cwd],model:m.params.model,modelProvider:m.params.modelProvider,reasoningEffort:${effortMismatch ? "'high'" : "m.params.config.model_reasoning_effort"},activePermissionProfile:{id:${permissionMismatch ? "'different-profile'" : "m.params.permissions"}}});
+        reply(m.id,{thread:{id:'thread-one',turns:[]},cwd:${wrongCwd ? "'/wrong'" : "m.params.cwd"},approvalPolicy:'never',instructionSources:[],runtimeWorkspaceRoots:[m.params.cwd],model:m.params.model,modelProvider:m.params.modelProvider,reasoningEffort:${effortMismatch ? "'high'" : "m.params.config.model_reasoning_effort"},serviceTier:${serviceMismatch?"'priority'":"m.params.serviceTier"},activePermissionProfile:{id:${permissionMismatch ? "'different-profile'" : "m.params.permissions"}}});
       }
       if(m.method==='thread/backgroundTerminals/clean') reply(m.id,{});
       if(m.method==='thread/backgroundTerminals/list') reply(m.id,{data:${dirtyTerminals ? "[{id:'still-running'}]" : "[]"},nextCursor:null});
@@ -46,7 +46,8 @@ function fixtureHost({ reroute = false, earlyReroute = false, approval = false, 
         ${approval ? "send({id:80,method:'item/commandExecution/requestApproval',params:{}});" : ""}
         ${reroute ? "send({method:'model/rerouted',params:{threadId:'thread-one',turnId:'turn-one',toModel:'unapproved'}});" : ""}
         ${neverComplete || approval ? "" : `send({method:'item/completed',params:{threadId:'thread-one',turnId:'turn-one',item:{type:'agentMessage',phase:'commentary',text:'Interim text is not the node result'}}});
-        send({method:'item/completed',params:{threadId:'thread-one',turnId:'turn-one',item:{type:'agentMessage',phase:'final_answer',text:JSON.stringify({outcome:${JSON.stringify(attention ? "attention" : "done")},output:'Offline fixture complete'})}}});
+        ${prelude ? "send({method:'item/completed',params:{threadId:'thread-one',turnId:'turn-one',item:{type:'agentMessage',phase:'final_answer',text:'Interim clarification before the structured final result'}}});" : ""}
+        send({method:'item/completed',params:{threadId:'thread-one',turnId:'turn-one',item:{type:'agentMessage',phase:'final_answer',text:${malformed ? JSON.stringify(typeof malformed==='string'?malformed:'unstructured completion claim') : "JSON.stringify({outcome:"+JSON.stringify(attention ? "attention" : "done")+",output:'Offline fixture complete'})"}}}});
         send({method:'thread/tokenUsage/updated',params:{threadId:'thread-one',turnId:'turn-one',tokenUsage:{last:{inputTokens:2,outputTokens:1},total:{inputTokens:10,outputTokens:4}}}});
         send({method:'turn/completed',params:{threadId:'thread-one',turn:{id:'turn-one',status:'completed'}}});`}
       }
@@ -56,7 +57,7 @@ function fixtureHost({ reroute = false, earlyReroute = false, approval = false, 
     env: { PATH: process.env.PATH }, assertCompatible: async () => {} });
   const connect = host.connect;
   host.connect = options => connect({ ...options, onNotification: message => {
-    if (message.method === "fixture/started") onStart();
+    if (message.method === "fixture/started") onStart(message.params);
     else if (message.method === "fixture/turn") onTurn(message.params);
     else if (message.method === "fixture/interrupt") onInterrupt();
     else { options.onNotification(message); if (message.method === "turn/started") onStarted(); }
@@ -79,9 +80,106 @@ test("Codex start/resume uses a real local JSON-RPC process, pinned model and re
   c.contract.authorization = { approval_ref: "approval.md" };
   await fs.writeFile(path.join(c.target, "approval.md"), "Synthetic approval");
   const rootWrites = await codexPermissionsForContract(c.target, c.contract);
-  for (const name of ["workkeel.lock", "workkeelw.mjs", "TEMPLE.md", "temple.lock", "templew.mjs", "approval.md"]) {
+  for (const name of ["workkeel.lock", "workkeelw.mjs", "approval.md"]) {
     assert.equal(rootWrites.filesystem[path.join(await fs.realpath(c.target), name)], "read", name);
   }
+});
+
+async function reviewContext(t){const c=await context(t);c.contract.environment.write_paths=[];c.contract.environment.network={mode:'none',hosts:[]};c.contract.environment.resources=[];c.contract.skills=[];return c;}
+test('source review preserves requested output and disables environments on thread and turn',async t=>{
+ const c=await reviewContext(t);let thread,turn,probed=0;
+ const host=fixtureHost({onStart:p=>thread=p,onTurn:p=>turn=p});host.assertSourceReview=async()=>{probed++;};
+ const runtime=createCodexRuntime(host,{sourceReview:true});const result=await runtime.start(c);
+ assert.equal(result.status,'completed');assert.equal(probed,1);assert.deepEqual(thread.environments,[]);assert.deepEqual(turn.environments,[]);assert.deepEqual(thread.dynamicTools,[]);assert.deepEqual(thread.selectedCapabilityRoots,[]);
+ assert.match(thread.developerInstructions,/Review only the source/);assert.match(thread.developerInstructions,/exact requested answer format/);assert.doesNotMatch(thread.developerInstructions,/Read applicable WORKKEEL/);
+ assert.deepEqual(JSON.parse(turn.input[0].text).work,c.input);assert.equal(result.usage.input_tokens,10);
+ await assert.rejects(runtime.resume({...c,conversation_id:result.conversation_id}),/fresh conversation/);
+});
+test('source review qualification and conflicting scope fail before inference',async t=>{
+ const c=await reviewContext(t);let calls=0;
+ assert.throws(()=>createCodexRuntime(fixtureHost(),{sourceReview:true}),/qualified/);
+ assert.throws(()=>createCodexRuntime(fixtureHost(),{sourceReview:'yes'}),/explicit/);
+ const host=fixtureHost({onTurn:()=>calls++});host.assertSourceReview=async()=>{throw Error('tools not disabled');};
+ await assert.rejects(createCodexRuntime(host,{sourceReview:true}).start(c),/tools not disabled/);assert.equal(calls,0);
+ host.assertSourceReview=async()=>{};
+ for(const change of [x=>x.contract.environment.write_paths=['src'],x=>x.contract.skills=['required.md'],x=>x.contract.environment.network.mode='allowlist',x=>x.input.instruction='',x=>x.conversation_id='prior']){
+  const invalid=structuredClone(c);change(invalid);await assert.rejects(createCodexRuntime(host,{sourceReview:true}).start(invalid),/Source review/);
+ }
+ assert.equal(calls,0);
+});
+test('source review rejects early or completed-only tool and unknown operations',async t=>{
+ const c=await reviewContext(t);
+ for(const operation of [{method:'item/started',type:'commandExecution'},{method:'item/completed',type:'mcpToolCall'},{method:'item/started',type:'newTool'}]){
+  const host=fixtureHost(),connect=host.connect;host.assertSourceReview=async()=>{};
+  host.connect=options=>connect({...options,onNotification:m=>{if(m.method==='turn/started')options.onNotification({method:operation.method,params:{item:{type:operation.type}}});options.onNotification(m);}});
+  await assert.rejects(createCodexRuntime(host,{sourceReview:true}).start(c),/tool or unknown/);
+ }
+});
+
+test('source review cannot succeed when a violation arrives during terminal cleanup',async t=>{
+ for(const kind of ['commandExecution','unknownTool','reroute','request','protocol']){
+  const c=await reviewContext(t),host=fixtureHost(),connect=host.connect;
+  host.assertSourceReview=async()=>{};
+  host.connect=async options=>{
+   const rpc=await connect(options),request=rpc.request.bind(rpc);let completed=false,injected=false;
+   rpc.request=async(method,params,...rest)=>{
+    const result=await request(method,params,...rest);
+    if(method==='turn/start')completed=true;
+    if(method==='thread/backgroundTerminals/clean'&&completed&&!injected){
+     injected=true;
+     if(kind==='protocol')options.onProtocolError();
+     else if(kind==='request')await options.onRequest({id:99,method:'item/commandExecution/requestApproval',params:{}});
+     else if(kind==='reroute')options.onNotification({method:'model/rerouted',params:{toModel:'unapproved'}});
+     else options.onNotification({method:'item/completed',params:{threadId:'thread-one',turnId:'turn-one',item:{id:'late',type:kind}}});
+    }
+    return result;
+   };
+   return rpc;
+  };
+  await assert.rejects(createCodexRuntime(host,{sourceReview:true}).start(c),/tool or unknown|pinned model|operator attention|invalid protocol/);
+ }
+});
+
+test('layered subscription routing sends and confirms the exact default service mode on start and resume',async t=>{
+  const c=await context(t);c.selection.connection={kind:'codex-subscription',model:'gpt-6-luna',effort:'low'};
+  c.selection.runtime_selection={provider:'openai',model:'gpt-6-luna',reasoning:'low',service:'provider-default'};
+  const turns=[],runtime=createCodexRuntime(fixtureHost({onTurn:params=>turns.push(params)}));
+  assert.deepEqual(runtime.assertModelSelection(c),c.selection.runtime_selection);
+  const result=await runtime.start(c);assert.deepEqual(result.runtime_selection,c.selection.runtime_selection);
+  assert.equal(turns[0].serviceTierForTurn,'default');assert.equal(turns[0].effort,'low');
+  const resumed=await runtime.resume({...c,conversation_id:'thread-one'});assert.deepEqual(resumed.runtime_selection,c.selection.runtime_selection);
+  assert.equal(turns[1].serviceTierForTurn,'default');
+});
+
+test('a final structured answer supersedes interim text and malformed settled output needs attention',async t=>{
+  const c=await context(t),structured=await createCodexRuntime(fixtureHost({prelude:true})).start(c);
+  assert.equal(structured.status,'completed');assert.equal(structured.output,'Offline fixture complete');
+  const malformed=await createCodexRuntime(fixtureHost({malformed:true})).start(c);
+  assert.equal(malformed.status,'failed');assert.equal(malformed.outcome,'attention');assert.match(malformed.output,/unstructured completion claim/);
+  assert.equal(malformed.usage.input_tokens,10,'known usage survives invalid content after actual process settlement');
+  const bounded=await createCodexRuntime(fixtureHost({malformed:'x'.repeat(65499)})).start(c);
+  assert.equal(bounded.status,'failed');assert.equal(bounded.outcome,'attention');assert.equal(Buffer.byteLength(bounded.output),65499);
+});
+
+test('exact file scopes remain exact, support new files and reject symlink escapes',async t=>{
+  const c=await context(t),root=await fs.realpath(c.target);await fs.writeFile(path.join(root,'src/value.mjs'),'export default 1;');
+  c.contract.environment.read_paths=['src/value.mjs'];c.contract.environment.write_paths=['src/value.mjs','src/new.mjs'];
+  const profile=await codexPermissionsForContract(root,c.contract);assert.equal(profile.filesystem[root+'/src/value.mjs'],'write');assert.equal(profile.filesystem[root+'/src/new.mjs'],'write');assert.equal(profile.filesystem[root+'/src'],undefined);
+  const readonly=await codexPermissionsForContract(root,c.contract,{productAccess:'read'});assert.equal(readonly.filesystem[root+'/src/value.mjs'],'read');
+  await fs.symlink('/tmp',root+'/src/escape');c.contract.environment.write_paths=['src/escape'];await assert.rejects(codexPermissionsForContract(root,c.contract),/symlink/);
+  c.contract.environment.write_paths=['../outside'];await assert.rejects(codexPermissionsForContract(root,c.contract),/normalized/);
+  c.contract.environment.write_paths=['.ai-org/new'];await fs.mkdir(root+'/.ai-org',{recursive:true});await assert.rejects(codexPermissionsForContract(root,c.contract),/protected/);
+});
+
+test('unsupported fixed service or connection tuple blocks before process dispatch and host mode drift blocks before inference',async t=>{
+  const c=await context(t);c.selection.connection={kind:'codex-subscription',model:'gpt-6-luna',effort:'low'};
+  c.selection.runtime_selection={provider:'openai',model:'gpt-6-luna',reasoning:'low',service:'priority'};
+  let connections=0;const runtime=createCodexRuntime({assertCompatible:async()=>{},connect:()=>{connections++;throw Error('Unexpected dispatch');}});
+  await assert.rejects(runtime.start(c),/supported default service/);assert.equal(connections,0);
+  c.selection.runtime_selection.service='provider-default';c.selection.runtime_selection.reasoning='high';
+  await assert.rejects(runtime.start(c),/exact approved/);assert.equal(connections,0);
+  c.selection.runtime_selection.reasoning='low';let turns=0;
+  await assert.rejects(createCodexRuntime(fixtureHost({serviceMismatch:true,onTurn:()=>turns++})).start(c),/confirm.*default service/);assert.equal(turns,0);
 });
 test("unqualified hosts and unsupported conditions fail before connecting", async t => {
   assert.throws(() => createCodexProcessHost({}), /qualified host/);
@@ -147,8 +245,9 @@ test("usage observations replace cumulative totals, ignore unrelated turns and s
       if (failResult && message.method === "item/completed" && message.params.item.phase === "final_answer") message.params.item.text = "not structured JSON";
       options.onNotification(message);
     } });
-    if (failResult) await assert.rejects(createCodexRuntime(host).start(c), /structured/);
-    else assert.deepEqual((await createCodexRuntime(host).start(c)).usage, { input_tokens: 20, output_tokens: 8, cost_usd: null });
+    const result=await createCodexRuntime(host).start(c);
+    assert.deepEqual(result.usage, { input_tokens: 20, output_tokens: 8, cost_usd: null });
+    if(failResult){assert.equal(result.status,'failed');assert.equal(result.outcome,'attention');assert.match(result.output,/structured/);}
     assert.equal(observations.at(-1).usage.input_tokens, 20);
     assert.equal(observations.at(-1).usage.cost_usd, null);
     assert.equal(observations.some(value => value.usage.input_tokens === 999), false);

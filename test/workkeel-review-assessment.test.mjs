@@ -34,14 +34,14 @@ async function fixture(t, { separation = 'distinct-agent', impact = 'none', pros
   await write(root, 'capture.log', 'Synthetic fixture capture, exit 0; not a real product measurement.\n');
   await initializeTaskProject(root, policy);
   git(root, 'add', '.'); git(root, 'commit', '-qm', 'base');
-  const contract = { schema_version: 'workkeel.task-contract/v1', id: 'WK-one', goal: 'Correct value', state: 'intake',
+  const contract = { schema_version: 'workkeel.task-contract/v2', id: 'WK-one', goal: 'Correct value', state: 'intake',
     scope: { include: ['value'], exclude: ['publication'] }, actor: builder, dependencies,
     acceptance: { criteria: ['Value equals two'], evidence: [] }, handoff: null,
     verification: { risk_tier: 'standard', separation, implementer: null, reviewer: null, candidate_revision: null },
     environment: { cwd: '.', read_paths: ['.'], write_paths: ['src', 'docs'], tools: ['node'], resources: [],
       network: { mode: 'none', hosts: [] }, external_actions: [], data: { classification: 'internal', model_access: 'none', policy_refs: ['approval.json'] } },
     authorization: { approved_by: 'owner', approval_ref: 'approval.json', operations: ['read', 'write', 'execute'], expires_at: expiresAt }, skills: [],
-    execution: { runtime: { kind: 'host-owned', adapter_id: null, required_features: [] }, model_connection: { kind: 'native' } }, legacy: null };
+    execution: { runtime: { kind: 'host-owned', adapter_id: null, required_features: [] }, model_connection: { kind: 'native' } } };
   await createNativeTask(root, contract, request(0));
   const claim = await mutateNativeTask(root, 'WK-one', 'claim', request(1, { base_revision: git(root, 'rev-parse', 'HEAD') }));
   await write(root, prose ? 'docs/note.md' : 'src/value.mjs', prose ? 'Spelling\n' : 'export const value = 2;\n');
@@ -94,7 +94,7 @@ test('actual diff and v1 stricter review floor survive, with a byte-for-byte no-
   assert.deepEqual(await snapshot(root), before);
 });
 
-test('unknown impact remains unresolved; pinned material impact selects established assurance; prose never waives review', async t => {
+test('unknown impact remains unresolved; pinned material impact selects elevated review; prose never waives review', async t => {
   const ordinary = await fixture(t, { prose: true });
   const unknown = await assessNativeTask(ordinary.root, 'WK-one');
   assert.equal(unknown.route, 'blocked');
@@ -103,7 +103,7 @@ test('unknown impact remains unresolved; pinned material impact selects establis
   assert.equal(prose.route, 'focused-independent-review');
   assert(prose.reasons.some(r => r.code === 'prose-semantics-unresolved'));
   const material = await fixture(t, { impact: 'material' });
-  assert.equal((await assessNativeTask(material.root, 'WK-one', input())).route, 'established-assurance');
+  assert.equal((await assessNativeTask(material.root, 'WK-one', input())).route, 'elevated-independent-review');
   await write(ordinary.root, 'unapproved.json', { schema_version: 'workkeel.review-impact/v1', task_id: 'WK-one', approved_by: 'owner', irreversible_impact: 'none' });
   assert.equal((await assessNativeTask(ordinary.root, 'WK-one', input({ impact_ref: 'unapproved.json' }))).route, 'blocked');
 });
@@ -216,15 +216,22 @@ test('padded and mixed-case reserved versions are unknown across every declared 
   }
 });
 
-test('changed authority, evidence, policy and capture bytes remain explicit blockers or ineligible measurements', async t => {
+test('missing evidence, changed policy and capture bytes remain explicit blockers; edited evidence and approval do not', async t => {
   const { root, evidence } = await fixture(t);
   const measurements = await reusable(root);
   await write(root, 'capture.log', 'changed\n');
   assert((await assessNativeTask(root, 'WK-one', measurements)).measurements[0].reasons.includes('capture-bytes-changed:capture.log'));
+  const kept = await fs.readFile(path.join(root, evidence));
   await write(root, evidence, 'altered\n');
-  assert((await assessNativeTask(root, 'WK-one', input())).reasons.some(r => r.code === 'delivery-evidence-changed'));
+  assert(!(await assessNativeTask(root, 'WK-one', input())).reasons.some(r => r.code.startsWith('delivery-evidence')));
+  await fs.rm(path.join(root, evidence));
+  assert((await assessNativeTask(root, 'WK-one', input())).reasons.some(r => r.code === 'delivery-evidence-unavailable'));
+  await fs.writeFile(path.join(root, evidence), kept);
   await write(root, 'approval.json', 'changed\n');
-  assert((await assessNativeTask(root, 'WK-one', input())).reasons.some(r => r.code === 'authority-changed'));
+  assert(!(await assessNativeTask(root, 'WK-one', input())).reasons.some(r => r.code.startsWith('authority-')));
+  await fs.rm(path.join(root, 'approval.json'));
+  assert((await assessNativeTask(root, 'WK-one', input())).reasons.some(r => r.code === 'authority-unavailable'));
+  await write(root, 'approval.json', 'changed\n');
   const policy = JSON.parse(await fs.readFile(path.join(root, 'workkeel.lock'), 'utf8')); policy.policy.review_separation = 'distinct-principal';
   await write(root, 'workkeel.lock', policy);
   assert((await assessNativeTask(root, 'WK-one', input())).reasons.some(r => r.code === 'policy-changed'));
@@ -248,7 +255,7 @@ test('malformed/unsupported input and unsafe source paths never produce affirmat
   await assert.rejects(assessNativeTask(root, 'WK-one', unknownCoverage), /exact approved criteria/);
 });
 
-test('accepted dependency pins are observed recursively and evidence drift blocks the dependent', async t => {
+test('accepted dependencies are observed recursively and missing dependency evidence blocks the dependent', async t => {
   const { root, revision, contract } = await fixture(t);
   const ref = '.ai-org/artifacts/WK-one/review.md'; await write(root, ref, 'Independent acceptance\n');
   await mutateNativeTask(root, 'WK-one', 'review', request(3, { revision, judgment: 'pass', summary: 'Accepted', evidence: [ref] }, reviewer));
@@ -263,10 +270,12 @@ test('accepted dependency pins are observed recursively and evidence drift block
   const report = await assessNativeTask(root, 'WK-two', parameters);
   assert.equal(report.route, 'focused-independent-review');
   assert.equal(report.repository_observed.dependencies[0].id, 'WK-one');
-  await write(root, ref, 'tampered dependency evidence\n');
-  const changed = await assessNativeTask(root, 'WK-two', parameters);
-  assert.equal(changed.route, 'blocked');
-  assert(changed.reasons.some(r => r.code === 'dependency-evidence-changed'));
+  await write(root, ref, 'edited dependency evidence\n');
+  assert.equal((await assessNativeTask(root, 'WK-two', parameters)).route, 'focused-independent-review');
+  await fs.rm(path.join(root, ref));
+  const missing = await assessNativeTask(root, 'WK-two', parameters);
+  assert.equal(missing.route, 'blocked');
+  assert(missing.reasons.some(r => r.code === 'dependency-evidence-unavailable'));
 });
 
 test('supplied commands and Git external diff drivers are not executed', async t => {

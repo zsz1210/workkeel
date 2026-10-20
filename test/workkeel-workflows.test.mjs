@@ -37,14 +37,14 @@ async function fixture(t, definition = graph(), executionPolicy = policy(), expi
   await fs.writeFile(path.join(root, "docs/approval.md"), "Approved local offline fixture with immutable workflow and execution policy.");
   await fs.writeFile(path.join(root, "docs/workflow.json"), JSON.stringify(definition));
   await fs.writeFile(path.join(root, "docs/execution.json"), JSON.stringify(executionPolicy));
-  const contract = { schema_version: "workkeel.task-contract/v1", id: "WK-workflow", goal: "Run approved offline workflow", state: "intake",
+  const contract = { schema_version: "workkeel.task-contract/v2", id: "WK-workflow", goal: "Run approved offline workflow", state: "intake",
     scope: { include: ["fixture"], exclude: ["publication"] }, actor, dependencies: [],
     acceptance: { criteria: ["The fixture completes"], evidence: [] }, handoff: null,
     verification: { risk_tier: "standard", separation: "distinct-agent", implementer: null, reviewer: null, candidate_revision: null },
     environment: { cwd: ".", read_paths: ["src"], write_paths: ["src"], tools: ["node"], resources: [], network: { mode: "none", hosts: [] }, external_actions: [],
       data: { classification: "internal", model_access: "none", policy_refs: ["docs/approval.md", "docs/workflow.json", "docs/execution.json"] } },
     authorization: { approved_by: "owner", approval_ref: "docs/approval.md", operations: ["read", "write", "execute"], expires_at: expiresAt }, skills: [],
-    execution: { runtime: { kind: "adapter", adapter_id: "fixture", required_features: [] }, model_connection: { kind: "policy", policy_ref: "docs/execution.json" } }, legacy: null };
+    execution: { runtime: { kind: "adapter", adapter_id: "fixture", required_features: [] }, model_connection: { kind: "policy", policy_ref: "docs/execution.json" } } };
   git(root, "add", "."); git(root, "commit", "-qm", "fixture");
   await createNativeTask(root, contract, { operation_id: "create", expected_version: 0, actor });
   const claim = await mutateNativeTask(root, contract.id, "claim", { operation_id: "claim", expected_version: 1, actor, base_revision: git(root, "rev-parse", "HEAD") });

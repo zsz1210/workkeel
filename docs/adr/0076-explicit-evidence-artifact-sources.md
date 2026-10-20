@@ -33,4 +33,4 @@ must explicitly select the map and all mapped records. The tool does not search
 history, guess a source, delete evidence, or make retention decisions. Missing or
 invalid original data remains debt until reviewed exact source bytes are available.
 Normal limits, safe paths, exclusive creation and project mutation locking apply.
-See the [recovery procedure](../operations/evidence-source-recovery.md).
+See the recovery procedure.

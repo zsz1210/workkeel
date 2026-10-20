@@ -86,6 +86,48 @@ test("sparse or padded arrays never satisfy role or probe requirements", async (
   for (const [result, pattern] of cases) await assert.rejects(runRolePreflight({ role: role(), host: trusted(result).host }), pattern);
 });
 
+test("preflight keeps the checked request stable while the host probe is pending", async t => {
+  const mutations = [
+    ["test ownership", value => { value.tests = "role"; }],
+    ["editing tools", value => { value.edit_tools[0] = "shell"; }],
+    ["model and effort", value => { Object.assign(value.model, { provider: "other", model: "other-model", effort: "low" }); }],
+    ["usage requirements", value => { value.usage.fields.length = 0; }],
+    ["role and access", value => { value.role = "review"; value.product_access = "read"; }]
+  ];
+  for (const [name, mutate] of mutations) await t.test(name, async () => {
+    const input = role(), expected = structuredClone(input);
+    const context = { approved_tools: ["apply_patch"], coordinator_checks: ["tests"] };
+    const entered = Promise.withResolvers(), resume = Promise.withResolvers();
+    let seen;
+    const host = createTrustedRoleHost({ id: "snapshot-host", probe: async request => {
+      seen = structuredClone(request); entered.resolve(); await resume.promise; return probe();
+    } });
+    const pending = runRolePreflight({ role: input, host, context });
+    await entered.promise;
+    assert.equal(Object.isFrozen(input), false); assert.equal(Object.isFrozen(input.model), false);
+    mutate(input); context.approved_tools[0] = "shell"; context.coordinator_checks.length = 0;
+    resume.resolve();
+    const receipt = await pending;
+    assert.deepEqual(seen, expected);
+    for (const key of ["role", "product_access", "tests", "edit_tools", "model"]) assert.deepEqual(receipt[key], expected[key]);
+    assert.deepEqual(receipt.usage_fields, expected.usage.fields);
+    assert.equal(receipt.execution_authorized, false);
+  });
+});
+
+test("probe request mutations cannot alter the private requirements or caller data", async () => {
+  const input = role(), expected = structuredClone(input);
+  const host = createTrustedRoleHost({ id: "isolated-probe-host", probe: async request => {
+    assert.notEqual(request.edit_tools, input.edit_tools); assert.notEqual(request.model, input.model);
+    request.edit_tools[0] = "shell"; request.model.model = "changed-in-probe"; request.usage.fields.length = 0;
+    return probe();
+  } });
+  const receipt = await runRolePreflight({ role: input, host, context: { approved_tools: ["apply_patch"], coordinator_checks: ["tests"] } });
+  assert.deepEqual(input, expected);
+  assert.deepEqual(receipt.edit_tools, expected.edit_tools); assert.deepEqual(receipt.model, expected.model);
+  assert.deepEqual(receipt.usage_fields, expected.usage.fields);
+});
+
 async function codexContext(t) {
   const target = await fs.mkdtemp(path.join(os.tmpdir(), "workkeel-role-"));
   t.after(() => fs.rm(target, { recursive: true, force: true }));

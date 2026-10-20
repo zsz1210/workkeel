@@ -5,7 +5,7 @@ import {readAllowlist} from './check-publication.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const privateRoots = new Set([
-  '.ai-org', '.codex', '.workkeel-private', '.temple-tmp', '.git', 'node_modules', 'output', 'coverage',
+  '.ai-org', '.codex', '.workkeel-private', '.workkeel-tmp', '.git', 'node_modules', 'output', 'coverage',
   'private', 'backups', 'workkeel.md', 'workkeel.lock', 'workkeelw.mjs',
   'temple.md', 'temple.lock', 'templew.mjs'
 ]);
@@ -52,7 +52,9 @@ export function checkSourceCheckout(cwd = root) {
   };
 }
 
-if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+let directInvocation=false;
+try{directInvocation=!!process.argv[1]&&fs.realpathSync(process.argv[1])===fs.realpathSync(fileURLToPath(import.meta.url));}catch{}
+if (directInvocation) {
   try {
     if (process.argv.length !== 2) throw Error('Usage: check-source-checkout.mjs');
     const report = checkSourceCheckout();

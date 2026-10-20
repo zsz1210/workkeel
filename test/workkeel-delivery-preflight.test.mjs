@@ -45,33 +45,30 @@ async function candidateRequest(f) {
     evidence:['docs/evidence.md'],unresolved:[]};
 }
 
-test('candidate diagnostics identify a stray report before handoff and exact new evidence resolves it',async t=>{
+test('candidate diagnostics treat every .ai-org report as administrative',async t=>{
   const f=await fixture(t),request=await candidateRequest(f),ref='.ai-org/artifacts/WK-preflight/snapshot.json';
   await fs.mkdir(path.dirname(f.root+'/'+ref),{recursive:true});await fs.writeFile(f.root+'/'+ref,'{"observed":true}');
-  const before=await fs.readFile(f.root+'/.ai-org/work-items/WK-preflight.json','utf8');
-  const blocked=await inspectTaskCandidate(f.root,'WK-preflight',{action:'handoff',request});
-  assert.equal(blocked.candidate_files_passed,false);
-  assert.deepEqual(blocked.issues.map(x=>[x.path,x.code]),[[ref,'unlisted-report']]);
-  await assert.rejects(mutateNativeTask(f.root,'WK-preflight','handoff',request),/including untracked files.*snapshot/);
-  assert.equal(await fs.readFile(f.root+'/.ai-org/work-items/WK-preflight.json','utf8'),before);
-  const exact={...request,evidence:[...request.evidence,ref]};
-  const ready=await inspectTaskCandidate(f.root,'WK-preflight',{action:'handoff',request:exact});
+  const ready=await inspectTaskCandidate(f.root,'WK-preflight',{action:'handoff',request});
   assert.equal(ready.candidate_files_passed,true);assert.equal(ready.lifecycle_validation,'not-performed');
   assert.equal(ready.execution_authorized,false);assert.ok(ready.administrative_paths.includes(ref));
-  const result=await mutateNativeTask(f.root,'WK-preflight','handoff',exact);assert.equal(result.state,'test');
+  const result=await mutateNativeTask(f.root,'WK-preflight','handoff',request);assert.equal(result.state,'test');
 });
 
-test('candidate diagnostics never exempt executable artifacts or modified tracked evidence',async t=>{
+test('candidate diagnostics report drift inside the write roots and ignore administrative or outside files',async t=>{
   const f=await fixture(t),script='.ai-org/artifacts/WK-preflight/report.mjs',tracked='.ai-org/artifacts/WK-preflight/frozen.md';
   await fs.mkdir(path.dirname(f.root+'/'+tracked),{recursive:true});await fs.writeFile(f.root+'/'+tracked,'Frozen report');
   f.git('add',tracked);f.git('commit','-qm','Evidence candidate');
-  const request=await candidateRequest(f);request.evidence.push(tracked,script);
+  const request=await candidateRequest(f);request.evidence.push(tracked);
   await fs.writeFile(f.root+'/'+tracked,'Changed report');await fs.writeFile(f.root+'/'+script,'throw Error("not metadata")');
+  await fs.writeFile(f.root+'/docs/notes.md','Outside the write roots');await fs.writeFile(f.root+'/src/stray.mjs','export {};');
   const result=await inspectTaskCandidate(f.root,'WK-preflight',{action:'handoff',request});
   assert.equal(result.candidate_files_passed,false);
-  assert.ok(result.issues.some(i=>i.path===tracked&&i.code==='tracked-artifact-changed'));
-  assert.ok(result.issues.some(i=>i.path===script&&i.code==='product-drift'));
-  await assert.rejects(mutateNativeTask(f.root,'WK-preflight','handoff',request),/tracked candidate artifact changed|including untracked/);
+  assert.deepEqual(result.issues.map(i=>[i.path,i.code]),[['src/stray.mjs','product-drift']]);
+  await assert.rejects(mutateNativeTask(f.root,'WK-preflight','handoff',request),/clean tree inside the approved write roots.*stray/);
+  await fs.unlink(f.root+'/src/stray.mjs');
+  assert.equal((await mutateNativeTask(f.root,'WK-preflight','handoff',request)).state,'test');
+  // A committed evidence path is read from the candidate, not from the edited working copy.
+  assert.deepEqual((await readNativeTask(f.root,'WK-preflight')).delivery.evidence.map(e=>e.source),['candidate','candidate']);
 });
 
 test('candidate diagnostics use exact paths, reject stale requests and do not mutate via the CLI',async t=>{
@@ -85,7 +82,7 @@ test('candidate diagnostics use exact paths, reject stale requests and do not mu
   const cli=spawnSync(process.execPath,['scripts/workkeel-delivery-preflight.mjs','candidate',f.root,tmp+'/request.json'],{encoding:'utf8'});
   assert.equal(cli.status,1);assert.equal(JSON.parse(cli.stdout).issues[0].path,ref);assert.equal(f.git('status','--porcelain=v1'),before);
   await assert.rejects(inspectTaskCandidate(f.root,'WK-preflight',{action:'handoff',request:{...request,expected_version:1}}),/Stale/);
-  await assert.rejects(inspectTaskCandidate(f.root,'WK-preflight',{action:'handoff',request:{...request,revision:'HEAD'}}),/immutable/);
+  await assert.rejects(inspectTaskCandidate(f.root,'WK-preflight',{action:'handoff',request:{...request,revision:'HEAD'}}),/commit ID/);
   await assert.rejects(inspectTaskCandidate(f.root,'WK-preflight',{action:'close',request:{operation_id:'close',expected_version:2,actor:request.actor,revision:request.revision,evidence:request.evidence}}),/delivered/);
 });
 
@@ -138,9 +135,10 @@ test('evidence mismatches, missing and untracked files, stale candidate and reco
   await fs.writeFile(f.root+'/docs/evidence.md','PASS is a quoted observation, not a performed gate.');
   f.git('add','docs/untracked.md');f.git('commit','-qm','Next');
   result=await readDeliveryPreflight(f.root,f.request);assert.ok(result.candidate_issues.includes('candidate-not-head'));
+  // An edited approval file is not an evidence warning.
   await fs.writeFile(f.root+'/docs/approval.md','Changed approval');
   result=await readDeliveryPreflight(f.root,{...f.request,candidate_revision:f.git('rev-parse','HEAD')});
-  assert.equal(result.evidence_preflight_passed,false);assert.ok(result.context_evidence.some(row=>row.status==='changed'));
+  assert.equal(result.evidence_preflight_passed,true,JSON.stringify(result));assert.deepEqual(result.context_evidence,[]);
 });
 
 test('leaf and parent symlinks, escape paths, oversized files and non-commit candidates are refused',async t=>{

@@ -52,10 +52,10 @@ skill-use.json`. Example request:
 
 ```json
 {
-  "expected":[".agents/skills/project-documentation/SKILL.md"],
-  "selected":[".agents/skills/project-documentation/SKILL.md"],
+  "expected":[".agents/skills/readme-writing/SKILL.md"],
+  "selected":[".agents/skills/readme-writing/SKILL.md"],
   "records":[{
-    "skill":".agents/skills/project-documentation/SKILL.md",
+    "skill":".agents/skills/readme-writing/SKILL.md",
     "read_complete":true,
     "application_evidence":[".ai-org/artifacts/WK-docs/documentation-review.md"],
     "verification_evidence":[".ai-org/artifacts/WK-docs/link-and-render-check.md"]
@@ -105,6 +105,6 @@ workkeel headroom read . --request original-read.json
 `original-read.json` contains `input` (the returned original path, repository-relative)
 and its `sha256`. The named environment variable identifies an explicitly installed
 Python executable; Workkeel installs nothing. `off` needs no Python packages.
-See the [Headroom adapter reference](headroom-adapter.md) for pinned versions,
-eligibility, preservation checks and measurements. Always report originals,
+The adapter is pinned to `headroom-ai==0.37.0` and `tiktoken==0.14.0`; see
+[third-party notices](../../THIRD_PARTY_NOTICES.md). Always report originals,
 compressed views and actual runtime token usage separately.

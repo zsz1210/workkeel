@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {createHash} from 'node:crypto';
-import {createJsonRpcProcess} from '../src/codex-app-server-provider.mjs';
+import {createJsonRpcProcess} from '../src/workkeel-json-rpc.mjs';
 
 const fixture=`let buffer='';process.stdin.setEncoding('utf8');
 process.stdin.on('data',chunk=>{buffer+=chunk;let at;while((at=buffer.indexOf('\\n'))!==-1){const line=buffer.slice(0,at);buffer=buffer.slice(at+1);consume(line);}});

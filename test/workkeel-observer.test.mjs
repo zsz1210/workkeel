@@ -22,8 +22,8 @@ test('analytics preserves partial, unknown and zero, deduplicates identities and
 });
 test('library searches content and invalidates derived cache without inferring Skill activation',async t=>{
  const root=await createObserverFixture();t.after(()=>fs.rm(root,{recursive:true,force:true}));const cache=createLibraryCache();
- const first=await readMonitorLibrary(root,{cache});assert.equal(first.skills.filter(x=>x.availability==='project').length,3);assert.ok(first.skills.some(x=>x.origin==='workkeel'&&x.availability==='not-added'));assert.deepEqual(first.learning.map(x=>x.completed_milestones),[1,2,3,1]);assert.equal(first.learning.at(-1).stopped,true);
- assert.equal(first.skills.find(x=>x.name==='temple-work').origin,'workkeel');assert.equal(first.skills.find(x=>x.name==='custom-check').origin,'project');
+ const first=await readMonitorLibrary(root,{cache});assert.equal(first.skills.filter(x=>x.availability==='project').length,3);assert.ok(!first.skills.some(x=>x.origin==='workkeel'));assert.deepEqual(first.learning.map(x=>x.completed_milestones),[1,2,3,1]);assert.equal(first.learning.at(-1).stopped,true);
+ assert.equal(first.skills.find(x=>x.name==='workkeel-work').origin,'project');assert.equal(first.skills.find(x=>x.name==='custom-check').origin,'project');
  assert.equal((await readMonitorLibrary(root,{cache,query:'copper kestrel'})).skills.length,1);assert.ok(cache.hits>0);
  const ref='.agents/skills/custom-check/SKILL.md';await fs.writeFile(path.join(root,ref),'# Changed\nSilver owl\n');
  assert.equal((await readMonitorLibrary(root,{cache,query:'copper kestrel'})).skills.length,0);
@@ -49,4 +49,24 @@ test('all observer APIs retain authentication, read-only methods and no external
  const policyPath=path.join(root,'docs/policy.json'),policy=JSON.parse(await fs.readFile(policyPath,'utf8'));policy.limits.steps=4;await fs.writeFile(policyPath,JSON.stringify(policy));
  const changed=await (await fetch(url.origin+'/api/snapshot',{headers})).json();assert.equal(changed.tasks.find(t=>t.id==='WK-working').settings.execution_policy.source_status,'changed');
  assert.equal((await fetch(url.origin+'/api/document?id='+documentId('private.md'),{headers})).status,503);
+});
+test('pre-0.2 learning records are reported as unsupported and never shown',async t=>{
+ const root=await createObserverFixture();t.after(()=>fs.rm(root,{recursive:true,force:true}));
+ const legacy={schema_version:'ai-org.learning-index/v1',entries:[{id:'LESSON-0001',kind:'lesson',title:'Old lesson',summary:'Old',status:'validated',confidence:'high',tags:[],applies_to:[],source_work_items:['WI-0001'],path:'.ai-org/learning/lessons/LESSON-0001.md',updated_at:'2026-01-01T00:00:00Z'}]};
+ await fs.mkdir(path.join(root,'.ai-org/learning/lessons'),{recursive:true});
+ await fs.writeFile(path.join(root,'.ai-org/learning/index.json'),JSON.stringify(legacy));
+ await fs.writeFile(path.join(root,'.ai-org/learning/lessons/LESSON-0001.md'),'# Old lesson\n');
+ const library=await readMonitorLibrary(root);
+ assert.ok(library.learning.every(entry=>entry.native===true),'only native learning is listed');
+ const error=library.errors.find(entry=>entry.code==='legacy-learning-unsupported');
+ assert.equal(error?.path,'.ai-org/learning/index.json');assert.match(error.next_action,/archive/i);
+});
+test('leftover pre-0.2 lesson and practice folders are reported without an index',async t=>{
+ for(const folder of ['lessons','practices']){
+  const root=await createObserverFixture();t.after(()=>fs.rm(root,{recursive:true,force:true}));
+  await fs.mkdir(path.join(root,'.ai-org/learning',folder),{recursive:true});
+  await fs.writeFile(path.join(root,'.ai-org/learning',folder,'OLD-0001.md'),'# Old\n');
+  const errors=(await readMonitorLibrary(root)).errors.filter(entry=>entry.code==='legacy-learning-unsupported');
+  assert.deepEqual(errors.map(entry=>entry.path),['.ai-org/learning/'+folder],folder);
+ }
 });

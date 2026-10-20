@@ -1,6 +1,6 @@
 {
   "name": "@zsz1210/workkeel",
-  "version": "0.1.0-beta.1",
+  "version": "0.2.0-beta.0",
   "description": "A repository-native task coordination framework for coding agents.",
   "license": "MIT",
   "repository": {
@@ -14,8 +14,6 @@
   "files": [
     "bin/",
     "src/",
-    "project-overlay/",
-    "packs/",
     "docs/README.md",
     "docs/adr/",
     "docs/assets/",
@@ -34,11 +32,10 @@
     "THIRD_PARTY_NOTICES.md"
   ],
   "bin": {
-    "workkeel": "./bin/workkeel.mjs",
-    "temple": "./bin/temple.mjs"
+    "workkeel": "./bin/workkeel.mjs"
   },
   "engines": {
-    "node": ">=24.0.0"
+    "node": ">=24.15.0"
   },
   "publishConfig": {
     "access": "public",
@@ -50,9 +47,9 @@
     "check:publication": "node scripts/check-publication.mjs --working",
     "check:public-history": "node scripts/check-publication.mjs --history",
     "setup:hooks": "git config --local core.hooksPath .githooks",
-    "check": "node scripts/check-repo.mjs && node scripts/check-doc-links.mjs && node scripts/check-package.mjs",
+    "check": "node scripts/check-repo.mjs && node scripts/check-import-boundary.mjs && node scripts/check-doc-links.mjs && node scripts/check-package.mjs",
     "test": "node scripts/test-groups.mjs full",
-    "test:browser": "node scripts/verify-console-browser.mjs",
+    "test:browser": "node scripts/verify-workkeel-monitor.mjs",
     "test:fast": "node scripts/test-groups.mjs fast",
     "test:core": "node scripts/test-groups.mjs core",
     "test:optional": "node scripts/test-groups.mjs optional",
@@ -67,7 +64,9 @@
   },
   "dependencies": {
     "ajv": "8.20.0",
-    "ajv-formats": "3.0.1"
+    "ajv-formats": "3.0.1",
+    "picomatch": "4.0.7",
+    "semver": "7.8.5"
   },
   "optionalDependencies": {
     "@langchain/core": "1.2.12",
@@ -76,6 +75,8 @@
     "zod": "4.6.5"
   },
   "devDependencies": {
-    "playwright-core": "1.62.1"
+    "acorn": "8.19.0",
+    "playwright-core": "1.62.1",
+    "validate-npm-package-name": "8.0.0"
   }
 }

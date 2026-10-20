@@ -36,9 +36,9 @@ This Code of Conduct applies in all Workkeel community spaces. It also applies w
 
 ## Reporting and enforcement
 
-Report abusive, harassing, or otherwise unacceptable behavior privately to `zsz1210+oss.temple@gmail.com` with the subject prefix `[Temple][CONDUCT]`. Do not include conduct reports or another person's private information in a public GitHub issue.
+Report abusive, harassing, or otherwise unacceptable behavior privately to `zsz1210+oss.workkeel@gmail.com` with the subject prefix `[Workkeel][CONDUCT]`. Do not include conduct reports or another person's private information in a public GitHub issue.
 
-The legacy address and subject prefix are intentionally retained after the Workkeel rename. The current maintainer monitors this project-scoped address. Reports will be reviewed privately, fairly, and as promptly as project capacity allows. The reporter's privacy and security will be respected. Workkeel is an early Alpha project and does not promise a response-time SLA.
+The current maintainer monitors this project-scoped address. Reports will be reviewed privately, fairly, and as promptly as project capacity allows. The reporter's privacy and security will be respected.
 
 ## Community impact guidelines
 

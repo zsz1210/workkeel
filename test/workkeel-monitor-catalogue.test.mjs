@@ -22,5 +22,5 @@ test('configured Skill sources are searchable, source-labelled and read only thr
   }
   await fs.unlink(path.join(personal,'my-skill/SKILL.md'));await fs.symlink('../private.txt',path.join(personal,'my-skill/SKILL.md'));
   await assert.rejects(readCatalogueDocument(root,skill.id,{catalogRoots}),/symlink/);
-  const partial=await readMonitorLibrary(root,{catalogRoots:[{path:personal+'/missing',origin:'user'}]});assert.ok(partial.errors.some(e=>e.code==='skill-source-unavailable'));assert.ok(partial.skills.some(s=>s.origin==='workkeel'));
+  const partial=await readMonitorLibrary(root,{catalogRoots:[{path:personal+'/missing',origin:'user'}]});assert.ok(partial.errors.some(e=>e.code==='skill-source-unavailable'));assert.ok(partial.skills.some(s=>s.origin==='project'));
 });

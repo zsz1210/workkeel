@@ -2,9 +2,10 @@ import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import fs from "node:fs/promises";
 import path from "node:path";
-import { createJsonRpcProcess } from "./codex-app-server-provider.mjs";
+import { createJsonRpcProcess } from "./workkeel-json-rpc.mjs";
 import { createCodexRuntime, codexPermissionProfileArgs } from "./workkeel-codex-runtime.mjs";
 import { safeDirectory } from "./workkeel-project.mjs";
+import {listNativeSkillLifecycle} from './workkeel-learning-lifecycle.mjs';
 
 const exec = promisify(execFile);
 export const QUALIFIED_CODEX_VERSION = "codex-cli 0.155.0-alpha.9.2";
@@ -43,6 +44,11 @@ export function codexVersionAtLeast(actual, minimum = QUALIFIED_CODEX_VERSION) {
 const disabled = ["apps", "plugins", "remote_plugin", "hooks", "browser_use", "browser_use_external", "browser_use_full_cdp_access",
   "computer_use", "image_generation", "multi_agent", "multi_agent_v2", "memories", "skill_mcp_dependency_install", "skill_search",
   "shell_snapshot", "workspace_dependencies", "tool_suggest", "auth_elicitation", "goals", "in_app_local_automation"];
+const sourceReviewDisabled=["shell_tool","unified_exec","view_image","sleep_tool","code_mode_host","in_app_browser","in_app_chat","realtime_conversation","request_permissions_tool"];
+export function assertCodexSourceReviewControls(config){
+  const failed=sourceReviewDisabled.filter(name=>config.features?.[name]!==false);
+  if(failed.length)throw Error(`Codex source review tools are not disabled: ${failed.join(", ")}`);
+}
 const cleanEnvironment = () => Object.fromEntries(["PATH", "HOME", "USER", "LOGNAME", "TMPDIR", "CODEX_HOME"]
   .filter(name => process.env[name] !== undefined).map(name => [name, process.env[name]]));
 
@@ -79,24 +85,50 @@ async function readableProjectSkill(target, file) {
   }
 }
 
-export async function codexSkillPolicy(rpc, target) {
-  const disabledPaths = [], enabledPaths = [];
-  for (const skill of await skillCatalogue(rpc, target)) {
+const versionedSkill=(target,file)=>file.startsWith(path.join(target,'.agents/skills/workkeel-local')+path.sep);
+async function activeVersionedSkills(target,skills){
+  if(!skills.some(skill=>versionedSkill(target,skill.path)))return new Set();
+  const view=await listNativeSkillLifecycle(target);
+  return new Set(view.active.map(skill=>path.join(target,skill.entrypoint.path)));
+}
+function configuredSkillDisables(entries) {
+  if (!Array.isArray(entries)) throw new Error("Invalid configured Skill overrides");
+  const paths = new Set(), disabled = new Set();
+  for (const entry of entries) {
+    if (!entry || typeof entry.path !== "string" || entry.path.includes("\0") ||
+        !path.isAbsolute(entry.path) || path.normalize(entry.path) !== entry.path ||
+        typeof entry.enabled !== "boolean" || paths.has(entry.path)) {
+      throw new Error("Invalid or ambiguous configured Skill overrides");
+    }
+    paths.add(entry.path);
+    if (!entry.enabled) disabled.add(entry.path);
+  }
+  return disabled;
+}
+
+export async function codexSkillPolicy(rpc, target, {configuredSkills = [], sourceReview = false} = {}) {
+  if (typeof sourceReview !== "boolean") throw new Error("Source review mode must be explicit");
+  // Snapshot inherited disables before awaiting discovery. A temporarily missing
+  // file is still disabled when it returns; discovery cannot grant it permission.
+  const disabledPaths = configuredSkillDisables(configuredSkills), enabledPaths = [];
+  const skills=await skillCatalogue(rpc,target),activeVersions=sourceReview?new Set():await activeVersionedSkills(target,skills);
+  for (const skill of skills) {
     // Replacing the config array must retain existing disabled project Skills.
-    if (!skill.enabled || !await readableProjectSkill(target, skill.path)) disabledPaths.push(skill.path);
+    if (sourceReview || disabledPaths.has(skill.path) || !skill.enabled || !await readableProjectSkill(target, skill.path) || versionedSkill(target,skill.path)&&!activeVersions.has(skill.path)) disabledPaths.add(skill.path);
     else enabledPaths.push(skill.path);
   }
-  return { disabledPaths, enabledPaths };
+  return { disabledPaths:[...disabledPaths], enabledPaths };
 }
 
 export async function assertCodexSkills(rpc, target, { disabledPaths, enabledPaths }) {
   const disabledSet = new Set(disabledPaths), skills = await skillCatalogue(rpc, target);
+  const activeVersions=await activeVersionedSkills(target,skills);
   const activePaths = new Set(skills.filter(skill => skill.enabled).map(skill => skill.path));
   if (enabledPaths.some(file => !activePaths.has(file))) {
     throw new Error("Codex Skill catalogue lost an enabled project Skill; resolve host routing before dispatch");
   }
   for (const skill of skills) {
-    if (skill.enabled && (disabledSet.has(skill.path) || !await readableProjectSkill(target, skill.path))) {
+    if (skill.enabled && (disabledSet.has(skill.path) || !await readableProjectSkill(target, skill.path) || versionedSkill(target,skill.path)&&!activeVersions.has(skill.path))) {
       throw new Error("Codex Skill catalogue contains an enabled out-of-scope or disabled Skill; resolve host routing before dispatch");
     }
   }
@@ -116,15 +148,18 @@ function assertControls(config, target) {
 }
 
 /** Uses existing ChatGPT login; never reads/copies credentials or rewrites global config. */
-export async function createLocalCodexSubscriptionHost(targetInput, { command = "codex" } = {}) {
+export async function createLocalCodexSubscriptionHost(targetInput, { command = "codex", sourceReview = false } = {}) {
+  if(typeof sourceReview!=="boolean")throw Error("Source review mode must be explicit");
   const target = await safeDirectory(targetInput, ".");
   const env = cleanEnvironment();
   const version = (await exec(command, ["--version"], { env, timeout: 5000 })).stdout.trim();
   if (!codexVersionAtLeast(version) || process.platform !== "darwin") throw new Error("Codex version/platform needs host qualification before automatic execution");
+  if(sourceReview&&!codexVersionAtLeast(version,"codex-cli 0.162.0-alpha.17.2"))throw Error("Codex source review requires the qualified environment-disabling protocol version");
   const settings = [...disabled.map(name => `features.${name}=false`), "web_search=\"disabled\"", "analytics.enabled=false",
     "shell_environment_policy.inherit=\"none\"", "shell_environment_policy.set={}", "shell_environment_policy.include_only=[]", "shell_environment_policy.experimental_use_profile=false",
     "project_doc_max_bytes=0", "instructions=\"\"", "developer_instructions=\"\"", "features.skip_host_skill_discovery=true", "allow_login_shell=false",
     `projects={${JSON.stringify(target)}={trust_level=\"untrusted\"}}`, "approval_policy=\"never\"", "sandbox_mode=\"read-only\""];
+  if(sourceReview)settings.push(...sourceReviewDisabled.map(name=>`features.${name}=false`));
   const args = () => ["app-server", "--stdio", ...settings.flatMap(setting => ["-c", setting])];
   const probe = createJsonRpcProcess(command, args(), { cwd: target, env });
   let skillPolicy;
@@ -141,13 +176,14 @@ export async function createLocalCodexSubscriptionHost(targetInput, { command = 
       if (!/^[A-Za-z0-9_-]+$/.test(name)) throw new Error("Codex MCP name requires a separately reviewed host profile");
       settings.push(`mcp_servers.${name}.enabled=false`);
     }
-    skillPolicy = await codexSkillPolicy(probe, target);
+    skillPolicy = await codexSkillPolicy(probe, target, {configuredSkills:config.skills?.config, sourceReview});
     // alpha.16.3 requires exact SKILL.md paths, not containing directories.
     // Check the resulting catalogue on the actual dispatch connection as well.
     settings.push(`skills.config=[${skillPolicy.disabledPaths.map(file => `{path=${JSON.stringify(file)},enabled=false}`).join(",")}]`);
   } finally { await probe.close(); }
   const assertConnected = async (rpc, context) => {
     const { config } = await rpc.request("config/read", { cwd: target, includeLayers: false }); assertControls(config, target);
+    if(sourceReview)assertCodexSourceReviewControls(config);
     await assertCodexSkills(rpc, target, skillPolicy);
     const account = await rpc.request("account/read", { refreshToken: false });
     if (account.account?.type !== "chatgpt") throw new Error("Existing ChatGPT subscription login is required; Workkeel will not change accounts");
@@ -156,6 +192,10 @@ export async function createLocalCodexSubscriptionHost(targetInput, { command = 
     if (!model?.supportedReasoningEfforts.some(e => e.reasoningEffort === context.selection.connection.effort)) throw new Error("Requested subscription model/effort is not currently available");
   };
   return {
+    ...(sourceReview?{assertSourceReview:async(rpc)=>{
+      const {config}=await rpc.request("config/read",{cwd:target,includeLayers:false});assertControls(config,target);assertCodexSourceReviewControls(config);
+      if((await skillCatalogue(rpc,target)).some(skill=>skill.enabled))throw Error("Source review cannot discover enabled Skills");
+    }}:{}),
     assertCompatible: async ({ target: requested, contract, selection }) => {
       if (await safeDirectory(requested, ".") !== target || selection.connection.kind !== "codex-subscription" ||
           contract.environment.tools.length !== 1 || contract.environment.tools[0] !== "codex" ||
@@ -169,5 +209,5 @@ export async function createLocalCodexSubscriptionHost(targetInput, { command = 
 }
 
 export async function createLocalCodexSubscriptionRuntime(target, options) {
-  return createCodexRuntime(await createLocalCodexSubscriptionHost(target, options));
+  return createCodexRuntime(await createLocalCodexSubscriptionHost(target, options),{sourceReview:options?.sourceReview??false});
 }

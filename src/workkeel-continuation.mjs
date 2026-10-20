@@ -16,15 +16,19 @@ async function absent(target, ref) {
 }
 const wrap = value => formatJson({ value, sha256: executionDigest(value) });
 function checkRequest(request, executing) {
-  exactKeys(request, ["source_run_id", "actor", "workflow_ref", "policy_ref", "run_id"], executing ? ["expected_plan", "material_refs"] : ["material_refs"]);
+  exactKeys(request, ["source_run_id", "actor", "workflow_ref", "policy_ref", "run_id"], executing ? ["expected_plan", "material_refs", "model_policy", "capabilities"] : ["material_refs", "model_policy", "capabilities"]);
   refFor(request.source_run_id); refFor(request.run_id);
   if (request.source_run_id === request.run_id) throw Error("Continuation needs a distinct successor run");
   if (executing && typeof request.expected_plan !== "string") throw Error("Continuation needs the inspected expected plan");
 }
+const routingFields=(request,original)=>Object.fromEntries(['model_policy','capabilities'].flatMap(key=>{
+  const value=Object.hasOwn(request,key)?request[key]:original.request[key];return value===undefined?[]:[[key,structuredClone(value)]];
+}));
 
 async function inspect(target, request, { locked = false, intent = null } = {}) {
   const ref = refFor(request.source_run_id);
   const original = await readWorkflowRun(target, request.source_run_id);
+  const routing=routingFields(request,original);
   if (!intent && !await absent(target, refFor(request.run_id))) throw Error("Successor run already exists");
   const item = await readNativeTask(target, original.request.task_id);
   if (!item.claim) throw Error("Continuation requires a current implementation claim");
@@ -54,10 +58,10 @@ async function inspect(target, request, { locked = false, intent = null } = {}) 
   if (executionDigest(partial) !== executionDigest(settlement.partial)) throw Error("Partial source or HEAD changed since interruption");
   // This checks current contract policy pins and source refs, without launching a provider.
   const next = await planWorkflow(target, { task_id: item.id, actor: request.actor, claim_id: item.claim.id,
-    workflow_ref: request.workflow_ref, policy_ref: request.policy_ref, ...(request.material_refs ? { material_refs: request.material_refs } : {}) });
+    workflow_ref: request.workflow_ref, policy_ref: request.policy_ref, ...routing, ...(request.material_refs ? { material_refs: request.material_refs } : {}) });
   const body = { schema_version: "workkeel.continuation-plan/v1", task_id: item.id,
     source_run_id: request.source_run_id, run_id: request.run_id, original_claim_id: original.request.claim_id,
-    actor: request.actor, workflow_ref: request.workflow_ref, policy_ref: request.policy_ref,
+    actor: request.actor, workflow_ref: request.workflow_ref, policy_ref: request.policy_ref, ...routing,
     ...(request.material_refs ? { material_refs: request.material_refs } : {}),
     settlement_sha256: executionDigest(settlement), pins: next.pins, partial, operations };
   return { ...body, sha256: executionDigest(body), execution_authorized: false, next_action: "continue-confirmed-interruption" };
@@ -78,7 +82,7 @@ export async function readContinuationView(target, id) {
   try {
     const original = await readWorkflowRun(target, id);
     const plan = await planContinuation(target, { source_run_id: id, run_id: `preview-${executionDigest(id).slice(0,24)}`,
-      actor: original.request.actor, workflow_ref: original.request.workflow_ref, policy_ref: original.request.policy_ref });
+      actor: original.request.actor, workflow_ref: original.request.workflow_ref, policy_ref: original.request.policy_ref, ...routingFields({},original) });
     return { source_run_id: id, status: plan.next_action === "inspect-existing-successor" ? "successor-recorded" : "confirmed-interruption",
       execution_authorized: false, next_action: plan.next_action === "inspect-existing-successor" ? "Inspect the recorded successor; do not create another continuation." :
         "Prepare current takeover material and inspect a continuation plan before dispatch." };
@@ -127,7 +131,7 @@ export async function continueWorkflow(target, request, options = {}) {
     const refreshed = await inspect(target, request, { locked: true, intent });
     if (refreshed.sha256 !== request.expected_plan) throw Error("Continuation changed before dispatch");
     const run = { run_id: request.run_id, task_id: intent.task_id, actor: request.actor, claim_id: claimed.claim.id,
-      workflow_ref: request.workflow_ref, policy_ref: request.policy_ref, ...(request.material_refs ? { material_refs: request.material_refs } : {}) };
+      workflow_ref: request.workflow_ref, policy_ref: request.policy_ref, ...routingFields(request,await readWorkflowRun(target,request.source_run_id)), ...(request.material_refs ? { material_refs: request.material_refs } : {}) };
     return await executeWorkflow(target, run, options);
   } finally { await unlock(); }
 }

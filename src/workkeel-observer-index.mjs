@@ -20,7 +20,7 @@ export function semanticObserverValue(value){
      const rework=value.timeline.some(event=>event.action==='rework'),phase={intake:'waiting',build:rework?'rework':'implementation',test:'review',release_gate:'acceptance'}[last.state];
      if(typeof lifecycle.elapsed_ms==='number')lifecycle.elapsed_ms-=tail;
      if(phase&&typeof lifecycle.phases?.[phase]==='number')lifecycle.phases={...lifecycle.phases,[phase]:lifecycle.phases[phase]-tail};
-    }else if(value.record_mode==='work-items'&&Object.keys(lifecycle.phases??{}).length===0)delete lifecycle.elapsed_ms;
+    }
    }
    result[key]=semanticObserverValue(lifecycle);continue;
   }
@@ -38,7 +38,7 @@ const newest=(a,b)=>String(b.updated_at??'').localeCompare(String(a.updated_at??
 /** Rebuildable in-memory query index. No authority is granted by this cache.
  * Watch invalidation is reconciled by fresh safe-reader validation every 30s.
  * Detail/document requests revalidate; the UI displays the last validation time. */
-export function createObserverIndex(target,reader,{catalogRoots=[],reconcileMs=30000,historyReader=null,detailReader=null}={}) {
+export function createObserverIndex(target,reader,{catalogRoots=[],reconcileMs=30000,detailReader=null}={}) {
   let current=null,compact=[],rows=[],revision='',dirty=true,validated=0,changed=null,pending=null,closed=false,generation=0,lastError=false,lastAttempt=0;
   const taskCache=new Map(),changes=new Set(),watchers=[],stats={builds:0,hits:0,watch_events:0,model_calls:0};
   const invalidate=(file='*')=>{dirty=true;generation++;stats.watch_events++;changes.add(typeof file==='string'?file:'*');if(changes.size>256){changes.clear();changes.add('*');}};
@@ -83,11 +83,11 @@ export function createObserverIndex(target,reader,{catalogRoots=[],reconcileMs=3
       }
       if(route==='/api/task'&&detailReader){const task=await detailReader(params.get('id'));if(task)return {...task,execution:executionSummary(task)};}
       await read();
-      if(route==='/api/task'){let task=current.tasks.find(t=>t.id===params.get('id'));if(!task&&historyReader&&current.legacy_tasks_excluded)task=(await historyReader()).tasks.find(t=>t.id===params.get('id'));if(!task)throw Error('Task not found');return {...task,execution:executionSummary(task)};}
+      if(route==='/api/task'){const task=current.tasks.find(t=>t.id===params.get('id'));if(!task)throw Error('Task not found');return {...task,execution:executionSummary(task)};}
       if(route==='/api/workspace'){
         const counts=Object.fromEntries(['intake','build','test','release_gate','done','cancelled','unknown'].map(s=>[s,compact.filter(t=>t.task_state===s).length]));
         return {schema_version:'workkeel.workspace/v1',read_at:current.read_at,complete:current.complete,project:current.project,health:health(),
-          legacy_tasks_excluded:current.legacy_tasks_excluded,counts,total_tasks:compact.length,
+          counts,total_tasks:compact.length,
           tasks:compact,runtime_tools:[...new Set(current.tasks.map(t=>t.settings?.runtime?.adapter_id??t.settings?.runtime?.kind).filter(Boolean))],overview_usage:aggregateRows(rows.map(r=>({...r,total:'all'})),'total')[0]??null,
           recent_events:current.tasks.flatMap(task=>(task.timeline??[]).map(e=>({...e,task_id:task.id,title:task.title}))).sort((a,b)=>b.at.localeCompare(a.at)).slice(0,3),
           usage_coverage:{tasks_with_operations:new Set(rows.map(r=>r.task_id)).size,total_tasks:compact.length,operations:rows.length}};
@@ -95,11 +95,9 @@ export function createObserverIndex(target,reader,{catalogRoots=[],reconcileMs=3
       if(route==='/api/tasks'){
         const q=(params.get('q')??'').toLocaleLowerCase();if(q.length>200)throw Error('Search limit');
         const state=params.get('state')??'all',mode=params.get('mode')??'all',cutoff=Date.now()-7*86400000;
-        const history=params.get('history')==='1';
-        const inventory=history&&historyReader&&current.legacy_tasks_excluded?summaries((await historyReader()).tasks).sort(newest):history?[]:compact;
-        const matches=inventory.filter(t=>(t.id+' '+t.title).toLocaleLowerCase().includes(q)&&(state==='all'||state==='attention'&&t.needs_attention||state==='unfinished'&&!['done','cancelled','concluded'].includes(t.task_state)||t.task_state===state));
+        const matches=compact.filter(t=>(t.id+' '+t.title).toLocaleLowerCase().includes(q)&&(state==='all'||state==='attention'&&t.needs_attention||state==='unfinished'&&!['done','cancelled','concluded'].includes(t.task_state)||t.task_state===state));
         const items=matches.filter(t=>mode==='all'||mode==='recent'&&Date.parse(t.updated_at)>=cutoff||mode==='unresolved'&&!['done','cancelled'].includes(t.task_state));
-        return {...page(items,params,JSON.stringify([q,state,mode,history])),revision,history};
+        return {...page(items,params,JSON.stringify([q,state,mode])),revision};
       }
       if(route==='/api/analysis'){
         const filters=Object.fromEntries(['model','tool','reasoning','kind','outcome','task_type','task','days'].map(k=>[k,params.get(k)??'all']));

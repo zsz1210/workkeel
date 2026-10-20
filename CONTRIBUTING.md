@@ -5,7 +5,10 @@ proposals. Open an issue before a large feature or a change to task authority,
 file ownership, security, public APIs, or external integrations. Use synthetic
 examples. Report vulnerabilities through [SECURITY.md](SECURITY.md).
 
-This repository contains framework content only. Read [AGENTS.md](AGENTS.md) and
+## Developing Workkeel
+
+This repository holds framework source, public documentation, generic templates
+and reproducible tests. Read [AGENTS.md](AGENTS.md) and
 the [framework development guide](docs/operations/framework-development.md)
 before governed work. Create real tasks only in a separate private workspace
 outside the public source checkout, and back that workspace up independently.
@@ -19,6 +22,8 @@ tests and documentation of the resulting behavior; retain the development
 process and acceptance records privately, linked to the exact source revision.
 See the [separation decision](docs/adr/0083-public-source-private-state.md).
 
+## Pull requests
+
 For a pull request:
 
 1. Create a focused branch and state the user problem and proposed behavior.
@@ -27,26 +32,27 @@ For a pull request:
 3. In the private workspace, add meaningful behavioral tests where needed. Use `npm ci --ignore-scripts`
    and follow the [testing guide](docs/getting-started/testing.md):
    `npm run verify:fast` for prose-only edits and `npm run verify` for
-   behavioral candidates. UI changes also need the applicable browser gate.
+   behavioral candidates. Observatory browser tests (`npm run test:browser`)
+   are optional, not a merge or release gate.
 4. Describe the exact candidate tested, what the checks prove, and any
    unverified behavior. Have a different registered Agent review it before
    task acceptance. A passing test or PR check does not itself accept a task.
 5. Promote only reviewed source commits to the clean public checkout; never copy
    the private workspace wholesale. Install its local pre-push hook with
-   `npm run setup:hooks`. Run `npm run check:source-checkout`, review additions to
-   `public-files.json` and run `npm run check:publication` and
+   `npm run setup:hooks`; it pushes only `workkeel/*` branches. Run
+   `npm run check:source-checkout`, review additions to `public-files.json` and run `npm run check:publication` and
    `npm run check:public-history` before any public push. Follow the
    [publication boundary guide](docs/operations/publication-boundary.md).
    Publication and package release require separate maintainer authorization.
 
 Include a concise, non-sensitive verification summary in a PR: candidate revision,
 commands, results and material limits. Keep raw output and private review records
-outside the public repository. The [repository settings guide](docs/operations/repository-settings.md)
+outside the public repository. The [repository settings guide](docs/operations/publication-boundary.md#public-repository-settings)
 describes the public contribution and security surfaces.
 
 The English README is the canonical public entry point. Keep
 [Japanese](README.ja.md) and [Traditional Chinese](README.zh-TW.md) aligned
 when changing its capabilities or commands; see
-[ADR-0012](docs/adr/0012-documentation-language-policy.md).
-Existing Temple projects follow the
-[compatibility and migration guide](docs/getting-started/migration-from-temple.md).
+[ADR-0091](docs/adr/0091-foundations.md#2-documentation-language-from-adr-0012).
+Projects pinned to an earlier CLI keep using that version; 0.2 has no migration
+path from the removed legacy mode.

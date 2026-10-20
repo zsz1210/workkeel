@@ -4,27 +4,28 @@ import os from "node:os";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
 import test from "node:test";
-import { testInventory, groupFor, fastFiles, dailyFiles, selectChangedTests, changedPaths, selectionOptions } from "../scripts/test-groups.mjs";
+import { testInventory, groupFor, fastFiles, dailyFiles, optionalFiles, selectChangedTests, changedPaths, selectionOptions } from "../scripts/test-groups.mjs";
 
 test("every discovered test belongs to exactly one group; new tests default to core", async () => {
   const inventory = await testInventory();
   assert.ok(inventory.length > 0);
   assert.equal(new Set(inventory).size, inventory.length);
-  const combined = ["core", "optional"].flatMap((group) => inventory.filter((file) => groupFor(file) === group));
-  assert.deepEqual(combined.sort(), inventory);
+  assert.ok(inventory.every((file) => ["core", "optional"].includes(groupFor(file))));
   assert.equal(groupFor("test/new.test.mjs"), "core");
+  assert.ok(optionalFiles.every((file) => inventory.includes(file) && groupFor(file) === "optional"));
+  // Fast and daily runs, including the lifecycle end-to-end tests, stay core.
+  assert.ok(dailyFiles.every((file) => groupFor(file) === "core"));
   assert.ok(fastFiles.every((file) => inventory.includes(file)));
   assert.ok(dailyFiles.every((file) => inventory.includes(file)));
   assert.ok(fastFiles.every((file) => dailyFiles.includes(file)));
-  assert.ok(["test/autonomous-delivery.test.mjs", "test/collaborative-recovery.test.mjs",
-    "test/high-assurance.test.mjs", "test/recovery.test.mjs", "test/control-plane-live.test.mjs",
+  assert.ok(["test/workkeel-lifecycle.test.mjs", "test/workkeel-risk-tiers.test.mjs",
     "test/json-rpc-process-cleanup.test.mjs"].every((file) => dailyFiles.includes(file)));
 });
 
 test("prose uses fast checks; changed tests include their entire group", async () => {
   const inventory = await testInventory();
   assert.deepEqual(selectChangedTests(["README.md", "docs/getting-started/testing.md"], inventory).files, [...fastFiles].sort());
-  for (const file of ["test/context.test.mjs", "test/control-plane-live.test.mjs"]) {
+  for (const file of ["test/task-contract.test.mjs", "test/workkeel-lifecycle.test.mjs"]) {
     const selection = selectChangedTests([file], inventory);
     assert.ok(inventory.filter((candidate) => groupFor(candidate) === groupFor(file)).every((candidate) => selection.files.includes(candidate)));
   }
@@ -32,7 +33,7 @@ test("prose uses fast checks; changed tests include their entire group", async (
 
 test("unknown, shared, state, fixture and deleted test paths fail toward the full suite", async () => {
   const inventory = await testInventory();
-  for (const paths of [[], ["src/evidence.mjs"], ["scripts/test-groups.mjs"], ["package.json"], [".ai-org/project/evidence.json"],
+  for (const paths of [[], ["src/workkeel-tasks.mjs"], ["scripts/test-groups.mjs"], ["package.json"], [".ai-org/project/evidence.json"],
     ["test/fixtures/example.json"], ["test/deleted.test.mjs"], ["README.md", "unknown"], ["AGENTS.md"], ["docs/../src/a.md"]]) {
     assert.deepEqual(selectChangedTests(paths, inventory).files, inventory);
     assert.equal(selectChangedTests(paths, inventory).mode, "full");
@@ -49,7 +50,7 @@ test("selection options reject typos, duplicate flags and missing base values", 
 });
 
 test("compact reporter keeps full failed-test diagnostics", async (t) => {
-  const directory = await fs.mkdtemp(path.join(os.tmpdir(), "temple-compact-reporter-"));
+  const directory = await fs.mkdtemp(path.join(os.tmpdir(), "workkeel-compact-reporter-"));
   t.after(() => fs.rm(directory, { recursive: true, force: true }));
   const fixture = path.join(directory, "failure.test.mjs");
   await fs.writeFile(fixture, `import test from "node:test";\nimport assert from "node:assert/strict";\ntest("actionable sentinel",()=>assert.equal("actual","expected"));\n`);
@@ -76,7 +77,7 @@ test("CLI does not silently narrow verification after an unrecognized option", (
 });
 
 test("comparison includes committed, staged, unstaged, untracked and both rename paths", async (t) => {
-  const root = await fs.mkdtemp(path.join(os.tmpdir(), "temple-test-selection-"));
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), "workkeel-test-selection-"));
   t.after(() => fs.rm(root, { recursive: true, force: true }));
   const git = (...args) => {
     const result = spawnSync("git", ["-C", root, ...args], { encoding: "utf8" });

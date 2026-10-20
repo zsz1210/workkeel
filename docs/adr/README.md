@@ -1,101 +1,48 @@
 # Architecture Decision Records
 
-Native Workkeel decisions for new projects include
-[ADR-0083: public source and private task state](0083-public-source-private-state.md),
-[ADR-0081: native dispatch](0081-native-dispatch-and-reading-state.md),
-[ADR-0080: local observer](0080-read-only-observer-workspace.md),
-[ADR-0073: opt-in execution](0073-opt-in-workflow-execution.md), and
-[ADR-0072: task-first lifecycle](0072-task-first-lifecycle.md).
-Earlier Temple decisions below preserve compatibility rationale; they do not
-change this source checkout's [native instructions](../../AGENTS.md).
+An ADR is an Architecture Decision Record. It preserves the context, decision,
+rationale, and consequences of an important technical or organizational choice
+so that later Agents do not have to infer why it was made from chat memory.
 
-- [ADR-0079: Stage material and confirmed continuation](0079-stage-material-and-confirmed-continuation.md)
+Start with [ADR-0091: Foundations](0091-foundations.md). It carries forward the
+principles from the Temple-era records ADR-0001 to ADR-0070, which were removed
+from this tree and remain available in Git history. Those removed records
+describe mechanisms that Workkeel no longer ships and are not current behavior.
+[ADR-0083](0083-public-source-private-state.md) keeps its own exact wording and
+governs the public and private boundary.
 
-- [ADR-0074: On-demand task monitor](0074-on-demand-task-monitor.md)
+## Foundations and boundaries
 
-- [ADR-0073: Opt-in workflow execution and model routing](0073-opt-in-workflow-execution.md)
+- [ADR-0091: Foundations carried forward from the Temple-era decisions](0091-foundations.md)
+- [ADR-0083: Separate public framework source from private task state](0083-public-source-private-state.md)
 
+## Native task lifecycle
+
+- [ADR-0090: Introduce a task contract before migrating lifecycle authority](0090-workkeel-task-contract.md)
 - [ADR-0072: Task-first lifecycle without company Positions](0072-task-first-lifecycle.md)
-
-- [ADR-0066: Demand-driven Learning review coverage](0066-demand-driven-learning-review-coverage.md)
-
-- [ADR-0065: Shared autonomous execution with preserved risk contracts](0065-unified-autonomous-delivery.md)
-
-- [ADR-0064: Opt-in daily core delivery](0064-daily-core-delivery.md)
-
-- [ADR-0061: Exact-text mechanical completion](0061-exact-text-mechanical-completion.md)
-
-- [ADR-0059: Proportionate work routes and stage completion](0059-proportionate-work-routes.md)
-
-- [ADR-0001: Init instead of fork](0001-init-not-fork.md)
-- [ADR-0002: Separate Position and Agent Identity](0002-position-identity-assignment.md)
-- [ADR-0003: External canonical state](0003-canonical-state-outside-chat.md)
-- [ADR-0004: Three file-ownership boundaries](0004-file-ownership-boundaries.md)
-- [ADR-0005: Third-party capabilities use adapters](0005-third-party-adapters.md)
-- [ADR-0006: Lifecycle CLI and Codex task registry](0006-lifecycle-cli-and-task-registry.md)
-- [ADR-0007: Separate the toolkit name from project identity](0007-tool-name-project-identity.md)
-- [ADR-0008: Skill tiers and open-source distribution](0008-capability-distribution-and-open-source.md)
-- [ADR-0009: One Decision Interview and explicit Skill authority](0009-single-decision-interview-and-skill-authority.md)
-- [ADR-0010: The first optional development Skill pack](0010-first-development-skill-pack.md)
-- [ADR-0011: Stop by default when a pilot is complete](0011-pilot-stop-boundary.md)
-- [ADR-0012: English canonical documentation with localized README entry points](0012-documentation-language-policy.md)
-- [ADR-0013: Governed project and third-party Skill extensions](0013-governed-skill-extensions.md)
-- [ADR-0014: Define Temple as an AI Development Organization Framework](0014-framework-category-and-layers.md)
-- [ADR-0015: Preserve engineering learning as project-owned canonical state](0015-engineering-learning-loop.md)
-- [ADR-0016: Own UI design explicitly and scale its artifacts by risk](0016-ui-design-position-and-delivery-modes.md)
-- [ADR-0017: Route bounded project context through generated views](0017-progressive-context-routing.md)
-- [ADR-0018: Collaborative Position pools and Work Item claims](0018-collaborative-position-pools-and-work-claims.md)
-- [ADR-0019: Product specifications and external source contracts](0019-product-specification-and-external-source-contracts.md)
-- [ADR-0020: Separate external planning, Work Items, and Agent sessions](0020-external-tracker-coordination.md)
-- [ADR-0021: Derive safe group dispatch waves without taking runtime authority](0021-safe-group-parallel-orchestration.md)
-- [ADR-0022: Reserve governed work before creating a runtime worker](0022-recoverable-runtime-dispatch.md)
-- [ADR-0023: Separate normalized evidence from lifecycle authority](0023-evidence-registry-and-observer-projection.md)
-- [ADR-0024: Version extension contracts and state migrations explicitly](0024-version-extension-contracts-and-migrations.md)
-- [ADR-0025: Measure learning retrieval before selecting a semantic default](0025-measure-learning-retrieval-before-semantic-defaults.md)
-- [ADR-0026: Make High-Assurance a risk contract, not a larger team](0026-high-assurance-is-a-risk-contract.md)
-- [ADR-0027: Separate canonical state, runtime telemetry, and live views](0027-separate-canonical-state-runtime-telemetry-and-views.md)
-- [ADR-0028: Negotiate provider capabilities and reconcile replay](0028-negotiate-provider-capabilities-and-reconcile-replay.md)
-- [ADR-0029: Separate Human Inbox request authority](0029-separate-human-inbox-authority.md)
-- [ADR-0030: Self-host the toolkit with explicit source and project boundaries](0030-self-host-the-toolkit-with-explicit-boundaries.md)
-- [ADR-0031: Prove durable recovery before persistence growth](0031-durable-recovery-before-persistence-growth.md)
-- [ADR-0032: Evaluate policy with adversarial evidence](0032-evaluate-policy-with-adversarial-evidence.md)
-- [ADR-0033: Federate project authority with read-only portfolios](0033-federate-project-authority-with-read-only-portfolios.md)
-- [ADR-0034: Attribute usage before routing models](0034-attribute-usage-before-routing-models.md)
-- [ADR-0035: Separate private Dashboard viewing from remote Agent control](0035-private-read-only-dashboard.md)
-- [ADR-0036: Use a dedicated listener for the private LAN Dashboard](0036-dedicated-private-lan-dashboard-listener.md)
-- [ADR-0037: Automatically propose Skills, require human activation](0037-human-approved-skill-promotion.md)
-- [ADR-0038: Separate multi-human identity, eligibility, authority, and validation](0038-multi-human-team-governance.md)
-- [ADR-0039: Qualify public distribution against maintained Node.js LTS lines](0039-public-alpha-distribution-and-node-lts.md)
-- [ADR-0040: Gate the Management Console with installed Chrome and semantic browser contracts](0040-real-browser-console-regression.md)
-- [ADR-0041: Put the outcome before responsibility in Codex task titles](0041-outcome-first-codex-task-titles.md)
-- [ADR-0042: Adapt first-run guidance to the project's repository workflow](0042-adaptive-repository-integration-onboarding.md)
-- [ADR-0043: Require Node.js 24 and keep hosted CI bounded](0043-node-24-local-first-ci.md)
-- [ADR-0044: Keep the Management Console optional and separate usage collection](0044-optional-management-console-and-usage-collector.md)
-- [ADR-0045: Match delivery controls to risk and keep concluded work out of the blocked queue](0045-adaptive-workflow-profiles.md)
-- [ADR-0046: Separate adaptive execution routing from responsibility and calibration](0046-separate-adaptive-execution-routing.md)
-- [ADR-0047: Bind Context Capsules to stage, purpose, and measured source manifests](0047-bind-context-capsules-to-stage-purpose-and-source-manifests.md)
-- [ADR-0048: Govern auditable self-hosting with Evidence Profiles](0048-auditable-self-hosting-evidence-profiles.md)
-- [ADR-0049: Bind reviewed adapter fixtures to installed provenance](0049-bind-reviewed-adapter-fixtures-to-provenance.md)
-- [ADR-0050: Publish npm packages only from published GitHub Releases](0050-release-triggered-npm-trusted-publishing.md)
-- [ADR-0051: Scope local verification and deduplicate evidence reads](0051-scope-local-verification-and-deduplicate-evidence-reads.md)
-- [ADR-0052: Resolve every new handoff to an immutable commit](0052-immutable-handoff-revisions.md)
-- [ADR-0053: Same-scope review rework](0053-review-rework.md)
-- [ADR-0054: Bound delivery entry and compose recoverable administration](0054-bounded-delivery-entry-and-recovery.md)
-- [ADR-0055: Acquire transient stage material through an opt-in read-only command](0055-transient-stage-material.md)
-- [ADR-0056: Scope derived stage material without dropping governing rules](0056-stage-material-projections.md)
-- [ADR-0057: Composed Lean completion with separate diagnostics](0057-composed-lean-completion.md)
-- [ADR-0058: Opt-in bounded Lean entry](0058-bounded-lean-entry.md)
-- [ADR-0060: Task material and proportionate instructions](0060-task-material-and-proportionate-instructions.md)
-- [ADR-0068: Portable completion diagnostics and contributor proposals](0068-collaborative-completion-recovery.md)
-- [ADR-0069: Mechanical closeout evidence and explicit task readiness](0069-mechanical-closeout-and-task-readiness.md)
-- [ADR-0070: Optional compact evidence reading view](0070-compact-evidence-reading-view.md)
-
-- [ADR-0071: Opt-in tool-output compression](0071-opt-in-tool-output-compression.md)
-- [Workkeel task-contract migration](0071-workkeel-task-contract.md)
+- [ADR-0075: Daily task briefs and evidence-first observation](0075-daily-task-entry-and-observation.md)
+- [ADR-0076: Explicit historical evidence artifact sources](0076-explicit-evidence-artifact-sources.md)
 - [ADR-0077: Read-only first-use guidance](0077-first-use-guidance.md)
+- [ADR-0079: Stage material and confirmed continuation](0079-stage-material-and-confirmed-continuation.md)
+- [ADR-0086: Compact execution views and explicit completion evidence](0086-compact-execution-and-completion-evidence.md)
+- [ADR-0089: Evidence-only rework and bounded process drain](0089-evidence-rework-and-process-drain.md)
 
-- [ADR-0080: Read-only observer workspace](0080-read-only-observer-workspace.md)
-- [ADR-0081: Native dispatch and retained reading state](0081-native-dispatch-and-reading-state.md)
+## Review
+
+- [ADR-0082: Read-only review assessment](0082-advisory-review-assessment.md)
 - [ADR-0084: Role preflight and interrupted review recovery](0084-role-preflight-and-review-recovery.md)
+- [ADR-0087: Coordinator-owned browser verification](0087-coordinator-owned-browser-verification.md)
+- [ADR-0088: Explicit structured source-review protocol](0088-structured-source-review-protocol.md)
 
-An ADR is an Architecture Decision Record. It preserves the context, decision, rationale, and consequences of an important technical or organizational choice so that later Agents do not have to infer why it was made from chat memory.
+## Execution, dispatch and observation
+
+- [ADR-0071: Opt-in tool-output compression with exact original readback](0071-opt-in-tool-output-compression.md)
+- [ADR-0073: Opt-in workflow execution with explicit model and context policies](0073-opt-in-workflow-execution.md)
+- [ADR-0081: Native dispatch and retained reading state](0081-native-dispatch-and-reading-state.md)
+- [ADR-0074: Read existing task measurements on demand](0074-on-demand-task-monitor.md)
+- [ADR-0078: Observer task lifecycle measurements](0078-observer-task-lifecycle-measurements.md)
+- [ADR-0080: Read existing records in a local observer workspace](0080-read-only-observer-workspace.md)
+- [ADR-0085: Native workspace, bounded autonomy and versioned Skill learning](0085-native-workspace-bounded-autonomy-and-skill-learning.md)
+
+ADR-0090 was originally filed as a second `0071`; it was renumbered without
+changing its decision.

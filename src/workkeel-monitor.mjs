@@ -10,7 +10,6 @@ import {renderMonitorPage} from './workkeel-monitor-page.mjs';
 import {readContinuationView} from './workkeel-continuation.mjs';
 import {createLibraryCache,readMonitorLibrary,readMonitorDocument,readCatalogueDocument,readLearningDocument,taskResourceView,monitorProjectView} from './workkeel-monitor-data.mjs';
 import {measureReads,trackSources} from './workkeel-read-metrics.mjs';
-import {readWorkItemProject,readWorkItemSnapshot,readWorkItemDocument} from './workkeel-monitor-work-items.mjs';
 import {createObserverIndex} from './workkeel-observer-index.mjs';
 import {listNativeLearning} from './workkeel-learning.mjs';
 
@@ -32,7 +31,7 @@ export function workflowNeedsAttention(summary,measurements) {
 export async function readMonitorSnapshot(target,{maxTasks=200,taskCache=null,changedPaths=[],onlyIds=null}={}) {
   const now=new Date();
   const items=await listTaskItems(target,{isolateErrors:true});
-  const visible=items.filter(item=>item.mode!=='legacy-read-only'&&(!onlyIds||onlyIds.includes(item.id)));
+  const visible=items.filter(item=>!onlyIds||onlyIds.includes(item.id));
   if(visible.length>maxTasks) throw Error("Monitor task limit exceeded; use per-task metrics");
   const index=await readProjectMeasurements(target);
   const tasks=[];
@@ -63,17 +62,16 @@ export async function readMonitorSnapshot(target,{maxTasks=200,taskCache=null,ch
   tasks.sort((a,b)=>Number(b.needs_attention)-Number(a.needs_attention)||String(b.updated_at??'').localeCompare(String(a.updated_at??''))||a.id.localeCompare(b.id));
   if(taskCache)for(const id of taskCache.keys())if(!visible.some(t=>t.id===id))taskCache.delete(id);
   return {schema_version:"workkeel.monitor/v2",authority:"observation-only",mutation_status:"no-write",
-    read_at:now.toISOString(),legacy_tasks_excluded:items.length-visible.length,tasks,
+    read_at:now.toISOString(),tasks,
     complete:index.errors.length===0&&tasks.every(t=>t.read_status==='available'&&t.observation.status!=='unavailable'&&t.quality.evidence_current&&t.lifecycle.coverage==='complete-history'),
     measurement_errors:index.errors,inventory_reads:index.index_reads,project:await monitorProjectView(target)};
 }
 
 
-export async function startTaskMonitor(targetInput,{port=0,recordMode='native',service='foreground',accessToken=null,catalogRoots=[]}={}) {
+export async function startTaskMonitor(targetInput,{port=0,service='foreground',accessToken=null,catalogRoots=[]}={}) {
   if(!Number.isInteger(port)||port<0||port>65535)throw Error("Invalid monitor port");
-  if(!['native','work-items'].includes(recordMode))throw Error('Invalid observer record mode');
-  const target=await fs.realpath(targetInput);await (recordMode==='work-items'?readWorkItemProject:readTaskProject)(target);
-  const snapshotReader=recordMode==='work-items'?readWorkItemSnapshot:readMonitorSnapshot;
+  const target=await fs.realpath(targetInput);await readTaskProject(target);
+  const snapshotReader=readMonitorSnapshot;
   if(accessToken!==null&&!/^[a-f0-9]{64}$/.test(accessToken))throw Error('Invalid observer access token');
   const token=accessToken??randomBytes(32).toString('hex'),nonce=randomBytes(24).toString('base64');
   const view=await fs.readFile(new URL('./workkeel-monitor-view.mjs',import.meta.url));
@@ -82,11 +80,12 @@ export async function startTaskMonitor(targetInput,{port=0,recordMode='native',s
   for(const name of ['analytics','style'])assets.set('/'+name+(name==='style'?'.css':'.mjs'),await fs.readFile(new URL('./workkeel-monitor-'+name+(name==='style'?'.css':'.mjs'),import.meta.url)));
   assets.set('/workkeel-monitor-time.mjs',await fs.readFile(new URL('./workkeel-monitor-time.mjs',import.meta.url)));
   assets.set('/dom.mjs',await fs.readFile(new URL('./workkeel-monitor-dom.mjs',import.meta.url)));
+  for(const extension of ['mjs','css'])assets.set('/execution-visuals.'+extension,await fs.readFile(new URL('./workkeel-execution-visuals.'+extension,import.meta.url)));
   const html=renderMonitorPage(nonce);let origin,busy=false;
   const cache=createLibraryCache(),diagnostics={requests:0,model_calls:0,last:null};
-  const index=createObserverIndex(target,options=>snapshotReader(target,{maxTasks:2000,...options}),{catalogRoots,historyReader:()=>readWorkItemSnapshot(target),detailReader:async id=>{
+  const index=createObserverIndex(target,options=>snapshotReader(target,{maxTasks:2000,...options}),{catalogRoots,detailReader:async id=>{
     const task=(await snapshotReader(target,{maxTasks:2000,onlyIds:[id]})).tasks.find(t=>t.id===id);
-    if(task&&recordMode==='native')try{const learning=await listNativeLearning(target),uses=learning.uses.filter(use=>use.task_id===id);task.learning_uses=uses.slice(-100);task.learning_use_count=uses.length;}catch{task.learning_unavailable=true;}
+    if(task)try{const learning=await listNativeLearning(target),uses=learning.uses.filter(use=>use.task_id===id);task.learning_uses=uses.slice(-100);task.learning_use_count=uses.length;}catch{task.learning_unavailable=true;}
     return task;
   }});
   const server=http.createServer(async(req,res)=>{
@@ -114,8 +113,7 @@ export async function startTaskMonitor(targetInput,{port=0,recordMode='native',s
         if(route.pathname==='/api/document'){
           const id=route.searchParams.get('id');if(!/^[a-f0-9]{64}$/.test(id??''))throw Error('Invalid document identifier');
           const snapshot=await index.snapshot(),skillRefs=snapshot.tasks.flatMap(t=>(t.skills??[]).map(s=>s.path));
-          if(recordMode==='native'&&route.searchParams.get('history')==='1'&&snapshot.legacy_tasks_excluded)return readWorkItemDocument(target,id);
-          return await readCatalogueDocument(target,id,{cache,skillRefs,catalogRoots})??await readLearningDocument(target,id,{cache})??await (recordMode==='work-items'?readWorkItemDocument:readMonitorDocument)(target,id,{cache});
+          return await readCatalogueDocument(target,id,{cache,skillRefs,catalogRoots})??await readLearningDocument(target,id,{cache})??await readMonitorDocument(target,id,{cache});
         }
         const q=route.searchParams.get('q')??'';if(q.length>200)throw Error('Search limit');
         const snapshot=await index.snapshot();

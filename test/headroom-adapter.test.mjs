@@ -4,14 +4,11 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { createHash } from "node:crypto";
-import { spawnSync } from "node:child_process";
-import { fileURLToPath } from "node:url";
 import { createHeadroomView, createHeadroomPayload, readHeadroomOriginal, runHeadroomWorker, HEADROOM_CONTRACT } from "../src/headroom-adapter.mjs";
 
 const hash = (value) => createHash("sha256").update(value).digest("hex");
-const cli = fileURLToPath(new URL("../bin/temple.mjs", import.meta.url));
 async function fixture(t, content = "record: example value\r\n".repeat(1000)) {
-  const root = await fs.mkdtemp(path.join(os.tmpdir(), "temple-headroom-test-"));
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), "workkeel-headroom-test-"));
   t.after(() => fs.rm(root, { recursive: true, force: true }));
   const input = path.join(root, "input.txt"), snapshot = path.join(root, "original.txt");
   await fs.writeFile(input, content);
@@ -75,13 +72,9 @@ test("default text bypass avoids workers; opting into lossy does not enable a di
   const disabled=await createHeadroomPayload({...f,enabled:false,kind:'log'},{runWorker});
   assert.equal(disabled.diagnostics.reason,'disabled');assert.equal(calls,0);
   await assert.rejects(createHeadroomPayload({...f,allowLossy:'true'}),/boolean/);
-  const args=[cli,'adapter','headroom-payload',f.root,'--input','input.txt','--kind','log','--json'];
-  const selected=spawnSync(process.execPath,[...args,'--allow-lossy-headroom'],{encoding:'utf8'});
-  assert.equal(selected.status,0,selected.stderr);
-  assert.equal(JSON.parse(selected.stdout).diagnostics.compression_policy,'allow-lossy');
-  assert.equal(JSON.parse(selected.stdout).diagnostics.reason,'disabled');
-  const plain=spawnSync(process.execPath,[...args,'--enable-headroom'],{encoding:'utf8'});
-  assert.equal(plain.status,0,plain.stderr);assert.equal(JSON.parse(plain.stdout).diagnostics.reason,'lossless-json-only');
+  const selected=await createHeadroomPayload({...f,enabled:false,allowLossy:true,kind:'log'},{runWorker});
+  assert.equal(selected.diagnostics.compression_policy,'allow-lossy');assert.equal(selected.diagnostics.reason,'disabled');
+  assert.equal(calls,0);
 });
 
 test("model payload passthrough is byte exact without a worker or diagnostic wrapper", async (t) => {
@@ -146,17 +139,6 @@ test("payload keeps exact serialized readback and snapshot failure restores raw 
   assert.equal(failed.text, f.content); assert.equal(failed.diagnostics.reason, "snapshot-write-failed");
   assert.equal(failed.diagnostics.metrics.model_text_token_estimate.returned_output, 6000);
   assert.equal(await fs.readFile(snapshot, "utf8"), "another owner");
-});
-
-test("payload CLI emits only exact model text unless operator JSON is explicitly requested", async (t) => {
-  const f = await fixture(t, "\ufeff繁體中文\r\nno newline");
-  const args = [cli, "adapter", "headroom-payload", f.root, "--input", "input.txt", "--kind", "log", "--enable-headroom"];
-  const plain = spawnSync(process.execPath, args, { encoding: "utf8" });
-  assert.equal(plain.status, 0, plain.stderr); assert.equal(plain.stdout, f.content); assert.equal(plain.stderr, "");
-  const diagnostic = spawnSync(process.execPath, [...args, "--json"], { encoding: "utf8" });
-  assert.equal(diagnostic.status, 0, diagnostic.stderr);
-  const value = JSON.parse(diagnostic.stdout);
-  assert.equal(value.text, f.content); assert.equal(value.diagnostics.metrics.worker_attempts, 0);
 });
 
 test("disabled, small, unsupported and malformed JSON skip runtime and snapshot", async (t) => {
@@ -290,12 +272,12 @@ let denied=false;try{fs.writeFileSync(${JSON.stringify(outside)},'forbidden')}ca
 fs.writeFileSync(process.env.HOME+'/scratch.txt','allowed');
 const socket=net.connect({host:'127.0.0.1',port:9});
 socket.on('connect',()=>{console.log(JSON.stringify({failure:'network-was-allowed'}));socket.destroy()});
-socket.on('error',error=>console.log(JSON.stringify({writeDenied:denied,networkDenied:error.code==='EPERM'||error.code==='EACCES',scratch:process.env.HOME,secretInherited:process.env.TEMPLE_FIXTURE_SECRET!==undefined})));
+socket.on('error',error=>console.log(JSON.stringify({writeDenied:denied,networkDenied:error.code==='EPERM'||error.code==='EACCES',scratch:process.env.HOME,secretInherited:process.env.WORKKEEL_FIXTURE_SECRET!==undefined})));
 `, { mode: 0o700 });
-  process.env.TEMPLE_FIXTURE_SECRET = "must not inherit";
+  process.env.WORKKEEL_FIXTURE_SECRET = "must not inherit";
   let result;
   try { result = await runHeadroomWorker({ content: f.content, query: "fixture", python: executable }); }
-  finally { delete process.env.TEMPLE_FIXTURE_SECRET; }
+  finally { delete process.env.WORKKEEL_FIXTURE_SECRET; }
   assert.equal(result.writeDenied, true); assert.equal(result.networkDenied, true);
   assert.equal(result.secretInherited, false);
   await assert.rejects(fs.access(result.scratch)); await assert.rejects(fs.access(outside));
@@ -311,14 +293,10 @@ test("actual runner terminates a timed-out configured process", { skip: process.
   assert.ok(performance.now()-start < HEADROOM_CONTRACT.timeoutMs+10000);
 });
 
-test("real CLI passthrough and exact readback need no optional environment", async (t) => {
+test("original passthrough and exact readback need no optional environment", async (t) => {
   const f = await fixture(t, "日本語 tool output\n");
-  const invoke = (args) => spawnSync(process.execPath, [cli, "adapter", ...args, "--json"], { encoding: "utf8" });
-  const raw = invoke(["headroom-view", f.root, "--input", "input.txt", "--kind", "log"]);
-  assert.equal(raw.status, 0, raw.stderr); const view = JSON.parse(raw.stdout);
+  const view = await createHeadroomView({ input: f.input, kind: "log" }, { runWorker: forbidden });
   assert.equal(view.content, f.content); assert.equal(view.metrics.worker_attempts, 0);
-  const read = invoke(["headroom-read", f.root, "--input", "input.txt", "--expected-sha256", view.source_sha256]);
-  assert.equal(read.status, 0, read.stderr); assert.equal(JSON.parse(read.stdout).content, f.content);
-  const changed = invoke(["headroom-read", f.root, "--input", "input.txt", "--expected-sha256", "0".repeat(64)]);
-  assert.notEqual(changed.status, 0);
+  assert.equal((await readHeadroomOriginal({ input: f.input, sha256: view.source_sha256 })).content, f.content);
+  await assert.rejects(readHeadroomOriginal({ input: f.input, sha256: "0".repeat(64) }));
 });

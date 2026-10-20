@@ -84,9 +84,11 @@ export async function readWorkflowMeasurements(target, id, { now = new Date() } 
     const selection=candidates.find(s=>s.id===op.model_id&&s.fingerprint===op.model_fingerprint&&executionDigest(s.connection)===s.fingerprint);
     const connection=selection?.connection;
     operations.push({...projectOperationMeasurement(op),connection_kind:connection?.kind??null,
+      actor:run.request.actor??null,
       provider:connection?.provider??(connection?.kind==='codex-subscription'?'openai':null),
       requested_reasoning:connection?.effort?{name:'effort',value:connection.effort}:null,
-      reported_reasoning:null});
+      reported_reasoning:op.result?.runtime_selection?.reasoning??null,
+      ...(selection?.model_snapshot?{model_snapshot:selection.model_snapshot,selected_model:selection.model_snapshot.selected.model,selected_reasoning:selection.model_snapshot.selected.reasoning,selected_service:selection.model_snapshot.selected.service,reported_service:op.result?.runtime_selection?.service??null,service_report_source:op.result?.runtime_selection?'runtime-acknowledgement':'unreported'}:{})});
   }
   const refreshed = await record(target, `${ref}/operations-index.json`);
   const latestStatus = await record(target, `${ref}/status.json`).catch(error => { if (error.code === "ENOENT") return { state: "created" }; throw error; });

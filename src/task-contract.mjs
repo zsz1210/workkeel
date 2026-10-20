@@ -3,11 +3,10 @@ import { constants } from "node:fs";
 import path from "node:path";
 import Ajv from "ajv";
 import addFormats from "ajv-formats";
-import { isWorkItemId } from "./ids.mjs";
 import { sha256 } from "./files.mjs";
 import { observeFileRead, observeSource } from './workkeel-read-metrics.mjs';
 
-export const TASK_CONTRACT_SCHEMA = "workkeel.task-contract/v1";
+export const TASK_CONTRACT_SCHEMA = "workkeel.task-contract/v2";
 const MAX_BYTES = 1024 * 1024;
 const text = { type: "string", minLength: 1, pattern: "\\S" };
 const strings = { type: "array", items: text, uniqueItems: true };
@@ -49,10 +48,10 @@ export const taskContractSchema = object({
     cwd: text, read_paths: strings, write_paths: strings, tools: identifiers, resources: identifiers,
     network: object({ mode: choice("none", "allowlist"), hosts: strings }),
     external_actions: identifiers,
-    data: object({ classification: choice("public", "internal", "sensitive"), model_access: choice("none", "approved-connection"), policy_refs: nonempty })
+    data: object({ classification: choice("public", "internal", "sensitive"), model_access: choice("none", "approved-connection"), policy_refs: strings })
   })),
   authorization: nullable(object({
-    approved_by: identifier, approval_ref: text,
+    approved_by: identifier, approval_ref: nullable(text),
     operations: { type: "array", uniqueItems: true, items: choice("read", "write", "execute", "network", "external"), minItems: 1 },
     expires_at: nullable({ type: "string", format: "date-time" })
   })),
@@ -60,9 +59,7 @@ export const taskContractSchema = object({
   execution: object({
     runtime: object({ kind: choice("host-owned", "adapter"), adapter_id: nullable(identifier), required_features: identifiers }),
     model_connection: { oneOf: [nativeModel, gatewayModel, routedModel, subscriptionModel] }
-  }),
-  legacy: nullable(object({ schema_version: { const: "temple.work-item/v1" }, source_ref: text,
-    source_sha256: { type: "string", pattern: "^[a-f0-9]{64}$" }, owner_position: nullable(text), assigned_agent_id: nullable(text) }))
+  })
 });
 const ajv = new Ajv({ allErrors: true, strict: true, ownProperties: true });
 addFormats(ajv);
@@ -88,7 +85,9 @@ function validGatewayUrl(value) {
 export function validateTaskContract(document, { now = new Date() } = {}) {
   const errors = [];
   const incomplete = [];
-  if (!validate(document)) errors.push(...validate.errors.map((entry) => `${entry.instancePath || "/"} ${entry.message}`));
+  if (!validate(document)) errors.push(...validate.errors.map((entry) => entry.instancePath === "/schema_version" && entry.keyword === "const"
+    ? `/schema_version ${(typeof document.schema_version === "string" ? document.schema_version : JSON.stringify(document.schema_version) ?? "missing").slice(0, 80)} is unsupported; this Workkeel reads ${TASK_CONTRACT_SCHEMA}`
+    : `${entry.instancePath || "/"} ${entry.message}`));
   if (!errors.length) {
     if (document.dependencies.includes(document.id)) errors.push("/dependencies must not include the task itself");
     if (!document.actor?.principal_id) incomplete.push("actor.principal_id");
@@ -120,7 +119,7 @@ export function validateTaskContract(document, { now = new Date() } = {}) {
     const authority = document.authorization;
     if (!authority) incomplete.push("authorization");
     else {
-      if (!repositoryPath(authority.approval_ref)) errors.push("/authorization/approval_ref must be a repository-relative evidence path");
+      if (authority.approval_ref !== null && !repositoryPath(authority.approval_ref)) errors.push("/authorization/approval_ref must be a repository-relative evidence path");
       if (authority.expires_at && Date.parse(authority.expires_at) <= now.getTime()) incomplete.push("authorization.expired");
       if (env) {
         for (const [operation, needed] of [["read", env.read_paths.length], ["write", env.write_paths.length], ["execute", env.tools.length], ["network", env.network.hosts.length], ["external", env.external_actions.length]]) {
@@ -196,47 +195,4 @@ export async function readTaskContractInput(target, source) {
   let document;
   try { document = JSON.parse(content); } catch { throw new Error("Contract input is not valid JSON"); }
   return { document, digest };
-}
-
-/** Project legacy data without converting scope, roles or assignment into grants. */
-export function projectLegacyTask(item, { sourceRef, sourceSha256 }) {
-  if (item?.schema_version !== "temple.work-item/v1" || !isWorkItemId(item?.id)) throw new Error("Unsupported legacy Work Item");
-  const active = item.claim?.status === "active" ? item.claim : null;
-  const last = item.handoffs?.at(-1);
-  const contract = {
-    schema_version: TASK_CONTRACT_SCHEMA, id: item.id, goal: item.title,
-    scope: { include: structuredClone(item.scope), exclude: [] },
-    actor: active ? { agent_id: active.agent_id, principal_id: active.principal_id ?? null } :
-      item.assigned_agent_id ? { agent_id: item.assigned_agent_id, principal_id: null } : null,
-    state: item.state, dependencies: structuredClone(item.dependencies ?? []),
-    acceptance: { criteria: structuredClone(item.acceptance_criteria), evidence: structuredClone(item.evidence ?? []) },
-    verification: { risk_tier: item.risk_tier ?? null, separation: "unresolved", implementer: null, reviewer: null,
-      candidate_revision: item.developer_candidate_revision ?? null },
-    handoff: last ? {
-      from_actor: last.actor ? { agent_id: last.actor, principal_id: last.principal_id ?? null } : null,
-      to_actor: null, revision: last.input_revision, summary: null, evidence: [last.artifact],
-      unresolved: structuredClone(item.unresolved ?? []), next_action: null
-    } : null,
-    environment: null, authorization: null, skills: [],
-    execution: { runtime: { kind: "host-owned", adapter_id: null, required_features: [] }, model_connection: { kind: "native" } },
-    legacy: { schema_version: item.schema_version, source_ref: sourceRef, source_sha256: sourceSha256,
-      owner_position: item.owner_position ?? null, assigned_agent_id: item.assigned_agent_id ?? null }
-  };
-  return {
-    ...validateTaskContract(contract), contract,
-    migration_notes: [
-      "Legacy lifecycle authority is unchanged; this is not a migrated canonical Work Item.",
-      "Affected paths describe change scope, not filesystem grants. Environment and authorization require explicit review.",
-      "Host-owned/native execution is a proposed baseline, not an observation of the existing runtime or model.",
-      "Source digest preserves provenance; review original gates, dependencies and handoff artifacts before migration."
-    ]
-  };
-}
-
-export async function inspectLegacyTaskContract(target, workItemId) {
-  if (typeof workItemId !== "string" || !isWorkItemId(workItemId)) throw new Error("A valid Work Item ID is required");
-  const sourceRef = `.ai-org/work-items/${workItemId}.json`;
-  const input = await readTaskContractInput(target, sourceRef);
-  if (input.document?.id !== workItemId) throw new Error("Legacy Work Item ID does not match its filename");
-  return projectLegacyTask(input.document, { sourceRef, sourceSha256: input.digest });
 }

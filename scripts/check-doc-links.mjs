@@ -1,3 +1,4 @@
+import { spawnSync } from "node:child_process";
 import fs from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
@@ -25,14 +26,24 @@ export function resolveLocalLink(sourceFile, target) {
   return path.resolve(path.dirname(sourceFile), decodeURIComponent(withoutFragment));
 }
 
+// Git-ignored Markdown (for example .workkeel-private/) is local state, not
+// documentation. Outside a Git repository nothing is treated as ignored.
+export function gitIgnoredFiles(directory, files) {
+  if (files.length === 0) return new Set();
+  const result = spawnSync("git", ["-C", directory, "check-ignore", "--stdin", "-z"], { input: files.join("\0"), encoding: "utf8" });
+  return result.status === 0 ? new Set(result.stdout.split("\0").filter(Boolean)) : new Set();
+}
+
 export async function findBrokenLinks(markdownRoot = root) {
   const failures = [];
-  const markdownFiles = (await walkFiles(markdownRoot)).filter(
+  const candidates = (await walkFiles(markdownRoot)).filter(
     (candidate) =>
       candidate.endsWith(".md") &&
       !candidate.startsWith(".git/") &&
       !candidate.startsWith("node_modules/")
   );
+  const ignored = gitIgnoredFiles(markdownRoot, candidates);
+  const markdownFiles = candidates.filter((candidate) => !ignored.has(candidate));
 
   for (const relativeFile of markdownFiles) {
     const sourceFile = path.join(markdownRoot, relativeFile);

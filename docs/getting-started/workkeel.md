@@ -12,17 +12,71 @@ Do not run task initialization in the public framework source checkout.
 
 ## Availability and compatibility
 
-Use Node.js 24 or newer. Beta.1 is published as
-`@zsz1210/workkeel@0.1.0-beta.1` on npm's `next` channel; follow the
-[installation commands](../../README.md#start). Installed projects can
+Use Node.js 24.15 or newer and run the current source as in the
+[README quick start](../../README.md#quick-start). Beta.1, published as
+`@zsz1210/workkeel@0.1.0-beta.1` on npm's `next` channel, is an
+[earlier line](../../CHANGELOG.md#010-beta1). Installed projects can
 use `npx --no-install workkeel`; a reviewed source checkout provides
 `node bin/workkeel.mjs`. Examples below using a source path remain the source
-alternative. Existing legacy projects keep `temple`, `templew.mjs`, `temple.lock`
-and their original workflows; `workkeel legacy <arguments>` is an explicit alias.
+alternative. Version 0.2 removed the earlier legacy mode; projects pinned to an
+older CLI keep that version, and there is no migration path.
 
-Task-first v1 supports ordinary low/standard-risk work. High/critical-risk,
-sensitive-data and verified/distributed identity workflows retain legacy mode.
-The optional Console and legacy provider are not required for task coordination.
+`workkeel.lock` pins a CLI version. A CLI with the same major version that is not
+older than the pin works normally. With any other CLI, read commands such as
+`status` and `doctor` still run and print a warning on stderr, and commands that
+write stop. Run `workkeel upgrade [target] [--actor id]` with the newer CLI to
+move the pin to it and rewrite `workkeelw.mjs`; an approving Principal runs it,
+and it never downgrades the pin or converts task records. Unknown top-level lock
+keys are ignored with a warning and kept when `policy update` or `upgrade`
+rewrites the lock. Unknown task request fields are ignored with a warning and
+never stored. Task policy and execution documents stay strict. `schema_version`
+decides major compatibility. The compatibility check runs before the mutation
+lock is taken, so an upgrade running at the same moment as another write may not
+stop that write.
+
+Tasks carry a low, standard, high or critical risk tier. Project policy
+`risk_paths` and sensitive data set a minimum tier, and high or critical work
+adds review by another model family and close by the approving Principal.
+Verified or distributed identity workflows are not supported.
+
+## Fastest path: flags only
+
+`init` registers one Principal, `owner`, with two Agents, `builder` and
+`reviewer`; the implementer and reviewer still differ. Commit the
+generated files and ignore `.workkeel/`, where `local.json` may name your default
+`agent_id`:
+
+```sh
+workkeel init .
+echo ".workkeel/" >> .gitignore && git add -A && git commit -m "Start Workkeel"
+workkeel task new --goal "Clarify the guide" --acceptance "The guide names its audience" --write docs --actor builder
+workkeel task claim --id WK-0001 --actor builder
+# edit, commit, and save evidence under .ai-org/artifacts/WK-0001/
+workkeel task handoff --id WK-0001 --actor builder --summary "Guide updated" --evidence .ai-org/artifacts/WK-0001/check.md
+workkeel task review --id WK-0001 --actor reviewer --judgment pass --summary "Meets the criterion" --evidence .ai-org/artifacts/WK-0001/review.md
+workkeel task close --id WK-0001 --actor builder --summary Accepted --rollback "Revert the guide commit" --evidence .ai-org/artifacts/WK-0001/review.md
+```
+
+`task new` needs only a goal and acceptance criteria. Unstated fields get recorded
+defaults: the repository root as read and write path, no network, native
+execution, and the lowest risk tier the write paths and data allow. Critical work also
+needs `--approval path` to a committed approval record. Operation IDs and
+expected versions are derived, and rerunning a command that already succeeded
+replays it. Replay uses the exact requests this checkout saved under its Git
+directory (`.git/workkeel/cli-operations/`); a fresh clone or another machine
+does not have them. An identical `task new` always returns its first task, so use
+different arguments or `--id` for another.
+
+Known limitation: flag-command replay relies only on that local cache. When several
+processes, or older and newer CLI versions, operate on the same task at the same
+time, edge cases remain; a command that cannot confirm its original claim or
+candidate stops instead of guessing. Hardening this is tracked separately. `--expect` and `--request` remain for
+integrations. The default `init` policy records the `builder` Agent as model family
+`claude` and the `reviewer` as `codex`; override these defaults with `--builder <family>` and `--reviewer <family>`.
+To register other people or Agents, initialize with a reviewed policy file,
+`init --policy task-policy.json`; `policy update` replaces the project policy
+later. The same rules apply however many Principals it lists. `workkeel help advanced` lists every form, including the optional
+subsystems that the lifecycle below never needs.
 
 ## Initialize an existing repository
 
@@ -32,21 +86,21 @@ Start with read-only guidance from your reviewed source checkout:
 node /path/to/workkeel/bin/workkeel.mjs start /path/to/your/project
 ```
 
-The JSON response identifies the next setup stage: Git root, project policy,
-instruction bridge, or task brief. `drafts.policy` and `drafts.brief` provide the
-structure to fill in; nulls and empty required fields are unresolved decisions,
-not defaults or approval. Ask your coding agent to fill them from your agreed
-goal and boundaries and save the reviewed document. Existing identities are
-listed as choices, never selected automatically. `next_command` is an argv array
-for the reviewed Workkeel CLI, run from the selected project; it is not shell text.
+The JSON response identifies the next setup stage: Git root, `init`,
+instruction bridge, or the first task. Before initialization it points to
+`workkeel init .`; afterwards it points to `task new`, whose `<...>` values you
+replace with the agreed goal, acceptance criteria and actor. Existing identities
+are listed as choices, never selected automatically. `next_command` is an argv
+array for the reviewed Workkeel CLI, run from the selected project; it is not
+shell text.
 
 Follow the returned step, then run `start` again. Initialization and instruction
-application remain explicit. For an existing legacy project it points back to
-the pinned legacy workflow. Broken project pins or conflicting instruction blocks
+application remain explicit. Broken project pins or conflicting instruction blocks
 return an error without overwriting anything. This checks setup and intake inputs;
 use `doctor` separately for existing task health.
 
-Once the bridge is applied and the approved brief is saved:
+An integration that already has an approved
+[single brief](../operations/workkeel-daily-work.md) can preview it instead:
 
 ```sh
 node /path/to/workkeel/bin/workkeel.mjs start /path/to/your/project --request brief.json
@@ -55,12 +109,13 @@ node /path/to/workkeel/bin/workkeel.mjs start /path/to/your/project --request br
 Inspect `intake_preview` and use its exact fingerprint with the returned
 `intake apply` arguments. `ready: true` means a preview was produced. It does not
 claim work, launch a model or accept a task. Continue through the lifecycle below;
-open `workkeel monitor .` when you want to inspect recorded progress and results.
+the optional `workkeel monitor .` observer shows recorded progress and results.
 An invalid brief returns exit code 1 with `mutation_status: no-write`; a valid
 guidance step returns exit code 0 even when there is more setup to do.
 
 Read native repository instructions and confirm identities, approval authority and
-review separation with the human. Save the reviewed policy as `task-policy.json`:
+review separation with the human. Plain `init .` writes this policy; to use a
+different one, save the reviewed policy as `task-policy.json`:
 
 ```json
 {
@@ -80,14 +135,15 @@ independent human. Select `distinct-principal` only with genuinely separate peop
 registered as Principals when that separation is required.
 
 ```sh
-node /path/to/workkeel/bin/workkeel.mjs init . --policy task-policy.json
+node /path/to/workkeel/bin/workkeel.mjs init .    # or: init . --policy task-policy.json
 WORKKEEL_CLI_PATH=/path/to/workkeel/bin/workkeel.mjs node ./workkeelw.mjs doctor .
 ```
 
 Init creates `workkeel.lock`, `workkeelw.mjs` and `WORKKEEL.md`, refusing existing
 framework files. It preserves native instructions. Preview and apply the additive
 [AGENTS/CLAUDE bridge](../extensions/workkeel-context.md#connect-native-instructions)
-so the coding agent can discover Workkeel. The source override is version-checked.
+so the coding agent can discover Workkeel. The source override must report a version,
+and the CLI checks it against the pin.
 The launcher uses a matching local package when present; it never silently fetches
 an unpublished package. Network package fetching requires the explicit
 `WORKKEEL_ALLOW_PACKAGE_FETCH=1` opt-in and an actually published pinned version.
@@ -110,7 +166,7 @@ this complete example as `task-contract.json`, adjusting its real boundaries:
 
 ```json
 {
-  "schema_version": "workkeel.task-contract/v1",
+  "schema_version": "workkeel.task-contract/v2",
   "id": "WK-cart-total",
   "goal": "Correct cart totals",
   "scope": {"include": ["Cart calculation"], "exclude": ["Deployment"]},
@@ -136,8 +192,7 @@ this complete example as `task-contract.json`, adjusting its real boundaries:
   "execution": {
     "runtime": {"kind": "host-owned", "adapter_id": null, "required_features": []},
     "model_connection": {"kind": "native"}
-  },
-  "legacy": null
+  }
 }
 ```
 
@@ -167,15 +222,17 @@ workkeel task show . --id WK-cart-total
 ```
 
 The approved contract stays immutable. Current state, claim, delivery, review and
-closure are separate fields in the canonical record. Approval, data-policy and
-Skill references are digest-bound. Changing them requires a newly approved task,
-not editing the accepted contract in place.
+closure are separate fields in the canonical record. Approval is the registered
+approving Principal plus the commit it was given at (`approval.approved_at_revision`).
+Editing the approval, data-policy or Skill files afterwards does not invalidate an
+active task, and Doctor does not recheck them; read the approved text with
+`git show <approved_at_revision>:<path>` when it was committed. Changing the
+contract itself still requires a newly approved task.
 
-Administrative reports/requests must not be runtime product inputs. Only exact
-known report paths and digest-matching operation JSON are exempt as newly added
-metadata; arbitrary code in an artifact folder is still product code. A tracked
-candidate artifact cannot change after verification. The task record itself is
-coordination state, never a mutable application configuration source.
+Everything under `.ai-org/` is administrative: task records, reports and requests
+never count as product changes or drift. Do not keep runtime product inputs
+there. The task record itself is coordination state, never a mutable application
+configuration source.
 
 ## Claim, deliver, review, accept
 
@@ -186,13 +243,30 @@ changing parameters under that ID is rejected. No claim is silently stolen.
 
 | Action | Additional request fields | Guard / result |
 | --- | --- | --- |
-| `claim` | `base_revision` (full current commit) | Approved Agent; accepted dependencies; no overlapping active write roots; returns `claim.id` |
+| `claim` | `base_revision` (current commit; full or abbreviated ID) | Approved Agent; accepted dependencies; no overlapping active write roots; returns `claim.id` |
 | `release` | `claim_id`, `summary` | Owner returns work to intake, without acceptance |
-| `handoff` | `claim_id`, `revision`, `summary`, `evidence` (paths), `unresolved: []` | Exact current commit descends from base; changed paths fit write roots; no tracked or untracked product drift |
-| `review` | `revision`, `judgment: "pass"` or `"fail"`, `summary`, `evidence` | Distinct reviewer; exact delivered candidate and unchanged evidence |
-| `rework` | `summary` | Approver; retain failure, same contract, new candidate and review |
+| `handoff` | `claim_id`, `revision`, `summary`, `evidence` (paths), `unresolved` (notes) | Current commit descends from base; committed changes fit write roots; no tracked or untracked drift inside the write roots |
+| `review` | `revision`, `judgment: "pass"` or `"fail"`, `summary`, `evidence` | Distinct reviewer; exact delivered candidate |
+| `rework` | `summary`, optional `mode` | Approver; retain failure, same contract; every rework delivers a new commit for a fresh review |
 | `close` | `revision`, `summary`, `rollback`, `evidence` | Approver; independent pass; local acceptance only |
 | `cancel` | `summary`, `evidence` | Approver; preserve history, grant no further work |
+
+Revisions may be full or abbreviated commit IDs; the record always stores the
+full ID. Evidence is a list of paths, recorded without digests: a path committed
+in the candidate, which Git keeps immutable, or a report under `.ai-org/`. Low
+risk work may hand off without evidence; standard and higher need at least one
+path. A review may put its evidence in the summary alone, except that high and
+critical reviews need the reviewer's own `workkeel.review-report/v1` file.
+
+`unresolved` lists open issues the implementer could not close. They are shown
+with the delivery. For low and standard work the reviewer decides whether they
+block; a high or critical review cannot pass with them, and critical work cannot
+be delivered with them at all.
+
+For a report-only correction after a failed review, an approver can record
+`"mode": "evidence-only"` in the rework request. Either mode needs a new commit:
+commit the corrected evidence, hand off that commit and obtain a fresh distinct
+review. The rejected revision itself cannot be delivered again.
 
 For example, after creation returns version 1, prepare `claim.json`:
 
@@ -200,7 +274,7 @@ For example, after creation returns version 1, prepare `claim.json`:
 {
   "operation_id": "claim-cart-v1", "expected_version": 1,
   "actor": {"agent_id": "builder", "principal_id": "owner"},
-  "base_revision": "<full-current-git-commit>"
+  "base_revision": "<current-git-commit>"
 }
 ```
 
@@ -217,7 +291,7 @@ without running its check. Save `handoff.json` using the returned claim ID:
 {
   "operation_id": "handoff-cart-v1", "expected_version": 2,
   "actor": {"agent_id": "builder", "principal_id": "owner"},
-  "claim_id": "<returned-claim-id>", "revision": "<full-tested-git-commit>",
+  "claim_id": "<returned-claim-id>", "revision": "<tested-git-commit>",
   "summary": "Implemented the approved fix; see measured checks",
   "evidence": [".ai-org/artifacts/WK-cart-total/developer.md"],
   "unresolved": []
@@ -307,55 +381,7 @@ or an additional API key. Narrower unsupported conditions still block execution.
 Live LiteLLM behavior remains unverified until a real service and explicit test
 authority are supplied. Runtime completion never equals task acceptance.
 
-## Legacy history and migration
-
-Continue the original pinned launcher by default. Legacy `work-item contract`
-provides a read-only projection; missing authority stays missing. Do not globally
-replace old schema IDs, evidence URLs or historical names.
-
-Explicit migration supports only quiescent, attributed Solo projects without
-configured team governance, active work or High-Assurance history. Core policies
-must match this release's unmodified legacy policy; custom/older policies require
-a separately reviewed migration:
-
-```sh
-workkeel migration preview . --policy task-policy.json
-workkeel migration apply . --policy task-policy.json --fingerprint <reviewed-sha256>
-```
-
-For explicitly authorized retirement of an old workflow, inactive unfinished
-items can remain unfinished, read-only history. Save a retention request:
-
-```json
-{
-  "schema_version": "workkeel.legacy-retention/v1",
-  "approved_by": "owner",
-  "approval_ref": "docs/migration-approval.md",
-  "open_work_items": [
-    {"id": "WI-0001", "sha256": "<sha256-of-exact-source-record>"}
-  ]
-}
-```
-
-Pass `--retain-open retention.json` to both migration preview and apply. The
-request must name every unfinished item exactly; its approval and original record
-digests are bound by the preview. Active claims, running workers, configured team
-governance, High-Assurance history and changed core policies remain unsupported.
-This does not close an item or accept its candidate. Create a separately approved
-native task to continue work, referencing the retained evidence.
-
-The event journal is hashed incrementally with a fixed 64 KiB buffer and an 8 MiB
-archive ceiling. Authority JSON and individual task inputs retain their 1 MiB
-bound. Doctor rechecks the frozen journal and retained records after migration.
-
-The preview binds legacy policy, events, tasks and the proposed policy. Apply
-rechecks that fingerprint, adds new files and preserves old ones byte-for-byte.
-Status marks old records `legacy-read-only`; their terminal labels are not native
-dependency grants. Review native/AGENTS instructions with the maintainer when
-switching; init never rewrites user guidance. Old lifecycle writers reject the
-new mode when invoked from this release. Previously installed old binaries cannot
-know this new marker and must not be used after opting in. Active-runtime, team and verified-identity migrations stay unsupported
-rather than dropping safeguards. Inputs over the bounded size also fail closed.
+## Rolling back
 
 Do not remove the new lock to roll back a populated project. Preserve versioned
 records and revert code through normal review. Locks coordinate this checkout,
