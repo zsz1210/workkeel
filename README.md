@@ -69,6 +69,7 @@ $ workkeel task close --id WK-0001 --actor builder --summary "Owner accepts" --r
 
 This `low` example needs no evidence files; other tiers add requirements below.
 The CLI records the lifecycle; your Agents do the editing and review, not the CLI.
+Commit the `.ai-org/` task records too, with your work or after closing the task.
 
 ## Quick start
 
@@ -82,7 +83,9 @@ alias workkeel="node $PWD/bin/workkeel.mjs"
 ```
 
 Switch to your own project's Git repository and run `workkeel start .` for a
-read-only setup preview. Follow the [quick start guide](docs/getting-started/workkeel.md)
+read-only setup preview. After `init`, run `workkeel start .` again for the optional
+[instructions bridge](docs/extensions/workkeel-context.md#connect-native-instructions) suggestion.
+Follow the [quick start guide](docs/getting-started/workkeel.md)
 for initialization, policies, evidence and rollback. To develop Workkeel itself,
 follow [Contributing](CONTRIBUTING.md).
 

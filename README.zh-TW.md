@@ -66,6 +66,7 @@ $ workkeel task close --id WK-0001 --actor builder --summary "Owner accepts" --r
 
 這個 `low` 範例不需要證據檔；其他等級的要求見下表。
 CLI 只記錄生命週期；修改和審查由你的 Agent 完成，不是 CLI。
+也請將 `.ai-org/` 的任務紀錄一併提交，可以和工作成果一起提交，或在結案後提交。
 
 ## 快速開始
 
@@ -79,6 +80,7 @@ alias workkeel="node $PWD/bin/workkeel.mjs"
 ```
 
 切換到你自己的專案 Git 儲存庫，執行 `workkeel start .` 預覽設定步驟，不會寫入檔案。
+完成 `init` 後，再執行 `workkeel start .`，就會看到選用的[指示檔橋接](docs/extensions/workkeel-context.md#connect-native-instructions)建議。
 初始化、政策、證據與回復方式見[快速入門指南](docs/getting-started/workkeel.md)。
 開發 Workkeel 本身則請依[貢獻指南](CONTRIBUTING.md)操作。
 

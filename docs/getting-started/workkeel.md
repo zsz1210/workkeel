@@ -57,6 +57,9 @@ workkeel task review --id WK-0001 --actor reviewer --judgment pass --summary "Me
 workkeel task close --id WK-0001 --actor builder --summary Accepted --rollback "Revert the guide commit" --evidence .ai-org/artifacts/WK-0001/review.md
 ```
 
+Commit the `.ai-org/` task records too, with your work or after closing the task.
+Work on one task at a time per branch or worktree: a handoff includes all changes since the claim, so interleaving commits from different tasks on one branch blocks handoff; use separate branches or worktrees.
+
 `task new` needs only a goal and acceptance criteria. Unstated fields get recorded
 defaults: the repository root as read and write path, no network, native
 execution, and the lowest risk tier the write paths and data allow. Critical work also

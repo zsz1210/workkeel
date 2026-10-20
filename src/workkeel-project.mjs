@@ -51,7 +51,7 @@ export async function readNativeGit(target, args, { maxBuffer = 4 * 1024 * 1024,
 async function assertGitRoot(target) {
   let root;
   try { root = (await readNativeGit(target, ["rev-parse", "--show-toplevel"])).trim(); }
-  catch { throw new Error("Task-first coordination requires an initialized Git repository"); }
+  catch { throw new Error("Task-first coordination requires an initialized Git repository; run `git init` here or choose the repository root"); }
   if (await fs.realpath(root) !== await fs.realpath(target)) throw new Error("Task-first project must be the Git repository root");
 }
 export const identifier = { type: "string", pattern: "^[A-Za-z0-9][A-Za-z0-9._-]{0,95}$" };

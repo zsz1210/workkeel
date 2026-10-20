@@ -67,6 +67,7 @@ $ workkeel task close --id WK-0001 --actor builder --summary "Owner accepts" --r
 
 この `low` の例では証跡ファイルを省略できます。他の区分の要件は下の表を参照してください。
 CLI はライフサイクルを記録するだけで、編集やレビューは CLI ではなく Agent が行います。
+`.ai-org/` のタスク記録も、作業の変更と一緒に、またはタスクをクローズした後にコミットしてください。
 
 ## クイックスタート
 
@@ -80,6 +81,7 @@ alias workkeel="node $PWD/bin/workkeel.mjs"
 ```
 
 自分のプロジェクトの Git リポジトリに移り、`workkeel start .` で書き込みを伴わないセットアップ案内を確認します。
+`init` の後にもう一度 `workkeel start .` を実行すると、任意で使える[指示ファイルの連携](docs/extensions/workkeel-context.md#connect-native-instructions)の案内を確認できます。
 初期化、ポリシー、証跡、ロールバックは[クイックスタートガイド](docs/getting-started/workkeel.md)を参照してください。
 Workkeel 自体の開発は[貢献ガイド](CONTRIBUTING.md)に従ってください。
 

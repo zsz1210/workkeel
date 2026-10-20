@@ -31,6 +31,27 @@ const fails = (root, ...args) => {
 const jsonFiles = async root => (await fs.readdir(root, { recursive: true }))
   .filter(name => name.endsWith(".json") && !name.startsWith(".git/") && !name.startsWith(".ai-org/")).sort();
 
+test("CLI errors preserve their envelope and give command-appropriate recovery guidance", async t => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), "workkeel-error-guidance-"));
+  t.after(() => fs.rm(root, { recursive: true, force: true }));
+  const neutral = "Read the message, fix the cause, then rerun the command.";
+  const lifecycle = "Inspect task state and operation history before retrying the same operation ID.";
+  const init = JSON.parse(fails(root, "init", "."));
+  assert.deepEqual(init, {
+    schema_version: "workkeel.operation-error/v1",
+    message: "Task-first coordination requires an initialized Git repository; run `git init` here or choose the repository root",
+    mutation_status: "inspect-before-retry", next_action: neutral
+  });
+  for (const [args, next] of [
+    [["task", "new", "--goal", "Clarify the guide", "--acceptance", "The guide is clear"], lifecycle],
+    [["task", "claim", "--id", "WK-0001", "--request", "claim.json"], lifecycle],
+    [["task", "show", "--id", "WK-0001"], neutral],
+    [["task", "unknown"], neutral],
+    [["doctor"], neutral]
+  ]) assert.equal(JSON.parse(fails(root, ...args)).next_action, next, args.join(" "));
+  assert.deepEqual(await fs.readdir(root), [], "failed setup and guidance leave the empty folder untouched");
+});
+
 test("goal serve signal handlers drain close and report shutdown failures", async t => {
   const root = await repository(t);
   workkeel(root, 'init');
