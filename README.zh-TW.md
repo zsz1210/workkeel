@@ -1,9 +1,9 @@
 # Workkeel
 
-讓 coding agents 以儲存庫檔案協調任務的小型框架。
+用儲存庫檔案協調 coding agents 任務的小型框架。
 
 把核准範圍、交接與審查證據留在程式碼旁，綁定 Git commit。
-沿用你現有的 coding tool；核心只需要儲存庫檔案和 CLI。
+你可以沿用現有的 coding tool，核心只需要儲存庫檔案和 CLI。
 
 [English](README.md) · 繁體中文 · [日本語](README.ja.md)
 
@@ -21,9 +21,9 @@
 ## 哪些情況不適合
 
 Workkeel 不是 sandbox，也不是 agent runtime，不會替你部署。
-權限限制與變更執行由你的 coding tool 負責。相較於任務追蹤器，
-Workkeel 把任務授權和證據綁到 commit；相較於 agent framework，
-它把寫程式的執行迴圈留給你現有的工具。
+你的 coding tool 負責限制權限、執行變更。使用 Workkeel 時，你會把任務授權和證據
+綁到 commit，這是它與任務追蹤器的差別。寫程式的執行迴圈則沿用你現有的工具，
+這點與 agent framework 不同。
 
 ## 一個任務怎麼走
 
@@ -34,16 +34,16 @@ Workkeel 把任務授權和證據綁到 commit；相較於 agent framework，
 
 先約定範圍、權限、驗收條件和風險等級，再認領任務，用 coding tool 實作，
 交付 commit 給另一個 Agent 審查。
-審查失敗仍停在 `test`；approver 執行 `task rework`，才會保存失敗紀錄，
-沿用同一份契約回到 `intake`，由 builder 重新認領並交付新的 commit；
+審查失敗後，任務會停在 `test`，直到 approver 執行 `task rework`，
+保存失敗紀錄，沿用同一份契約回到 `intake`。接著由 builder 重新認領，交付新的 commit。
 `low` 最多重做兩次，其餘等級三次，達上限就停下來問人。
 審查通過後，由有權限的 approver 結案；`high` 與 `critical` 須由不同模型家族審查，
 完成規定的交叉審查，再由原核准人（Principal）結案。
 
 ## 30 秒示範
 
-先依下方步驟安裝原始碼 CLI，再到既有 Git 專案操作。輸出僅列出部分 JSON 欄位。
-`init` 會在同一位 `owner` 下註冊 `builder` 與 `reviewer`，模型家族預設分別為 `claude` 與 `codex`，可用 `--builder <family>` 與 `--reviewer <family>` 指定。
+依下方步驟安裝原始碼 CLI，再到既有 Git 專案執行示範。輸出只列出部分 JSON 欄位。
+`init` 會在同一位 `owner` 下註冊 `builder` 與 `reviewer`。模型家族預設分別為 `claude` 與 `codex`，可用 `--builder <family>` 與 `--reviewer <family>` 指定。
 owner 核准任務與驗收，兩個 Agent 各自完成實作和審查。
 
 ```text
@@ -65,11 +65,11 @@ $ workkeel task close --id WK-0001 --actor builder --summary "Owner accepts" --r
 ```
 
 這個 `low` 範例不需要證據檔；其他等級的要求見下表。
-CLI 只記錄生命週期，不會代你修改或審查內容。
+用 CLI 記錄生命週期，內容仍由你修改、審查。
 
 ## 快速開始
 
-需要 Git、Node.js 24.15+ 和 coding tool。安裝目前的原始碼：
+你需要 Git、Node.js 24.15+ 和 coding tool。安裝目前的原始碼：
 
 ```sh
 git clone https://github.com/zsz1210/workkeel.git
@@ -105,7 +105,7 @@ CLI 會檢查已註冊的模型家族，但這項檢查本身不能證明交叉�
 - **[原生派工](docs/operations/workkeel-native-dispatch.md)：**記錄執行交接和指定模型，實際執行結果由 host 回報。
 - **[Bot 層參考用法](docs/operations/reference-usage-bot-layer.md)：**示範如何用人工關卡協調專案 Bot、Claude Code 與 Codex，屬於核心以外的用法。
 
-這些與其他選用功能請見[文件索引](docs/README.md)。
+到[文件索引](docs/README.md)查看這些功能與其他選用功能。
 
 ## 限制
 
