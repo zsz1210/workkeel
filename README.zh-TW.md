@@ -65,7 +65,7 @@ $ workkeel task close --id WK-0001 --actor builder --summary "Owner accepts" --r
 ```
 
 這個 `low` 範例不需要證據檔；其他等級的要求見下表。
-用 CLI 記錄生命週期，內容仍由你修改、審查。
+CLI 只記錄生命週期；修改和審查由你的 Agent 完成，不是 CLI。
 
 ## 快速開始
 

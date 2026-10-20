@@ -66,7 +66,7 @@ $ workkeel task close --id WK-0001 --actor builder --summary "Owner accepts" --r
 ```
 
 この `low` の例では証跡ファイルを省略できます。他の区分の要件は下の表を参照してください。
-CLI でライフサイクルを記録し、編集やレビューは自分で行います。
+CLI はライフサイクルを記録するだけで、編集やレビューは CLI ではなく Agent が行います。
 
 ## クイックスタート
 

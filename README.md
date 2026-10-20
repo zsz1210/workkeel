@@ -68,7 +68,7 @@ $ workkeel task close --id WK-0001 --actor builder --summary "Owner accepts" --r
 ```
 
 This `low` example needs no evidence files; other tiers add requirements below.
-Use the CLI to record the lifecycle; you do the editing and review.
+The CLI records the lifecycle; your Agents do the editing and review, not the CLI.
 
 ## Quick start
 
