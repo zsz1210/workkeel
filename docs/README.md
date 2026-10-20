@@ -39,7 +39,7 @@ but may be removed in a later release if nobody uses them.
 | Observe tasks, read their documents, and compare recorded time and tokens | [Local observer workspace](operations/workkeel-observer.md) |
 | Manage several projects and repositories from the desktop | [Desktop workspace and controlled settings](operations/workkeel-workspace.md) |
 | Deliver all mandatory repositories with distinct review and bounded repair | [Whole-goal coordination](operations/workkeel-goals.md), [opt-in improvement](operations/workkeel-autonomy.md) |
-| Explore optional workflow adapters and model routing | [Workflow and routing guide](operations/workkeel-workflows.md), [native dispatch](operations/workkeel-native-dispatch.md) |
+| Explore optional workflow adapters and model routing | [Workflow and routing guide](operations/workkeel-workflows.md) (LangGraph runner is EXPERIMENTAL: outside the 1.0 compatibility guarantees; we may change or remove it in a minor release), [native dispatch](operations/workkeel-native-dispatch.md) |
 
 ## Decision records
 
