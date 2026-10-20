@@ -282,7 +282,8 @@ test('weekly boundaries use events, pending reviews, global rounds and deduplica
     { ...event('rework', -2 * 86400000, 'intake'), summary: '[evidence] Missing proof' }, event('handoff', 0, 'test', B), event('review', 1, 'test', B, 'fail'),
     { ...event('rework', 2, 'intake'), summary: '[evidence] Missing proof' }, event('handoff', 8 * 86400000, 'test', C), event('review', 8 * 86400000 + 1, 'release_gate', C, 'pass')],
     { attempts: [{ kind: 'rejected', review: old, summary: '[evidence] Missing proof' }, { kind: 'rejected', review: current, summary: '[evidence] Missing proof' }], review: future });
-  await historical('WK-pending', [event('create', -100, 'intake'), event('handoff', 100, 'test', A)]);
+  const passed = await reviewed('WK-pending', A, 'pass', 5);
+  await historical('WK-pending', [event('create', -100, 'intake'), event('handoff', 100, 'test', A), event('review', 8 * 86400000 + 2, 'release_gate', A, 'pass')], { review: passed });
   await historical('WK-never', [event('create', 0, 'intake')]);
   await historical('WK-cutoff', [event('create', end - start, 'intake')]);
   const failed = await reviewed('WK-fix', B, 'fail', 2, [{ level: 'P1', note: '[evidence] Missing proof' }, { level: 'P2', note: '[evidence] Second finding, same round' }]);
@@ -304,7 +305,14 @@ test('weekly boundaries use events, pending reviews, global rounds and deduplica
   assert.equal(report.by_risk.standard.rework.recorded_total_rounds, 3, 'several findings and checks do not multiply repair rounds');
   assert.deepEqual(report.by_risk.standard.pending_first_review, ['WK-pending']);
   assert.deepEqual(report.by_risk.standard.not_yet_reviewed, ['WK-never']);
-  assert.equal(report.by_risk.standard.entered_first_review, 2); assert.equal(report.by_risk.standard.first_pass_rate, 0);
+  assert.equal(report.by_risk.standard.entered_first_review, 1); assert.equal(report.by_risk.standard.first_pass_rate, 0);
+  // A handoff in one week is counted only when its first independent review happens.
+  const nextWeek = await readStatsReport(root, { ...settings, cutoff: time(14 * 86400000) });
+  assert.equal(nextWeek.by_risk.standard.entered_first_review, 1);
+  assert.equal(nextWeek.by_risk.standard.first_review_passed, 1);
+  assert.equal(nextWeek.by_risk.standard.first_pass_rate, 1);
+  assert.deepEqual(nextWeek.by_risk.standard.pending_first_review, []);
+  assert.match(nextWeek.rules.first_pass_denominator, /first independent review happened.*pending first reviews excluded/);
   assert.equal(report.suggestions[0].category, 'evidence');
   assert.equal(report.tasks.find(t => t.task_id === 'WK-fix').tokens.optimization_target, false);
   assert.notEqual((await readStatsReport(root, { ...settings, timezone: 'UTC' })).input.fingerprint, report.input.fingerprint);
@@ -312,7 +320,7 @@ test('weekly boundaries use events, pending reviews, global rounds and deduplica
   await assert.rejects(readStatsReport(root, { ...settings, timezone: 'bad-zone' }), /timezone/);
 });
 
-test('empty, no-candidate and bounded partial weekly reports all emit and stop without writes', async t => {
+test('empty, no-candidate and more than 60 tasks emit complete weekly reports without writes', async t => {
   const { executionDigest } = await import('../src/workkeel-execution-policy.mjs');
   const { readStatsReport, formatStatsReport } = await import('../src/workkeel-stats-report.mjs');
   const root = await fs.mkdtemp(path.join(os.tmpdir(), 'workkeel-weekly-empty-'));
@@ -324,16 +332,17 @@ test('empty, no-candidate and bounded partial weekly reports all emit and stop w
   const only = await readStatsReport(root, settings); assert.equal(only.stop_reason, 'no-candidate');
   assert.equal(only.by_risk.standard.first_pass_rate, null); assert.equal(only.by_risk.standard.rework.total_rounds, null);
   const seed = await readNativeTask(root, 'WK-seed');
-  for(let i=0;i<35;i++){
+  for(let i=0;i<65;i++){
     const item=structuredClone(seed);item.id=item.contract.id=`WK-extra-${i}`;item.contract_sha256=executionDigest(item.contract);
     const e=item.history[0];e.record_sha256=executionDigest(Object.fromEntries(Object.entries(item).filter(([k])=>k!=='history')));
     const {hash,...body}=e;item.history[0]={...body,hash:executionDigest(body)};
     await write(root,`.ai-org/work-items/${item.id}.json`,JSON.stringify(item));
   }
   const ref=path.join(root,'.ai-org/work-items/WK-seed.json'),before=await fs.readFile(ref,'utf8');
-  const partial=await readStatsReport(root,settings);assert.equal(partial.stop_reason,'operation-limit');
-  assert.ok(partial.coverage.errors.some(e=>e.message.includes('operation-limit')));
-  assert.deepEqual(JSON.parse(formatStatsReport(partial).split('```json\n')[1].split('\n```')[0]),partial);
+  const complete=await readStatsReport(root,settings);assert.equal(complete.stop_reason,'no-candidate');
+  assert.equal(complete.coverage.tasks,66);assert.deepEqual(complete.coverage.errors,[]);
+  assert.equal(complete.by_risk.standard.tasks,66);
+  assert.deepEqual(JSON.parse(formatStatsReport(complete).split('```json\n')[1].split('\n```')[0]),complete);
   assert.equal(await fs.readFile(ref,'utf8'),before);
   await assert.rejects(fs.access(path.join(root,'.ai-org/loop/run.json')),{code:'ENOENT'});
 });
@@ -344,4 +353,20 @@ test('rework categories preserve explicit source labels and leave unclassified p
   const rounds=projectReworkIterations('WK-synthetic',events,[],[]);
   assert.deepEqual(rounds.map(r=>r.reasons[0].category),REWORK_CATEGORIES);
   assert.deepEqual(rounds.map(r=>r.round),[1,2,3,4,5,6,7]);
+});
+
+test('task listing errors without samples report unknown tier totals and source-error', async t => {
+  const { readStatsReport, formatStatsReport } = await import('../src/workkeel-stats-report.mjs');
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), 'workkeel-weekly-source-error-'));
+  t.after(() => fs.rm(root, { recursive: true, force: true }));
+  // Missing native project/Git metadata makes listing fail, rather than proving zero tasks.
+  const report = await readStatsReport(root, { cutoff: '2026-10-19T00:00:00Z' });
+  assert.equal(report.stop_reason, 'source-error');assert.equal(report.tasks.length, 0);
+  assert.ok(report.coverage.errors.length > 0);
+  for (const tier of Object.values(report.by_risk)) {
+    assert.equal(tier.tasks, null);assert.equal(tier.entered_first_review, null);assert.equal(tier.first_review_passed, null);
+    assert.equal(tier.first_pass_rate, null);assert.equal(tier.rework.total_rounds, null);assert.equal(tier.rework.recorded_total_rounds, null);
+    assert.equal(tier.rework.coverage, 'partial');
+  }
+  assert.deepEqual(JSON.parse(formatStatsReport(report).split('```json\n')[1].split('\n```')[0]), report);
 });

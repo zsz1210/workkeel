@@ -1,4 +1,4 @@
-import {withLoopRun, countLoopOperation, readLoopRun, requestLoopStop, assertLoopAdmission, countLoopCancellationOperation, reserveLoopCancellation, releaseLoopCancellation} from './workkeel-loop-run.mjs';
+import {withLoopRun, countLoopOperation, readLoopRun, isLoopRunActive, requestLoopStop, assertLoopAdmission, countLoopCancellationOperation, reserveLoopCancellation, releaseLoopCancellation} from './workkeel-loop-run.mjs';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import os from 'node:os';
@@ -150,7 +150,7 @@ export async function createNativeGoal(target,r){
     try{const prior=await stateAt(target,replayManifest.id);if(prior.receipts[0]?.sha256!==executionDigest(r)||prior.manifest_sha256!==replayFile.bytes_digest)fail('goal registration conflict');await assertNativeGoalAuthority(target,prior.id,{actor:r.actor});return {goal:await readNativeGoal(target,prior.id),replayed:true};}catch(e){if(e.code!=='ENOENT')throw e;}
     const task=await assertTaskExecutionContext(target,r.task_id,r),project=await readTaskProject(target);assertApprover(project.policy,r.actor);
     const file=await readTaskFile(target,r.manifest_ref),m=validateGoalManifest(JSON.parse(file.content));
-    const loopRun=await readLoopRun(target);if(loopRun){await assertLoopAdmission(target,m.id);if(m.components.some(c=>c.root!==target)||m.admission||m.derived_from)fail('L2 is limited to one project and one goal, without new admission');}
+    const loopRun=await readLoopRun(target);if(isLoopRunActive(loopRun)){await assertLoopAdmission(target,m.id);if(m.components.some(c=>c.root!==target)||m.admission||m.derived_from)fail('L2 is limited to one project and one goal, without new admission');}
     if(!sameActor(m.approved_by,r.actor)||!sameActor(m.roles.approver,r.actor))fail('manifest approver must be the actual approving controller');
     if(!task.contract.environment.write_paths.some(root=>under(ROOT+'/'+m.id,root)))fail('goal store outside controller write authority');
     if(!task.authority_pins.some(p=>p.path===r.manifest_ref&&p.sha256===file.bytes_digest))fail('goal manifest must be explicitly task-authority pinned');
@@ -305,7 +305,7 @@ export async function runNativeGoalStep(target,goalId,{adapter,signal}={}){
     await withProjectMutationLock(target,async()=>{const s=await stateAt(target,goalId);if(s.status!=='done')s.status=unknown.length?'cancel-requested':'cancelled';await save(target,s);});
     return unknown;
   };
-  try{return await withLoopRun(target,goalId,adapter,async()=>{const run=await readLoopRun(target);if(run){const m=(await stateAt(target,goalId)).manifest_frozen;if(m.components.some(c=>c.root!==target)||m.admission||m.derived_from)fail('L2 requires one project and one goal without admission');}return runGoalStep(target,goalId,{adapter,signal:controller.signal});},cancel);}
+  try{return await withLoopRun(target,goalId,adapter,async()=>{const run=await readLoopRun(target);if(isLoopRunActive(run)){const m=(await stateAt(target,goalId)).manifest_frozen;if(m.components.some(c=>c.root!==target)||m.admission||m.derived_from)fail('L2 requires one project and one goal without admission');}return runGoalStep(target,goalId,{adapter,signal:controller.signal});},cancel);}
   finally{signal?.removeEventListener('abort',abort);}
 }
 async function runGoalStep(target,goalId,{adapter,signal}={}){

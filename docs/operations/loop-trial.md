@@ -2,8 +2,8 @@
 
 L1 is the weekly read-only `stats --report` command described in
 [team adoption and risk](team-adoption-and-risk.md). It writes nothing, calls no
-model, emits one report and stops. L1 has a separate in-memory allowance of 60
-observation operations and two hours including waits. It does not consume an L2
+model, emits one report and stops. L1 has a two-hour wall-clock cap including
+waits; individual file reads do not consume operations. It does not consume an L2
 approval. Keep actual reports, approvals and evidence in a private workspace.
 
 L2 delivery remains exclusively the existing native `goal` lifecycle: claim,
@@ -47,8 +47,10 @@ reset it by choosing a different target. The trial permits one project and one
 goal; it refuses new autonomous admission and additional derived goals.
 Trusted custom host adapters must use `countLoopOperation` for internal command,
 check and comparison operations, just as the stock goal adapter charges its
-commands. Orchestration steps and individual native/host calls each count;
-the safety stop and abort signal close admission immediately. A host call reserves cancellation capacity before dispatch, across restarts;
+commands. Each real native, host or check operation counts once; orchestration
+steps do not add another charge. The safety stop and abort signal close admission
+immediately. A host call reserves cancellation capacity before dispatch, across
+restarts;
 explicit cancellation observations consume that reservation within the original
 60-operation allowance. Unknown confirmation remains visible without extending
 the deadline. Stop bookkeeping grants no execution allowance.
@@ -63,7 +65,11 @@ unknown effects remain unknown, block further dispatch and require reconciliatio
 Only a verified user action through trusted `clearLoopStop(target, {authorizeUser})`
 can clear a confirmed stop. Clearing changes neither the old deadline nor the
 operation count, does not restart the terminal run, and never authorizes another
-L2. The one-L2 seal survives restart. Do not delete the ledger to resume work.
+L2. The one-L2 seal survives restart. After normal completion or a confirmed stop
+is cleared, ordinary task, dispatch, goal and admission operations resume without
+being charged to the terminal run. The guard applies only while a run is running
+or stopping, or its stop request remains uncleared. Keep the ledger: only
+`startLoopRun` uses it to refuse another L2.
 
 ## Sealed comparison records
 

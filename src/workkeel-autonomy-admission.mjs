@@ -1,4 +1,4 @@
-import {readLoopRun, countLoopOperation} from './workkeel-loop-run.mjs';
+import {readLoopRun, isLoopRunActive, countLoopOperation} from './workkeel-loop-run.mjs';
 import path from 'node:path';
 import os from 'node:os';
 import {randomUUID} from 'node:crypto';
@@ -139,7 +139,7 @@ function contractFor(base,{id:taskId,goal,actor,read_paths,write_paths,refs,acce
 export async function admitGoalImprovement(target,request,{proposal=null,trigger=null}={}){
   request=structuredClone(request);proposal=structuredClone(proposal);trigger=structuredClone(trigger);
   await countLoopOperation("admission-attempt", target);
-  if(await readLoopRun(target)) throw Error("Loop run: one L2 only; new admission requires a separate user-approved trial");
+  if(isLoopRunActive(await readLoopRun(target))) throw Error("Loop run: one L2 in progress; new admission is blocked during the run");
   exactKeys(request,['goal_id','actor','operation_id','expected_version'],['proposal_id','event_id','direction']);id(request.goal_id);id(request.operation_id);integer(request.expected_version,0,1000);
   const context=await source(target,request),{goal,grant,controller,template,component,task,goals}=context;
   const kind=trigger?'discovery':'execution';if(!!proposal===!!trigger)fail('select one evidence-backed proposal or discovery trigger');

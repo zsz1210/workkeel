@@ -24,11 +24,10 @@ export async function readStatsReport(target, { days = 7, cutoff, timezone = 'UT
   try { new Intl.DateTimeFormat('en', { timeZone: timezone }).format(until); } catch { throw Error('Invalid --timezone'); }
   if (previous !== null && !/^[a-f0-9]{64}$/.test(previous)) throw Error('Invalid --previous fingerprint');
   const inPeriod = v => at(v) >= start && at(v) < end;
-  const started = performance.now(); let operations = 0, budgetStop = null;
+  const started = performance.now(); let budgetStop = null;
   const read = async fn => {
     const remaining = 7200000 - (performance.now() - started);
-    if (operations >= 60 || remaining <= 0) { budgetStop = remaining <= 0 ? 'wall-clock-limit' : 'operation-limit'; throw Error('L1 observation '+budgetStop); }
-    operations++;
+    if (remaining <= 0) { budgetStop = 'wall-clock-limit'; throw Error('L1 observation '+budgetStop); }
     let timer;
     try { return await Promise.race([fn(), new Promise((_,reject)=>{timer=setTimeout(()=>{budgetStop='wall-clock-limit';reject(Error('L1 observation wall-clock-limit'));},remaining);})]); }
     finally { clearTimeout(timer); }
@@ -73,7 +72,7 @@ export async function readStatsReport(target, { days = 7, cutoff, timezone = 'UT
     const reworks = projectReworkIterations(item.id, history, reviews, ops).filter(r => inPeriod(r.at));
     const first = independent[0] ?? null, last = independent.at(-1) ?? null;
     const entry = history.find(e => e.action === 'handoff') ?? first;
-    const entered = entry && inPeriod(entry.at);
+    const entered = first && inPeriod(first.at);
     const tokens = ops.filter(o => inPeriod(o.at)).map(o => ({ operation_id: o.operation_id, usage: o.result?.usage ?? null }));
     for (const r of reviews) if (!r.score) gaps.push(`Review round ${r.round} has no usable actual-reviewer score`);
     const record = { ...observation, type, reviews, state: history.at(-1)?.state ?? 'unknown',
@@ -85,15 +84,16 @@ export async function readStatsReport(target, { days = 7, cutoff, timezone = 'UT
     sources.push({ task_id: item.id, task_sha256: history.at(-1)?.hash ?? null, evidence_sha256: sha256(record) });
     }catch(error){errors.push({task_id:summary.id,message:error.message});if(budgetStop)break;}
   }
+  const sourceUnavailable = !tasks.length && errors.length > 0;
   const by_risk = Object.fromEntries(RISK_TIERS.map(risk => {
     const rows = tasks.filter(t => t.risk === risk), reviewed = rows.filter(t => t.entered_first_review), passes = reviewed.filter(t => t.first_pass).length;
-    const rounds = rows.map(t => t.rework.rounds), complete = rounds.every(n => n !== null), recorded = rows.map(t => t.rework.recorded_rounds);
-    return [risk, { tasks: rows.length, entered_first_review: reviewed.length, first_review_passed: passes,
+    const rounds = rows.map(t => t.rework.rounds), complete = !sourceUnavailable && rounds.every(n => n !== null), recorded = rows.map(t => t.rework.recorded_rounds);
+    return [risk, { tasks: sourceUnavailable ? null : rows.length, entered_first_review: sourceUnavailable ? null : reviewed.length, first_review_passed: sourceUnavailable ? null : passes,
       first_pass_rate: reviewed.length ? passes / reviewed.length : null, not_yet_reviewed: rows.filter(t => t.not_yet_reviewed).map(t => t.task_id), pending_first_review: rows.filter(t => t.pending_first_review).map(t => t.task_id),
       failed: rows.filter(t => t.reviews.at(-1)?.judgment === 'fail' || t.goal_operations.some(o => o.result?.checks?.some(c => c.status === 'fail'))).map(t => t.task_id),
       stopped: rows.filter(t => t.state === 'cancelled').map(t => t.task_id), unfinished: rows.filter(t => !['done', 'cancelled'].includes(t.state)).map(t => t.task_id),
-      rework: { total_rounds: complete ? rounds.reduce((a, b) => a + b, 0) : null, average_rounds: complete ? avg(rounds) : null, max_rounds: complete && rounds.length ? Math.max(...rounds) : null, recorded_total_rounds: recorded.reduce((a, b) => a + b, 0), recorded_average_rounds: avg(recorded), recorded_max_rounds: recorded.length ? Math.max(...recorded) : null,
-        coverage: rows.every(t => t.rework.coverage === 'recorded-only') ? 'recorded-only' : 'partial' } }];
+      rework: { total_rounds: complete ? rounds.reduce((a, b) => a + b, 0) : null, average_rounds: complete ? avg(rounds) : null, max_rounds: complete && rounds.length ? Math.max(...rounds) : null, recorded_total_rounds: sourceUnavailable ? null : recorded.reduce((a, b) => a + b, 0), recorded_average_rounds: avg(recorded), recorded_max_rounds: recorded.length ? Math.max(...recorded) : null,
+        coverage: !sourceUnavailable && rows.every(t => t.rework.coverage === 'recorded-only') ? 'recorded-only' : 'partial' } }];
   }));
   const reasons = Object.fromEntries(REWORK_CATEGORIES.map(key => [key, []]));
   for (const task of tasks) for (const round of task.rework.iterations) for (const reason of round.reasons) reasons[reason.category].push({ ...round, ...reason });
@@ -105,13 +105,13 @@ export async function readStatsReport(target, { days = 7, cutoff, timezone = 'UT
   const suggestions = [...groups.values()].filter(evidence => new Set(evidence.map(e => `${e.task_id}:${e.round}`)).size >= 2)
     .map(evidence => ({ signal: 'repeated-rework-reason', category: evidence[0].category, task_ids: [...new Set(evidence.map(e => e.task_id))], evidence }));
   const period = { days: 7, since: new Date(start).toISOString(), until: until.toISOString(), timezone, interval: '[since, until)', cutoff_local: new Intl.DateTimeFormat('en-CA', { timeZone: timezone, dateStyle: 'full', timeStyle: 'long' }).format(until) };
-  const rules = { repeat_min: 2, max_operations: 60, wall_ms: 7200000, rework_unit: 'one correction iteration; findings do not multiply rounds', first_pass_denominator: 'tasks entering their first independent review in this period', tokens: 'recorded only', task_types: 'code and unknown; explicit non-code excluded' };
+  const rules = { repeat_min: 2, wall_ms: 7200000, rework_unit: 'one correction iteration; findings do not multiply rounds', first_pass_denominator: 'tasks whose first independent review happened in this period; pending first reviews excluded', tokens: 'recorded only', task_types: 'code and unknown; explicit non-code excluded' };
   const fingerprint = sha256({ period, rules, version: REPORT_RULES_VERSION, sources, errors });
   return { schema_version: 'workkeel.stats-report/v1', authority: 'observation-only', mutation_status: 'no-write', model_called: false,
     rules_version: REPORT_RULES_VERSION, rules, period, input: { fingerprint, sources }, by_risk, tasks, reasons, suggestions,
     coverage: { tasks: tasks.length, review_rounds: tasks.reduce((n, t) => n + t.reviews.length, 0),
       scored_rounds: tasks.reduce((n, t) => n + t.reviews.filter(r => r.score).length, 0), missing: tasks.flatMap(t => t.gaps.map(message => ({ task_id: t.task_id, message }))), errors },
-    stop_reason: budgetStop ?? (previous === fingerprint ? 'unchanged' : !tasks.length && !errors.length ? 'no-input' : suggestions.length ? 'complete' : 'no-candidate'),
+    stop_reason: budgetStop ?? (sourceUnavailable ? 'source-error' : previous === fingerprint ? 'unchanged' : !tasks.length && !errors.length ? 'no-input' : suggestions.length ? 'complete' : 'no-candidate'),
     next_steps: suggestions.length ? ['Submit one L2 proposal for explicit user approval; then stop.'] : [],
     limitations: ['Counts cover recorded events only; unavailable history is not zero.', 'No model calls, task creation or automatic follow-up.'] };
 }

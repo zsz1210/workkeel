@@ -172,8 +172,9 @@ the agreed cutoff. There is no background scheduler or model call.
 
 The report groups task counts, first-pass rate, failed/stopped/unfinished tasks
 and rework by risk. First-pass rate is first independent-review passes divided
-by tasks entering their first review in the period; a pending first review is
-in the denominator, never a pass. Tasks not yet handed off are listed separately.
+by tasks whose first independent review happened in the period. Tasks awaiting
+their first review are listed separately and excluded from the denominator.
+Tasks not yet handed off are also listed separately.
 First and last review scores retain their actual reviewer, candidate, round and
 evidence; an unscored last review stays unknown even if an earlier score exists.
 

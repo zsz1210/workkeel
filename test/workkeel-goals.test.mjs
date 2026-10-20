@@ -260,14 +260,14 @@ test('the existing goal path shares the trial ledger and persists a user stop be
   const f=await fixture(t),costPath={path:'synthetic-goal-host',billing:'local'},adapter=fixtureAdapter({costPath});
   await startLoopRun(f.target,{id:'synthetic-trial',goal_id:f.manifest.id,proposal_sha256:'a'.repeat(64),baseline_sha256:'b'.repeat(64),cost_path:costPath},{authorizeUser:async()=>true,costPath});
   await runNativeGoalStep(f.target,f.manifest.id,{adapter});
-  assert.equal((await readLoopRun(f.target)).operations,2,'goal step and native claim are both charged');
+  assert.equal((await readLoopRun(f.target)).operations,1,'native claim is charged once');
   await runNativeGoalStep(f.target,f.manifest.id,{adapter});
-  assert.equal((await readLoopRun(f.target)).operations,4,'goal step and host planning are both charged');
+  assert.equal((await readLoopRun(f.target)).operations,2,'host planning is charged once');
   await requestLoopStop(f.target);
   await assert.rejects(runNativeGoalStep(f.target,f.manifest.id,{adapter}),/stop/);
   const run=await readLoopRun(f.target),goal=await readNativeGoal(f.target,f.manifest.id);
   assert.equal(run.stop.requested,true);assert.equal(run.stop.confirmed,true);assert.deepEqual(run.stop.unknown,[]);
-  assert.equal(goal.status,'cancelled');assert.equal(goal.operations.length,2);assert.equal(run.operations,4);
+  assert.equal(goal.status,'cancelled');assert.equal(goal.operations.length,2);assert.equal(run.operations,2);
 });
 
 test('an unqualified cost path cannot dispatch even the first native goal operation',async t=>{
@@ -285,4 +285,19 @@ test('an already-aborted user signal persists a trial stop before a native claim
   await startLoopRun(f.target,{id:'synthetic-trial',goal_id:f.manifest.id,proposal_sha256:'a'.repeat(64),baseline_sha256:'b'.repeat(64),cost_path:costPath},{authorizeUser:async()=>true,costPath});
   signal.abort();await runNativeGoalStep(f.target,f.manifest.id,{adapter:fixtureAdapter({costPath}),signal:signal.signal});
   assert.equal((await readLoopRun(f.target)).stop.requested,true);assert.equal((await readNativeGoal(f.target,f.manifest.id)).operations.length,0);
+});
+
+for (const terminal of ['finish', 'clear']) test(`ordinary goals run after ${terminal} without trial cost qualification`, async t => {
+  const {startLoopRun,finishLoopRun,requestLoopStop,confirmLoopStop,clearLoopStop,readLoopRun}=await import('../src/workkeel-loop-run.mjs');
+  const f=await fixture(t),costPath={path:'synthetic-goal-host',billing:'local'};
+  await startLoopRun(f.target,{id:'synthetic-trial',goal_id:'another-goal',proposal_sha256:'a'.repeat(64),baseline_sha256:'b'.repeat(64),cost_path:costPath},{authorizeUser:async()=>true,costPath});
+  if(terminal==='finish')await finishLoopRun(f.target);
+  else {await requestLoopStop(f.target);await confirmLoopStop(f.target);await clearLoopStop(f.target,{authorizeUser:async()=>true});}
+  const before=await readLoopRun(f.target);
+  const adapter=fixtureAdapter();
+  await runNativeGoalStep(f.target,f.manifest.id,{adapter});
+  await runNativeGoalStep(f.target,f.manifest.id,{adapter});
+  assert.equal((await readNativeGoal(f.target,f.manifest.id)).operations.length,2);
+  const after=await readLoopRun(f.target);
+  assert.equal(after.operations,before.operations);assert.equal(after.stop.requested,false);assert.equal(after.status,before.status);
 });

@@ -35,6 +35,7 @@ export async function readLoopRun(target) {
 }
 const stored = s => { const value = { ...s }; delete value.remaining_operations; delete value.remaining_ms; return value; };
 const lock = (target, fn) => withProjectMutationLock(path.join(path.resolve(target), '.ai-org/loop'), fn);
+export const isLoopRunActive = run => Boolean(run && (['running', 'stopping'].includes(run.status) || run.stop.requested));
 
 /** Host-only infrastructure. Exactly one approved L2 for this private trial.
  * This does not create a task or execute an improvement. Delivery remains goal. */
@@ -63,7 +64,7 @@ export async function finishLoopRun(target, reason='comparison-complete') {
 }
 export async function requestLoopStop(target, reason = 'user-requested') {
   return lock(target, async () => {
-    const s = await readLoopRun(target); if (!s) return null;
+    const s = await readLoopRun(target); if (!isLoopRunActive(s)) return s;
     s.stop = { requested: true, confirmed: false, unknown: ['in-flight operations'], reason };
     s.status = 'stopping'; return write(target, stored(s));
   });
@@ -86,7 +87,7 @@ export async function confirmLoopStop(target, unknown = []) {
   });
 }
 export async function assertLoopAdmission(target, goalId) {
-  const s = await readLoopRun(target); if (!s) return null;
+  const s = await readLoopRun(target); if (!isLoopRunActive(s)) return null;
   if (s.stop.requested || s.status !== 'running') fail('persistent stop blocks new admission/dispatch');
   if (s.goal_id !== goalId) fail('one approved goal only; sub-jobs cannot reset the run budget');
   if (Date.now() >= Date.parse(s.deadline) || s.operations >= 60) {
@@ -100,7 +101,7 @@ export async function countLoopOperation(label, target = context.getStore()?.tar
   target = context.getStore()?.target ?? target;
   if (!target) return;
   await lock(target, async () => {
-    const s = await readLoopRun(target); if (!s) return;
+    const s = await readLoopRun(target); if (!isLoopRunActive(s)) return;
     if (s.stop.requested || s.status !== 'running' || s.operations + (s.cancellation_reservations?.length??0) >= 60 || Date.now() >= Date.parse(s.deadline)) {
       if (!s.stop.requested) { s.stop = { requested: true, confirmed: false, unknown: ['in-flight operations'], reason: 'run-budget-exhausted' }; s.status = 'stopping'; await write(target, stored(s)); }
       fail('persistent stop or run budget exhausted');
@@ -129,7 +130,7 @@ export async function countLoopCancellationOperation(label, target, operationId)
   target = context.getStore()?.target ?? target;
   if(!target) return true;
   return lock(target,async()=>{
-    const s=await readLoopRun(target);if(!s)return true;
+    const s=await readLoopRun(target);if(!isLoopRunActive(s))return true;
     const reserved=(s.cancellation_reservations??[]).includes(operationId);
     if(s.operations+(s.cancellation_reservations?.length??0)>=60&&!reserved)return false;
     if(reserved)s.cancellation_reservations=s.cancellation_reservations.filter(id=>id!==operationId);
@@ -142,7 +143,7 @@ export async function withLoopRun(target, goalId, adapter, operation, cancel) {
   const inherited = context.getStore();
   const ledgerTarget = inherited?.target ?? target;
   const s = await readLoopRun(ledgerTarget);
-  if (!s) return operation();
+  if (!isLoopRunActive(s)) return operation();
   try {
     await assertLoopAdmission(ledgerTarget, goalId);
     assertLoopCostPath(s.cost_path, adapter.costPath);
@@ -172,7 +173,6 @@ export async function withLoopRun(target, goalId, adapter, operation, cancel) {
     const timer = setTimeout(() => { void stop('wall-clock-limit'); }, s.remaining_ms);
     const poll = setInterval(() => { void readLoopRun(ledgerTarget).then(run => { if (run.stop.requested) return stop(run.stop.reason); }).catch(() => stop('ledger-unavailable')); }, 50);
     try {
-      await countLoopOperation('goal-step');
       const result = await Promise.race([operation(), interrupted]), current = await readLoopRun(ledgerTarget);
       if (current.stop.requested || result?.operation?.status === 'unknown' || ['host-capability-unavailable', 'components-blocked', 'pre-dispatch-blocked', 'aborted'].includes(result?.idle) || result?.status === 'blocked') await stop(current.stop.reason ?? result?.reason ?? 'uncertain-or-blocked-result');
       return result;

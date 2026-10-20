@@ -69,7 +69,6 @@ async function reviewScore(target, item, review, errors) {
     if (report.task_id !== item.id || report.revision !== review.revision || report.judgment !== review.judgment || report.reviewer?.agent_id !== review.actor?.agent_id || report.reviewer?.principal_id !== review.actor?.principal_id) {
       errors.push({ task_id: item.id, path: ref.path, message: "Score source differs from the actual reviewer, task, candidate or judgment" }); continue;
     }
-    if (report.judgment !== review.judgment || report.reviewer?.agent_id !== review.actor?.agent_id || report.reviewer?.principal_id !== review.actor?.principal_id) continue;
     if (isObject(report.score)) delete report.score.self_eval;
     try { found.push(validateReviewScore(report.score)); }
     catch (error) { errors.push({ task_id: item.id, path: ref.path, message: `Invalid score: ${error.message}` }); return null; }

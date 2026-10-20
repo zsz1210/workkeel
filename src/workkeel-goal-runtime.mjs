@@ -1,4 +1,4 @@
-import {countLoopOperation, assertLoopCostPath, readLoopRun} from './workkeel-loop-run.mjs';
+import {countLoopOperation, assertLoopCostPath, readLoopRun, isLoopRunActive} from './workkeel-loop-run.mjs';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import {spawn} from 'node:child_process';
@@ -208,7 +208,7 @@ export async function createCodexGoalAdapter({hostFactory=createLocalCodexSubscr
   const hosts=new Map(),runtimes=new Map();
   async function hostFor(root){if(!hosts.has(root))hosts.set(root,await hostFactory(root));return hosts.get(root);}
   async function componentCapabilities(ctx){
-    const run=await readLoopRun(ctx.target);if(run)assertLoopCostPath(run.cost_path,costPath);
+    const run=await readLoopRun(ctx.target);if(isLoopRunActive(run))assertLoopCostPath(run.cost_path,costPath);
     const model=ctx.input.model;
     // Check the restricted Git environment before a model turn whose changes
     // could not be checkpointed. Global identity is intentionally absent.
