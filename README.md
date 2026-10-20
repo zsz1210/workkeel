@@ -21,9 +21,9 @@ English · [繁體中文](README.zh-TW.md) · [日本語](README.ja.md)
 ## Why not
 
 Workkeel is not a sandbox or an agent runtime, and it does not deploy your work.
-Your coding tool enforces permissions and executes changes. With Workkeel, you tie
-task authority and evidence to commits, unlike a tracker. You keep using your tool
-for the coding loop, unlike an agent framework.
+Your coding tool enforces permissions and executes changes. Compared with a tracker,
+Workkeel binds task authority and evidence to commits; compared with an agent framework,
+it leaves the coding loop to your tool.
 
 ## How a task flows
 
