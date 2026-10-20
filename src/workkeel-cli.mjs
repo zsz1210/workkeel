@@ -209,7 +209,7 @@ async function runCommand(args) {
       allow(options,['--id']);const id=required(options,'--id');
       if(action==='show')output=await goals.readNativeGoal(target,id);
       else if(action==='tick')output=await goals.runNativeGoalStep(target,id);
-      else {const controller=new AbortController(),service=await goals.serveNativeGoal(target,id,{signal:controller.signal,onError:e=>console.error(JSON.stringify({error:e.message}))});const stop=()=>{controller.abort();service.close();};process.once('SIGINT',stop);process.once('SIGTERM',stop);console.log(JSON.stringify({schema_version:'workkeel.goal-service/v1',goal_id:id,state:'listening',foreground:true,inference:'sealed-approved-operations-only'}));return 0;}
+      else {const controller=new AbortController(),onError=e=>console.error(JSON.stringify({error:e.message})),service=await goals.serveNativeGoal(target,id,{signal:controller.signal,onError});const stop=async()=>{try{controller.abort();await service.close();}catch(e){onError(e);}};process.once('SIGINT',stop);process.once('SIGTERM',stop);console.log(JSON.stringify({schema_version:'workkeel.goal-service/v1',goal_id:id,state:'listening',foreground:true,inference:'sealed-approved-operations-only'}));return 0;}
     }else{allow(options,['--request']);const request=(await readTaskContractInput(target,required(options,'--request'))).document;
       if(action==='create')output=await goals.createNativeGoal(target,request);
       else if(action==='extend-admission'){const {extendGoalAdmission}=await import('./workkeel-autonomy-admission.mjs');output=await extendGoalAdmission(target,request);}

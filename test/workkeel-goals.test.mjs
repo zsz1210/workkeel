@@ -1,5 +1,6 @@
 import test from 'node:test';
 import {projectWorkspaceGoals} from '../src/workkeel-workspace.mjs';
+import {createWorkspaceHooks} from '../src/workkeel-workspace-hooks.mjs';
 import {buildExecutionVisual} from '../src/workkeel-execution-visuals.mjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
@@ -249,6 +250,23 @@ test('service close drains the in-flight operation and callback and discards pen
   const view=await readNativeGoal(f.target,f.manifest.id),runtime=view.operations.filter(op=>op.kind==='runtime');
   assert.equal(runtime.length,1);assert.equal(runtime[0].result.reason,'Result persisted before close resolves');
   assert.equal(calls,1);assert.equal(reconciliations,0);assert.deepEqual(errors.map(e=>e.message),[]);
+});
+
+test('workspace goal hook close drains in-flight writes before clearing service records',async t=>{
+  const f=await fixture(t),entered=Promise.withResolvers(),release=Promise.withResolvers();
+  const watchMock=t.mock.method(fsSync,'watch',()=>({close(){}}));syncBuiltinESMExports();t.after(()=>{watchMock.mock.restore();syncBuiltinESMExports();});
+  const adapter=createTrustedGoalAdapter({id:'draining-hook-fixture',assertCapabilities:async()=>{},execute:async()=>{entered.resolve();await release.promise;return {status:'unknown',reason:'Hook shutdown persisted this result'};},reconcile:async()=>({status:'unknown'}),cancel:async()=>({status:'cancelled'})});
+  const hooks=createWorkspaceHooks({goalAdapter:adapter}),context={project:{task_root:f.target},actor:builder};
+  t.after(async()=>{release.resolve();await hooks.goals.close();});
+  await hooks.goals.execute({...context,action:'goals.start',expectedVersion:(await readNativeGoal(f.target,f.manifest.id)).version,payload:{goal_id:f.manifest.id}});
+  await entered.promise;
+  let settled=false;const closing=Promise.resolve(hooks.goals.close()).then(()=>{settled=true;});
+  await new Promise(resolve=>setImmediate(resolve));assert.equal(settled,false,'hook close must wait for the active step');
+  assert.equal((await hooks.goals.read(context)).services[0].state,'running-in-this-host','service is retained until draining finishes');
+  release.resolve();await closing;
+  const view=await readNativeGoal(f.target,f.manifest.id);
+  assert.equal(view.operations.find(op=>op.kind==='runtime').result.reason,'Hook shutdown persisted this result');
+  assert.equal((await hooks.goals.read(context)).services[0].state,'not-confirmed-in-this-host');
 });
 
 test('service close synchronously clears a queued tick before any operation starts',async t=>{

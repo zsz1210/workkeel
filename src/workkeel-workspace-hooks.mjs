@@ -24,7 +24,7 @@ function selectedGoalProject(project,repoId){
 /** UI passes intent, never claim ownership or invented model capability evidence. */
 export function createWorkspaceHooks({host_models=[],goalAdapter}={}){
   const goalServices=new Map(),improvementServices=new Map();
-  const closeServices=services=>{for(const item of services.values()){item.controller.abort();item.service.close();}services.clear();};
+  const closeServices=async services=>{await Promise.all([...services.values()].map(async item=>{item.controller.abort();await item.service.close();}));services.clear();};
   const retentionPolicy={schema_version:'workkeel.retention-policy/v1',roots:['.ai-org/host-usage'],protected_paths:[],archive_root:'.ai-org/retention',limits:{max_files:256,max_bytes:8388608,max_file_bytes:1048576}};
   const defaults={model:{mode:'auto'},reasoning:{mode:'auto'},service:{mode:'auto'}};
   async function protectedCapacity(project){

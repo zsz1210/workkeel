@@ -31,6 +31,35 @@ const fails = (root, ...args) => {
 const jsonFiles = async root => (await fs.readdir(root, { recursive: true }))
   .filter(name => name.endsWith(".json") && !name.startsWith(".git/") && !name.startsWith(".ai-org/")).sort();
 
+test("goal serve signal handlers drain close and report shutdown failures", async t => {
+  const root = await repository(t);
+  workkeel(root, 'init');
+  const moduleURL = new URL('../src/workkeel-cli.mjs', import.meta.url).href;
+  for (const signal of ['SIGINT', 'SIGTERM']) for (const rejectClose of [false, true]) {
+    const source = `
+      import assert from 'node:assert/strict';
+      import {registerHooks} from 'node:module';
+      const entered=Promise.withResolvers(),drain=Promise.withResolvers();let aborted=false;
+      globalThis.goalServiceFixture={serveNativeGoal:async(_target,_id,{signal})=>({close:()=>{aborted=signal.aborted;entered.resolve();return drain.promise;}})};
+      const stub='data:text/javascript,'+encodeURIComponent('export const serveNativeGoal=globalThis.goalServiceFixture.serveNativeGoal;');
+      registerHooks({resolve(specifier,context,next){return specifier==='./workkeel-goals.mjs'&&context.parentURL===${JSON.stringify(moduleURL)}?{url:stub,shortCircuit:true}:next(specifier,context);}});
+      const {workkeelMain}=await import(${JSON.stringify(moduleURL)});
+      assert.equal(await workkeelMain(['goal','serve',${JSON.stringify(root)},'--id','synthetic-goal']),0);
+      const stop=process.listeners(${JSON.stringify(signal)}).at(-1);
+      let settled=false;const closing=Promise.resolve(stop()).then(()=>{settled=true;});
+      await entered.promise;assert.equal(aborted,true);
+      await new Promise(resolve=>setImmediate(resolve));assert.equal(settled,false);
+      ${rejectClose ? "drain.reject(Error('Synthetic shutdown failure'));" : 'drain.resolve();'}
+      await closing;
+      process.removeAllListeners('SIGINT');process.removeAllListeners('SIGTERM');
+    `;
+    const result = spawnSync(process.execPath, ['--unhandled-rejections=strict', '--input-type=module', '-e', source], { encoding: 'utf8', timeout: 10000 });
+    assert.equal(result.status, 0, result.stdout + result.stderr);
+    if (rejectClose) assert.deepEqual(JSON.parse(result.stderr), {error:'Synthetic shutdown failure'});
+    else assert.equal(result.stderr, '');
+  }
+});
+
 test("defaultPolicy defaults model families and validates overrides as identifiers", () => {
   assert.deepEqual(defaultPolicy().agents.map(agent => agent.model_family), ["claude", "codex"]);
   assert.deepEqual(defaultPolicy("maria", { builder: "family-a", reviewer: "family-b" }).agents, [
