@@ -14,7 +14,7 @@ The dashed boxes are optional additions. The workspace observatory starts with
 `workkeel monitor`. Opt-in workflows add a LangGraph runner and approved model
 policy, while native dispatch records execution handoffs. The
 [Workkeel Loop L1 report](../operations/loop-trial.md) provides a weekly read-only
-view through `workkeel stats --report` with no model/API spend.
+view through `workkeel stats --report --cutoff 2026-10-19T00:00:00Z --timezone UTC` with no model/API spend.
 
 ## Workkeel execution and authority boundaries
 

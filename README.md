@@ -103,7 +103,7 @@ registered model families, which alone does not prove cross-review happened.
 
 - **[Workspace observatory](docs/operations/workkeel-workspace.md):** start with `workkeel workspace serve`; browse project records without idle model calls. The separate [read-only observer](docs/operations/workkeel-observer.md) uses `workkeel monitor`.
 - **[Workflows / LangGraph](docs/operations/workkeel-workflows.md):** opt into a runner with approved graphs, model policy and recoverable steps.
-- **[Workkeel Loop L1 report](docs/operations/loop-trial.md):** `workkeel stats --report` produces a weekly read-only report with zero model/API spend.
+- **[Workkeel Loop L1 report](docs/operations/loop-trial.md):** `workkeel stats --report --cutoff 2026-10-19T00:00:00Z --timezone UTC` produces a weekly read-only report with zero model/API spend.
 - **[Native dispatch](docs/operations/workkeel-native-dispatch.md):** record execution handoffs and requested models; the host reports what ran.
 - **[Reference Bot-layer usage](docs/operations/reference-usage-bot-layer.md):** one way to organize project Bots, Claude Code and Codex around human gates, outside the core.
 

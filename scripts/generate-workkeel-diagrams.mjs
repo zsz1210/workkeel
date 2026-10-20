@@ -196,7 +196,7 @@ export function coreOptionalSvg() {
   </g>
   <g transform="translate(816 437)">
     <rect class="optional" width="368" height="91" rx="12"/>
-    <text x="18" y="34" font-size="22" font-weight="500">Workkeel Loop L1 report</text><text x="18" y="67" font-size="19">Weekly, read-only; no model/API spend</text>
+    <text x="18" y="34" font-size="22" font-weight="500">Workkeel Loop L1 report</text><text x="18" y="67" font-size="19">Weekly, read-only, zero API spend</text>
   </g>
   <g transform="translate(32 551)">
     <rect class="optional" width="368" height="85" rx="12"/>
