@@ -41,19 +41,18 @@ is a separate capability and is not evidence of zero API spend.
 State is private at `.ai-org/loop/run.json`, with an integrity envelope and
 atomic writes under a shared lock. The ledger starts its absolute two-hour
 clock at approval admission; waits, pauses and restarts consume time. It grants
-60 operations shared by the goal, native mutations, host calls, checks, dispatch
-and failed/retried attempts. Nested async work inherits the ledger and cannot
+60 real native, host and check operations, including failed/retried attempts.
+Dispatch and task admission gates do not add charges. Nested async work inherits the ledger and cannot
 reset it by choosing a different target. The trial permits one project and one
 goal; it refuses new autonomous admission and additional derived goals.
-Trusted custom host adapters must use `countLoopOperation` for internal command,
-check and comparison operations, just as the stock goal adapter charges its
-commands. Each real native, host or check operation counts once; orchestration
+Trusted custom host adapters use the goal context’s `mutateNativeTask` for native
+operations and `countLoopOperation` for internal command, check and comparison
+operations, just as the stock goal adapter does. Each real native, host or check operation counts once; orchestration
 steps do not add another charge. The safety stop and abort signal close admission
-immediately. A host call reserves cancellation capacity before dispatch, across
-restarts;
-explicit cancellation observations consume that reservation within the original
-60-operation allowance. Unknown confirmation remains visible without extending
-the deadline. Stop bookkeeping grants no execution allowance.
+immediately. Cancellation after a stop or exhausted budget remains possible and
+is recorded in ledger attempts as `stop-bookkeeping`, outside the 60-operation
+allowance. Unknown confirmation remains visible without extending the deadline.
+Stop bookkeeping grants no execution allowance.
 
 Use `requestLoopStop` for a user stop. `withLoopRun`, used by native goal steps,
 checks the ledger before dispatch and closes admission before cancellation.

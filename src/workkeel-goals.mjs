@@ -1,4 +1,4 @@
-import {withLoopRun, countLoopOperation, readLoopRun, isLoopRunActive, requestLoopStop, assertLoopAdmission, countLoopCancellationOperation, reserveLoopCancellation, releaseLoopCancellation} from './workkeel-loop-run.mjs';
+import {withLoopRun, countLoopOperation, readLoopRun, isLoopRunActive, requestLoopStop, assertLoopAdmission} from './workkeel-loop-run.mjs';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import os from 'node:os';
@@ -142,8 +142,7 @@ async function validateDerived(target,m){
   if(receipt.reservation.operations<m.limits.max_operations||receipt.reservation.max_runtime_ms<m.limits.timeout_ms||receipt.control_task_id===undefined)fail('admission budget was not reserved');
 }
 export async function createNativeGoal(target,r){
-  r=structuredClone(r);
-  await countLoopOperation('goal-create',target);
+  await assertLoopAdmission(target);
   exactKeys(r,['task_id','actor','claim_id','contract_sha256','operation_id','expected_version','manifest_ref']);id(r.operation_id);if(r.expected_version!==0)fail('new goal expects version zero');
   return withProjectMutationLock(target,async()=>{
     const replayFile=await readTaskFile(target,r.manifest_ref),replayManifest=validateGoalManifest(JSON.parse(replayFile.content));
@@ -181,8 +180,7 @@ export async function readNativeGoal(target,goalId){
 }
 export async function listNativeGoals(target){let dir;try{dir=await safeDirectory(target,ROOT);}catch(e){if(e.code==='ENOENT')return [];throw e;}const names=(await fs.readdir(dir)).filter(n=>n!=='.gitignore').sort();if(names.length>200)fail('goal inventory bound');const items=[];for(const name of names){try{items.push(await readNativeGoal(target,name));}catch(e){items.push({id:name,read_status:'unavailable',accepted:false,reason:e.message});}}return items;}
 export async function controlNativeGoal(target,goalId,action,r){
-  r=structuredClone(r);
-  if(action==='cancel'){if(await readLoopRun(target))await requestLoopStop(target,'user-requested');}else await countLoopOperation('goal-control-'+action,target);
+  if(action==='cancel')await requestLoopStop(target,'user-requested');else await assertLoopAdmission(target,goalId);
   exactKeys(r,['actor','operation_id','expected_version']);actor(r.actor);id(r.operation_id);if(!['pause','resume','cancel','recover'].includes(action))fail('unknown control');
   return withProjectMutationLock(target,async()=>{
     const s=await stateAt(target,goalId),m=await manifestAt(target,s,{frozen:true}),project=await readTaskProject(target);assertApprover(project.policy,r.actor);
@@ -296,7 +294,7 @@ export async function runNativeGoalStep(target,goalId,{adapter,signal}={}){
       if(op.kind==='native'){if(live(op.owner))unknown.push(op.id);continue;}
       const m=snapshot.manifest_frozen,component=m.components.find(c=>c.id===op.input.component_id);
       try{
-        if(!await countLoopCancellationOperation('host-cancel',target,op.id)){unknown.push(op.id+': cancellation confirmation exceeds remaining allowance');continue;}
+        await countLoopOperation('host-cancel',target,{cancellation:true});
         const result=await adapter.cancel({target,goal:goalId,controller:snapshot.controller,manifest:m,manifest_sha256:snapshot.manifest_sha256,component,operation_id:op.id,input:op.input,task:op.input.task_snapshot,signal:controller.signal});
         if(result?.status!=='cancelled'){unknown.push(op.id);continue;}
         await withProjectMutationLock(target,async()=>{const s=await stateAt(target,goalId),stored=s.operations.find(o=>o.id===op.id);stored.result={...stored.result,cancellation:result};stored.status='completed';stored.owner=null;await save(target,s);});
@@ -324,6 +322,7 @@ async function runGoalStep(target,goalId,{adapter,signal}={}){
     // Only an intent explicitly retained before any effects may be executed
     // again. Unknown started work continues to reconcile its exact operation.
     if(op.kind==='runtime'&&reservation.mode==='execute'&&op.result?.dispatch_started===false)await adapter.assertCapabilities(context);
+    context.mutateNativeTask=async(action,request)=>{await countLoopOperation('native-task-'+action,target,{cancellation:action==='cancel'});return mutateNativeTask(component.root,component.task_id,action,request);};
     context.beforeEffects=()=>withProjectMutationLock(target,async()=>{
       const current=await stateAt(target,goalId),stored=current.operations.find(o=>o.id===op.id);
       if(!stored||stored.input_sha256!==op.input_sha256||reservation.mode!=='cancel'&&stored.owner?.token!==op.owner?.token)fail('pre-dispatch operation identity or owner changed');
@@ -343,10 +342,10 @@ async function runGoalStep(target,goalId,{adapter,signal}={}){
     await context.beforeEffects();
     if(controller.signal.aborted)fail('operation aborted before dispatch');
     effects_started=true;
-    if(reservation.mode==='cancel')result=await adapter.cancel(context);
-    else if(reservation.mode==='reconcile'){await countLoopOperation('host-reconcile');await reserveLoopCancellation(op.id);result=await adapter.reconcile(context);if(['completed','cancelled'].includes(result?.status))await releaseLoopCancellation(op.id);}
-    else if(op.kind==='native')result={status:'completed',native:await mutateNativeTask(op.input.root,op.input.task_id,op.input.action,op.input.request)};
-    else {await countLoopOperation('host-'+op.input.phase);await reserveLoopCancellation(op.id);result=await adapter.execute(context);if(['completed','cancelled'].includes(result?.status))await releaseLoopCancellation(op.id);}
+    if(reservation.mode==='cancel'){await countLoopOperation('host-cancel',target,{cancellation:true});result=await adapter.cancel(context);}
+    else if(reservation.mode==='reconcile'){await countLoopOperation('host-reconcile');result=await adapter.reconcile(context);}
+    else if(op.kind==='native'){await countLoopOperation('native-task-'+op.input.action,target,{cancellation:op.input.action==='cancel'});result={status:'completed',native:await mutateNativeTask(op.input.root,op.input.task_id,op.input.action,op.input.request)};}
+    else {await countLoopOperation('host-'+op.input.phase);result=await adapter.execute(context);}
   }catch(e){result={status:'unknown',reason:e.message.slice(0,1000)};}
   finally{if(timer)clearTimeout(timer);signal?.removeEventListener('abort',abort);}
   if(!effects_started||reservation.mode==='execute'&&op.kind==='runtime'&&result?.dispatch_started===false&&result.model_called===false)return withProjectMutationLock(target,async()=>{

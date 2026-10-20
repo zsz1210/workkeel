@@ -64,7 +64,7 @@ function fixtureAdapter({firstFail=true,alwaysFail=false,onExecute=()=>{},wrongT
         const proofPath='.ai-org/artifacts/'+ctx.task.id+'/goal-review-'+ctx.operation_id+'.json';
         const native_request={operation_id:ctx.operation_id,expected_version:ctx.task.version,actor:reviewer,revision:ctx.input.candidate,judgment:alwaysFail||firstFail&&n===0?'fail':'pass',summary:firstFail&&n===0?'Synthetic distinct reviewer observes value first; acceptance requires fixed':'Synthetic distinct reviewer verified repaired exact candidate',evidence:[...ctx.input.verification.evidence,proofPath]};
         result.authored_request_pin=await artifact(ctx,'review',{schema_version:'workkeel.goal-authored-review/v1',actor:reviewer,thread_id:thread,operation_id:ctx.operation_id,product_access:'read',runtime_selection:ctx.input.model,native_request});
-        await mutateNativeTask(ctx.component.root,ctx.task.id,'review',native_request);
+        await ctx.mutateNativeTask('review',native_request);
         receipts.set(ctx.operation_id,result);
         if(interruptAfterNativeReview&&n===0)throw Error('Synthetic crash after actual native review');
       }
@@ -256,18 +256,32 @@ test('goal rework is clamped to the risk-tier limit and then waits for a person'
 });
 
 test('the existing goal path shares the trial ledger and persists a user stop before any further dispatch',async t=>{
-  const {startLoopRun,readLoopRun,requestLoopStop}=await import('../src/workkeel-loop-run.mjs');
+  const {startLoopRun,readLoopRun,requestLoopStop,countLoopOperation}=await import('../src/workkeel-loop-run.mjs');
   const f=await fixture(t),costPath={path:'synthetic-goal-host',billing:'local'},adapter=fixtureAdapter({costPath});
   await startLoopRun(f.target,{id:'synthetic-trial',goal_id:f.manifest.id,proposal_sha256:'a'.repeat(64),baseline_sha256:'b'.repeat(64),cost_path:costPath},{authorizeUser:async()=>true,costPath});
+  for(let i=0;i<58;i++)await countLoopOperation('prior-work',f.target);
   await runNativeGoalStep(f.target,f.manifest.id,{adapter});
-  assert.equal((await readLoopRun(f.target)).operations,1,'native claim is charged once');
+  assert.equal((await readLoopRun(f.target)).operations,59,'native claim is charged once');
   await runNativeGoalStep(f.target,f.manifest.id,{adapter});
-  assert.equal((await readLoopRun(f.target)).operations,2,'host planning is charged once');
+  assert.equal((await readLoopRun(f.target)).operations,60,'the last host call remains admissible');
   await requestLoopStop(f.target);
   await assert.rejects(runNativeGoalStep(f.target,f.manifest.id,{adapter}),/stop/);
   const run=await readLoopRun(f.target),goal=await readNativeGoal(f.target,f.manifest.id);
   assert.equal(run.stop.requested,true);assert.equal(run.stop.confirmed,true);assert.deepEqual(run.stop.unknown,[]);
-  assert.equal(goal.status,'cancelled');assert.equal(goal.operations.length,2);assert.equal(run.operations,2);
+  assert.equal(goal.status,'cancelled');assert.equal(goal.operations.length,2);assert.equal(run.operations,60);
+});
+
+for(const capped of [false,true])test(`review relay counts its native mutation after the host (cap=${capped})`,async t=>{
+  const {startLoopRun,readLoopRun,countLoopOperation}=await import('../src/workkeel-loop-run.mjs'),f=await fixture(t),costPath={path:'synthetic-goal-host',billing:'local'},adapter=fixtureAdapter({costPath,firstFail:false});
+  await startLoopRun(f.target,{id:'review-trial',goal_id:f.manifest.id,proposal_sha256:'a'.repeat(64),baseline_sha256:'b'.repeat(64),cost_path:costPath},{authorizeUser:async()=>true,costPath});
+  while((await readNativeGoal(f.target,f.manifest.id)).components[0].phase!=='review')await runNativeGoalStep(f.target,f.manifest.id,{adapter});
+  const before=(await readLoopRun(f.target)).operations;
+  if(capped)for(let i=before;i<59;i++)await countLoopOperation('prior-work',f.target);
+  await runNativeGoalStep(f.target,f.manifest.id,{adapter});
+  const run=await readLoopRun(f.target),task=await readNativeTask(f.target,'WK-component-0');
+  assert.equal(run.operations,capped?60:before+2);assert.equal(!!task.review,!capped);
+  if(capped){assert.equal(run.stop.requested,true);assert.equal(run.attempts.at(-1).kind,'stop-bookkeeping');}
+  else assert.deepEqual(run.attempts.slice(-2).map(a=>a.operation),['host-review','native-task-review']);
 });
 
 test('an unqualified cost path cannot dispatch even the first native goal operation',async t=>{

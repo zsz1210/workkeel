@@ -30,8 +30,8 @@ export async function readLoopRun(target) {
   try { file = await readTaskFile(target, REF); } catch (error) { if (error.code === 'ENOENT') return null; throw error; }
   const envelope = JSON.parse(file.content), s = envelope.value;
   if (executionDigest(s) !== envelope.sha256 || s.schema_version !== 'workkeel.loop-run/v1' || !Number.isSafeInteger(s.operations) || s.operations < 0 || s.operations > 60 || !Number.isFinite(Date.parse(s.started_at)) || !Number.isFinite(Date.parse(s.deadline))) fail('persistent ledger integrity failure');
-  if(Date.parse(s.deadline)-Date.parse(s.started_at)!==LOOP_MAX_WALL_MS||!Array.isArray(s.attempts)||s.attempts.length!==s.operations||!Array.isArray(s.cancellation_reservations)||s.operations+s.cancellation_reservations.length>60||new Set(s.cancellation_reservations).size!==s.cancellation_reservations.length||!['running','stopping','stopped','completed'].includes(s.status)||typeof s.stop?.requested!=='boolean'||typeof s.stop.confirmed!=='boolean'||!Array.isArray(s.stop.unknown))fail('persistent ledger fields invalid');
-  return { ...s, remaining_operations: Math.max(0, 60 - s.operations - (s.cancellation_reservations?.length??0)), remaining_ms: Math.max(0, Date.parse(s.deadline) - Date.now()) };
+  if(Date.parse(s.deadline)-Date.parse(s.started_at)!==LOOP_MAX_WALL_MS||!Array.isArray(s.attempts)||s.attempts.filter(a=>a.kind!=='stop-bookkeeping').length!==s.operations||!['running','stopping','stopped','completed'].includes(s.status)||typeof s.stop?.requested!=='boolean'||typeof s.stop.confirmed!=='boolean'||!Array.isArray(s.stop.unknown))fail('persistent ledger fields invalid');
+  return { ...s, remaining_operations: Math.max(0, 60 - s.operations), remaining_ms: Math.max(0, Date.parse(s.deadline) - Date.now()) };
 }
 const stored = s => { const value = { ...s }; delete value.remaining_operations; delete value.remaining_ms; return value; };
 const lock = (target, fn) => withProjectMutationLock(path.join(path.resolve(target), '.ai-org/loop'), fn);
@@ -50,7 +50,7 @@ export async function startLoopRun(target, approval, { authorizeUser, costPath }
     if (await readLoopRun(target)) fail('this trial already consumed its one L2; clearing a stop never starts another');
     try{const file=await readTaskFile(target,'.ai-org/goals/'+approval.goal_id+'/state.json'),e=JSON.parse(file.content);if(executionDigest(e.value)!==e.sha256)fail('goal integrity before run');if(e.value.operations.some(o=>['running','intent','unknown'].includes(o.status)))fail('reconcile existing host work before starting a trial');}catch(error){if(error.code!=='ENOENT')throw error;}
     const started = Date.now();
-    return write(target, { schema_version: 'workkeel.loop-run/v1', ...structuredClone(approval), started_at: new Date(started).toISOString(), deadline: new Date(started + LOOP_MAX_WALL_MS).toISOString(), operations: 0, cancellation_reservations: [], attempts: [], status: 'running', stop: { requested: false, confirmed: false, unknown: [], reason: null }, user_clearances: 0 }, true);
+    return write(target, { schema_version: 'workkeel.loop-run/v1', ...structuredClone(approval), started_at: new Date(started).toISOString(), deadline: new Date(started + LOOP_MAX_WALL_MS).toISOString(), operations: 0, attempts: [], status: 'running', stop: { requested: false, confirmed: false, unknown: [], reason: null }, user_clearances: 0 }, true);
   }));
 }
 /** End the guard after the host records the comparison (or another normal
@@ -58,7 +58,7 @@ export async function startLoopRun(target, approval, { authorizeUser, costPath }
 export async function finishLoopRun(target, reason='comparison-complete') {
   if(!['comparison-complete','no-improvement','success'].includes(reason))fail('invalid normal stop reason');
   return lock(target,async()=>{const s=await readLoopRun(target);if(!s)fail('no run');
-    if(s.stop.requested||s.status!=='running'||s.cancellation_reservations.length)fail('cannot finish unresolved work');
+    if(s.stop.requested||s.status!=='running')fail('cannot finish unresolved work');
     if(Date.now()>=Date.parse(s.deadline)){s.stop={requested:true,confirmed:true,unknown:[],reason:'wall-clock-limit'};s.status='stopped';await write(target,stored(s));fail('wall-clock limit prevents normal completion');}
     s.status='completed';s.completion_reason=reason;return write(target,stored(s));});
 }
@@ -89,6 +89,7 @@ export async function confirmLoopStop(target, unknown = []) {
 export async function assertLoopAdmission(target, goalId) {
   const s = await readLoopRun(target); if (!isLoopRunActive(s)) return null;
   if (s.stop.requested || s.status !== 'running') fail('persistent stop blocks new admission/dispatch');
+  if (goalId === undefined) return s;
   if (s.goal_id !== goalId) fail('one approved goal only; sub-jobs cannot reset the run budget');
   if (Date.now() >= Date.parse(s.deadline) || s.operations >= 60) {
     await requestLoopStop(target, Date.now() >= Date.parse(s.deadline) ? 'wall-clock-limit' : 'operation-limit');
@@ -97,45 +98,19 @@ export async function assertLoopAdmission(target, goalId) {
   return s;
 }
 /** Charge before work, including failure and retry. No public reset parameter. */
-export async function countLoopOperation(label, target = context.getStore()?.target) {
+export async function countLoopOperation(label, target = context.getStore()?.target, { cancellation = false } = {}) {
   target = context.getStore()?.target ?? target;
   if (!target) return;
   await lock(target, async () => {
     const s = await readLoopRun(target); if (!isLoopRunActive(s)) return;
-    if (s.stop.requested || s.status !== 'running' || s.operations + (s.cancellation_reservations?.length??0) >= 60 || Date.now() >= Date.parse(s.deadline)) {
+    const stopped = s.stop.requested || s.status !== 'running' || s.operations >= 60 || Date.now() >= Date.parse(s.deadline);
+    if (stopped) {
       if (!s.stop.requested) { s.stop = { requested: true, confirmed: false, unknown: ['in-flight operations'], reason: 'run-budget-exhausted' }; s.status = 'stopping'; await write(target, stored(s)); }
-      fail('persistent stop or run budget exhausted');
+      if (!cancellation) fail('persistent stop or run budget exhausted');
     }
-    s.operations++; s.attempts.push({ number: s.operations, operation: label, at: new Date().toISOString() });
+    if (!stopped) s.operations++;
+    s.attempts.push({ number: s.operations, operation: label, at: new Date().toISOString(), ...(stopped ? { kind: 'stop-bookkeeping' } : {}) });
     await write(target, stored(s));
-  });
-}
-/** Reserve cancellation capacity before a host can start. Unused reservations
- * are released only on a confirmed terminal result; attempts never reset. */
-export async function reserveLoopCancellation(operationId) {
-  const target=context.getStore()?.target;if(!target)return;
-  await lock(target,async()=>{const s=await readLoopRun(target);if(!s)return;
-    s.cancellation_reservations??=[];if(s.cancellation_reservations.includes(operationId))return;
-    if(s.stop.requested||s.operations+s.cancellation_reservations.length>=60)fail('no cancellation capacity before host dispatch');
-    s.cancellation_reservations.push(operationId);await write(target,stored(s));});
-}
-export async function releaseLoopCancellation(operationId) {
-  const target=context.getStore()?.target;if(!target)return;
-  await lock(target,async()=>{const s=await readLoopRun(target);if(!s)return;
-    s.cancellation_reservations=(s.cancellation_reservations??[]).filter(id=>id!==operationId);await write(target,stored(s));});
-}
-/** Safety may request cancellation without granting new execution. A host
- * observation still consumes the original allowance; exhaustion stays unknown. */
-export async function countLoopCancellationOperation(label, target, operationId) {
-  target = context.getStore()?.target ?? target;
-  if(!target) return true;
-  return lock(target,async()=>{
-    const s=await readLoopRun(target);if(!isLoopRunActive(s))return true;
-    const reserved=(s.cancellation_reservations??[]).includes(operationId);
-    if(s.operations+(s.cancellation_reservations?.length??0)>=60&&!reserved)return false;
-    if(reserved)s.cancellation_reservations=s.cancellation_reservations.filter(id=>id!==operationId);
-    s.operations++;s.attempts.push({number:s.operations,operation:label,at:new Date().toISOString()});
-    await write(target,stored(s));return true;
   });
 }
 /** Shared context follows nested async operations; it never owns delivery. */
@@ -144,40 +119,39 @@ export async function withLoopRun(target, goalId, adapter, operation, cancel) {
   const ledgerTarget = inherited?.target ?? target;
   const s = await readLoopRun(ledgerTarget);
   if (!isLoopRunActive(s)) return operation();
+  let stopping = null, rejectStop;
+  const stopAndCancel = reason => stopping ??= (async () => {
+    await requestLoopStop(ledgerTarget, reason);
+    // The persisted flag closes admission before cancellation starts.
+    const cancellation = Promise.resolve().then(cancel).catch(e => [e.message]);
+    let timer, timedOut = false;
+    const remaining = Math.min(1000, Math.max(0, Date.parse(s.deadline) - Date.now()));
+    const unknown = await Promise.race([cancellation, new Promise(resolve => {
+      timer = setTimeout(() => { timedOut = true; resolve(['cancellation not yet confirmed']); }, remaining);
+    })]);
+    clearTimeout(timer);
+    await confirmLoopStop(ledgerTarget, unknown);
+    if (timedOut) void cancellation.then(value => confirmLoopStop(ledgerTarget, value)).catch(() => {});
+    rejectStop?.(Error('Loop run: stopped: ' + reason));
+  })();
   try {
     await assertLoopAdmission(ledgerTarget, goalId);
     assertLoopCostPath(s.cost_path, adapter.costPath);
-  } catch (error) {
-    await requestLoopStop(ledgerTarget, error.message);
-    // The persisted flag closes admission before cancellation starts.
-    const cancellation=Promise.resolve().then(cancel).catch(e=>[e.message]);let timer,timedOut=false;
-    const unknown=await Promise.race([cancellation,new Promise(resolve=>{timer=setTimeout(()=>{timedOut=true;resolve(['cancellation not yet confirmed']);},Math.min(1000,s.remaining_ms));})]);clearTimeout(timer);
-    await confirmLoopStop(ledgerTarget, unknown);if(timedOut)void cancellation.then(value=>confirmLoopStop(ledgerTarget,value)).catch(()=>{});throw error;
-  }
+  } catch (error) { await stopAndCancel(error.message); throw error; }
   return context.run({ target: ledgerTarget }, async () => {
-    let stopping = null, rejectStop;
     const interrupted = new Promise((_, reject) => { rejectStop = reject; });
     // Attach immediately: a timeout may precede the operation's await boundary.
     interrupted.catch(() => {});
-    const stop = reason => stopping ??= (async () => {
-      await requestLoopStop(ledgerTarget, reason);
-      const cancellation = Promise.resolve().then(cancel).catch(e => [e.message]);
-      const remaining = Math.min(1000, Math.max(0, Date.parse(s.deadline) - Date.now()));
-      let limit,timedOut=false;
-      const unknown = await Promise.race([cancellation, new Promise(resolve => { limit = setTimeout(() => {timedOut=true;resolve(['cancellation not yet confirmed']);}, remaining); })]);
-      clearTimeout(limit);
-      await confirmLoopStop(ledgerTarget, unknown);
-      if(timedOut) void cancellation.then(value => confirmLoopStop(ledgerTarget,value)).catch(()=>{});
-      rejectStop(Error('Loop run: stopped: '+reason));
-    })();
-    const timer = setTimeout(() => { void stop('wall-clock-limit'); }, s.remaining_ms);
-    const poll = setInterval(() => { void readLoopRun(ledgerTarget).then(run => { if (run.stop.requested) return stop(run.stop.reason); }).catch(() => stop('ledger-unavailable')); }, 50);
+    const timer = setTimeout(() => { void stopAndCancel('wall-clock-limit'); }, s.remaining_ms);
+    // A different process may set the persistent user stop during a host wait.
+    let polling = null;
+    const poll = setInterval(() => { polling ??= lock(ledgerTarget, () => readLoopRun(ledgerTarget)).then(run => { if (run.stop.requested) return stopAndCancel(run.stop.reason); }).catch(() => stopAndCancel('ledger-unavailable')).finally(() => { polling = null; }); }, 50);
     try {
       const result = await Promise.race([operation(), interrupted]), current = await readLoopRun(ledgerTarget);
-      if (current.stop.requested || result?.operation?.status === 'unknown' || ['host-capability-unavailable', 'components-blocked', 'pre-dispatch-blocked', 'aborted'].includes(result?.idle) || result?.status === 'blocked') await stop(current.stop.reason ?? result?.reason ?? 'uncertain-or-blocked-result');
+      if (current.stop.requested || result?.operation?.status === 'unknown' || ['host-capability-unavailable', 'components-blocked', 'pre-dispatch-blocked', 'aborted'].includes(result?.idle) || result?.status === 'blocked') await stopAndCancel(current.stop.reason ?? result?.reason ?? 'uncertain-or-blocked-result');
       return result;
     }
-    catch (error) { await stop(error.message); throw error; }
-    finally { clearTimeout(timer); clearInterval(poll); if(stopping) await stopping; }
+    catch (error) { await stopAndCancel(error.message); throw error; }
+    finally { clearTimeout(timer); clearInterval(poll); if(polling) await polling; if(stopping) await stopping; }
   });
 }

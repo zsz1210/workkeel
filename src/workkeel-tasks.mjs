@@ -1,4 +1,4 @@
-import {countLoopOperation, readLoopRun, assertLoopAdmission, countLoopCancellationOperation} from './workkeel-loop-run.mjs';
+import {assertLoopAdmission} from './workkeel-loop-run.mjs';
 import fs from "node:fs/promises";
 import path from "node:path";
 import crypto from "node:crypto";
@@ -192,7 +192,7 @@ async function context(target, item, project) {
  * Skill files to still match their approval-time snapshot, because hosts run them.
  */
 export async function assertTaskExecutionContext(target, id, { actor, claim_id, contract_sha256 = null }) {
-  const loopRun = await readLoopRun(target); if(loopRun) await assertLoopAdmission(target, loopRun.goal_id);
+  await assertLoopAdmission(target);
   const project = await readTaskProject(target);
   const item = await readNativeTask(target, id);
   assertActor(project.policy, actor);
@@ -234,8 +234,7 @@ function result(item, replayed = false) {
 }
 
 export async function createNativeTask(targetInput, draft, request, { expectedPolicyDigest = null, expectedAuthorityPins = null } = {}) {
-  draft=structuredClone(draft);request=structuredClone(request);
-  await countLoopOperation("native-task-create", targetInput);
+  await assertLoopAdmission(targetInput);
   const target = await fs.realpath(targetInput);
   request = assertRequest(request, []);
   if (request.expected_version !== 0) throw new Error("Task creation expects version zero");
@@ -414,8 +413,7 @@ const FIELDS = {
   rework: ["summary", "mode"], close: ["revision", "summary", "rollback", "evidence"], cancel: ["summary", "evidence"]
 };
 export async function mutateNativeTask(targetInput, id, action, request) {
-  request=structuredClone(request);
-  if(action === "cancel"){if(!await countLoopCancellationOperation("native-task-cancel",targetInput))throw Error("Loop run: cancellation confirmation exceeds remaining allowance");}else await countLoopOperation("native-task-"+action, targetInput);
+  if (action !== "cancel") await assertLoopAdmission(targetInput);
   if (!Object.hasOwn(FIELDS, action)) throw new Error("Unknown task operation");
   request = assertRequest(request, FIELDS[action]);
   const target = await fs.realpath(targetInput);

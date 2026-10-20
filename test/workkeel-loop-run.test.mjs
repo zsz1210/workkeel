@@ -30,18 +30,19 @@ test('zero API spend fails closed before starting: missing proof, unknown, API a
   const state = await startLoopRun(root, approval(), { authorizeUser, costPath });
   assert.equal(Date.parse(state.deadline) - Date.parse(state.started_at), 7200000);
 });
-test('all attempts share 60 operations, including failed native, admission and dispatch attempts and nested jobs', async t => {
+test('only real execution attempts share 60 operations; gates do not charge and nested jobs cannot reset it', async t => {
   const root = await fixture(t); await startLoopRun(root, approval(), { authorizeUser, costPath });
   await assert.rejects(prepareDispatchTicket(root, {}));
   await assert.rejects(admitGoalImprovement(root, {}), /one L2/);
   await assert.rejects(mutateNativeTask(root, 'missing', 'claim', {}));
-  assert.equal((await readLoopRun(root)).operations, 3);
+  assert.equal((await readLoopRun(root)).operations, 0);
   await withLoopRun(root, 'one', { costPath }, async () => {
     // A sub-job's different target never creates a fresh allowance.
     await countLoopOperation('nested-check', path.join(root, 'child'));
   }, async () => []);
-  assert.equal((await readLoopRun(root)).operations, 4);
-  for (let n = 4; n < 60; n++) await countLoopOperation('failed-attempt', root);
+  assert.equal((await readLoopRun(root)).operations, 1);
+  for (let n = 1; n < 60; n++) await countLoopOperation('failed-attempt', root);
+  await assertLoopAdmission(root); // Nested gates allow the already-charged 60th operation.
   await assert.rejects(countLoopOperation('sixty-first', root), /budget/);
   const s = await readLoopRun(root); assert.equal(s.operations, 60); assert.equal(s.stop.requested, true);
   await assert.rejects(assertLoopAdmission(root, 'another'), /stop/);
@@ -68,7 +69,7 @@ test('persistent stop closes admission before cancellation; restart and user cle
 });
 test('unknown cancellation remains explicit and cannot be cleared', async t => {
   const root = await fixture(t); await startLoopRun(root, approval(), { authorizeUser, costPath });
-  await requestLoopStop(root); await confirmLoopStop(root, ['operation-unknown']);
+  await assert.rejects(withLoopRun(root,'one',{costPath},async()=>{await requestLoopStop(root);return new Promise(()=>{});},async()=>['operation-unknown']),/stopped/);
   const run = await readLoopRun(root); assert.equal(run.stop.confirmed, false); assert.deepEqual(run.stop.unknown, ['operation-unknown']);
   await assert.rejects(clearLoopStop(root, { authorizeUser }), /unknown/);
 });
@@ -83,6 +84,8 @@ test('whole wall-clock includes pause/restart; expiry interrupts an in-flight wa
     assert.equal((await readLoopRun(active)).stop.requested, true); settle('cancelled'); return [];
   });
   assert.equal(result, 'cancelled');
+  for(let i=0;i<50&&!(await readLoopRun(active)).stop.confirmed;i++)await new Promise(resolve=>setTimeout(resolve,10));
+  assert.equal((await readLoopRun(active)).stop.confirmed,true);
 });
 
 test('an uncooperative wait cannot extend the absolute deadline and unknown cancellation stays visible', async t => {
@@ -92,20 +95,33 @@ test('an uncooperative wait cannot extend the absolute deadline and unknown canc
   assert.deepEqual(state.stop.unknown, ['uncooperative-host']);
 });
 
-test('persisted cancellation reservations keep the 60th slot available after exhaustion and restart',async t=>{
-  const {reserveLoopCancellation,countLoopCancellationOperation}=await import('../src/workkeel-loop-run.mjs');
-  const root=await fixture(t);await startLoopRun(root,approval(),{authorizeUser,costPath});
-  await assert.rejects(withLoopRun(root,'one',{costPath},async()=>{
-    await reserveLoopCancellation('host-one');
-    for(let i=0;i<59;i++)await countLoopOperation('work');
-    await countLoopOperation('would-steal-cancellation-slot');
-  },async()=>{
-    const restarted=await import('../src/workkeel-loop-run.mjs?cancellation-restart');
-    assert.equal((await restarted.readLoopRun(root)).stop.requested,true);
-    assert.equal(await countLoopCancellationOperation('host-cancel',root,'host-one'),true);
+for (const entryStop of [false, true]) test(`cancellation after cap survives restart (${entryStop ? 'entry' : 'in-run'} stop) without taking execution allowance`, async t => {
+  const root = await fixture(t); await startLoopRun(root, approval(), { authorizeUser, costPath });
+  // Fill before polling so setup writes cannot race the ledger integrity reader.
+  for (let i = 0; i < (entryStop ? 60 : 59); i++) await countLoopOperation('work', root);
+  await assert.rejects(withLoopRun(root, 'one', { costPath }, async () => {
+    await countLoopOperation('sixtieth'); await countLoopOperation('sixty-first');
+  }, async () => {
+    const restarted = await import('../src/workkeel-loop-run.mjs?cancellation-restart');
+    assert.equal((await restarted.readLoopRun(root)).stop.requested, true);
+    await assert.rejects(prepareDispatchTicket(root, {}), /stop/);
+    await restarted.countLoopOperation('host-cancel', root, { cancellation: true });
     return [];
-  }),/budget/);
-  const run=await readLoopRun(root);assert.equal(run.operations,60);assert.deepEqual(run.cancellation_reservations,[]);assert.equal(run.stop.confirmed,true);
+  }), /budget/);
+  const run = await readLoopRun(root); assert.equal(run.operations, 60); assert.equal(run.attempts.length, 61);
+  assert.equal(run.attempts.at(-1).kind, 'stop-bookkeeping'); assert.equal(run.stop.confirmed, true);
+});
+
+test('old cancellation reservation fields are ignored without weakening the ledger digest', async t => {
+  const root = await fixture(t); await startLoopRun(root, approval(), { authorizeUser, costPath });
+  const file = path.join(root, '.ai-org/loop/run.json'), e = JSON.parse(await fs.readFile(file, 'utf8'));
+  e.value.cancellation_reservations = ['old-host']; e.sha256 = executionDigest(e.value);
+  await fs.writeFile(file, JSON.stringify(e));
+  assert.equal((await readLoopRun(root)).remaining_operations, 60);
+  const { finishLoopRun } = await import('../src/workkeel-loop-run.mjs');
+  await finishLoopRun(root);
+  e.value.cancellation_reservations = []; await fs.writeFile(file, JSON.stringify(e));
+  await assert.rejects(readLoopRun(root), /integrity/);
 });
 
 test('goal acceptance leaves the same allowance for comparison; normal comparison completion ends it',async t=>{

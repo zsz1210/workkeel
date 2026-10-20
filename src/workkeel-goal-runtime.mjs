@@ -14,7 +14,7 @@ import {createTrustedRoleHost} from './workkeel-role-preflight.mjs';
 import {readApprovedModelPolicy} from './workkeel-model-routing.mjs';
 import {resolveModelPolicy} from './workkeel-model-policy.mjs';
 import {readTaskProject,assertActor,safeDirectory,readNativeGit} from './workkeel-project.mjs';
-import {readNativeTask,mutateNativeTask,assertTaskExecutionContext} from './workkeel-tasks.mjs';
+import {readNativeTask,assertTaskExecutionContext} from './workkeel-tasks.mjs';
 import {readTaskFile} from './task-contract.mjs';
 import {checkEvidencePin} from './workkeel-evidence-file.mjs';
 import {durableAtomicCreate,durableAtomicWrite,formatJson} from './files.mjs';
@@ -282,7 +282,7 @@ export async function createCodexGoalAdapter({hostFactory=createLocalCodexSubscr
       const pin=await report(ctx,'review',{schema_version:'workkeel.goal-authored-review/v1',actor:ctx.input.actor,thread_id:result.conversation_id,operation_id:ctx.operation_id,runtime_selection:result.runtime_selection,product_access:'read',native_request:request,usage:result.usage,raw_result_sha256:executionDigest(result)});
       // Import the exact bytes authored by this actual registered reviewer
       // thread. The coordinator never selects a judgment or rewrites the request.
-      await mutateNativeTask(ctx.component.root,ctx.component.task_id,'review',request);
+      await ctx.mutateNativeTask('review',request);
       return {...base,authored_request_pin:pin};
     }
     const pin=await report(ctx,ctx.input.phase,{schema_version:'workkeel.goal-role-result/v1',operation_id:ctx.operation_id,actor:ctx.input.actor,thread_id:result.conversation_id,runtime_selection:result.runtime_selection,product_access:e.access,phase:ctx.input.phase,output:result.output,usage:result.usage});

@@ -1,4 +1,4 @@
-import {readLoopRun, isLoopRunActive, countLoopOperation} from './workkeel-loop-run.mjs';
+import {readLoopRun, isLoopRunActive} from './workkeel-loop-run.mjs';
 import path from 'node:path';
 import os from 'node:os';
 import {randomUUID} from 'node:crypto';
@@ -79,9 +79,8 @@ export async function readGoalAdmissionAuthority(target,goal,{journal}={}){
   return {grant,extension_sha256,continuation_sha256,authorizations};
 }
 export async function extendGoalAdmission(target,input){
-  input=structuredClone(input);
-  await countLoopOperation("admission-extend",target);
   extensionRequest(input);const r=structuredClone(input),hash=executionDigest(r);
+  await assertAdmission(target);
   return withProjectMutationLock(target,async()=>{
     const s=await readGoalAdmissions(target),{readNativeGoal,assertNativeGoalAuthority}=await import('./workkeel-goals.mjs');
     const approvalFile=await readTaskFile(target,r.approval_ref),approval=JSON.parse(approvalFile.content);extensionApproval(approval);
@@ -137,9 +136,7 @@ function contractFor(base,{id:taskId,goal,actor,read_paths,write_paths,refs,acce
 /** Exact IDs, artifacts and receipts survive partial intake. Budget reservations
  * never refund an uncertain operation or manufacture a new human approval. */
 export async function admitGoalImprovement(target,request,{proposal=null,trigger=null}={}){
-  request=structuredClone(request);proposal=structuredClone(proposal);trigger=structuredClone(trigger);
-  await countLoopOperation("admission-attempt", target);
-  if(isLoopRunActive(await readLoopRun(target))) throw Error("Loop run: one L2 in progress; new admission is blocked during the run");
+  await assertAdmission(target);
   exactKeys(request,['goal_id','actor','operation_id','expected_version'],['proposal_id','event_id','direction']);id(request.goal_id);id(request.operation_id);integer(request.expected_version,0,1000);
   const context=await source(target,request),{goal,grant,controller,template,component,task,goals}=context;
   const kind=trigger?'discovery':'execution';if(!!proposal===!!trigger)fail('select one evidence-backed proposal or discovery trigger');
@@ -203,8 +200,7 @@ export async function admitGoalImprovement(target,request,{proposal=null,trigger
 }
 
 export async function reconcileGoalAdmission(target,input,{owner=null}={}){
-  input=structuredClone(input);
-  await countLoopOperation("admission-reconcile",target);
+  await assertAdmission(target);
   const {admission_id,actor}=input;
   id(admission_id);let entry=await withProjectMutationLock(target,async()=>{
     const s=await readGoalAdmissions(target),e=s.entries.find(e=>e.id===admission_id);if(!e)fail('unknown admission');
@@ -238,8 +234,7 @@ export async function reconcileGoalAdmission(target,input,{owner=null}={}){
  * nothing is retried automatically. needs-reevaluation leaves a later discovery to
  * propose it again from current sources. */
 export async function disposeGoalProposal(target,r){
-  r=structuredClone(r);
-  await countLoopOperation("admission-dispose",target);
+  await assertAdmission(target);
   exactKeys(r,['goal_id','actor','operation_id','expected_version','proposal_id','disposition','reason'],['superseded_by']);id(r.goal_id);id(r.operation_id);id(r.proposal_id);integer(r.expected_version,0,1000);
   const record={goal_id:r.goal_id,proposal_id:r.proposal_id,disposition:r.disposition,superseded_by:r.superseded_by??null,reason:r.reason,actor:r.actor,operation_id:r.operation_id,created_at:current()};
   disposition(record);if(record.superseded_by===record.proposal_id)fail('a proposal cannot supersede itself');
@@ -258,4 +253,8 @@ export async function disposeGoalProposal(target,r){
     if(s.entries.some(e=>e.goal_id===r.goal_id&&e.kind==='execution'&&e.proposal_id===r.proposal_id))fail('admitted proposals are settled through their derived goal');
     s.dispositions??=[];if(s.dispositions.length>=1000)fail('journal capacity');s.dispositions.push(record);await save(target,s);return {version:s.version,disposition:record,replayed:false};
   });
+}
+
+async function assertAdmission(target) {
+  if (isLoopRunActive(await readLoopRun(target))) throw Error("Loop run: one L2 in progress; new admission is blocked during the run");
 }
