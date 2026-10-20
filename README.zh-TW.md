@@ -1,149 +1,118 @@
 # Workkeel
 
-把任務協作紀錄放在 repository 裡、給程式開發 Agent 用的框架。
+讓 coding agents 以儲存庫檔案協調任務的小型框架。
 
-Workkeel 把已批准的任務範圍、交接與審查證據存在程式碼旁邊，並綁定到 Git commit。
-能遵循專案指示的開發工具都能使用，雲端或本機模型皆可，不綁定特定廠商或模型。
+把核准範圍、交接與審查證據留在程式碼旁，綁定 Git commit。
+沿用你現有的 coding tool；核心只需要儲存庫檔案和 CLI。
 
 [English](README.md) · 繁體中文 · [日本語](README.ja.md)
 
 [![CI](https://github.com/zsz1210/workkeel/actions/workflows/ci.yml/badge.svg)](https://github.com/zsz1210/workkeel/actions/workflows/ci.yml)
-0.2.0-beta.0 未發布的原始碼 · Node.js 24.15+ · [MIT](LICENSE)
 
-## 可以做什麼
+0.2.0-beta.0 未發布原始碼 · Node.js 24.15+ · [MIT](LICENSE)
 
-- **工作可以接續：** 換工具或換對話之後，目標、限制、決策和做到一半的成果都還在 repository 裡。
-- **審查強度跟著風險走：** 每個任務分成 `low`、`standard`、`high`、`critical` 四級。
-  專案政策訂出最低等級，交接時如果改到風險更高的檔案，等級會自動調高。
-- **審查確切的變更：** 由另一個 Agent 審查交付的那個 commit，再由核准者驗收。
-  核准和證據都綁在 Git 上，不靠聊天紀錄。
-- **不增加負擔：** 核心只有一個 CLI 和 repository 裡的檔案，不需要伺服器、模型呼叫或全域設定。
-- **查看既有紀錄：** 選用的本機網站可以看任務、文件、執行時間和 Token，不會呼叫模型。
+## 為什麼用 Workkeel
 
-實際執行工作、套用權限限制的是你原本使用的開發工具。Workkeel 的紀錄不是沙箱，
-執行跑完也不代表任務已經驗收。
+- **換工具也能接著做：**對話結束或切換 coding tool 後，任務範圍、決策與部分成果仍在。
+- **審查確切變更：**由不同 Agent 檢查交付的 commit，再由 approver 驗收。
+- **依風險決定審查要求：**先約定風險等級，政策與實際變更可提高等級；重做次數設有上限。
+- **核心保持小巧：**協調任務不需要伺服器、模型呼叫或修改全域模型設定。
 
-## 從需求到驗收
+## 哪些情況不適合
+
+Workkeel 不是 sandbox，也不是 agent runtime，不會替你部署。
+權限限制與變更執行由你的 coding tool 負責。相較於任務追蹤器，
+Workkeel 把任務授權和證據綁到 commit；相較於 agent framework，
+它把寫程式的執行迴圈留給你現有的工具。
+
+## 一個任務怎麼走
 
 <picture>
   <source media="(max-width: 640px)" srcset="docs/assets/workkeel-workflow-mobile.svg">
-  <img src="docs/assets/workkeel-workflow.svg" alt="批准範圍、執行工作、審查確切版本、驗收；審查未通過則返回實作。">
+  <img src="docs/assets/workkeel-workflow.svg" alt="約定範圍與風險，以現有 coding tool 實作，由不同 Agent 審查確切 commit，再驗收、完成。審查失敗仍停在 test，直到 approver 執行 task rework，才沿用同一份契約回到 intake；low 最多重做 2 次，其餘 3 次，達上限就停下來問人。">
 </picture>
 
-以修一個 bug 為例：先批准目標和允許修改的檔案，讓開發工具調查並實作，保留測試證據，
-再請另一個 Agent 審查這個候選 commit。審查沒過的話，任務會在同一個已批准範圍內退回重做。
+先約定範圍、權限、驗收條件和風險等級，再認領任務，用 coding tool 實作，
+交付 commit 給另一個 Agent 審查。
+審查失敗仍停在 `test`；approver 執行 `task rework`，才會保存失敗紀錄，
+沿用同一份契約回到 `intake`，由 builder 重新認領並交付新的 commit；
+`low` 最多重做兩次，其餘等級三次，達上限就停下來問人。
+審查通過後，由有權限的 approver 結案；`high` 與 `critical` 須由不同模型家族審查，
+完成規定的交叉審查，再由原核准人（Principal）結案。
+
+## 30 秒示範
+
+先依下方步驟安裝原始碼 CLI，再到既有 Git 專案操作。輸出僅列出部分 JSON 欄位。
+`init` 會在同一位 `owner` 下註冊 `builder` 與 `reviewer`；
+owner 核准任務與驗收，兩個 Agent 各自完成實作和審查。
+
+```text
+$ workkeel init .
+{"initialized":true,"mode":"task-first"}
+# 忽略 .workkeel/，並在認領前提交產生的設定檔。
+$ workkeel task new --goal "Clarify the guide" --acceptance "The guide names its audience" --write docs --risk low --actor builder
+{"id":"WK-0001","state":"intake"}
+$ workkeel task claim --id WK-0001 --actor builder
+{"id":"WK-0001","state":"build"}
+# builder 修改指南、檢查內容並提交變更。
+$ workkeel task handoff --id WK-0001 --actor builder --summary "Guide updated"
+{"id":"WK-0001","state":"test"}
+# reviewer 依驗收條件檢查交付的確切 commit。
+$ workkeel task review --id WK-0001 --actor reviewer --judgment pass --summary "Meets the criterion"
+{"id":"WK-0001","state":"release_gate"}
+$ workkeel task close --id WK-0001 --actor builder --summary "Owner accepts" --rollback "Revert the guide commit"
+{"id":"WK-0001","state":"done","external_release":"not-performed"}
+```
+
+這個 `low` 範例不需要證據檔；其他等級的要求見下表。
+CLI 只記錄生命週期，不會代你修改或審查內容。
 
 ## 快速開始
 
-需要 Git、Node.js 24.15+ 和一套開發工具。從 clone 下來的原始碼執行目前版本：
+需要 Git、Node.js 24.15+ 和 coding tool。安裝目前的原始碼：
 
 ```sh
 git clone https://github.com/zsz1210/workkeel.git
-cd workkeel && npm ci --omit=optional --ignore-scripts
+cd workkeel
+npm ci --omit=optional --ignore-scripts
 alias workkeel="node $PWD/bin/workkeel.mjs"
 ```
 
-在你的專案裡，`init` 會建立一位負責人，加上 `builder`（model family `claude`）和 `reviewer`（model family `codex`）兩個 Agent：
-
-```sh
-workkeel init .
-echo ".workkeel/" >> .gitignore && git add -A && git commit -m "Start Workkeel"
-workkeel task new --goal "Clarify the guide" --acceptance "The guide names its audience" --write docs --actor builder
-workkeel task claim --id WK-0001 --actor builder
-# edit, commit, and save evidence under .ai-org/artifacts/WK-0001/
-workkeel task handoff --id WK-0001 --actor builder --summary "Guide updated" --evidence .ai-org/artifacts/WK-0001/check.md
-workkeel task review --id WK-0001 --actor reviewer --judgment pass --summary "Meets the criterion" --evidence .ai-org/artifacts/WK-0001/review.md
-workkeel task close --id WK-0001 --actor builder --summary Accepted --rollback "Revert the guide commit" --evidence .ai-org/artifacts/WK-0001/review.md
-```
-
-`workkeel start .` 只預覽設定步驟，不會寫入任何檔案；`workkeel help advanced` 會列出 request 檔案形式和選用子系統。
-自訂政策（`init --policy`）、request 檔案和回復方式請看[快速開始指南](docs/getting-started/workkeel.md)。
+切換到你自己的專案 Git 儲存庫，執行 `workkeel start .` 預覽設定步驟，不會寫入檔案。
+初始化、政策、證據與回復方式見[快速入門指南](docs/getting-started/workkeel.md)。
+開發 Workkeel 本身則請依[貢獻指南](CONTRIBUTING.md)操作。
 
 ## 風險等級
 
-| 等級 | 常見用途 | 驗收前需要 |
-| --- | --- | --- |
-| `low` | 文件、文字修改 | 由不同 Agent 審查；證據可省略 |
-| `standard` | 一般功能與修正 | 交接證據，加上不同 Agent 審查 |
-| `high` | 認證、資料遷移、敏感資料 | 審查者來自另一個模型系列，並附上自己的審查報告；不能留有未解決問題；由核准的 Principal 驗收 |
-| `critical` | 部署、CI、正式環境設定 | `high` 的全部要求，再加上回復計畫和已 commit 的核准紀錄 |
+| 等級 | 常見用途 | 結案前要求 | 重做上限 |
+| --- | --- | --- | --- |
+| `low` | 文件、文字調整 | 不同 Agent 審查；證據檔可省略 | 2 |
+| `standard` | 一般功能與修正 | 交付證據、不同 Agent 審查 | 3 |
+| `high` | 認證、資料遷移、敏感資料 | 不同模型家族、審查者自己的報告及交叉審查；無未解問題；原核准人結案 | 3 |
+| `critical` | 部署、CI、正式環境設定 | `high` 的全部要求，加上交付時的回復計畫與已提交的核准紀錄 | 3 |
 
-high 以上的工作不分一個人或多人，規則都一樣：由另一個模型系列的審查者審查，再由核准的 Principal 本人確認。
-導入 Workkeel 之前，請先讀[導入與風險分級](docs/operations/team-adoption-and-risk.md)。
-
-重做上限為 `low` 兩輪，`standard`、`high`、`critical` 三輪；到上限就停下來，交由人決定。
-選填的審查分數欄位會保留供[統計](docs/operations/team-adoption-and-risk.md#review-scores-optional)使用，
-不作為退回重做或驗收的門檻。
+達上限就停下來，請人決定重訂範圍、核准新任務或取消。
 [QA 流程](docs/operations/workkeel-review-assessment.md#independent-qa-and-release-gate)
-將發現分為 Must fix（必須修正）／Consider（考慮採用）／Note（備註）／Dismiss（不採納），
-`high` 和 `critical` 任務必須由 Codex／Claude 各自獨立交叉審查。
+將問題分為 Must fix（阻擋）及 Consider／Note／Dismiss（留存紀錄），
+並要求 `high`、`critical` 由 Codex／Claude 獨立交叉審查；
+CLI 會檢查已註冊的模型家族，但這項檢查本身不能證明交叉審查已完成。
 
-## 已發布的 Beta.1
+## 選用功能
 
-npm `next` 通道上的 `@zsz1210/workkeel@0.1.0-beta.1` 是較早的版本，
-仍包含這份原始碼已經移除的 Temple 相容模式，也沒有上面的旗標指令和 high、critical 等級。
-只有在評估那個舊版時才使用它，詳見它的[發布說明](CHANGELOG.md#010-beta1)。
+- **[Workspace 觀測台](docs/operations/workkeel-workspace.md)：**以 `workkeel workspace serve` 啟動，瀏覽專案紀錄，閒置時不呼叫模型。另有獨立的[唯讀觀察器](docs/operations/workkeel-observer.md)，使用 `workkeel monitor`。
+- **[工作流程／LangGraph](docs/operations/workkeel-workflows.md)：**選用 runner，依核准的流程圖、模型政策執行可復原步驟。
+- **[Workkeel Loop L1 報告](docs/operations/loop-trial.md)：**`workkeel stats --report` 產生每週唯讀報告，模型／API 花費為零。
+- **[原生派工](docs/operations/workkeel-native-dispatch.md)：**記錄執行交接和指定模型，實際執行結果由 host 回報。
+- **[Bot 層參考用法](docs/operations/reference-usage-bot-layer.md)：**示範如何用人工關卡協調專案 Bot、Claude Code 與 Codex，屬於核心以外的用法。
 
-## 選用元件
-
-除了任務協作，其他元件都是選用的。簡短的 `workkeel help` 不列出這些子系統，
-`workkeel help advanced` 才會列出。它們仍然可以使用，也都有測試；沒有人使用的部分，之後的版本可能會移除。
-
-| 元件 | 預設 | 範圍 |
-| --- | --- | --- |
-| 任務協作 | 核心 | 任務契約、認領、交接、審查與驗收；不需要伺服器 |
-| 開發工具與模型 | 沿用你現有的工具 | Workkeel 不更改任何全域模型設定 |
-| 觀察站（`workkeel monitor`） | 關閉 | 本機、唯讀，完全不呼叫模型 |
-| 觀測台／工作區介面（`workkeel workspace serve`） | 選用 | 核心交付流程不依賴它 |
-| 工作流程執行 | 需要明確啟用 | 選用的 LangGraph 相依套件，以及已批准的流程圖和模型政策 |
-| 原生派工與模型選擇 | 需要明確啟用 | 記錄要求的模型和理由；實際執行的模型由工具回報 |
-| Headroom 工具輸出檢視 | 關閉 | 只在要求時提供有損壓縮的檢視；原始內容仍可讀取 |
-| 學習紀錄與 Skill 版本 | 選用紀錄 | 核准不會自動建立或啟用 Skill |
-| 工具用量紀錄與保存封存 | 選用紀錄 | 用量由工具回報；封存只在要求時執行 |
-| 桌面工作區、整體目標、有限自主執行 | 實驗性 | 只能透過原始碼 CLI 使用；自動執行只限 `low` 和 `standard` 任務 |
-
-[觀察站](docs/operations/workkeel-observer.md) ·
-[工作流程](docs/operations/workkeel-workflows.md) ·
-[原生派工](docs/operations/workkeel-native-dispatch.md) ·
-[工作區介面](docs/operations/workkeel-workspace.md) ·
-[專案脈絡與 Skill](docs/extensions/workkeel-context.md)
-
-選用的 [Workkeel Loop](docs/operations/loop-trial.md) 提供 L1 每週唯讀報告
-（`workkeel stats --report`），模型／API 支出為零。試行的執行防護限制為 60 次操作、
-兩小時（含等待時間），停止旗標會持續保留，只有使用者能清除。
-L2 比較紀錄只有資料，不會執行工作或核准工作。
-
-若想參考專案 Bot、Claude Code 和 Codex 如何分工，搭配三個人工關卡，請看
-[選用用法：Bot 層](docs/operations/reference-usage-bot-layer.md)。這套配置不屬於框架核心。
-
-## 架構
-
-<picture>
-  <source media="(max-width: 640px)" srcset="docs/assets/workkeel-architecture-mobile.svg">
-  <img src="docs/assets/workkeel-architecture.svg" alt="專案任務契約連到協調與選用的工作流程執行；執行工具使用工具並回傳證據；審查與驗收保持分開。">
-</picture>
-
-任務的權限和證據存在專案檔案裡。開發工具在自己的權限範圍內執行。選用的 runner 負責
-工作流程進度和已批准的模型選擇；結果不確定時會停下來等待核對。觀察站只負責讀取。
-
-[架構](docs/concepts/architecture.md) ·
-[任務契約](docs/concepts/task-contract.md)
+這些與其他選用功能請見[文件索引](docs/README.md)。
 
 ## 限制
 
-- 目前是實驗性的 beta。各種中斷後的復原，以及在全新機器上安裝，都還沒有完整驗證。
-- Principal 和 Agent 只是記錄下來的名稱，不是經過驗證的帳號。Workkeel 無法證明兩位
-  Principal 真的是兩個人，也無法證明實際跑的是哪個模型。
-- 本機鎖不是分散式協調。原生工具的工作階段，除非工具自己記錄，否則沒有用量資料。
-- 用舊版 Temple 模式建立的專案請繼續使用原本的 CLI 版本，沒有遷移路徑。
+- 仍是實驗性 beta，尚未完整驗證所有中斷復原情境及全新機器安裝。
+- Principal 與 Agent 是署名，不是經過身分驗證的帳號。Workkeel 無法證明兩個 Principal 就是兩個人，也無法證明實際用了哪個模型。
+- 本機鎖無法協調多台機器；原生 host 用量資料只有在 host 有記錄時才存在。
 
-## 開發 Workkeel
+## 文件與貢獻
 
-這個 repository 只放框架原始碼、公開文件、通用範本和可重現的測試。開發 Workkeel 時
-實際產生的任務、核准、紀錄和審查證據，一律放在[獨立的私有工作區](docs/operations/framework-development.md)，
-不放進這個 checkout，即使 Git 會忽略那些檔案也一樣。請見
-[ADR-0083](docs/adr/0083-public-source-private-state.md)。
-
-[文件](docs/README.md) · [測試](docs/getting-started/testing.md) ·
-[貢獻指南](CONTRIBUTING.md) · [安全性](SECURITY.md) ·
-[MIT](LICENSE) · [第三方授權聲明](THIRD_PARTY_NOTICES.md)
+[文件](docs/README.md) · [架構](docs/concepts/architecture.md) · [測試](docs/getting-started/testing.md) · [貢獻指南](CONTRIBUTING.md) · [安全性](SECURITY.md) · [MIT](LICENSE) · [第三方聲明](THIRD_PARTY_NOTICES.md)

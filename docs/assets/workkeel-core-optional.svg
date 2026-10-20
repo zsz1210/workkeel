@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1216" height="660" viewBox="0 0 1216 660" role="img" aria-labelledby="title desc">
+  <title id="title">Workkeel core and optional parts</title>
+  <desc id="desc">The core is repository files for task contracts, evidence and policy, plus the Workkeel CLI. Your existing coding tool sits beside the core and enforces execution permissions. Dashed boxes are optional: workspace observatory using workkeel workspace serve, workflow runner using LangGraph, Workkeel Loop L1 report, native dispatch, and read-only observer. Core task coordination requires none of them.</desc>
+  <defs>
+    <marker id="arrow" markerWidth="9" markerHeight="9" refX="8" refY="4" orient="auto"><path d="M0 0L8 4L0 8" fill="none" stroke="#536a7c" stroke-width="1.5"/></marker>
+    <style>
+      text{font-family:system-ui,-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif;fill:#1d3041}
+      .heading{font-size:25px;font-weight:600}.body{font-size:20px}
+      .optional{fill:#fff1df;stroke:#c8d3dc;stroke-width:2;stroke-dasharray:8 6}
+    </style>
+  </defs>
+  <rect width="100%" height="100%" fill="#fff"/>
+  <text x="32" y="49" font-size="30" font-weight="600">A small core, with optional parts</text>
+  <text x="32" y="82" font-size="22">Repository files + CLI; your coding tool does the work.</text>
+  <rect x="32" y="116" width="700" height="254" rx="16" fill="#edf3fa" stroke="#c8d3dc"/>
+  <text x="54" y="153" class="heading">Workkeel core</text>
+  <rect x="54" y="177" width="386" height="166" rx="12" fill="#fff" stroke="#c8d3dc"/>
+  <text x="74" y="212" font-size="23" font-weight="500">Repository files</text>
+  <text x="74" y="251" class="body">Task contracts · evidence · policy</text>
+  <text x="74" y="282" class="body">Claims, review and acceptance</text>
+  <text x="74" y="313" class="body">Bound to exact Git commits</text>
+  <path d="M445 260H480" fill="none" stroke="#536a7c" stroke-width="2" marker-end="url(#arrow)"/>
+  <rect x="490" y="177" width="220" height="166" rx="12" fill="#fff" stroke="#c8d3dc"/>
+  <text x="510" y="212" font-size="23" font-weight="500">CLI</text>
+  <text x="510" y="251" class="body">Lifecycle guards</text><text x="510" y="282" class="body">Read / write records</text>
+  <text x="510" y="313" class="body">No model calls</text>
+  <path d="M735 249H790" fill="none" stroke="#536a7c" stroke-width="2" marker-end="url(#arrow)"/>
+  <rect x="800" y="116" width="384" height="254" rx="16" fill="#e6f3ec" stroke="#c8d3dc"/>
+  <text x="822" y="153" class="heading">Your coding tool</text>
+  <text x="822" y="202" class="body">Existing agent + model</text><text x="822" y="240" class="body">Edit, test and commit</text>
+  <text x="822" y="278" class="body">Enforce tool / file / network limits</text><text x="822" y="316" class="body">Return candidate + evidence</text>
+  <text x="32" y="413" font-size="23" font-weight="500">Optional · dashed boxes · none required for core task coordination</text>
+  <g transform="translate(32 437)">
+    <rect class="optional" width="368" height="91" rx="12"/>
+    <text x="18" y="34" font-size="22" font-weight="500">Workspace observatory</text><text x="18" y="67" font-size="19">workkeel workspace serve</text>
+  </g>
+  <g transform="translate(424 437)">
+    <rect class="optional" width="368" height="91" rx="12"/>
+    <text x="18" y="34" font-size="22" font-weight="500">Workflow runner / LangGraph</text><text x="18" y="67" font-size="19">Approved graphs + recoverable steps</text>
+  </g>
+  <g transform="translate(816 437)">
+    <rect class="optional" width="368" height="91" rx="12"/>
+    <text x="18" y="34" font-size="22" font-weight="500">Workkeel Loop L1 report</text><text x="18" y="67" font-size="19">Weekly, read-only; no model/API spend</text>
+  </g>
+  <g transform="translate(32 551)">
+    <rect class="optional" width="368" height="85" rx="12"/>
+    <text x="18" y="34" font-size="22" font-weight="500">Native dispatch</text><text x="18" y="65" font-size="19">Execution handoffs + host reports</text>
+  </g>
+  <g transform="translate(424 551)">
+    <rect class="optional" width="368" height="85" rx="12"/>
+    <text x="18" y="34" font-size="22" font-weight="500">Read-only observer</text><text x="18" y="65" font-size="19">workkeel monitor · no model calls</text>
+  </g>
+</svg>

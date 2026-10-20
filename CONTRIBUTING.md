@@ -5,7 +5,10 @@ proposals. Open an issue before a large feature or a change to task authority,
 file ownership, security, public APIs, or external integrations. Use synthetic
 examples. Report vulnerabilities through [SECURITY.md](SECURITY.md).
 
-This repository contains framework content only. Read [AGENTS.md](AGENTS.md) and
+## Developing Workkeel
+
+This repository holds framework source, public documentation, generic templates
+and reproducible tests. Read [AGENTS.md](AGENTS.md) and
 the [framework development guide](docs/operations/framework-development.md)
 before governed work. Create real tasks only in a separate private workspace
 outside the public source checkout, and back that workspace up independently.
@@ -18,6 +21,8 @@ synthetic reproductions. Publish reusable code, generic templates, reproducible
 tests and documentation of the resulting behavior; retain the development
 process and acceptance records privately, linked to the exact source revision.
 See the [separation decision](docs/adr/0083-public-source-private-state.md).
+
+## Pull requests
 
 For a pull request:
 

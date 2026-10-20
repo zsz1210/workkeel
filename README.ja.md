@@ -1,151 +1,118 @@
 # Workkeel
 
-コーディングエージェントのためのタスク連携を、リポジトリの中で記録するフレームワークです。
+コーディングエージェントのタスクを、リポジトリ内のファイルで管理する小さなフレームワーク。
 
-Workkeel は承認済みのタスク範囲、引き継ぎ、レビューの証跡をコードの横に保存し、Git コミットに結び付けます。
-プロジェクトの指示に従えるコーディングツールであれば、クラウドでもローカルモデルでも使えます。
-特定のプロバイダーやモデルには依存しません。
+承認した範囲、引き継ぎ、レビューの証跡をコードのそばに残し、Git コミットに結び付けます。
+普段のコーディングツールをそのまま使えます。コアに必要なのはリポジトリ内のファイルと CLI だけです。
 
 [English](README.md) · [繁體中文](README.zh-TW.md) · 日本語
 
 [![CI](https://github.com/zsz1210/workkeel/actions/workflows/ci.yml/badge.svg)](https://github.com/zsz1210/workkeel/actions/workflows/ci.yml)
-0.2.0-beta.0 未公開のソース · Node.js 24.15+ · [MIT](LICENSE)
 
-## できること
+0.2.0-beta.0 未公開ソース · Node.js 24.15+ · [MIT](LICENSE)
 
-- **作業を再開できる：** ツールや会話が変わっても、目標、制約、決定、途中の成果がリポジトリに残ります。
-- **リスクに応じてレビューを強める：** 各タスクは `low`、`standard`、`high`、`critical` のいずれかです。
-  最低ランクはプロジェクトのポリシーで決まり、引き継ぎ時により危険なファイルが変わっていれば引き上げられます。
-- **正確な変更をレビューする：** 別の Agent が引き渡されたコミットそのものをレビューし、承認者が受け入れます。
-  承認と証跡はチャットではなく Git に結び付きます。
-- **邪魔にならない：** 中核は CLI とリポジトリ内のファイルだけです。サーバー、モデル呼び出し、グローバル設定は不要です。
-- **既存の記録を見る：** 任意のローカル Web サイトで、タスク、文書、実行時間、トークンをモデルを呼ばずに確認できます。
+## Workkeel を使う理由
 
-作業を実行し、権限を強制するのは普段使っているコーディングツールです。Workkeel の記録はサンドボックスではなく、
-実行が終わってもタスクが受け入れられたことにはなりません。
+- **ツールを変えても再開できる：**会話が終わっても、別のコーディングツールに移っても、タスクの範囲、判断、途中の成果が残ります。
+- **渡した変更そのものをレビューする：**別の Agent が提出コミットを確認し、その後に承認権限を持つ人が受け入れます。
+- **リスクに応じてレビューする：**最初にリスク区分を合意し、ポリシーや変更内容に応じて引き上げます。やり直し回数にも上限があります。
+- **コアを小さく保つ：**タスクの管理にサーバーやモデル呼び出し、グローバルなモデル設定の変更は要りません。
 
-## 依頼から受け入れまで
+## 向かない用途
+
+Workkeel はサンドボックスでもエージェントランタイムでもなく、デプロイも行いません。
+権限の制御と変更の実行は、コーディングツールが担当します。タスクトラッカーとの違いは、
+タスクの権限と証跡をコミットに結び付ける点です。エージェントフレームワークと違い、
+コーディングの実行ループは既存のツールに任せます。
+
+## タスクの流れ
 
 <picture>
   <source media="(max-width: 640px)" srcset="docs/assets/workkeel-workflow-mobile.svg">
-  <img src="docs/assets/workkeel-workflow.svg" alt="範囲を承認し、実行し、正確な候補をレビューして受け入れる。レビューに通らなければ実装に戻る。">
+  <img src="docs/assets/workkeel-workflow.svg" alt="範囲とリスクを合意し、普段のツールで実装、別の Agent が提出コミットをレビューし、受け入れて完了。レビュー不合格でも test に留まり、承認者が task rework を実行して初めて同じ契約のまま intake に戻る。やり直しは low が 2 回、その他は 3 回まで。上限では停止して人に判断を求める。">
 </picture>
 
-バグ修正なら、目標と変更してよいファイルを承認し、コーディングツールに調査と実装を任せ、テストの証跡を残してから、
-別の Agent に候補コミットをレビューしてもらいます。レビューに通らなければ、同じ承認範囲のまま差し戻されます。
+範囲、権限、受け入れ条件、リスク区分を合意してからタスクを引き受け、
+普段のツールで実装し、コミットを別の Agent に渡してレビューを受けます。
+レビュー不合格でも `test` に留まり、承認者が `task rework` を実行して初めて、
+不合格の記録を残して同じ契約のまま `intake` に戻し、builder が再び引き受けて新しいコミットを提出します。
+やり直しは `low` が 2 回、その他は 3 回までで、上限に達したら停止して人に判断を求めます。
+合格後は権限を持つ承認者が同じ候補をクローズします。`high` と `critical` では、
+別のモデルファミリーによるレビューと所定の相互レビューを経て、元の承認者（Principal）がクローズします。
+
+## 30 秒デモ
+
+下の手順でソース版 CLI を用意し、既存の Git プロジェクトで操作します。出力は JSON の一部のフィールドです。
+`init` は 1 人の `owner` の下に `builder` と `reviewer` を登録します。
+owner がタスクと受け入れを承認し、2 つの Agent がそれぞれ実装とレビューを行います。
+
+```text
+$ workkeel init .
+{"initialized":true,"mode":"task-first"}
+# .workkeel/ を Git の対象から除外し、生成した設定ファイルをコミットしてから引き受ける。
+$ workkeel task new --goal "Clarify the guide" --acceptance "The guide names its audience" --write docs --risk low --actor builder
+{"id":"WK-0001","state":"intake"}
+$ workkeel task claim --id WK-0001 --actor builder
+{"id":"WK-0001","state":"build"}
+# builder がガイドを編集、確認し、変更をコミットする。
+$ workkeel task handoff --id WK-0001 --actor builder --summary "Guide updated"
+{"id":"WK-0001","state":"test"}
+# reviewer が提出されたコミットを受け入れ条件と照らし合わせる。
+$ workkeel task review --id WK-0001 --actor reviewer --judgment pass --summary "Meets the criterion"
+{"id":"WK-0001","state":"release_gate"}
+$ workkeel task close --id WK-0001 --actor builder --summary "Owner accepts" --rollback "Revert the guide commit"
+{"id":"WK-0001","state":"done","external_release":"not-performed"}
+```
+
+この `low` の例では証跡ファイルを省略できます。他の区分の要件は下の表を参照してください。
+CLI はライフサイクルを記録します。編集やレビューそのものを代行するわけではありません。
 
 ## クイックスタート
 
-Git、Node.js 24.15+、コーディングツールが必要です。clone したソースから現在の版を実行します。
+Git、Node.js 24.15+、コーディングツールが必要です。現在のソースを用意します。
 
 ```sh
 git clone https://github.com/zsz1210/workkeel.git
-cd workkeel && npm ci --omit=optional --ignore-scripts
+cd workkeel
+npm ci --omit=optional --ignore-scripts
 alias workkeel="node $PWD/bin/workkeel.mjs"
 ```
 
-プロジェクトでは、`init` が 1 人の責任者と `builder`（model family `claude`）、`reviewer`（model family `codex`）の 2 つの Agent を作成します。
+自分のプロジェクトの Git リポジトリに移り、`workkeel start .` で書き込みを伴わないセットアップ案内を確認します。
+初期化、ポリシー、証跡、ロールバックは[クイックスタートガイド](docs/getting-started/workkeel.md)を参照してください。
+Workkeel 自体の開発は[貢献ガイド](CONTRIBUTING.md)に従ってください。
 
-```sh
-workkeel init .
-echo ".workkeel/" >> .gitignore && git add -A && git commit -m "Start Workkeel"
-workkeel task new --goal "Clarify the guide" --acceptance "The guide names its audience" --write docs --actor builder
-workkeel task claim --id WK-0001 --actor builder
-# edit, commit, and save evidence under .ai-org/artifacts/WK-0001/
-workkeel task handoff --id WK-0001 --actor builder --summary "Guide updated" --evidence .ai-org/artifacts/WK-0001/check.md
-workkeel task review --id WK-0001 --actor reviewer --judgment pass --summary "Meets the criterion" --evidence .ai-org/artifacts/WK-0001/review.md
-workkeel task close --id WK-0001 --actor builder --summary Accepted --rollback "Revert the guide commit" --evidence .ai-org/artifacts/WK-0001/review.md
-```
+## リスク区分
 
-`workkeel start .` は何も書き込まずに設定手順をプレビューし、`workkeel help advanced` はリクエストファイル形式と任意のサブシステムを表示します。
-独自のポリシー（`init --policy`）、リクエストファイル、ロールバックは[クイックスタートガイド](docs/getting-started/workkeel.md)を参照してください。
+| 区分 | 主な用途 | クローズ前の要件 | やり直し上限 |
+| --- | --- | --- | --- |
+| `low` | ドキュメント、文言の変更 | 別の Agent によるレビュー。証跡ファイルは任意 | 2 |
+| `standard` | 通常の機能と修正 | 引き継ぎの証跡、別の Agent によるレビュー | 3 |
+| `high` | 認証、データ移行、機密データ | 別のモデルファミリー、レビュアー自身の報告書と相互レビュー。未解決事項なし。元の承認者がクローズ | 3 |
+| `critical` | デプロイ、CI、本番環境の設定 | `high` の全要件に加え、引き継ぎ時のロールバック計画とコミット済みの承認記録 | 3 |
 
-## リスクランク
-
-| ランク | 主な用途 | 受け入れ前に必要なもの |
-| --- | --- | --- |
-| `low` | 文書や文言の修正 | 別の Agent によるレビュー。証跡は省略可 |
-| `standard` | 通常の機能追加と修正 | 引き継ぎの証跡と、別の Agent によるレビュー |
-| `high` | 認証、データ移行、機密データ | 別のモデル系列のレビュアーと、その人自身のレビュー報告。未解決の問題は残せない。承認した Principal が受け入れる |
-| `critical` | デプロイ、CI、本番設定 | `high` のすべてに加えて、ロールバック計画とコミット済みの承認記録 |
-
-high 以上の作業は、1 人でも複数人でも同じです。別のモデル系列のレビュアーが確認し、そのあと承認した Principal が人として確定します。
-導入する前に[導入とリスクランク](docs/operations/team-adoption-and-risk.md)を読んでください。
-
-手戻りの上限は `low` が 2 回、`standard`、`high`、`critical` が 3 回です。上限に達したら停止し、人の判断を求めます。
-任意のレビュースコア欄は[統計](docs/operations/team-adoption-and-risk.md#review-scores-optional)用に保持し、
-差し戻しや受け入れの条件には使いません。
+上限に達したら停止し、範囲の見直し、新しいタスクの承認、キャンセルのいずれかを人に判断してもらいます。
 [QA 手順](docs/operations/workkeel-review-assessment.md#independent-qa-and-release-gate)では、
-指摘を Must fix（修正必須）／Consider（検討）／Note（記録）／Dismiss（不採用）に分類し、
-`high` と `critical` では Codex と Claude による独立したクロスレビューを必須とします。
+Must fix は進行を止める指摘、Consider／Note／Dismiss は記録する指摘として扱い、
+`high` と `critical` には Codex／Claude による独立した相互レビューを求めます。
+CLI は登録済みのモデルファミリーを検査しますが、それだけでは相互レビューの実施を証明できません。
 
-## 公開済みの Beta.1
+## 任意の追加機能
 
-npm の `next` チャネルにある `@zsz1210/workkeel@0.1.0-beta.1` は以前の系統です。
-このソースから削除した Temple 互換モードを含み、上記のフラグコマンドや high、critical ランクはありません。
-その旧版を評価する場合にだけ使ってください。詳しくは[リリースノート](CHANGELOG.md#010-beta1)を参照してください。
+- **[Workspace 観測画面](docs/operations/workkeel-workspace.md)：**`workkeel workspace serve` で起動し、プロジェクトの記録を閲覧します。待機中のモデル呼び出しはありません。別の[読み取り専用オブザーバー](docs/operations/workkeel-observer.md)は `workkeel monitor` で起動します。
+- **[ワークフロー／LangGraph](docs/operations/workkeel-workflows.md)：**承認済みのグラフとモデルポリシーに従い、再開可能なステップを実行するランナーを選べます。
+- **[Workkeel Loop L1 レポート](docs/operations/loop-trial.md)：**`workkeel stats --report` が読み取り専用の週次レポートを生成します。モデル／API の費用はかかりません。
+- **[ネイティブディスパッチ](docs/operations/workkeel-native-dispatch.md)：**実行の引き継ぎと指定モデルを記録し、何が実行されたかをホストが報告します。
+- **[Bot レイヤーの参考運用](docs/operations/reference-usage-bot-layer.md)：**プロジェクト Bot、Claude Code、Codex を人の承認で連携させる一例です。コアには含まれません。
 
-## 任意のコンポーネント
-
-タスク連携以外はすべて任意です。短い `workkeel help` はこれらのサブシステムを表示せず、
-`workkeel help advanced` だけが表示します。引き続き使え、テストもありますが、使われていないものは今後のリリースで削除する場合があります。
-
-| コンポーネント | 既定 | 範囲 |
-| --- | --- | --- |
-| タスク連携 | 中核 | 契約、着手、引き継ぎ、レビュー、受け入れ。サーバー不要 |
-| コーディングツールとモデル | 既存のホスト | Workkeel はグローバルなモデル設定を変更しない |
-| オブザーバー（`workkeel monitor`） | オフ | ローカルかつ読み取り専用。モデル呼び出しはゼロ |
-| オブザーバトリー／ワークスペース UI（`workkeel workspace serve`） | 任意 | 中核の作業・受け入れフローには不要 |
-| ワークフロー実行 | 明示的に有効化 | 任意の LangGraph 依存関係と、承認済みのグラフおよびモデルポリシー |
-| ネイティブディスパッチとモデル選択 | 明示的に有効化 | 要求したモデルと理由を記録し、実際に動いたモデルはホストが報告 |
-| Headroom のツール出力ビュー | オフ | 要求時だけ非可逆なビューを作る。元の出力は読める |
-| 学習記録と Skill のバージョン | 任意の記録 | 承認しても Skill は作成も有効化もされない |
-| ホストの使用量記録と保存アーカイブ | 任意の記録 | 使用量はホストが報告し、アーカイブは要求時だけ実行 |
-| デスクトップワークスペース、目標全体、範囲付き自律実行 | 実験的 | ソース版 CLI のみ。自動実行は `low` と `standard` のタスクに限る |
-
-[オブザーバー](docs/operations/workkeel-observer.md) ·
-[ワークフロー](docs/operations/workkeel-workflows.md) ·
-[ネイティブディスパッチ](docs/operations/workkeel-native-dispatch.md) ·
-[ワークスペース UI](docs/operations/workkeel-workspace.md) ·
-[プロジェクトの文脈と Skill](docs/extensions/workkeel-context.md)
-
-任意の [Workkeel Loop](docs/operations/loop-trial.md) は、モデル／API 支出ゼロで L1 の週次読み取り専用レポート
-（`workkeel stats --report`）を提供します。試行用の実行ガードは、待機時間を含めて 60 操作・2 時間を上限とし、
-停止フラグはユーザーが解除するまで保持します。L2 の比較記録はデータのみで、作業の実行や承認は行いません。
-
-プロジェクト Bot、Claude Code、Codex を 3 つの人による確認段階と組み合わせる任意の構成は、
-[参考の使い方：Bot レイヤー](docs/operations/reference-usage-bot-layer.md)を参照してください。フレームワークの中核には含まれません。
-
-## アーキテクチャ
-
-<picture>
-  <source media="(max-width: 640px)" srcset="docs/assets/workkeel-architecture-mobile.svg">
-  <img src="docs/assets/workkeel-architecture.svg" alt="プロジェクトのタスク契約が連携と任意のワークフロー実行につながる。実行ホストはツールを使い証跡を返す。レビューと受け入れは分かれている。">
-</picture>
-
-タスクの権限と証跡はプロジェクトのファイルにあります。コーディングホストは自身の権限内で実行します。
-任意のランナーはワークフローの進行と承認済みのモデル選択を管理し、結果が不確かな場合は照合のために停止します。
-オブザーバーは読み取るだけです。
-
-[アーキテクチャ](docs/concepts/architecture.md) ·
-[タスク契約](docs/concepts/task-contract.md)
+その他の任意機能も含めて、[ドキュメント一覧](docs/README.md)を参照してください。
 
 ## 制限
 
-- 実験的なベータ版です。あらゆる中断からの復旧や、新しいマシンへのインストールはまだ十分に検証されていません。
-- Principal と Agent は記録された名前であり、認証されたアカウントではありません。2 人の Principal が
-  本当に 2 人の人間か、実際にどのモデルが動いたかを Workkeel は証明できません。
-- ローカルロックは分散協調ではありません。ネイティブホストのセッションは、ホストが記録しない限り使用量データを持ちません。
-- 以前の Temple モードで作成したプロジェクトは、その CLI バージョンを使い続けてください。移行手段はありません。
+- 実験的なベータ版です。あらゆる中断からの復旧や、新しいマシンへのインストールは十分に検証できていません。
+- Principal と Agent は記録上の名前であり、認証済みアカウントではありません。Workkeel は 2 つの Principal が別人であることや、実際に使ったモデルを証明できません。
+- ローカルロックは複数マシン間の調整には使えません。ネイティブホストの使用量データは、ホストが記録した場合にだけ残ります。
 
-## Workkeel の開発
+## ドキュメントと貢献
 
-このリポジトリにあるのはフレームワークのソース、公開文書、汎用テンプレート、再現可能なテストだけです。
-Workkeel の開発で生じる実際のタスク、承認、ログ、レビュー証跡は
-[独立したプライベートワークスペース](docs/operations/framework-development.md)に置き、
-Git が無視するファイルであってもこの checkout には置きません。
-[ADR-0083](docs/adr/0083-public-source-private-state.md) を参照してください。
-
-[ドキュメント](docs/README.md) · [テスト](docs/getting-started/testing.md) ·
-[コントリビューション](CONTRIBUTING.md) · [セキュリティ](SECURITY.md) ·
-[MIT](LICENSE) · [サードパーティ通知](THIRD_PARTY_NOTICES.md)
+[ドキュメント](docs/README.md) · [アーキテクチャ](docs/concepts/architecture.md) · [テスト](docs/getting-started/testing.md) · [貢献ガイド](CONTRIBUTING.md) · [セキュリティ](SECURITY.md) · [MIT](LICENSE) · [サードパーティの表記](THIRD_PARTY_NOTICES.md)

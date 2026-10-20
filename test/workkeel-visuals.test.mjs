@@ -3,24 +3,24 @@ import fs from "node:fs/promises";
 import test from "node:test";
 import { generatedDiagrams } from "../scripts/generate-workkeel-diagrams.mjs";
 
-test("each README exposes the workflow and architecture with responsive figures", async () => {
+test("each README exposes the workflow with a responsive figure and architecture docs show core and optional parts", async () => {
   for (const file of ["README.md", "README.zh-TW.md", "README.ja.md"]) {
     const markdown = await fs.readFile(new URL(`../${file}`, import.meta.url), "utf8");
     const pictures = [...markdown.matchAll(/<picture\b[^>]*>([\s\S]*?)<\/picture>/g)].map((match) => match[1]);
-    for (const name of ["workkeel-workflow", "workkeel-architecture"]) {
-      const desktop = `docs/assets/${name}.svg`;
-      const mobile = `docs/assets/${name}-mobile.svg`;
-      const picture = pictures.find((body) => body.includes(`src="${desktop}"`));
-      assert.ok(picture, `${file} must display ${name}, not just ship an unused asset`);
-      assert.ok(picture.includes(`srcset="${mobile}"`), `${file}: narrow-screen ${name}`);
-      assert.match(picture, /media="\(max-width: 640px\)"/);
-      assert.match(picture, /alt="[^"]+"/);
-      for (const asset of [desktop, mobile]) {
-        const svg = await fs.readFile(new URL(`../${asset}`, import.meta.url), "utf8");
-        assert.match(svg, /<svg\b[^>]*viewBox=/, `${file}: usable ${asset}`);
-      }
+    const desktop = "docs/assets/workkeel-workflow.svg";
+    const mobile = "docs/assets/workkeel-workflow-mobile.svg";
+    const picture = pictures.find((body) => body.includes(`src="${desktop}"`));
+    assert.ok(picture, `${file} must display the workflow, not just ship an unused asset`);
+    assert.ok(picture.includes(`srcset="${mobile}"`), `${file}: narrow-screen workflow`);
+    assert.match(picture, /media="\(max-width: 640px\)"/);
+    assert.match(picture, /<img\b[^>]*\balt="[^"]+"/);
+    for (const asset of [desktop, mobile]) {
+      const svg = await fs.readFile(new URL(`../${asset}`, import.meta.url), "utf8");
+      assert.match(svg, /<svg\b[^>]*viewBox=/, `${file}: usable ${asset}`);
     }
   }
+  const architecture = await fs.readFile(new URL("../docs/concepts/architecture.md", import.meta.url), "utf8");
+  assert.match(architecture, /!\[[^\]]+\]\(\.\.\/assets\/workkeel-core-optional\.svg\)/);
 });
 
 test("committed explanatory diagrams match their dependency-free source", async () => {
@@ -29,7 +29,7 @@ test("committed explanatory diagrams match their dependency-free source", async 
     assert.equal(actual, expected, name);
     assert.match(actual, /<title id="title">/);
     assert.match(actual, /<desc id="desc">/);
-    assert.doesNotMatch(actual, /<script|<foreignObject|(?:href|src)="https?:/);
+    assert.doesNotMatch(actual, /<script\b|<foreignObject\b|(?:href|src)\s*=\s*["'](?!#)/i);
   }
 });
 

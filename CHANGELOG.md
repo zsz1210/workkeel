@@ -82,6 +82,11 @@ Publication and deployment remain pending.
 
 ## 0.1.0-beta.1
 
+> Published Beta.1: the npm package `@zsz1210/workkeel@0.1.0-beta.1` on the
+> `next` channel is an earlier line. It retains the Temple compatibility mode
+> removed from 0.2 source and has neither the flag commands nor the high and
+> critical risk tiers. Use it only to evaluate that earlier release.
+
 Workkeel Beta.1 experimental prerelease for internal and early adopter evaluation.
 Published on npm's `next` channel on 2026-10-06 (Japan time;
 2026-10-05 UTC), with a GitHub release in the previous repository.

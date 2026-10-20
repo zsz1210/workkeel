@@ -15,7 +15,7 @@ Do not run task initialization in the public framework source checkout.
 Use Node.js 24.15 or newer and run the current source as in the
 [README quick start](../../README.md#quick-start). Beta.1, published as
 `@zsz1210/workkeel@0.1.0-beta.1` on npm's `next` channel, is an
-[earlier line](../../README.md#published-beta1). Installed projects can
+[earlier line](../../CHANGELOG.md#010-beta1). Installed projects can
 use `npx --no-install workkeel`; a reviewed source checkout provides
 `node bin/workkeel.mjs`. Examples below using a source path remain the source
 alternative. Version 0.2 removed the earlier legacy mode; projects pinned to an

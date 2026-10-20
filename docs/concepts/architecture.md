@@ -1,5 +1,21 @@
 # Architecture
 
+## Core and optional parts
+
+The core is repository files for task contracts, evidence and policy, plus the
+CLI that records claims, handoffs, review and acceptance. Your existing coding
+tool executes the work and enforces its permissions. Core task coordination needs
+no server, workflow runner or model call.
+
+![Workkeel core: repository files and CLI, beside your coding tool. Dashed optional boxes: workspace observatory, workflow runner/LangGraph, Workkeel Loop L1 report, native dispatch and read-only observer.](../assets/workkeel-core-optional.svg)
+
+The dashed boxes are optional additions. The workspace observatory starts with
+`workkeel workspace serve`; the separate read-only observer uses
+`workkeel monitor`. Opt-in workflows add a LangGraph runner and approved model
+policy, while native dispatch records execution handoffs. The
+[Workkeel Loop L1 report](../operations/loop-trial.md) provides a weekly read-only
+view through `workkeel stats --report` with no model/API spend.
+
 ## Workkeel execution and authority boundaries
 
 Native Workkeel coordinates approved tasks in the repository. A
@@ -24,8 +40,6 @@ runtime's internal coding loop. The concrete Codex host uses the existing ChatGP
 subscription and explicitly selected models. See the
 [workflow guide](../operations/workkeel-workflows.md) and
 [execution ADR](../adr/0073-opt-in-workflow-execution.md).
-
-![Workkeel task records and optional graph execution connect to a host-enforced coding runtime; recovery state and acceptance evidence remain separate.](../assets/workkeel-architecture.svg)
 
 The optional native [desktop workspace](../operations/workkeel-workspace.md)
 observatory starts only with `workkeel workspace serve`; core task and goal
