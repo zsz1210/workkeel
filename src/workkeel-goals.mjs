@@ -58,7 +58,10 @@ export function validateGoalManifest(m){
 }
 export function goalAdmissionManifestDigest(manifest){const body=structuredClone(manifest);if(body.derived_from)delete body.derived_from.admission_sha256;return executionDigest(body);}
 function ref(idValue,file='state.json'){id(idValue);return ROOT+'/'+idValue+'/'+file;}
-async function envelopeAt(target,file){const input=await readTaskFile(target,file);const e=JSON.parse(input.content);exactKeys(e,['value','sha256']);if(executionDigest(e.value)!==e.sha256)fail('state integrity');return {value:e.value,sha256:e.sha256,bytes_sha256:input.bytes_digest};}
+// Atomic replacement can race a no-symlink reader's final inode check. Retry that
+// specific observation, never malformed data or a failed integrity check.
+async function readStable(target,file){for(let attempt=0;;attempt++){try{return await readTaskFile(target,file);}catch(e){if(e.message==='Contract input changed while reading'&&attempt<2)continue;throw e;}}}
+async function envelopeAt(target,file){const input=await readStable(target,file);const e=JSON.parse(input.content);exactKeys(e,['value','sha256']);if(executionDigest(e.value)!==e.sha256)fail('state integrity');return {value:e.value,sha256:e.sha256,bytes_sha256:input.bytes_digest};}
 async function stateAt(target,goalId){
   const s=(await envelopeAt(target,ref(goalId))).value;
   exactKeys(s,['schema_version','id','version','manifest_ref','manifest_sha256','manifest_frozen','approval_pin','controller','roots','status','components','operations','receipts','reserved_ms','known_cost_usd','cost_complete','completion','last_error','created_at']);
