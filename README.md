@@ -1,6 +1,6 @@
 # Workkeel
 
-A repository-native task coordination framework for coding agents.
+A framework for coordinating coding-agent tasks through repository files.
 
 Keep approved scope, handoffs and review evidence beside your code, tied to Git commits.
 Use your existing coding tool; the core needs only repository files and a CLI.
@@ -15,7 +15,7 @@ English · [繁體中文](README.zh-TW.md) · [日本語](README.ja.md)
 
 - **Resume across tools:** keep task scope, decisions and partial results when a conversation ends or you switch coding tools.
 - **Review the exact change:** a different Agent checks the delivered commit before an approver accepts it.
-- **Match review to risk:** agree a risk tier up front; policy and changed files can raise it. Cap rework instead of retrying indefinitely.
+- **Match review to risk:** agree on a risk tier before starting; policy and changed files can raise it. Limit the number of reworks.
 - **Keep the core small:** run task coordination without a server, model call or global model setting.
 
 ## Why not
@@ -34,18 +34,19 @@ it leaves the coding loop to your tool.
 
 Agree scope, permissions, acceptance criteria and risk tier, then claim the task,
 build with your coding tool and hand off a commit for another Agent to review.
-A failed review stays in `test`; the approver runs `task rework` to preserve the
-failed attempt and return it to `intake` under the same contract, then the builder
-claims again and delivers a new commit, up to two reworks for `low` or three for
-other tiers before stopping to ask a person. After a passing review, an authorized
+After a failed review, the task stays in `test` until the approver runs `task rework`.
+This preserves the failed attempt and returns the task to `intake` under the same
+contract. The builder claims it again and delivers a new commit. Stop and ask a
+person after two reworks for `low` or three for other tiers. After a passing review, an authorized
 approver closes the exact candidate; for `high` and `critical`, the approving
 Principal closes it after review by a different model family and the required cross-review.
 
 ## 30-second demo
 
-In an existing Git project, after installing the source CLI below. Output shows
-selected JSON fields. `init` registers `builder` and `reviewer` under one `owner`,
-defaulting to `claude` and `codex`; override their model families with `--builder <family>` and `--reviewer <family>`.
+Install the source CLI below, then run the demo in an existing Git project.
+The output includes selected JSON fields. `init` registers `builder` and `reviewer`
+under one `owner`. Their model families default to `claude` and `codex`; override
+them with `--builder <family>` and `--reviewer <family>`.
 The owner approves the task and acceptance, and the two Agents do their own work.
 
 ```text
@@ -67,11 +68,11 @@ $ workkeel task close --id WK-0001 --actor builder --summary "Owner accepts" --r
 ```
 
 This `low` example needs no evidence files; other tiers add requirements below.
-The CLI records the lifecycle. It does not perform the editing or review for you.
+The CLI records the lifecycle; your Agents do the editing and review, not the CLI.
 
 ## Quick start
 
-Requires Git, Node.js 24.15+ and a coding tool. Install the current source:
+You need Git, Node.js 24.15+ and a coding tool. Install the current source:
 
 ```sh
 git clone https://github.com/zsz1210/workkeel.git
@@ -98,7 +99,7 @@ At the cap, stop and ask a person to re-scope, approve a new task or cancel.
 The [QA procedure](docs/operations/workkeel-review-assessment.md#independent-qa-and-release-gate)
 defines Must fix (blocks) and Consider / Note / Dismiss (recorded), and requires
 independent Codex/Claude cross-review for `high` and `critical`; the CLI checks
-registered model families, which alone does not prove cross-review happened.
+registered model families, but that check does not prove cross-review happened.
 
 ## Optional extras
 
@@ -106,9 +107,9 @@ registered model families, which alone does not prove cross-review happened.
 - **[Workflows / LangGraph](docs/operations/workkeel-workflows.md):** opt into a runner with approved graphs, model policy and recoverable steps.
 - **[Workkeel Loop L1 report](docs/operations/loop-trial.md):** `workkeel stats --report --cutoff 2026-10-19T00:00:00Z --timezone UTC` produces a weekly read-only report with zero model/API spend.
 - **[Native dispatch](docs/operations/workkeel-native-dispatch.md):** record execution handoffs and requested models; the host reports what ran.
-- **[Reference Bot-layer usage](docs/operations/reference-usage-bot-layer.md):** one way to organize project Bots, Claude Code and Codex around human gates, outside the core.
+- **[Reference Bot-layer usage](docs/operations/reference-usage-bot-layer.md):** one way to coordinate project Bots, Claude Code and Codex through human gates, outside the core.
 
-See the [documentation index](docs/README.md) for these and other optional parts.
+Find these and other optional parts in the [documentation index](docs/README.md).
 
 ## Limits
 
