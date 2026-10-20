@@ -1,4 +1,4 @@
-import {assertLoopAdmission} from './workkeel-loop-run.mjs';
+import {assertLoopAdmission, countLoopOperation} from './workkeel-loop-run.mjs';
 import fs from "node:fs/promises";
 import path from "node:path";
 import crypto from "node:crypto";
@@ -234,10 +234,10 @@ function result(item, replayed = false) {
 }
 
 export async function createNativeTask(targetInput, draft, request, { expectedPolicyDigest = null, expectedAuthorityPins = null } = {}) {
-  await assertLoopAdmission(targetInput);
-  const target = await fs.realpath(targetInput);
   request = assertRequest(request, []);
   if (request.expected_version !== 0) throw new Error("Task creation expects version zero");
+  await countLoopOperation('native-task-create', targetInput);
+  const target = await fs.realpath(targetInput);
   const ref = fileRef(draft?.id);
   return withProjectMutationLock(target, async () => {
     const project = await readTaskProject(target);
@@ -413,9 +413,9 @@ const FIELDS = {
   rework: ["summary", "mode"], close: ["revision", "summary", "rollback", "evidence"], cancel: ["summary", "evidence"]
 };
 export async function mutateNativeTask(targetInput, id, action, request) {
-  if (action !== "cancel") await assertLoopAdmission(targetInput);
   if (!Object.hasOwn(FIELDS, action)) throw new Error("Unknown task operation");
   request = assertRequest(request, FIELDS[action]);
+  await countLoopOperation('native-task-' + action, targetInput, { cancellation: action === "cancel" });
   const target = await fs.realpath(targetInput);
   return withProjectMutationLock(target, async () => {
     const project = await readTaskProject(target);

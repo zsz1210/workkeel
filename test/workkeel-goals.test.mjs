@@ -10,6 +10,7 @@ import {initializeTaskProject} from '../src/workkeel-project.mjs';
 import {createNativeTask,readNativeTask,mutateNativeTask} from '../src/workkeel-tasks.mjs';
 import {executionDigest} from '../src/workkeel-execution-policy.mjs';
 import {readTaskFile} from '../src/task-contract.mjs';
+import {withProjectMutationLock} from '../src/workkeel-lock.mjs';
 import {createNativeGoal,readNativeGoal,controlNativeGoal,runNativeGoalStep,serveNativeGoal,createTrustedGoalAdapter,validateGoalManifest,assertNativeGoalAuthority,goalAdmissionManifestDigest} from '../src/workkeel-goals.mjs';
 
 const builder={agent_id:'builder',principal_id:'owner'},reviewer={agent_id:'reviewer',principal_id:'owner'};
@@ -42,7 +43,7 @@ async function fixture(t,{count=1,maxReworks=2,purpose='execution',release=false
   return {target,roots,manifest,request,directory};
 }
 async function artifact(ctx,kind,value){const ref='.ai-org/artifacts/'+ctx.task.id+'/goal-'+kind+'-'+ctx.operation_id+'.json';await fs.mkdir(path.dirname(ctx.component.root+'/'+ref),{recursive:true});await fs.writeFile(ctx.component.root+'/'+ref,JSON.stringify(value,null,2)+'\n');return {path:ref,sha256:(await readTaskFile(ctx.component.root,ref)).bytes_digest};}
-function fixtureAdapter({firstFail=true,alwaysFail=false,onExecute=()=>{},wrongThread=false,interruptAfterNativeReview=false,costPath}={}){
+function fixtureAdapter({firstFail=true,alwaysFail=false,onExecute=()=>{},wrongThread=false,interruptAfterNativeReview=false,costPath,directNative=false}={}){
   const reviews=new Map(),receipts=new Map();
   return createTrustedGoalAdapter({id:'synthetic-goal-host',...(costPath?{costPath}:{}),assertCapabilities:async()=>{},cancel:async()=>({status:'cancelled',reason:'Synthetic exact owned host stopped'}),reconcile:async ctx=>receipts.get(ctx.operation_id)??{status:'unknown',reason:'Synthetic effects are unknown'},
     execute:async ctx=>{
@@ -64,7 +65,8 @@ function fixtureAdapter({firstFail=true,alwaysFail=false,onExecute=()=>{},wrongT
         const proofPath='.ai-org/artifacts/'+ctx.task.id+'/goal-review-'+ctx.operation_id+'.json';
         const native_request={operation_id:ctx.operation_id,expected_version:ctx.task.version,actor:reviewer,revision:ctx.input.candidate,judgment:alwaysFail||firstFail&&n===0?'fail':'pass',summary:firstFail&&n===0?'Synthetic distinct reviewer observes value first; acceptance requires fixed':'Synthetic distinct reviewer verified repaired exact candidate',evidence:[...ctx.input.verification.evidence,proofPath]};
         result.authored_request_pin=await artifact(ctx,'review',{schema_version:'workkeel.goal-authored-review/v1',actor:reviewer,thread_id:thread,operation_id:ctx.operation_id,product_access:'read',runtime_selection:ctx.input.model,native_request});
-        await ctx.mutateNativeTask('review',native_request);
+        if(directNative)await mutateNativeTask(ctx.component.root,ctx.task.id,'review',native_request);
+        else await ctx.mutateNativeTask('review',native_request);
         receipts.set(ctx.operation_id,result);
         if(interruptAfterNativeReview&&n===0)throw Error('Synthetic crash after actual native review');
       }
@@ -148,6 +150,25 @@ test('frozen goal remains cancellable after approved manifest and approval bytes
   const stale=await readNativeGoal(f.target,f.manifest.id);assert.equal(stale.manifest.id,f.manifest.id);assert.equal(stale.authority_status,'unavailable');
   await controlNativeGoal(f.target,f.manifest.id,'cancel',{actor:builder,operation_id:'cancel-drift',expected_version:stale.version});
   for(let n=0;n<5;n++)await runNativeGoalStep(f.target,f.manifest.id,{adapter});const stopped=await readNativeGoal(f.target,f.manifest.id);assert.equal(stopped.status,'cancelled',JSON.stringify(stopped.operations.map(o=>({phase:o.input.phase,result:o.result}))));assert.equal((await readNativeTask(f.target,'WK-component-0')).state,'cancelled');
+});
+
+test('goal control snapshots validated input before waiting for the mutation lock',async t=>{
+  const f=await fixture(t),goal=await readNativeGoal(f.target,f.manifest.id);
+  const entered=Promise.withResolvers(),release=Promise.withResolvers(),validated=Promise.withResolvers();
+  const locked=withProjectMutationLock(f.target,async()=>{entered.resolve();await release.promise;});
+  await entered.promise;
+  let operationId='pause-snapshot';
+  const request={actor:structuredClone(builder),expected_version:goal.version,get operation_id(){validated.resolve();return operationId;}};
+  const pending=controlNativeGoal(f.target,f.manifest.id,'pause',request);
+  try{
+    await validated.promise;
+    operationId='invalid operation id';request.actor.agent_id='mutated-caller';
+  }finally{release.resolve();await locked;}
+  const result=await pending;
+  assert.equal(result.goal.status,'paused');
+  assert.equal(result.goal.receipts.at(-1).operation_id,'pause-snapshot');
+  const replay=await controlNativeGoal(f.target,f.manifest.id,'pause',{actor:builder,expected_version:goal.version,operation_id:'pause-snapshot'});
+  assert.equal(replay.replayed,true);
 });
 
 test('explicit safe parent release preserves sealed standing authority while native overlap gates remain active',async t=>{
@@ -271,8 +292,40 @@ test('the existing goal path shares the trial ledger and persists a user stop be
   assert.equal(goal.status,'cancelled');assert.equal(goal.operations.length,2);assert.equal(run.operations,60);
 });
 
-for(const capped of [false,true])test(`review relay counts its native mutation after the host (cap=${capped})`,async t=>{
-  const {startLoopRun,readLoopRun,countLoopOperation}=await import('../src/workkeel-loop-run.mjs'),f=await fixture(t),costPath={path:'synthetic-goal-host',billing:'local'},adapter=fixtureAdapter({costPath,firstFail:false});
+for(const limit of ['none','cap','expiry'])test(`direct native API enforces the shared trial allowance (${limit})`,async t=>{
+  const {startLoopRun,readLoopRun,countLoopOperation,LOOP_MAX_WALL_MS}=await import('../src/workkeel-loop-run.mjs');
+  const f=await fixture(t),costPath={path:'synthetic-goal-host',billing:'local'},task=await readNativeTask(f.target,'WK-controller');
+  await startLoopRun(f.target,{id:'direct-native-trial',goal_id:f.manifest.id,proposal_sha256:'a'.repeat(64),baseline_sha256:'b'.repeat(64),cost_path:costPath},{authorizeUser:async()=>true,costPath});
+  if(limit==='cap')for(let i=0;i<60;i++)await countLoopOperation('prior-work',f.target);
+  if(limit==='expiry'){
+    const file=f.target+'/.ai-org/loop/run.json',ledger=JSON.parse(await fs.readFile(file,'utf8'));
+    ledger.value.deadline=new Date(Date.now()-1).toISOString();ledger.value.started_at=new Date(Date.parse(ledger.value.deadline)-LOOP_MAX_WALL_MS).toISOString();
+    ledger.sha256=executionDigest(ledger.value);await fs.writeFile(file,JSON.stringify(ledger));
+  }
+  const file=f.target+'/.ai-org/work-items/'+task.id+'.json',before=await fs.readFile(file,'utf8'),stat=await fs.stat(file);
+  const draft={...structuredClone(task.contract),id:'WK-direct-create'},creation={actor:builder,operation_id:'direct-create',expected_version:0};
+  const request={actor:builder,operation_id:'direct-release',expected_version:task.version,claim_id:task.claim.id,summary:'Synthetic direct native operation'};
+  const result=mutateNativeTask(f.target,task.id,'release',request);
+  if(limit==='none'){
+    assert.equal((await result).state,'intake');
+    const run=await readLoopRun(f.target);assert.equal(run.operations,1);assert.equal(run.attempts[0].operation,'native-task-release');
+    await createNativeTask(f.target,draft,creation);
+    const created=await readLoopRun(f.target);assert.equal(created.operations,2);assert.equal(created.attempts.at(-1).operation,'native-task-create');
+  }else{
+    await assert.rejects(result,/budget/);
+    assert.equal(await fs.readFile(file,'utf8'),before,'rejected native operation leaves task bytes unchanged');
+    const after=await fs.stat(file);assert.equal(after.ino,stat.ino);assert.equal(after.mtimeMs,stat.mtimeMs);
+    await assert.rejects(createNativeTask(f.target,draft,creation),/budget/);
+    await assert.rejects(fs.stat(f.target+'/.ai-org/work-items/'+draft.id+'.json'),{code:'ENOENT'});
+    const run=await readLoopRun(f.target);assert.equal(run.operations,limit==='cap'?60:0);assert.equal(run.stop.requested,true);
+    await mutateNativeTask(f.target,task.id,'cancel',{actor:builder,operation_id:'direct-cancel',expected_version:task.version,summary:'Synthetic cancellation after limit',evidence:[]});
+    const stopped=await readLoopRun(f.target);assert.equal(stopped.operations,run.operations);assert.equal(stopped.attempts.at(-1).kind,'stop-bookkeeping');
+    assert.equal((await readNativeTask(f.target,task.id)).state,'cancelled');
+  }
+});
+
+for(const directNative of [false,true])for(const capped of [false,true])test(`review relay counts its native mutation after the host (direct=${directNative}, cap=${capped})`,async t=>{
+  const {startLoopRun,readLoopRun,countLoopOperation}=await import('../src/workkeel-loop-run.mjs'),f=await fixture(t),costPath={path:'synthetic-goal-host',billing:'local'},adapter=fixtureAdapter({costPath,firstFail:false,directNative});
   await startLoopRun(f.target,{id:'review-trial',goal_id:f.manifest.id,proposal_sha256:'a'.repeat(64),baseline_sha256:'b'.repeat(64),cost_path:costPath},{authorizeUser:async()=>true,costPath});
   while((await readNativeGoal(f.target,f.manifest.id)).components[0].phase!=='review')await runNativeGoalStep(f.target,f.manifest.id,{adapter});
   const before=(await readLoopRun(f.target)).operations;
