@@ -7,124 +7,71 @@ repository migration does not republish old tags, archives or npm versions.
 
 ## 0.2.0-beta.0
 
-Unpublished source. Breaking: removes the Temple compatibility mode.
+Unpublished source since 0.1.0-beta.1. Requires Node.js 24.15+.
+Breaking: removes Temple compatibility; existing Temple projects must keep their
+pinned CLI or archive their old records. No record migration is available.
 
-- Adds a flags-only path: plain `init` (one owner Principal with `builder` and
-  `reviewer` Agents; `--policy file` for a custom policy), `task new --goal --acceptance`, and
-  lifecycle flags (`--actor`, `--summary`, `--evidence`, `--judgment`,
-  `--revision`, `--rollback`) with derived operation IDs and versions; request
-  files remain for integrations. Contracts need only a goal, scope and acceptance;
-  other fields get recorded defaults, including the path-derived risk floor.
-  Adds `policy show|update`, a short default help with `help advanced`, a shorter
-  WORKKEEL.md, an `@AGENTS.md`-only CLAUDE.md bridge that upgrades the earlier
-  block, and init's suggested `.gitignore`. `start` points to `init` and
-  `task new` instead of returning policy and brief drafts, and the
-  `workkeel-init` Skill is removed.
-- The package ships no Skills. The generic `decision-interview`,
-  `domain-modeling`, `project-documentation` and `skill-authoring` Skills and the
-  `project-overlay/` directory are removed; projects write their own Skills. The
-  observer no longer labels any Skill as Workkeel-origin.
-- Adds optional review scores: a reviewer may append a `score` block (a `code`
-  or `non-code` rubric, 1-5 per criterion, P-level findings) to its own review
-  report, and the read-only `workkeel stats` lists average scores, rework rounds
-  and rework reasons by risk tier. Scores never trigger rework or block a close.
-- Adds `workkeel stats --report`: a single read-only weekly observation with an
-  explicit cutoff/timezone, event-based selection, risk metrics, first/last actual
-  reviewer scores, check/review repair rounds, missing-data coverage and candidate
-  evidence. Markdown contains the same data as JSON; fingerprints include rules
-  and filters. Output ends the observation without model calls or task creation.
-- Adds optional private trial guard infrastructure for the existing goal path:
-  shared 60-operation and two-hour wall limits, persistent stop/cancellation state,
-  user-only stop clearing, and fail-closed non-API billing qualification. Sealed
-  L2 baseline and before/after record validators do not execute an L2 trial.
-- Plain `init` records `builder` as model family `claude` and `reviewer` as
-  `codex`, so high-risk tasks can start without a `policy update`. A `--policy`
-  file is used as written. High and critical work still needs another model
-  family's review and the approving Principal's close.
-- Known limitation: replay of flag commands relies on requests saved under the
-  checkout's Git directory. Several processes or mixed CLI versions acting on the
-  same task at once can still hit edge cases; such commands stop rather than act on
-  another claim or candidate. Further hardening is tracked separately.
-- Approval and evidence rely on Git instead of digest pins. A task records its
-  approving Principal and `approved_at_revision`; later edits to approval, policy
-  or Skill files no longer stop lifecycle operations, and Doctor checks only active
-  tasks against current policy and scope. Launching work through the execution
-  gate still requires those files to match their approval-time snapshot. Evidence
-  is a list of paths, read from the candidate commit when committed there and
-  recorded without digests; low risk work may omit it. Revisions accept
-  abbreviated commit IDs. `unresolved` may be non-empty: high and critical reviews
-  cannot pass with it, and critical work cannot deliver it. Open issues are listed in
-  the monitor's delivery block and the copied handoff. An abbreviation must name
-  exactly one commit. Drift is checked only
-  inside the write roots, and all of `.ai-org/` is administrative. Every rework,
-  including `evidence-only`, delivers a new commit. Review recovery links attempts
-  by ID and binds the review to the attempt ID and commit
-  (`workkeel.review-recovery-request/v2`, `workkeel.review-attempt/v2`).
-- Removes the `temple` executable, the `workkeel legacy` and `workkeel migration`
-  commands, read-only legacy history, the Temple project overlay, packs and their
-  modules, tests and documentation. Projects pinned to an earlier CLI keep that
-  version; there is no migration path. Existing `.ai-org/work-items` records are
-  archived by their owners, not converted.
-- `workkeel.lock` moves to `workkeel.project/v2` (keys `cli`, `policy`,
-  `schema_version`) and task contracts to `workkeel.task-contract/v2` without the
-  `legacy` field. The mutation lock, temporary files and remaining schema names use
-  the `workkeel` prefix.
-- CLI compatibility follows semver (the `semver` package): a CLI with the pinned
-  major version and not older than the pin is compatible. Otherwise read commands
-  warn on stderr and mutations stop with a pointer to `workkeel upgrade`, which
-  moves the pin to the running CLI and rewrites the launcher; it never downgrades
-  and never converts task records. The launcher now reads the pin from
-  `workkeel.lock` instead of embedding a version and refuses a pin that is not an
-  exact version before running or downloading anything. Unknown top-level
-  `workkeel.lock` keys and unknown task lifecycle request fields are ignored with
-  a warning instead of rejected: requests keep only their known fields, so unknown
-  values are never stored or hashed, and upgrade preserves unknown lock keys.
-  `schema_version` still decides major compatibility. Task policy and execution
-  documents stay strict.
-- Known limitation: the CLI compatibility check runs before the mutation lock, so
-  a write racing with a concurrent `workkeel upgrade` may pass it.
-- The monitor and workspace drop the pre-migration history and legacy Skill views.
-- The short help lists only the core lifecycle. `help advanced` groups the optional
-  subsystems (monitor, workspace, workflow, dispatch, usage, model policy,
-  Headroom, Learning, Skill versions, goals, autonomy and retention) apart from
-  the core forms; they keep working unchanged. Their tests form the `optional`
-  group (`npm run test:optional`); `test:core` leaves them out and the complete
-  suite runs both. Unused internal helpers are removed.
+### Added
 
-- Native tasks now accept high, critical and sensitive work. Project policy
-  `risk_paths` globs and data classification set a minimum tier that authors can
-  only raise; a candidate that changes riskier paths is escalated at handoff.
-  High and critical review needs another registered model family and the
-  reviewer's own `workkeel.review-report/v1` record of the exact candidate;
-  rejected or released attempts keep their risk. The task's approving Principal
-  then closes it as the human confirmation; the rule is the same however many
-  Principals the policy lists, and there is no separate solo or team mode. Critical
-  work also needs a delivered rollback plan and the approved record committed in
-  the candidate (byte-exact). Review assessment and model routing use the
-  effective tier; model policies may approve models for `critical` with their
-  own automatic effort. Escalation records its comparison base and basis.
+- Flags-only task creation and lifecycle commands, short task contracts,
+  `policy show|update`, and `workkeel upgrade`; request files remain available
+  for integrations.
+- High and critical risk tiers, path- and data-derived minimum risk, and handoff
+  escalation. These tiers require another model family's exact-candidate review
+  and closure by the approving Principal; critical work also requires a rollback
+  plan and the committed approval record.
+- Optional review scores and read-only task statistics, including weekly reports
+  with risk, rework, reviewer scores and missing-data coverage.
+- Opt-in source-only Codex and structured Claude review helpers; bounded goal-run
+  controls and sealed comparison-record validation through trusted hosts.
+- Optional desktop project/repository navigation, model controls and execution
+  details; bounded goals and opt-in improvement discovery; versioned project
+  Skill learning and verified evidence archives. Access these extensions through
+  `help advanced`; the CLI task lifecycle remains the core.
 
-- Adds a desktop workspace for registered projects and repositories, controlled
-  model settings, exact-version integration checks and detailed recorded execution.
-- Resolves independently inherited/automatic/fixed model, reasoning and service
-  dimensions within pinned task authority and verified host capabilities. New
-  dispatch/workflow operations retain immutable policy snapshots; unsupported
-  fixed settings block explicitly.
-- Adds durable approved-work continuation, explicit recovery and confirmed host
-  cancellation. Improvement discovery is opt-in, scoped and bounded; proposals
-  cannot invent task authority or acceptance.
-- Adds sealed whole-goal manifests with mandatory repository components, exact
-  integration proof, distinct reviewer-authored native decisions and bounded
-  FAIL-to-repair-to-fresh-acceptance continuation. Opt-in standing grants admit
-  source-pinned improvements with durable cumulative reservations and event-based
-  read-only discovery; partial intake keeps exact identities.
-- Adds comparative, independently reviewed, versioned project Skill activation,
-  scoped retrieval, explicit use/outcomes, suspension, rollback and revalidation.
-  Source drift removes current eligibility while retaining original evidence.
-- Adds capacity previews and verified archives preserving all originals and source
-  identity. Unknown measurements remain unknown; archive copies release zero bytes.
+### Changed
 
-These source additions do not imply a new npm publication or deployment.
+- Plain `init` creates one owner with Claude-family builder and Codex-family
+  reviewer defaults. Custom policies remain explicit. Setup guidance, generated
+  instructions and the three README editions now focus on the core lifecycle.
+- Approval and evidence now use Git revisions and evidence paths instead of
+  digest pins. Execution still checks the approval-time authority snapshot;
+  every rework delivers a new commit. High and critical reviews cannot pass with
+  unresolved issues, and critical deliveries cannot contain them.
+- Project locks and task contracts use v2 schemas. CLI compatibility follows
+  semver; incompatible versions warn on reads and block mutations. Upgrade
+  refreshes the pin and launcher without converting tasks or downgrading.
+  Unknown lock keys and lifecycle request fields produce warnings; upgrade
+  preserves unknown lock keys.
+- Optional subsystems and their tests are separate from core help and tests.
+  The workspace observatory and browser tests are optional.
+- Model routing respects approved model, reasoning and service settings;
+  dispatch and workflow retain policy snapshots and block unsupported fixed settings.
+
+### Removed
+
+- The `temple` executable, legacy/migration commands and history views, project
+  overlay and bundled packs and Skills. Projects maintain their own Skills.
+
+### Fixed
+
+- Retried lifecycle commands validate their claim, target and candidate;
+  ambiguous abbreviated revisions fail, and handoffs expose unresolved issues.
+- Recovery and dispatch preserve scope, capacity reservations, evidence and
+  configured Skill disables; command results and cancellation require confirmation.
+- Optional workspace views preserve navigation, edits and pending controls while
+  showing recorded activity, usage, dependencies and waiting states. Goal delivery
+  and improvement recovery retain authority, stop limits and acceptance boundaries;
+  loop guards preserve accounting and weekly reports retain review history.
+
+### Security
+
+- Hardened module import boundaries, recovery-journal validation and execution
+  preflight snapshots; closed risk-tier approval bypasses.
+
+Known limitations: concurrent or mixed-version flag commands may stop on replay
+conflicts, and the compatibility check can race with a concurrent upgrade.
+Publication and deployment remain pending.
 
 ## 0.1.0-beta.1
 
