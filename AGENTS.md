@@ -23,7 +23,8 @@ it is not a second framework implementation or a publishable repository.
   verification and obtain review by an actual different Agent before acceptance.
 - Use applicable Skills, read their instructions, and report their use. Run
   `npm run verify:fast` for prose and `npm run verify` for behavioral candidates.
-  Run native Doctor after task-state changes and browser gates for UI work.
+  Run native Doctor after task-state changes. Observatory browser tests
+  (`npm run test:browser`) are optional, not a merge or release gate.
 - Never invent model usage, identity or review evidence.
 - Install the pre-push hook with `npm run setup:hooks` and never bypass it. It
   refuses every push except to `workkeel/*` branches and runs the publication

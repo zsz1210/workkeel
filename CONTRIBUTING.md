@@ -27,7 +27,8 @@ For a pull request:
 3. In the private workspace, add meaningful behavioral tests where needed. Use `npm ci --ignore-scripts`
    and follow the [testing guide](docs/getting-started/testing.md):
    `npm run verify:fast` for prose-only edits and `npm run verify` for
-   behavioral candidates. UI changes also need the applicable browser gate.
+   behavioral candidates. Observatory browser tests (`npm run test:browser`)
+   are optional, not a merge or release gate.
 4. Describe the exact candidate tested, what the checks prove, and any
    unverified behavior. Have a different registered Agent review it before
    task acceptance. A passing test or PR check does not itself accept a task.

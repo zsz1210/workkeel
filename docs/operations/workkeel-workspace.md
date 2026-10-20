@@ -1,5 +1,10 @@
 # Desktop workspace
 
+The workspace UI, also called the observatory, is an optional component. It starts
+only when you run `workkeel workspace serve`; core task and goal delivery does not
+depend on it. Its browser tests (`npm run test:browser`) are optional, not a merge
+or release gate.
+
 The workspace groups explicitly registered projects and repositories in one local
 interface. Projects retain their native task records; the workspace is a projection,
 not another writable copy of task acceptance. Its overview prioritizes required

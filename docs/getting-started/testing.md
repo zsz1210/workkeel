@@ -58,8 +58,10 @@ npm run verify
 
 Run it once on the final behavioral candidate, not after every intermediate edit. Further code, fixture, dependency, or contract changes invalidate that result. Later evidence/prose-only updates require their applicable checks and an explicit link to the tested code revision; they do not turn an untested code revision into a tested one. Release verification remains complete regardless of local selection.
 
-Monitor and workspace changes also require the real-browser gate. Run browser
-checks in the private workspace so failure screenshots and raw results stay there:
+The workspace UI/observatory is optional; core task and goal delivery does not
+depend on it. Its browser tests are optional, not a merge or release gate,
+including for monitor and workspace changes. When running browser checks, use
+the private workspace so failure screenshots and raw results stay there:
 
 ```bash
 npm run test:browser
@@ -72,7 +74,7 @@ calls; its report distinguishes real journal states from injected UI projections
 
 ## Desktop workspace and whole goals
 
-For workspace changes, run the actual browser scenarios in the private checkout:
+For optional workspace browser coverage, run the actual scenarios in the private checkout:
 
 ```sh
 WORKKEEL_WORKSPACE_BROWSER=1 node --test test/workkeel-workspace.test.mjs
@@ -116,7 +118,7 @@ Ordinary PR/push CI does not run `npm run test:browser`. The separate GitHub Rel
 Complete candidate evidence stays private and revision-specific:
 
 - run `npm run verify` before proposing a behavioral candidate;
-- run `npm run test:browser` for monitor, workspace or other user-interface changes;
+- optionally run `npm run test:browser` for monitor or workspace UI coverage; it is not a merge or release gate;
 - record the exact tested revision and preserve the native task's independent review and authorized acceptance gates. Tests do not accept a task or authorize publication.
 
 ## Release and live validation

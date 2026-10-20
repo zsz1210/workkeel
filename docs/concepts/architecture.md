@@ -27,15 +27,17 @@ subscription and explicitly selected models. See the
 
 ![Workkeel task records and optional graph execution connect to a host-enforced coding runtime; recovery state and acceptance evidence remain separate.](../assets/workkeel-architecture.svg)
 
-The native [desktop workspace](../operations/workkeel-workspace.md) observes
-registered projects without relocating their task authority. Its controlled
-settings feed exact approved pins into new dispatches. A bounded continuation
+The optional native [desktop workspace](../operations/workkeel-workspace.md)
+observatory starts only with `workkeel workspace serve`; core task and goal
+delivery does not depend on it. It observes registered projects without relocating
+their task authority. Its controlled settings feed exact approved pins into new
+dispatches. A bounded continuation
 runner resumes eligible approved work; improvement discovery creates evidenced
 proposals rather than new permission. Versioned Skill reuse stays project-local.
 
 ```mermaid
 flowchart LR
-  UI[Desktop workspace] -->|observe| A[Project A task records]
+  UI[Optional desktop workspace] -->|observe| A[Project A task records]
   UI -->|observe| B[Project B task records]
   UI -->|authorized intent| C[Version and authority checks]
   C --> J[Durable approved jobs]

@@ -61,9 +61,10 @@ make relocation pass. Keep the original state in the private backup for recovery
 ## Verify and promote only source
 
 Implement and run candidate verification in the private workspace. Redirect raw
-logs there and run browser gates there, since failure screenshots are development
-output. Product tests create isolated synthetic temporary fixtures. Review source
-diffs, explicitly stage public files and update `public-files.json` only for new
+logs there and run any optional observatory browser tests there, since failure
+screenshots are development output. `npm run test:browser` is not a merge or
+release gate. Product tests create isolated synthetic temporary fixtures. Review
+source diffs, explicitly stage public files and update `public-files.json` only for new
 files whose purpose and contents have been reviewed.
 
 Framework content checks exclude the root `.workkeel-private/` evidence directory,
