@@ -204,22 +204,49 @@ test('expiry prohibits new dispatch while frozen explicit cancellation still clo
   try{await assert.rejects(runNativeGoalStep(f.target,f.manifest.id,{adapter}),/expired/);const stale=await readNativeGoal(f.target,f.manifest.id);await controlNativeGoal(f.target,f.manifest.id,'cancel',{actor:builder,operation_id:'stop-expired',expected_version:stale.version});for(let n=0;n<4;n++)await runNativeGoalStep(f.target,f.manifest.id,{adapter});assert.equal((await readNativeGoal(f.target,f.manifest.id)).status,'cancelled');}finally{Date.now=clock;}
 });
 
-test('service does not spin on its own uncertain result writes or invoke inference during idle reconciliation',async t=>{
+test('service does not spin on its own uncertain result writes or invoke inference during idle reconciliation',{timeout:30000},async t=>{
   let service;t.after(async()=>{await service?.close();});
   const f=await fixture(t);let calls=0,reconciliations=0;const errors=[];
-  t.mock.timers.enable({apis:['setInterval']});
+  t.mock.timers.enable({apis:['setTimeout','setInterval']});
+  const watchers=[],notifications=[];
+  const watchMock=t.mock.method(fsSync,'watch',(dir,callback)=>{const watcher={dir,callback,closed:false,close(){this.closed=true;}};watchers.push(watcher);return watcher;});
+  syncBuiltinESMExports();t.after(()=>{watchMock.mock.restore();syncBuiltinESMExports();});
+  const rename=fs.rename;
+  t.mock.method(fs,'rename',async(from,to)=>{
+    const result=await rename(from,to);
+    for(const watcher of watchers)if(path.dirname(to)===watcher.dir)notifications.push(watcher);
+    return result;
+  });
   const adapter=createTrustedGoalAdapter({id:'bounded-watcher-fixture',assertCapabilities:async()=>{},execute:async()=>{calls++;return {status:'unknown',reason:'Synthetic unknown; never infer on poll'};},reconcile:async()=>{reconciliations++;return {status:'unknown',reason:'Still unknown'};},cancel:async()=>({status:'cancelled'})});
-  const dispatched=Promise.withResolvers(),reconciled=Promise.withResolvers();
-  service=await serveNativeGoal(f.target,f.manifest.id,{adapter,reconcile_ms:1000,onError:e=>errors.push(e),onStep:result=>{if(result.operation?.kind==='runtime')(reconciliations?reconciled:dispatched).resolve();}});
-  let timer;try{
-    await Promise.race([(async()=>{
-      await dispatched.promise;
-      // Exercise one idle interval without letting slow fixture I/O add polls.
-      t.mock.timers.tick(1000);
-      await reconciled.promise;
-      await service.close();
-    })(),new Promise((_,reject)=>timer=setTimeout(()=>reject(Error('Service did not dispatch and reconcile')),10000))]);
-  }finally{clearTimeout(timer);}
+  let runtimeReports=0;
+  // Advance the debounce clock while allowing actual state writes, final reads
+  // and filesystem watcher notifications to finish; never sleep on wall time.
+  const advance=async()=>{
+    t.mock.timers.tick(20);await readNativeGoal(f.target,f.manifest.id);
+    // Deliver real atomic-write notifications late, including after onStep.
+    for(const watcher of notifications.splice(0))if(!watcher.closed)watcher.callback();
+    await new Promise(resolve=>setImmediate(resolve));
+  };
+  const awaitReport=async expected=>{
+    for(let n=0;n<100&&runtimeReports<expected;n++)await advance();
+    assert.equal(runtimeReports,expected,'the requested runtime step reported its persisted result');
+  };
+  const assertQuiescent=async expectedReconciliations=>{
+    // A full virtual second covers fifty debounce opportunities. The 60-second
+    // interval stays dormant throughout startup and both idle windows.
+    for(let n=0;n<50;n++){
+      await advance();
+      assert.equal(calls,1,'uncertain work must not be executed again');
+      assert.equal(reconciliations,expectedReconciliations,'uncertain result writes must leave the service quiescent');
+    }
+  };
+  service=await serveNativeGoal(f.target,f.manifest.id,{adapter,reconcile_ms:60000,onError:e=>errors.push(e),onStep:result=>{if(result.operation?.kind==='runtime')runtimeReports++;}});
+  await awaitReport(1);
+  await assertQuiescent(0);
+  service.trigger();
+  await awaitReport(2);
+  await assertQuiescent(1);
+  await service.close();
   assert.equal(calls,1);assert.equal(reconciliations,1);assert.deepEqual(errors.map(e=>e.message),[]);
 });
 
