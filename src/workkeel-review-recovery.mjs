@@ -362,7 +362,8 @@ export async function readReviewRecovery(targetInput, taskId) {
       duration_ms: a.result?.value.duration_ms ?? null })), acceptance: "not-performed" };
 }
 
-// Runs under the project lock; host probes happen afterwards, outside it.
+// Runs under the project and host writer locks: binding directories become
+// visible before binding.json is published. Host probes run outside both locks.
 async function prepare(target, request) {
   const item = await assertReviewRecoveryContext(target, request.task_id, { approver: request.actor, reviewer: request.reviewer,
     revision: request.revision, expected_version: request.expected_version });
@@ -485,7 +486,7 @@ export async function recoverInterruptedReview(targetInput, input, { host } = {}
   const target = await fs.realpath(targetInput), requestSha = executionDigest(request);
   const initial = await withProjectMutationLock(target, async () => {
     const prior = await replay(target, request, requestSha);
-    return prior ? { replayed: prior } : { probed: await prepare(target, request) };
+    return prior ? { replayed: prior } : { probed: await withHostSourceReservation(target, () => prepare(target, request)) };
   });
   if (initial.replayed) return initial.replayed;
   const probed = initial.probed, receipt = await preflightReview(host, probed);

@@ -309,6 +309,38 @@ test('a concurrent binding and recovery reserving one source have exactly one wi
   assert.match(outcomes[recovered?1:0].reason.message,recovered?/host-source-used-by-review-recovery/:/fresh source/);
 });
 
+test('initial recovery inspection waits for a binding whose directory is visible before publication',async t=>{
+  const f=await fixture(t),other=await secondTask(f),source={thread_id:'publishing-thread',turn_id:'publishing-turn'};
+  const request=await f.request({source}),{host,calls}=reviewHost();
+  const target=`${f.root}/.ai-org/host-usage/other-publishing-turn/binding.json`,locks=`${f.root}/.ai-org/host-usage/.locks`;
+  const realRename=fs.rename,realLink=fs.link;
+  let publish,finalize,contend,paused=false;
+  const publishing=new Promise(resolve=>{publish=resolve;}),canFinalize=new Promise(resolve=>{finalize=resolve;}),
+    contending=new Promise(resolve=>{contend=resolve;});
+  // The directory already exists, but the durable temporary file has not yet
+  // been renamed to binding.json. Hold its writer here until recovery either
+  // joins the same lock or (incorrectly) finishes its unlocked initial read.
+  fs.rename=async(from,to)=>{if(to===target){paused=true;publish();await canFinalize;}return realRename(from,to);};
+  fs.link=async(from,to)=>{const linked=await realLink(from,to);if(paused&&path.dirname(to)===locks)contend();return linked;};
+  const restore=()=>{fs.rename=realRename;fs.link=realLink;finalize();};t.after(restore);
+  const binding=bindHostUsage(f.root,other(source));
+  const bound=Promise.allSettled([binding]);
+  let recovered;
+  try {
+    await publishing;
+    assert.equal(existsSync(path.dirname(target)),true);assert.equal(existsSync(target),false);
+    recovered=Promise.allSettled([recoverInterruptedReview(f.root,request,{host})]);
+    await Promise.race([contending,recovered]);
+  } finally {
+    finalize();await bound;if(recovered)await recovered;restore();
+  }
+  assert.equal((await bound)[0].status,'fulfilled');
+  const [outcome]=await recovered;
+  assert.equal(outcome.status,'rejected');assert.match(outcome.reason.message,/fresh source/);
+  assert.equal(calls.runtimeState,0);assert.equal(calls.launch,0);
+  assert.equal((await readReviewRecovery(f.root,f.id)).attempts.length,0);
+});
+
 test('ordinary binding inside an already-held project lock completes without waiting for that lock',async t=>{
   const f=await fixture(t),other=await secondTask(f),started=Date.now();
   // Execution capture binds while holding the project lock; binding must not reacquire it.
