@@ -39,7 +39,7 @@
   },
   "publishConfig": {
     "access": "public",
-    "tag": "latest"
+    "tag": "next"
   },
   "scripts": {
     "release:pack": "node scripts/pack-npm-release.mjs",

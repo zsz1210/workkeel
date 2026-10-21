@@ -7,7 +7,8 @@ repository migration does not republish old tags, archives or npm versions.
 
 ## 1.0.1
 
-- Prepared the first npm release of the 1.0 line with the `latest` dist-tag.
+- Prepared the first npm release of the 1.0 line. A stable GitHub Release publishes it
+  to the `latest` dist-tag; `publishConfig.tag` stays `next` as the manual default.
 - Updated all three README version lines and added an npm installation option.
 - Completed the 1.0.0 changelog with the review-recovery and CLI retry fixes.
 
