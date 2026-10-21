@@ -45,6 +45,11 @@ test("CLI errors preserve their envelope and give command-appropriate recovery g
   for (const [args, next] of [
     [["task", "new", "--goal", "Clarify the guide", "--acceptance", "The guide is clear"], lifecycle],
     [["task", "claim", "--id", "WK-0001", "--request", "claim.json"], lifecycle],
+    [["task", "--json", "claim", "--id", "WK-0001"], lifecycle],
+    [["--json", "task", "--id", "WK-0001", "claim"], lifecycle],
+    [["task", "--summary", "claim", "show", "--id", "WK-0001"], neutral],
+    [["task", "--json", "claim", "--id"], neutral],
+    [["task", "claim", "--id"], lifecycle],
     [["task", "show", "--id", "WK-0001"], neutral],
     [["task", "unknown"], neutral],
     [["doctor"], neutral]
@@ -222,13 +227,78 @@ test("retrying a flag command after it succeeded replays it instead of failing",
   await fs.mkdir(path.join(root, ".ai-org/artifacts/WK-0001"), { recursive: true });
   await fs.writeFile(path.join(root, ".ai-org/artifacts/WK-0001/check.md"), "Checked\n");
   const handoff = ["task", "handoff", "--id", "WK-0001", "--actor", "builder", "--summary", "Done", "--evidence", ".ai-org/artifacts/WK-0001/check.md"];
-  assert.equal(workkeel(root, ...handoff).state, "test");
+  const delivered = workkeel(root, ...handoff);
+  assert.equal(delivered.state, "test");
+  await fs.appendFile(path.join(root, "docs/guide.md"), "Later change.\n"); git(root, "commit", "-qam", "later");
   const retried = workkeel(root, ...handoff);
   assert.equal(retried.replayed, true); assert.equal(retried.version, 3);
+  assert.deepEqual(retried, { ...delivered, replayed: true, mutation_status: "already-applied" });
   const item = await readNativeTask(root, "WK-0001");
   assert.ok(item.history.every(event => event.operation_id.length <= 96));
   // A different command is a new operation, not a replay of the earlier one.
   assert.match(fails(root, "task", "claim", "--id", "WK-0001", "--actor", "builder", "--base", git(root, "rev-parse", "HEAD")), /already claimed|not available/);
+});
+
+test("a rejected implicit handoff follows the repaired HEAD with a fresh operation ID", async t => {
+  const root = await initialized(t);
+  await states.claimed(root);
+  await fs.writeFile(path.join(root, "outside.txt"), "Outside the approved roots.\n");
+  git(root, "add", "outside.txt"); git(root, "commit", "-qm", "outside");
+  const args = ["task", "handoff", "--id", ID, "--actor", B, "--summary", "Done"];
+  const options = { "--id": ID, "--actor": B, "--summary": "Done" };
+  assert.match(fails(root, ...args), /outside approved write roots/);
+  const rejected = await lifecycleRequestFromFlags(root, ID, "handoff", options);
+  assert.equal((await lifecycleRequestFromFlags(root, ID, "handoff", options)).operation_id, rejected.operation_id);
+  // An explicit revision remains pinned even after the branch is repaired.
+  assert.match(fails(root, ...args, "--revision", rejected.revision), /outside approved write roots/);
+  git(root, "rm", "outside.txt");
+  await fs.appendFile(path.join(root, "docs/guide.md"), "Tidied.\n"); git(root, "commit", "-qam", "repair");
+  assert.match(fails(root, ...args, "--revision", rejected.revision), /current commit/);
+  const result = workkeel(root, ...args);
+  assert.equal(result.state, "test"); assert.equal(result.candidate_revision, head(root));
+  const item = await readNativeTask(root, ID);
+  assert.notEqual(item.history.at(-1).operation_id, rejected.operation_id);
+  assert.equal(item.history.some(event => event.operation_id === rejected.operation_id), false);
+  assert.equal(workkeel(root, ...args).replayed, true);
+});
+
+test("a rejected implicit claim refreshes its base when HEAD moves", async t => {
+  const root = await initialized(t);
+  await states.claimed(root);
+  const id = workkeel(root, "task", "new", "--goal", "Another tidy", "--acceptance", "Tidy", "--write", "docs", "--actor", B).id;
+  const args = ["task", "claim", "--id", id, "--actor", B];
+  const options = { "--id": id, "--actor": B };
+  assert.match(fails(root, ...args), /overlapping write roots/);
+  const rejected = await lifecycleRequestFromFlags(root, id, "claim", options);
+  assert.match(fails(root, ...args, "--base", rejected.base_revision), /overlapping write roots/);
+  await retargets.newCommit(root);
+  workkeel(root, "task", "release", "--id", ID, "--actor", B, "--summary", "Pause");
+  assert.match(fails(root, ...args, "--base", rejected.base_revision), /current HEAD/);
+  assert.equal(workkeel(root, ...args).state, "build");
+  const item = await readNativeTask(root, id);
+  assert.equal(item.base_revision, head(root));
+  assert.notEqual(item.history.at(-1).operation_id, rejected.operation_id);
+  await retargets.newCommit(root);
+  assert.equal(workkeel(root, ...args).replayed, true, "a landed claim keeps its original base");
+});
+
+for (const state of ["cancelled", "done"]) test(`task new refuses an identical ${state} task and explains how to file another`, async t => {
+  const root = await initialized(t);
+  const args = ["task", "new", "--goal", "Tidy", "--acceptance", "Tidy", "--write", "docs", "--actor", B];
+  workkeel(root, ...args);
+  if (state === "cancelled") workkeel(root, "task", "cancel", "--id", ID, "--actor", B, "--summary", "Stop");
+  else {
+    workkeel(root, "task", "claim", "--id", ID, "--actor", B);
+    await deliver(root, "candidate"); await judge(root, "pass", "pass");
+    workkeel(root, "task", "close", "--id", ID, "--actor", B, "--summary", "Accepted", "--rollback", "Revert");
+  }
+  const before = await readNativeTask(root, ID);
+  assert.match(fails(root, ...args), new RegExp(`An identical task ${ID} already exists and is ${state};.*--id with an unused task ID`));
+  assert.deepEqual(await readNativeTask(root, ID), before);
+  assert.equal((await fs.readdir(path.join(root, ".ai-org/work-items"))).length, 1);
+  const created = workkeel(root, ...args, "--id", "WK-0002");
+  assert.equal(created.id, "WK-0002"); assert.equal(created.replayed, false);
+  assert.equal(workkeel(root, ...args, "--id", "WK-0002").replayed, true);
 });
 
 test("long task IDs keep a bounded operation ID", async t => {
@@ -488,7 +558,7 @@ const matrix = [
   ["rework", "failed", "newFailedCandidate", "new"], ["rework", "failed", "newFailedCandidate", "pending"], ["rework", "failed", "newFailedCandidate", "legacy"],
   ["close", "delivered", "newPassedCandidate", "pending"], ["close", "delivered", "newPassedCandidate", "legacy"],
   ["close", "delivered", "newPassedCandidate", "new"],
-  ["handoff", "claimed", "newCommit", "pending"], ["handoff", "claimed", "newCommit", "new"],
+  ["handoff", "claimed", "newCommit", "new"],
   ["release", "claimed", "newClaim", "legacy-first"], ["review", "delivered", "newCandidate", "legacy-first"],
   ["rework", "failed", "newFailedCandidate", "legacy-first"]
 ];
