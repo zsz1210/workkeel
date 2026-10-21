@@ -12,6 +12,7 @@ Workkeel in your own project is a separate use case.
 | Goal | Read |
 | --- | --- |
 | Understand the framework and its concepts | [README](../README.md), [terminology](concepts/terminology.md), [architecture](concepts/architecture.md) |
+| Check the 1.0 compatibility tiers | [Compatibility guarantees](concepts/compatibility.md) |
 | Check what the published Beta.1 contains | [Published Beta.1 release notes](../CHANGELOG.md#010-beta1) |
 | Initialize, claim, hand off and accept a task | [Quick start](getting-started/workkeel.md), [task contract](concepts/task-contract.md) |
 | Choose risk tiers, review requirements and a custom policy | [Adoption and risk tiers](operations/team-adoption-and-risk.md) |
@@ -39,7 +40,7 @@ but may be removed in a later release if nobody uses them.
 | Observe tasks, read their documents, and compare recorded time and tokens | [Local observer workspace](operations/workkeel-observer.md) |
 | Manage several projects and repositories from the desktop | [Desktop workspace and controlled settings](operations/workkeel-workspace.md) |
 | Deliver all mandatory repositories with distinct review and bounded repair | [Whole-goal coordination](operations/workkeel-goals.md), [opt-in improvement](operations/workkeel-autonomy.md) |
-| Explore optional workflow adapters and model routing | [Workflow and routing guide](operations/workkeel-workflows.md), [native dispatch](operations/workkeel-native-dispatch.md) |
+| Explore optional workflow adapters and model routing | [Workflow and routing guide](operations/workkeel-workflows.md) (LangGraph runner is EXPERIMENTAL: outside the [1.0 compatibility guarantees](concepts/compatibility.md); we may change or remove it in a minor release), [native dispatch](operations/workkeel-native-dispatch.md) |
 
 ## Decision records
 

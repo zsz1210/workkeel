@@ -116,7 +116,7 @@ export async function runLifecycleFromFlags(target, id, action, options, hooks =
 }
 
 // The object each state-changing command acts on. A command binds it on its first
-// attempt; every later attempt, new or left pending, must aim at the same one.
+// attempt, except an undelivered handoff may refresh its implicit HEAD revision.
 // claim, cancel and create act on the task itself (its ID is part of the command
 // key); claim deliberately does not bind its base revision.
 const TARGET_FIELDS = { claim: [], cancel: [], release: ["claim_id"], handoff: ["claim_id", "revision"],
@@ -170,9 +170,19 @@ export async function lifecycleRequestFromFlags(target, id, action, options, sna
   const replay = saved.find(entry => entry.value.request.operation_id === latestEvent);
   if (replay) return replay.value.request;
   if (!TARGET_FIELDS[action]) throw new Error("Unknown task operation");
-  const firstTarget = saved[0] ? recordedTarget(action, saved[0].value) : null;
+  let firstTarget = saved[0] ? recordedTarget(action, saved[0].value) : null;
+  const derivedField = action === "handoff" && !("--revision" in options) ? "revision"
+    : action === "claim" && !("--base" in options) ? "base_revision" : null;
+  const derivedHead = derivedField ? await head(target) : null;
+  const landed = new Set(item.history.map(event => event.operation_id));
+  // Only an undelivered handoff's implicit revision may follow HEAD. Keep its
+  // original claim binding, and never redirect a command that already landed.
+  if (firstTarget && action === "handoff" && derivedField &&
+      !saved.some(entry => landed.has(entry.value.request.operation_id)))
+    firstTarget = { ...firstTarget, revision: derivedHead };
   const pending = saved.find(entry => entry.value.request.expected_version === item.version &&
-    !item.history.some(event => event.operation_id === entry.value.request.operation_id));
+    !landed.has(entry.value.request.operation_id) &&
+    (!derivedField || entry.value.request[derivedField] === derivedHead));
   // A request that never landed is resent only if it still aims at the first target.
   if (pending) { assertReusable(action, item, options, firstTarget, recordedTarget(action, pending.value)); return pending.value.request; }
   // A new request is built only for the task as it is now; an --expect for another
@@ -180,12 +190,13 @@ export async function lifecycleRequestFromFlags(target, id, action, options, sna
   if ("--expect" in options && version(options, item) !== item.version)
     throw new Error(`--expect ${options["--expect"]} does not match the task's current version ${item.version}`);
   const expected = item.version;
-  const request = { operation_id: `cli-${action}-${expected + 1}-${key.slice(0, 16)}`, expected_version: expected, actor: await resolveActor(target, project, options["--actor"]) };
+  const attempt = (saved.at(-1)?.number ?? 0) + 1;
+  const request = { operation_id: `cli-${action}-${expected + 1}-${key.slice(0, 16)}-${attempt}`, expected_version: expected, actor: await resolveActor(target, project, options["--actor"]) };
   const summary = () => { if (!options["--summary"]) throw new Error(`task ${action} needs --summary`); return options["--summary"]; };
   const evidence = () => options["--evidence"] ?? [];
-  if (action === "claim") request.base_revision = options["--base"] ?? await head(target);
+  if (action === "claim") request.base_revision = options["--base"] ?? derivedHead;
   else if (action === "release") Object.assign(request, { claim_id: options["--claim"] ?? item.claim?.id, summary: summary() });
-  else if (action === "handoff") Object.assign(request, { claim_id: options["--claim"] ?? item.claim?.id, revision: options["--revision"] ?? await head(target),
+  else if (action === "handoff") Object.assign(request, { claim_id: options["--claim"] ?? item.claim?.id, revision: options["--revision"] ?? derivedHead,
     summary: summary(), evidence: evidence(), unresolved: options["--unresolved"] ?? [], ...(options["--rollback"] ? { rollback: options["--rollback"] } : {}) });
   else if (action === "review") Object.assign(request, { revision: options["--revision"] ?? item.delivery?.revision, judgment: options["--judgment"],
     summary: summary(), evidence: evidence(), ...(options["--attempt"] ? { review_attempt_id: options["--attempt"] } : {}) });
@@ -194,17 +205,17 @@ export async function lifecycleRequestFromFlags(target, id, action, options, sna
     rollback: options["--rollback"], evidence: evidence() });
   else if (action === "cancel") Object.assign(request, { summary: summary(), evidence: evidence() });
   else throw new Error("Unknown task operation");
-  // A command keeps the claim and candidate its first attempt targeted. If a later
-  // attempt would derive a different one, stop rather than apply this judgment,
-  // summary or evidence to another target.
+  // Keep the first target, except for an undelivered handoff's implicit HEAD.
   const aim = currentTarget(action, item, request, options);
   assertReusable(action, item, options, firstTarget, aim);
-  await hooks.beforeSave?.(dir, (saved.at(-1)?.number ?? 0) + 1, key);
+  await hooks.beforeSave?.(dir, attempt, key);
   // Another process may have saved this attempt number first. Its request is adopted
   // only if it is the same command aimed at the same target as this one.
-  const kept = await saveAttempt(dir, (saved.at(-1)?.number ?? 0) + 1, { key, request, target: aim });
+  const kept = await saveAttempt(dir, attempt, { key, request, target: aim });
   if (kept?.key !== key) throw new Error("A concurrent CLI request with another command took this attempt; rerun the command");
   assertReusable(action, item, options, firstTarget ?? aim, recordedTarget(action, kept));
+  if (derivedField && kept.request[derivedField] !== derivedHead)
+    throw new Error("A concurrent CLI request derived a different HEAD; rerun the command");
   return kept.request;
 }
 
@@ -234,9 +245,12 @@ export async function draftFromFlags(target, options) {
   return { draft: kept.draft, request: kept.request };
 }
 
-/** Creates a task from flags; an identical command always resends its first saved request. */
+/** Creates or replays a task from flags, refusing an identical terminal task. */
 export async function runCreateFromFlags(target, options, hooks = {}) {
   const { draft, request } = await draftFromFlags(target, options);
   await hooks.beforeMutation?.(request);
-  return createNativeTask(target, draft, request);
+  const result = await createNativeTask(target, draft, request);
+  if (["cancelled", "done"].includes(result.state))
+    throw new Error(`An identical task ${result.id} already exists and is ${result.state}; change the goal or acceptance text, or pass --id with an unused task ID to file a new task.`);
+  return result;
 }

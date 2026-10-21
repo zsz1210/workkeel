@@ -5,6 +5,27 @@ line. Historical release entries describe their own versions, not current-main
 qualification. Actual development tasks and validation records stay private;
 repository migration does not republish old tags, archives or npm versions.
 
+## 1.0.0
+
+Unpublished source.
+
+- Documented 1.0 compatibility guarantees (docs/concepts/compatibility.md).
+- Added `init --builder <family>` and `--reviewer <family>` overrides for the
+  default Claude builder and Codex reviewer.
+- Goal service `close()` now drains in-flight work; CLI and workspace shutdown
+  hooks await it.
+- Goal-state reads retry when they race an atomic file replacement.
+- CLI errors include an actionable `next_action`; initializing outside a Git
+  repository explains how to run `git init` or select the repository root.
+- Redesigned the three READMEs and task flow diagram, clarified the CLI capability
+  boundary, and added guidance on the instructions bridge, committing `.ai-org/`,
+  and using one task per branch or worktree.
+- Added copy-pasteable `stats --report` examples and fixed Loop L1 diagram text
+  overflow.
+- Marked the LangGraph workflow runner EXPERIMENTAL and outside the
+  [1.0 compatibility guarantees](docs/concepts/compatibility.md); it may change or
+  be removed in a minor release.
+
 ## 0.2.0-beta.0
 
 Unpublished source since 0.1.0-beta.1. Requires Node.js 24.15+.

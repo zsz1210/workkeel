@@ -9,7 +9,9 @@ English · [繁體中文](README.zh-TW.md) · [日本語](README.ja.md)
 
 [![CI](https://github.com/zsz1210/workkeel/actions/workflows/ci.yml/badge.svg)](https://github.com/zsz1210/workkeel/actions/workflows/ci.yml)
 
-0.2.0-beta.0 unpublished source · Node.js 24.15+ · [MIT](LICENSE)
+1.0.0 unpublished source · Node.js 24.15+ · [MIT](LICENSE)
+
+The [1.0 compatibility guarantees](docs/concepts/compatibility.md) list what is stable, best effort or experimental.
 
 ## Why Workkeel
 
@@ -69,6 +71,7 @@ $ workkeel task close --id WK-0001 --actor builder --summary "Owner accepts" --r
 
 This `low` example needs no evidence files; other tiers add requirements below.
 The CLI records the lifecycle; your Agents do the editing and review, not the CLI.
+Commit the `.ai-org/` task records too, with your work or after closing the task.
 
 ## Quick start
 
@@ -82,7 +85,9 @@ alias workkeel="node $PWD/bin/workkeel.mjs"
 ```
 
 Switch to your own project's Git repository and run `workkeel start .` for a
-read-only setup preview. Follow the [quick start guide](docs/getting-started/workkeel.md)
+read-only setup preview. After `init`, run `workkeel start .` again for the optional
+[instructions bridge](docs/extensions/workkeel-context.md#connect-native-instructions) suggestion.
+Follow the [quick start guide](docs/getting-started/workkeel.md)
 for initialization, policies, evidence and rollback. To develop Workkeel itself,
 follow [Contributing](CONTRIBUTING.md).
 
@@ -104,7 +109,7 @@ registered model families, but that check does not prove cross-review happened.
 ## Optional extras
 
 - **[Workspace observatory](docs/operations/workkeel-workspace.md):** start with `workkeel workspace serve`; browse project records without idle model calls. The separate [read-only observer](docs/operations/workkeel-observer.md) uses `workkeel monitor`.
-- **[Workflows / LangGraph](docs/operations/workkeel-workflows.md):** opt into a runner with approved graphs, model policy and recoverable steps.
+- **[Workflows / LangGraph](docs/operations/workkeel-workflows.md):** opt into a runner with approved graphs, model policy and recoverable steps. EXPERIMENTAL: outside the [1.0 compatibility guarantees](docs/concepts/compatibility.md); we may change or remove this runner in a minor release.
 - **[Workkeel Loop L1 report](docs/operations/loop-trial.md):** `workkeel stats --report --cutoff 2026-10-19T00:00:00Z --timezone UTC` produces a weekly read-only report with zero model/API spend.
 - **[Native dispatch](docs/operations/workkeel-native-dispatch.md):** record execution handoffs and requested models; the host reports what ran.
 - **[Reference Bot-layer usage](docs/operations/reference-usage-bot-layer.md):** one way to coordinate project Bots, Claude Code and Codex through human gates, outside the core.
@@ -113,7 +118,7 @@ Find these and other optional parts in the [documentation index](docs/README.md)
 
 ## Limits
 
-- Experimental beta: recovery from every interruption and fresh-machine installation are not fully qualified.
+- Recovery from every interruption and fresh-machine installation are not fully qualified.
 - Principals and Agents are attributed names, not authenticated accounts. Workkeel cannot prove two Principals are two people or which model ran.
 - Local locks do not coordinate multiple machines. Native host usage data exists only when the host records it.
 

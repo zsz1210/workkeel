@@ -1,5 +1,7 @@
 # Executable workflows and model routing
 
+The LangGraph workflow runner is EXPERIMENTAL: outside the [1.0 compatibility guarantees](../concepts/compatibility.md); we may change or remove it in a minor release.
+
 Workkeel coordinates an approved task; a coding runtime performs its individual
 steps. The optional LangGraph engine supplies execution order, branches, bounded
 loops, direct parallel joins, approval interrupts and durable checkpoints.

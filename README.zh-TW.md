@@ -9,7 +9,9 @@
 
 [![CI](https://github.com/zsz1210/workkeel/actions/workflows/ci.yml/badge.svg)](https://github.com/zsz1210/workkeel/actions/workflows/ci.yml)
 
-0.2.0-beta.0 未發布原始碼 · Node.js 24.15+ · [MIT](LICENSE)
+1.0.0 未發布原始碼 · Node.js 24.15+ · [MIT](LICENSE)
+
+哪些部分穩定、盡力維護或屬於實驗性功能，見 [1.0 相容性保證](docs/concepts/compatibility.md)（英文）。
 
 ## 為什麼用 Workkeel
 
@@ -66,6 +68,7 @@ $ workkeel task close --id WK-0001 --actor builder --summary "Owner accepts" --r
 
 這個 `low` 範例不需要證據檔；其他等級的要求見下表。
 CLI 只記錄生命週期；修改和審查由你的 Agent 完成，不是 CLI。
+也請將 `.ai-org/` 的任務紀錄一併提交，可以和工作成果一起提交，或在結案後提交。
 
 ## 快速開始
 
@@ -79,6 +82,7 @@ alias workkeel="node $PWD/bin/workkeel.mjs"
 ```
 
 切換到你自己的專案 Git 儲存庫，執行 `workkeel start .` 預覽設定步驟，不會寫入檔案。
+完成 `init` 後，再執行 `workkeel start .`，就會看到選用的[指示檔橋接](docs/extensions/workkeel-context.md#connect-native-instructions)建議。
 初始化、政策、證據與回復方式見[快速入門指南](docs/getting-started/workkeel.md)。
 開發 Workkeel 本身則請依[貢獻指南](CONTRIBUTING.md)操作。
 
@@ -100,7 +104,7 @@ CLI 會檢查已註冊的模型家族，但這項檢查本身不能證明交叉�
 ## 選用功能
 
 - **[Workspace 觀測台](docs/operations/workkeel-workspace.md)：**以 `workkeel workspace serve` 啟動，瀏覽專案紀錄，閒置時不呼叫模型。另有獨立的[唯讀觀察器](docs/operations/workkeel-observer.md)，使用 `workkeel monitor`。
-- **[工作流程／LangGraph](docs/operations/workkeel-workflows.md)：**選用 runner，依核准的流程圖、模型政策執行可復原步驟。
+- **[工作流程／LangGraph](docs/operations/workkeel-workflows.md)：**選用 runner，依核准的流程圖、模型政策執行可復原步驟。實驗性功能（EXPERIMENTAL）：不在 [1.0 相容性保證](docs/concepts/compatibility.md)範圍內，未來可能在次版本更新中變更或移除。
 - **[Workkeel Loop L1 報告](docs/operations/loop-trial.md)：**`workkeel stats --report --cutoff 2026-10-19T00:00:00Z --timezone UTC` 產生每週唯讀報告，模型／API 花費為零。
 - **[原生派工](docs/operations/workkeel-native-dispatch.md)：**記錄執行交接和指定模型，實際執行結果由 host 回報。
 - **[Bot 層參考用法](docs/operations/reference-usage-bot-layer.md)：**示範如何用人工關卡協調專案 Bot、Claude Code 與 Codex，屬於核心以外的用法。
@@ -109,7 +113,7 @@ CLI 會檢查已註冊的模型家族，但這項檢查本身不能證明交叉�
 
 ## 限制
 
-- 仍是實驗性 beta，尚未完整驗證所有中斷復原情境及全新機器安裝。
+- 尚未完整驗證所有中斷復原情境及全新機器安裝。
 - Principal 與 Agent 是署名，不是經過身分驗證的帳號。Workkeel 無法證明兩個 Principal 就是兩個人，也無法證明實際用了哪個模型。
 - 本機鎖無法協調多台機器；原生 host 用量資料只有在 host 有記錄時才存在。
 
