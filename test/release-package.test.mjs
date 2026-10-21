@@ -11,11 +11,11 @@ import {
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
-test("package declares the qualified Node.js range and public stable channel", async () => {
+test("package declares the qualified Node.js range and conservative next publish default", async () => {
   const packageDocument = JSON.parse(await fs.readFile(path.join(root, "package.json"), "utf8"));
   assert.equal(packageDocument.engines.node, ">=24.15.0");
   assert.equal(packageDocument.private, undefined, "the approved release package must be publishable");
-  assert.deepEqual(packageDocument.publishConfig, { access: "public", tag: "latest" });
+  assert.deepEqual(packageDocument.publishConfig, { access: "public", tag: "next" });
 });
 
 test("package validator rejects missing, forbidden, undeclared and oversized manifests", () => {
