@@ -25,9 +25,17 @@ async function write(target, value, create = false) {
   await (create ? durableAtomicCreate : durableAtomicWrite)(path.join(dir, 'run.json'), formatJson({ value, sha256: executionDigest(value) }));
   return value;
 }
+// Atomic replacement can race a no-symlink reader's final inode check. Retry that
+// specific observation, never malformed data or a failed integrity check.
+async function readStable(target, ref) {
+  for (let attempt = 0; ; attempt++) {
+    try { return await readTaskFile(target, ref); }
+    catch (error) { if (error.message === 'Contract input changed while reading' && attempt < 2) continue; throw error; }
+  }
+}
 export async function readLoopRun(target) {
   let file;
-  try { file = await readTaskFile(target, REF); } catch (error) { if (error.code === 'ENOENT') return null; throw error; }
+  try { file = await readStable(target, REF); } catch (error) { if (error.code === 'ENOENT') return null; throw error; }
   const envelope = JSON.parse(file.content), s = envelope.value;
   if (executionDigest(s) !== envelope.sha256 || s.schema_version !== 'workkeel.loop-run/v1' || !Number.isSafeInteger(s.operations) || s.operations < 0 || s.operations > 60 || !Number.isFinite(Date.parse(s.started_at)) || !Number.isFinite(Date.parse(s.deadline))) fail('persistent ledger integrity failure');
   if(Date.parse(s.deadline)-Date.parse(s.started_at)!==LOOP_MAX_WALL_MS||!Array.isArray(s.attempts)||s.attempts.filter(a=>a.kind!=='stop-bookkeeping').length!==s.operations||!['running','stopping','stopped','completed'].includes(s.status)||typeof s.stop?.requested!=='boolean'||typeof s.stop.confirmed!=='boolean'||!Array.isArray(s.stop.unknown))fail('persistent ledger fields invalid');
@@ -48,7 +56,7 @@ export async function startLoopRun(target, approval, { authorizeUser, costPath }
   assertLoopCostPath(approval.cost_path, costPath);
   return withProjectMutationLock(target,()=>lock(target, async () => {
     if (await readLoopRun(target)) fail('this trial already consumed its one L2; clearing a stop never starts another');
-    try{const file=await readTaskFile(target,'.ai-org/goals/'+approval.goal_id+'/state.json'),e=JSON.parse(file.content);if(executionDigest(e.value)!==e.sha256)fail('goal integrity before run');if(e.value.operations.some(o=>['running','intent','unknown'].includes(o.status)))fail('reconcile existing host work before starting a trial');}catch(error){if(error.code!=='ENOENT')throw error;}
+    try{const file=await readStable(target,'.ai-org/goals/'+approval.goal_id+'/state.json'),e=JSON.parse(file.content);if(executionDigest(e.value)!==e.sha256)fail('goal integrity before run');if(e.value.operations.some(o=>['running','intent','unknown'].includes(o.status)))fail('reconcile existing host work before starting a trial');}catch(error){if(error.code!=='ENOENT')throw error;}
     const started = Date.now();
     return write(target, { schema_version: 'workkeel.loop-run/v1', ...structuredClone(approval), started_at: new Date(started).toISOString(), deadline: new Date(started + LOOP_MAX_WALL_MS).toISOString(), operations: 0, attempts: [], status: 'running', stop: { requested: false, confirmed: false, unknown: [], reason: null }, user_clearances: 0 }, true);
   }));

@@ -9,7 +9,7 @@ English · [繁體中文](README.zh-TW.md) · [日本語](README.ja.md)
 
 [![CI](https://github.com/zsz1210/workkeel/actions/workflows/ci.yml/badge.svg)](https://github.com/zsz1210/workkeel/actions/workflows/ci.yml)
 
-1.0.0 unpublished source · Node.js 24.15+ · [MIT](LICENSE)
+[npm](https://www.npmjs.com/package/@zsz1210/workkeel) 1.0.1 · Node.js 24.15+ · [MIT](LICENSE)
 
 The [1.0 compatibility guarantees](docs/concepts/compatibility.md) list what is stable, best effort or experimental.
 
@@ -45,7 +45,7 @@ Principal closes it after review by a different model family and the required cr
 
 ## 30-second demo
 
-Install the source CLI below, then run the demo in an existing Git project.
+Install the CLI below, then run the demo in an existing Git project.
 The output includes selected JSON fields. `init` registers `builder` and `reviewer`
 under one `owner`. Their model families default to `claude` and `codex`; override
 them with `--builder <family>` and `--reviewer <family>`.
@@ -83,6 +83,8 @@ cd workkeel
 npm ci --omit=optional --ignore-scripts
 alias workkeel="node $PWD/bin/workkeel.mjs"
 ```
+
+Or install from npm with `npm install -g @zsz1210/workkeel` to use the `workkeel` command.
 
 Switch to your own project's Git repository and run `workkeel start .` for a
 read-only setup preview. After `init`, run `workkeel start .` again for the optional

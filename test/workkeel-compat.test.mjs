@@ -132,12 +132,12 @@ test("the launcher rejects a pin that is not an exact version before any downloa
 });
 
 test("upgrade rewrites a stale launcher, needs an approver and never downgrades", async t => {
-  const root = await fixture(t, TEMPLATE_VERSION), cli = await cliAt(t, "1.0.1");
+  const root = await fixture(t, TEMPLATE_VERSION), cli = await cliAt(t, "1.0.2");
   await fs.writeFile(path.join(root, "workkeelw.mjs"), (await fs.readFile(path.join(root, "workkeelw.mjs"), "utf8")) + "// stale\n");
   const result = JSON.parse(launch(root, cli, "upgrade", "--actor", "builder").stdout);
   assert.deepEqual(result.updated, ["workkeelw.mjs", "workkeel.lock"]);
-  assert.doesNotMatch(await fs.readFile(path.join(root, "workkeelw.mjs"), "utf8"), /stale|1\.0\.1/);
-  // The source CLI (1.0.0) is older than the 1.0.1 pin.
+  assert.doesNotMatch(await fs.readFile(path.join(root, "workkeelw.mjs"), "utf8"), /stale|1\.0\.2/);
+  // The source CLI (1.0.1) is older than the 1.0.2 pin.
   const lock = await fs.readFile(path.join(root, "workkeel.lock"));
   const older = spawnSync(process.execPath, [sourceCli, "upgrade", root, "--actor", "builder"], { encoding: "utf8" });
   assert.equal(older.status, 1); assert.match(older.stderr, /never downgrades/);
@@ -155,10 +155,10 @@ test("unknown lock fields only warn and upgrade keeps them, including one named 
   assert.deepEqual(drainCompatibilityWarnings(), [{ code: "unknown-fields-ignored", context: "workkeel.lock", fields: ["future_setting", "digest"] }]);
   const doctor = spawnSync(process.execPath, [sourceCli, "doctor", root], { encoding: "utf8" });
   assert.equal(doctor.status, 0); assert.deepEqual(warnings(doctor).map(w => w.fields), [["future_setting", "digest"]]);
-  const upgraded = launch(root, await cliAt(t, "1.0.1"), "upgrade", "--actor", "builder");
+  const upgraded = launch(root, await cliAt(t, "1.0.2"), "upgrade", "--actor", "builder");
   assert.equal(upgraded.status, 0, upgraded.stderr);
   const after = await lockOf(root);
-  assert.equal(after.cli.version, "1.0.1"); assert.equal(after.digest, "future-data"); assert.deepEqual(after.future_setting, { kept: true });
+  assert.equal(after.cli.version, "1.0.2"); assert.equal(after.digest, "future-data"); assert.deepEqual(after.future_setting, { kept: true });
 });
 
 test("unknown request fields warn and are neither stored, validated nor hashed", async t => {
