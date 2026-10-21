@@ -2,8 +2,11 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { createHash } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
+import { setTimeout as sleep } from 'node:timers/promises';
 
 const registry = 'https://registry.npmjs.org';
+// Only post-publish metadata 404s may wait: 300 seconds of backoff, capped at 60 seconds per retry.
+const publicationRetryDelays = [5000, 10000, 20000, 40000, 60000, 60000, 60000, 45000];
 const hash = (algorithm, bytes, encoding) => createHash(algorithm).update(bytes).digest(encoding);
 
 async function boundedBody(response, limit) {
@@ -17,13 +20,20 @@ async function boundedBody(response, limit) {
   return Buffer.concat(chunks);
 }
 
-export async function checkPublishedPackage({ packageDocument, asset, channel, requirePublished = false, request = fetch }) {
+export async function checkPublishedPackage({ packageDocument, asset, channel, requirePublished = false, request = fetch, wait = sleep }) {
   const { name, version } = packageDocument;
   if (!/^@[a-z0-9][a-z0-9._-]*\/[a-z0-9][a-z0-9._-]*$/.test(name ?? '') ||
       !/^\d+\.\d+\.\d+(?:-[A-Za-z0-9.-]+)?$/.test(version ?? '') ||
       !['next', 'latest'].includes(channel) || !Buffer.isBuffer(asset) || !asset.length) throw Error('Invalid publication check input');
   const get = url => request(url, { redirect: 'error', signal: AbortSignal.timeout(20000) });
-  const response = await get(`${registry}/${encodeURIComponent(name)}/${version}`);
+  const versionUrl = `${registry}/${encodeURIComponent(name)}/${version}`;
+  let response = await get(versionUrl);
+  if (requirePublished) for (const delay of publicationRetryDelays) {
+    if (response.status !== 404) break;
+    await response.body?.cancel();
+    await wait(delay);
+    response = await get(versionUrl);
+  }
   if (response.status === 404) {
     if (requirePublished) throw Error('Required published version is absent');
     return { action: 'publish', package_name: name, package_version: version, registry_status: 'version-absent' };
