@@ -9,7 +9,7 @@
 
 [![CI](https://github.com/zsz1210/workkeel/actions/workflows/ci.yml/badge.svg)](https://github.com/zsz1210/workkeel/actions/workflows/ci.yml)
 
-1.0.0 未發布原始碼 · Node.js 24.15+ · [MIT](LICENSE)
+[npm](https://www.npmjs.com/package/@zsz1210/workkeel) 1.0.1 · Node.js 24.15+ · [MIT](LICENSE)
 
 哪些部分穩定、盡力維護或屬於實驗性功能，見 [1.0 相容性保證](docs/concepts/compatibility.md)（英文）。
 
@@ -44,7 +44,7 @@ Workkeel 不是 sandbox，也不是 agent runtime，不會替你部署。
 
 ## 30 秒示範
 
-依下方步驟安裝原始碼 CLI，再到既有 Git 專案執行示範。輸出只列出部分 JSON 欄位。
+依下方步驟安裝 CLI，再到既有 Git 專案執行示範。輸出只列出部分 JSON 欄位。
 `init` 會在同一位 `owner` 下註冊 `builder` 與 `reviewer`。模型家族預設分別為 `claude` 與 `codex`，可用 `--builder <family>` 與 `--reviewer <family>` 指定。
 owner 核准任務與驗收，兩個 Agent 各自完成實作和審查。
 
@@ -80,6 +80,8 @@ cd workkeel
 npm ci --omit=optional --ignore-scripts
 alias workkeel="node $PWD/bin/workkeel.mjs"
 ```
+
+也可以用 `npm install -g @zsz1210/workkeel` 從 npm 安裝，再執行 `workkeel` 指令。
 
 切換到你自己的專案 Git 儲存庫，執行 `workkeel start .` 預覽設定步驟，不會寫入檔案。
 完成 `init` 後，再執行 `workkeel start .`，就會看到選用的[指示檔橋接](docs/extensions/workkeel-context.md#connect-native-instructions)建議。

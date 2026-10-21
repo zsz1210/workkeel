@@ -9,7 +9,7 @@
 
 [![CI](https://github.com/zsz1210/workkeel/actions/workflows/ci.yml/badge.svg)](https://github.com/zsz1210/workkeel/actions/workflows/ci.yml)
 
-1.0.0 未公開ソース · Node.js 24.15+ · [MIT](LICENSE)
+[npm](https://www.npmjs.com/package/@zsz1210/workkeel) 1.0.1 · Node.js 24.15+ · [MIT](LICENSE)
 
 どの部分が安定版・ベストエフォート・実験的機能かは、[1.0 の互換性保証](docs/concepts/compatibility.md)（英語）にまとめています。
 
@@ -45,7 +45,7 @@ builder が再び引き受け、新しいコミットを提出します。
 
 ## 30 秒デモ
 
-下の手順でソース版 CLI を用意したら、既存の Git プロジェクトでデモを実行します。出力には JSON の一部のフィールドだけを載せています。
+下の手順で CLI を用意したら、既存の Git プロジェクトでデモを実行します。出力には JSON の一部のフィールドだけを載せています。
 `init` は 1 人の `owner` の下に `builder` と `reviewer` を登録します。モデルファミリーの既定値はそれぞれ `claude` と `codex` です。`--builder <family>` と `--reviewer <family>` で変更できます。
 owner がタスクと受け入れを承認し、2 つの Agent がそれぞれ実装とレビューを行います。
 
@@ -81,6 +81,8 @@ cd workkeel
 npm ci --omit=optional --ignore-scripts
 alias workkeel="node $PWD/bin/workkeel.mjs"
 ```
+
+または `npm install -g @zsz1210/workkeel` で npm からインストールすると、`workkeel` コマンドを使えます。
 
 自分のプロジェクトの Git リポジトリに移り、`workkeel start .` で書き込みを伴わないセットアップ案内を確認します。
 `init` の後にもう一度 `workkeel start .` を実行すると、任意で使える[指示ファイルの連携](docs/extensions/workkeel-context.md#connect-native-instructions)の案内を確認できます。

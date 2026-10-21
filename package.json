@@ -1,6 +1,6 @@
 {
   "name": "@zsz1210/workkeel",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "A repository-native task coordination framework for coding agents.",
   "license": "MIT",
   "repository": {
@@ -39,7 +39,7 @@
   },
   "publishConfig": {
     "access": "public",
-    "tag": "next"
+    "tag": "latest"
   },
   "scripts": {
     "release:pack": "node scripts/pack-npm-release.mjs",

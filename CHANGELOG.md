@@ -5,9 +5,15 @@ line. Historical release entries describe their own versions, not current-main
 qualification. Actual development tasks and validation records stay private;
 repository migration does not republish old tags, archives or npm versions.
 
+## 1.0.1
+
+- Prepared the first npm release of the 1.0 line with the `latest` dist-tag.
+- Updated all three README version lines and added an npm installation option.
+- Completed the 1.0.0 changelog with the review-recovery and CLI retry fixes.
+
 ## 1.0.0
 
-Unpublished source.
+Source release; tagged v1.0.0, not published to npm.
 
 - Documented 1.0 compatibility guarantees (docs/concepts/compatibility.md).
 - Added `init --builder <family>` and `--reviewer <family>` overrides for the
@@ -25,6 +31,11 @@ Unpublished source.
 - Marked the LangGraph workflow runner EXPERIMENTAL and outside the
   [1.0 compatibility guarantees](docs/concepts/compatibility.md); it may change or
   be removed in a minor release.
+- Review recovery holds the host writer lock during preparation, preventing a
+  binding read before `binding.json` exists (`be2b3388`).
+- Retried handoffs and claims that never landed rebuild their derived revision
+  from the current HEAD. `task new` refuses a cancelled or done task with the same
+  text, and lifecycle error guidance handles reordered flags (`ade4ee59`).
 
 ## 0.2.0-beta.0
 
