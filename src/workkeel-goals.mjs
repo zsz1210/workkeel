@@ -61,6 +61,7 @@ function ref(idValue,file='state.json'){id(idValue);return ROOT+'/'+idValue+'/'+
 // Atomic replacement can race a no-symlink reader's final inode check. Retry that
 // specific observation, never malformed data or a failed integrity check.
 async function readStable(target,file){for(let attempt=0;;attempt++){try{return await readTaskFile(target,file);}catch(e){if(e.message==='Contract input changed while reading'&&attempt<2)continue;throw e;}}}
+async function readNativeTaskStable(target,taskId){for(let attempt=0;;attempt++){try{return await readNativeTask(target,taskId);}catch(e){if(e.message==='Contract input changed while reading'&&attempt<2)continue;throw e;}}}
 async function envelopeAt(target,file){const input=await readStable(target,file);const e=JSON.parse(input.content);exactKeys(e,['value','sha256']);if(executionDigest(e.value)!==e.sha256)fail('state integrity');return {value:e.value,sha256:e.sha256,bytes_sha256:input.bytes_digest};}
 async function stateAt(target,goalId){
   const s=(await envelopeAt(target,ref(goalId))).value;
@@ -78,7 +79,7 @@ async function freshPin(target,pin){try{return await checkEvidencePin(target,['.
 async function standing(target,s,m,{stop=false}={}){
   const project=await readTaskProject(target);assertApprover(project.policy,m.roles.approver);
   if(stop)return;
-  const task=await readNativeTask(target,s.controller.task_id);
+  const task=await readNativeTaskStable(target,s.controller.task_id);
   if(s.controller.policy_sha256!==project.digest&&s.controller.policy_sha256!==executionDigest(project.policy))fail('standing project policy changed');
   if(task.contract_sha256!==s.controller.contract_sha256||task.policy_sha256!==s.controller.policy_sha256||task.state==='cancelled')fail('standing goal authority changed or cancelled');
   if(executionDigest(task.authority_pins)!==executionDigest(s.controller.authority_pins))fail('standing authority pins changed');
@@ -100,7 +101,7 @@ const reworkLimit=(m,t)=>Math.min(m.limits.max_reworks,MAX_REWORKS[taskRisk(t)])
 async function componentTask(s,c){
   const identity=s.roots.find(r=>r.root===c.root),current=await rootIdentity(c.root);
   if(!identity||identity.dev!==current.dev||identity.ino!==current.ino)fail('component repository identity changed');
-  const task=await readNativeTask(c.root,c.task_id),project=await readTaskProject(c.root);
+  const task=await readNativeTaskStable(c.root,c.task_id),project=await readTaskProject(c.root);
   if(task.contract_sha256!==c.contract_sha256||task.policy_sha256!==project.digest&&task.policy_sha256!==executionDigest(project.policy))fail('component contract or policy changed');
   for(const p of task.authority_pins)if((await readTaskFile(c.root,p.path)).digest!==p.sha256)fail('component approval source changed');
   if(task.contract.authorization.expires_at&&Date.parse(task.contract.authorization.expires_at)<=Date.now())fail('component authority expired');

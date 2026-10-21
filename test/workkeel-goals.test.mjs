@@ -79,6 +79,45 @@ function fixtureAdapter({firstFail=true,alwaysFail=false,onExecute=()=>{},wrongT
 }
 async function finish(f,adapter,max=60){for(let n=0;n<max;n++){const view=await readNativeGoal(f.target,f.manifest.id);if(view.accepted)return view;const step=await runNativeGoalStep(f.target,f.manifest.id,{adapter});if(step.idle&&['components-blocked','host-capability-unavailable'].includes(step.idle))throw Error(step.idle+': '+JSON.stringify((await readNativeGoal(f.target,f.manifest.id)).components));}const view=await readNativeGoal(f.target,f.manifest.id);throw Error('Goal did not accept: '+JSON.stringify({status:view.status,components:view.components,canonical:view.mandatory_components.map(c=>({id:c.id,state:c.state,accepted:c.accepted,reason:c.reason})),ops:view.operations.slice(-3).map(o=>({phase:o.input.phase,status:o.status,reason:o.result?.reason,first:o.first_result?.reason}))}));}
 
+for(const taskId of ['WK-controller','WK-component-0'])test(`goal authority bounds native task read retries for ${taskId}`,async t=>{
+  const f=await fixture(t),taskFile=path.join(f.target,'.ai-org/work-items',taskId+'.json'),original=await fs.readFile(taskFile),open=fs.open;
+  for(const replacements of [1,2,3])await t.test(`${replacements} atomic replacements`,async t=>{
+    let reads=0;
+    t.mock.method(fs,'open',async(file,...args)=>{
+      const handle=await open(file,...args);
+      if(file===taskFile&&++reads<=replacements){
+        // Replace the directory entry after opening the old inode. The real
+        // readTaskFile final inode check must detect this deterministic race.
+        await fs.writeFile(taskFile+'.replacement',original);
+        await fs.rename(taskFile+'.replacement',taskFile);
+      }
+      return handle;
+    });
+    const pending=assertNativeGoalAuthority(f.target,f.manifest.id,{actor:builder});
+    if(replacements<3)assert.equal((await pending).standing_authorized,true);
+    else await assert.rejects(pending,{message:'Contract input changed while reading'});
+    assert.equal(reads,Math.min(replacements+1,3));
+  });
+  for(const failure of ['ENOENT','malformed JSON','integrity'])await t.test(`${failure} fails on the first read`,async t=>{
+    let reads=0;
+    const missing=Object.assign(Error('Synthetic missing task'),{code:'ENOENT'});
+    if(failure==='malformed JSON')await fs.writeFile(taskFile,'{');
+    if(failure==='integrity'){
+      const record=JSON.parse(original);record.history[0].hash='0'.repeat(64);
+      await fs.writeFile(taskFile,JSON.stringify(record));
+    }
+    t.mock.method(fs,'open',async(file,...args)=>{
+      if(file===taskFile){reads++;if(failure==='ENOENT')throw missing;}
+      return open(file,...args);
+    });
+    try{
+      await assert.rejects(assertNativeGoalAuthority(f.target,f.manifest.id,{actor:builder}),
+        failure==='ENOENT'?error=>error===missing:failure==='malformed JSON'?/Contract input is not valid JSON/:/Task operation history integrity failure/);
+      assert.equal(reads,1);
+    }finally{await fs.writeFile(taskFile,original);}
+  });
+});
+
 test('whole goal continues first FAIL, native rework, fresh candidate, distinct PASS and authorized closure',async t=>{
   const f=await fixture(t),adapter=fixtureAdapter();let failed;
   for(let n=0;n<12;n++){await runNativeGoalStep(f.target,f.manifest.id,{adapter});failed=await readNativeGoal(f.target,f.manifest.id);if(failed.mandatory_components[0].review?.judgment==='fail')break;}
