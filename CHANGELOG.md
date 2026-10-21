@@ -9,6 +9,7 @@ repository migration does not republish old tags, archives or npm versions.
 
 Unpublished source.
 
+- Documented 1.0 compatibility guarantees (docs/concepts/compatibility.md).
 - Added `init --builder <family>` and `--reviewer <family>` overrides for the
   default Claude builder and Codex reviewer.
 - Goal service `close()` now drains in-flight work; CLI and workspace shutdown
@@ -21,8 +22,9 @@ Unpublished source.
   and using one task per branch or worktree.
 - Added copy-pasteable `stats --report` examples and fixed Loop L1 diagram text
   overflow.
-- Marked the LangGraph workflow runner EXPERIMENTAL and outside the 1.0
-  compatibility guarantees; it may change or be removed in a minor release.
+- Marked the LangGraph workflow runner EXPERIMENTAL and outside the
+  [1.0 compatibility guarantees](docs/concepts/compatibility.md); it may change or
+  be removed in a minor release.
 
 ## 0.2.0-beta.0
 

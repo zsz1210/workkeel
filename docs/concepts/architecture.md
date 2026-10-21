@@ -12,7 +12,7 @@ You need no server, workflow runner or model call for core task coordination.
 The dashed boxes show optional additions. Start the workspace observatory with
 `workkeel workspace serve`, or use `workkeel monitor` for the separate read-only
 observer. For opt-in workflows, use a LangGraph runner and approved model policy.
-The LangGraph workflow runner is EXPERIMENTAL: outside the 1.0 compatibility guarantees; we may change or remove it in a minor release.
+The LangGraph workflow runner is EXPERIMENTAL: outside the [1.0 compatibility guarantees](compatibility.md); we may change or remove it in a minor release.
 Use native dispatch to record execution handoffs. For a weekly read-only view
 with no model/API spend, use the
 [Workkeel Loop L1 report](../operations/loop-trial.md) through

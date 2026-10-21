@@ -11,6 +11,8 @@ English · [繁體中文](README.zh-TW.md) · [日本語](README.ja.md)
 
 1.0.0 unpublished source · Node.js 24.15+ · [MIT](LICENSE)
 
+The [1.0 compatibility guarantees](docs/concepts/compatibility.md) list what is stable, best effort or experimental.
+
 ## Why Workkeel
 
 - **Resume across tools:** keep task scope, decisions and partial results when a conversation ends or you switch coding tools.
@@ -107,7 +109,7 @@ registered model families, but that check does not prove cross-review happened.
 ## Optional extras
 
 - **[Workspace observatory](docs/operations/workkeel-workspace.md):** start with `workkeel workspace serve`; browse project records without idle model calls. The separate [read-only observer](docs/operations/workkeel-observer.md) uses `workkeel monitor`.
-- **[Workflows / LangGraph](docs/operations/workkeel-workflows.md):** opt into a runner with approved graphs, model policy and recoverable steps. EXPERIMENTAL: outside the 1.0 compatibility guarantees; we may change or remove this runner in a minor release.
+- **[Workflows / LangGraph](docs/operations/workkeel-workflows.md):** opt into a runner with approved graphs, model policy and recoverable steps. EXPERIMENTAL: outside the [1.0 compatibility guarantees](docs/concepts/compatibility.md); we may change or remove this runner in a minor release.
 - **[Workkeel Loop L1 report](docs/operations/loop-trial.md):** `workkeel stats --report --cutoff 2026-10-19T00:00:00Z --timezone UTC` produces a weekly read-only report with zero model/API spend.
 - **[Native dispatch](docs/operations/workkeel-native-dispatch.md):** record execution handoffs and requested models; the host reports what ran.
 - **[Reference Bot-layer usage](docs/operations/reference-usage-bot-layer.md):** one way to coordinate project Bots, Claude Code and Codex through human gates, outside the core.
