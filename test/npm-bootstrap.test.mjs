@@ -9,6 +9,10 @@ const digest = algorithm => createHash(algorithm).update(asset).digest(algorithm
 const tarball = 'https://registry.npmjs.org/@zsz1210/workkeel/-/workkeel-0.1.0-beta.1.tgz';
 const metadata = () => ({ ...packageDocument, dist: { integrity: `sha512-${digest('sha512')}`, shasum: digest('sha1'), tarball } });
 const json = (value, status = 200) => new Response(JSON.stringify(value), { status });
+const notFound = cancel => new Response(new ReadableStream({ cancel }), { status: 404 });
+const erroredNotFound = () => new Response(new ReadableStream({
+  start(controller) { controller.error(new Error('Registry body stream failed')); }
+}), { status: 404 });
 function check(responses, options = {}) {
   let calls = 0, endpoint = 0;
   return checkPublishedPackage({ packageDocument, asset, channel: 'next', wait: async () => assert.fail('unexpected wait'), ...options,
@@ -34,17 +38,38 @@ test('bootstrap skips only exact identity, two hashes, archive bytes and channel
   assert.equal(result.action, 'skip');
   assert.equal(result.archive_sha256, digest('sha256'));
 });
-test('absent version permits publish intent but cannot satisfy required publication', async () => {
+test('absent version permits publish intent but cannot satisfy required publication', async t => {
   const waits = [], wait = async delay => { waits.push(delay); };
-  const absentResponse = json({ error: 'Not found' }, 404);
+  const cancel = t.mock.fn();
+  const absentResponse = notFound(cancel);
   assert.equal((await check([absentResponse], { wait })).action, 'publish');
-  assert.equal(absentResponse.bodyUsed, true);
+  assert.equal(cancel.mock.callCount(), 1);
   assert.deepEqual(waits, []);
-  const requiredResponses = Array.from({ length: 9 }, () => json({}, 404));
+  const requiredCancels = Array.from({ length: 9 }, () => t.mock.fn());
+  const requiredResponses = requiredCancels.map(notFound);
   await assert.rejects(check(requiredResponses, { requirePublished: true, wait }), /absent/);
-  assert.equal(requiredResponses.at(-1).bodyUsed, true);
+  for (const requiredCancel of requiredCancels) assert.equal(requiredCancel.mock.callCount(), 1);
   assert.deepEqual(waits, [5000, 10000, 20000, 40000, 60000, 60000, 60000, 45000]);
   assert.equal(waits.reduce((total, delay) => total + delay, 0), 300000);
+});
+test('absent version with an errored body still permits publish intent', async () => {
+  assert.equal((await check([erroredNotFound()])).action, 'publish');
+});
+test('required publication with errored 404 bodies exhausts retries and reports absent', async () => {
+  const waits = [];
+  await assert.rejects(check(Array.from({ length: 9 }, erroredNotFound), {
+    requirePublished: true, wait: async delay => { waits.push(delay); }
+  }), /absent/);
+  assert.deepEqual(waits, [5000, 10000, 20000, 40000, 60000, 60000, 60000, 45000]);
+});
+test('required publication retries an errored 404 body and verifies the next lookup', async () => {
+  const waits = [];
+  const result = await check([erroredNotFound(), json(metadata()), new Response(asset), channel()], {
+    requirePublished: true, wait: async delay => { waits.push(delay); }
+  });
+  assert.equal(result.action, 'skip');
+  assert.equal(result.archive_sha256, digest('sha256'));
+  assert.deepEqual(waits, [5000]);
 });
 test('required publication waits for metadata acquisition then verifies the exact archive and channel', async () => {
   const waits = [];
