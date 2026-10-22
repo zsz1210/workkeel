@@ -36,9 +36,13 @@ test('bootstrap skips only exact identity, two hashes, archive bytes and channel
 });
 test('absent version permits publish intent but cannot satisfy required publication', async () => {
   const waits = [], wait = async delay => { waits.push(delay); };
-  assert.equal((await check([json({ error: 'Not found' }, 404)], { wait })).action, 'publish');
+  const absentResponse = json({ error: 'Not found' }, 404);
+  assert.equal((await check([absentResponse], { wait })).action, 'publish');
+  assert.equal(absentResponse.bodyUsed, true);
   assert.deepEqual(waits, []);
-  await assert.rejects(check(Array.from({ length: 9 }, () => json({}, 404)), { requirePublished: true, wait }), /absent/);
+  const requiredResponses = Array.from({ length: 9 }, () => json({}, 404));
+  await assert.rejects(check(requiredResponses, { requirePublished: true, wait }), /absent/);
+  assert.equal(requiredResponses.at(-1).bodyUsed, true);
   assert.deepEqual(waits, [5000, 10000, 20000, 40000, 60000, 60000, 60000, 45000]);
   assert.equal(waits.reduce((total, delay) => total + delay, 0), 300000);
 });

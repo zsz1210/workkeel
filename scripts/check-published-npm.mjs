@@ -35,6 +35,7 @@ export async function checkPublishedPackage({ packageDocument, asset, channel, r
     response = await get(versionUrl);
   }
   if (response.status === 404) {
+    await response.body?.cancel();
     if (requirePublished) throw Error('Required published version is absent');
     return { action: 'publish', package_name: name, package_version: version, registry_status: 'version-absent' };
   }
