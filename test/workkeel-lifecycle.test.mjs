@@ -28,7 +28,7 @@ function contract(id = "WK-one") {
 }
 function git(root, ...args) { return execFileSync("git", ["-C", root, ...args], { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }).trim(); }
 async function write(root, ref, data) { await fs.mkdir(path.dirname(path.join(root, ref)), { recursive: true }); await fs.writeFile(path.join(root, ref), typeof data === "string" ? data : JSON.stringify(data)); }
-async function fixture(t, { init = true } = {}) {
+async function fixture(t, { init = true, commit = true } = {}) {
   const root = await fs.mkdtemp(path.join(os.tmpdir(), "workkeel-test-"));
   t.after(() => fs.rm(root, { recursive: true, force: true }));
   git(root, "init", "-q"); git(root, "config", "user.name", "Fixture"); git(root, "config", "user.email", "fixture@example.invalid");
@@ -36,7 +36,7 @@ async function fixture(t, { init = true } = {}) {
   await write(root, "src/cart.mjs", "export const total = 1;\n");
   await write(root, "policy.json", policy());
   if (init) await initializeTaskProject(root, policy());
-  git(root, "add", "."); git(root, "commit", "-qm", "base");
+  if (commit) { git(root, "add", "."); git(root, "commit", "-qm", "base"); }
   return root;
 }
 async function deliver(root, id = "WK-one") {
@@ -68,28 +68,49 @@ test("task-first init, doctor, exact delivery, distinct review and close need no
   assert.equal(status.status, 0, status.stderr); assert.equal(JSON.parse(status.stdout).tasks[0].state, "done");
 });
 
-for (const later of ['outside', 'in-scope', 'reverted']) test(`close and summary compare delivered candidate with later ${later} commits`, async t => {
+for (const committed of [false, true]) test(`summary before delivery is read-only with ${committed ? 'committed' : 'unborn'} HEAD`, async t => {
+  const root = await fixture(t, {commit:committed});
+  await createNativeTask(root, contract(), request(0));
+  const record = path.join(root, '.ai-org/work-items/WK-one.json'), before = await fs.readFile(record);
+  const head = committed ? git(root, 'rev-parse', 'HEAD') : null;
+  assert.equal((await readNativeTask(root, 'WK-one')).approval.approved_at_revision, head);
+  const summary = await readTaskSummary(root, 'WK-one');
+  assert.equal(summary.task_state, 'intake');
+  assert.deepEqual(summary.candidate_head, {head, delivered:null, matches:false, later_in_scope_paths:[]});
+  assert.ok(!summary.attention_reasons.includes('head-moved-past-candidate'));
+  assert.deepEqual(await fs.readFile(record), before);
+});
+
+for (const later of ['outside', 'in-scope', 'reverted', 'outside-merge', 'in-scope-merge', 'reverted-merge']) test(`close and summary compare delivered candidate with later ${later} commits`, async t => {
   const root = await fixture(t), { revision, ref } = await deliver(root);
   await mutateNativeTask(root, 'WK-one', 'review', request(3, reviewer, { revision, judgment: 'pass', summary: 'Verified candidate', evidence: [ref] }));
   let summary = await readTaskSummary(root, 'WK-one');
   assert.deepEqual(summary.candidate_head, {head:revision, delivered:revision, matches:true, later_in_scope_paths:[]});
   assert.ok(!summary.attention_reasons.includes('head-moved-past-candidate'));
-  const paths = later === 'outside' ? ['docs/later.md', 'src-other/later.mjs'] : ['src/cart.mjs'];
+  const outside = later.startsWith('outside'), merge = later.endsWith('-merge');
+  if (merge) git(root, 'checkout', '-b', 'later-work', `${revision}^`);
+  // A separate in-scope file lets Git merge the genuine later work cleanly.
+  const paths = outside ? ['docs/later.md', 'src-other/later.mjs'] : [merge ? 'src/later.mjs' : 'src/cart.mjs'];
   for (const file of paths) await write(root, file, 'Later change\n');
   git(root, 'add', ...paths); git(root, 'commit', '-qm', 'Later changes');
-  if (later === 'reverted') git(root, 'revert', '--no-edit', 'HEAD');
+  if (later.startsWith('reverted')) git(root, 'revert', '--no-edit', 'HEAD');
+  if (merge) {
+    git(root, 'merge', '--no-ff', '-qm', 'Merge delivered candidate as second parent', revision);
+    assert.equal(git(root, 'rev-parse', 'HEAD^2'), revision);
+    if (outside) assert.deepEqual(git(root, 'diff', '--name-only', revision, 'HEAD').split('\n'), paths);
+  }
   const head = git(root, 'rev-parse', 'HEAD'), record = path.join(root, '.ai-org/work-items/WK-one.json');
   const before = await fs.readFile(record);
   summary = await readTaskSummary(root, 'WK-one');
-  assert.deepEqual(summary.candidate_head, {head, delivered:revision, matches:false, later_in_scope_paths:later === 'outside' ? [] : ['src/cart.mjs']});
-  assert.equal(summary.attention_reasons.includes('head-moved-past-candidate'), later !== 'outside');
+  assert.deepEqual(summary.candidate_head, {head, delivered:revision, matches:false, later_in_scope_paths:outside ? [] : paths});
+  assert.equal(summary.attention_reasons.includes('head-moved-past-candidate'), !outside);
   assert.deepEqual(await fs.readFile(record), before, 'summary never writes task state');
   const close = request(4, developer, {revision, summary:'Accept reviewed candidate', rollback:'Revert repair', evidence:[ref]});
-  if (later === 'outside') assert.equal((await mutateNativeTask(root, 'WK-one', 'close', close)).state, 'done');
+  if (outside) assert.equal((await mutateNativeTask(root, 'WK-one', 'close', close)).state, 'done');
   else {
     await assert.rejects(mutateNativeTask(root, 'WK-one', 'close', close), error => {
       assert.ok(error.message.includes(revision)); assert.ok(error.message.includes(head));
-      assert.match(error.message, /src\/cart\.mjs/);
+      assert.ok(error.message.includes(paths[0]));
       assert.match(error.message, /Hand off the new commit in a new or reworked task/);
       assert.match(error.message, /check out the delivered revision/);
       return true;
@@ -185,6 +206,36 @@ test('summary observes changed rejected-attempt evidence hashes without rewritin
   await write(root, reviewRef, 'Round one failed\n');
   await write(root, ref, 'Overwritten delivery evidence'); assert.equal(await changed(), true);
   assert.deepEqual(await fs.readFile(record), before, 'evidence diagnostics never mutate history');
+});
+
+test('summary checks retained candidate evidence at the rejected revision, independently of workspace bytes', async t => {
+  const root = await fixture(t), {revision} = await deliver(root), ref = 'src/cart.mjs';
+  await mutateNativeTask(root, 'WK-one', 'review', request(3, reviewer, {revision, judgment:'fail', summary:'Needs repair', evidence:[ref]}));
+  await mutateNativeTask(root, 'WK-one', 'rework', request(4, developer, {summary:'Repair same scope'}));
+  // Synthetic retained hashes: supported lifecycle records remain path-only.
+  const item = await readNativeTask(root, 'WK-one'), entry = item.attempts[0].review.evidence[0];
+  assert.equal(entry.source, 'candidate');
+  entry.sha256 = sha256(await fs.readFile(path.join(root, ref)));
+  const save = async () => {
+    const last = item.history.at(-1);
+    last.record_sha256 = sha256(formatJson(Object.fromEntries(Object.entries(item).filter(([key]) => key !== 'history'))));
+    delete last.hash; last.hash = sha256(formatJson(last));
+    await write(root, '.ai-org/work-items/WK-one.json', formatJson(item));
+  };
+  await save();
+  const record = path.join(root, '.ai-org/work-items/WK-one.json'), before = await fs.readFile(record);
+  const changed = async () => (await readTaskSummary(root, 'WK-one')).attention_reasons.includes('attempt-evidence-changed');
+  assert.equal(await changed(), false);
+  await write(root, ref, 'Next attempt\n');
+  git(root, 'add', ref); git(root, 'commit', '-qm', 'Next attempt evidence');
+  assert.equal(await changed(), false, 'the current commit is not the rejected attempt');
+  await write(root, ref, 'Uncommitted next attempt\n');
+  assert.equal(await changed(), false, 'changed workspace evidence does not change the retained blob');
+  await fs.unlink(path.join(root, ref));
+  assert.equal(await changed(), false, 'missing workspace evidence does not remove the retained blob');
+  assert.deepEqual(await fs.readFile(record), before, 'summary preserves retained history');
+  entry.sha256 = '0'.repeat(64); await save();
+  assert.equal(await changed(), true, 'a retained hash that differs from the blob is still reported');
 });
 
 test("identity, immutable input, stale claims, duplicate requests and self-review fail closed", async t => {

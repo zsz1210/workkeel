@@ -2,10 +2,10 @@ import fs from 'node:fs/promises';
 import { constants } from 'node:fs';
 import path from 'node:path';
 import { readNativeTask, taskCandidateHead, evidenceStatus as taskEvidenceStatus } from './workkeel-tasks.mjs';
-import { readTaskProject, assertActor, safeDirectory, existsEntry } from './workkeel-project.mjs';
+import { readTaskProject, assertActor, safeDirectory, existsEntry, readNativeGit } from './workkeel-project.mjs';
 import { readTaskContractInput, readTaskFile } from './task-contract.mjs';
 import { withProjectMutationLock } from './workkeel-lock.mjs';
-import { durableAtomicCreate } from './files.mjs';
+import { durableAtomicCreate, sha256 } from './files.mjs';
 import { executionDigest, exactKeys } from './workkeel-execution-policy.mjs';
 import { projectTaskTiming } from './workkeel-task-timing.mjs';
 import { observeFileRead, observeSource } from './workkeel-read-metrics.mjs';
@@ -202,7 +202,12 @@ export async function readTaskSummary(target,id,{now=new Date()}={}) {
   // to path-only records or changing the current lifecycle's evidence rules.
   for(const attempt of task.attempts.filter(a=>a.kind==='rejected'))for(const stage of ['delivery','review'])for(const entry of attempt[stage]?.evidence??[]) {
     if(typeof entry.sha256!=='string')continue;
-    try {if((await readTaskFile(target,entry.path)).digest!==entry.sha256)attemptEvidenceChanged=true;}
+    try {
+      const revision=attempt.delivery?.revision;
+      const current=entry.source==='candidate' ? revision&&sha256(await readNativeGit(target,['cat-file','blob',`${revision}:${entry.path}`],{encoding:'buffer'})) :
+        (await readTaskFile(target,entry.path)).digest;
+      if(current!==entry.sha256)attemptEvidenceChanged=true;
+    }
     catch {attemptEvidenceChanged=true;}
   }
   const project=await readTaskProject(target),policyCurrent=executionDigest(project.policy)===task.policy_sha256;

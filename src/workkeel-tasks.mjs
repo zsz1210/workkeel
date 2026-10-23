@@ -290,12 +290,27 @@ const CANDIDATE_MESSAGES = {
 };
 /** Read-only comparison with all later commits, including changes later reverted. */
 export async function taskCandidateHead(target, item) {
-  const head = (await git(target, ['rev-parse', 'HEAD'])).trim(), delivered = item.delivery?.revision ?? null;
+  const delivered = item.delivery?.revision ?? null;
+  const head = delivered ? (await git(target, ['rev-parse', '--verify', 'HEAD^{commit}'])).trim() : await headRevision(target);
   const paths = head !== delivered && delivered ? (await git(target, [
-    'log', '--no-show-signature', '--no-ext-diff', '--no-textconv', '--format=', '--name-only', '--no-renames', '--diff-merges=first-parent', '-z', `${delivered}..${head}`, '--'
+    'log', '--no-show-signature', '--no-ext-diff', '--no-textconv', '--format=', '--name-only', '--no-renames', '--no-merges', '-z', `${delivered}..${head}`, '--'
   ])).split('\0').filter(Boolean) : [];
+  if (delivered && head !== delivered) {
+    const commits = (await git(target, ['log', '--no-show-signature', '--no-patch', '--format=%H %P', '--topo-order', '--reverse', `${delivered}..${head}`, '--'])).trim();
+    const descendants = new Set([delivered]);
+    for (const line of commits.split('\n').filter(Boolean)) {
+      const [revision, ...parents] = line.split(' '), parent = parents.find(value => descendants.has(value));
+      if (parent) descendants.add(revision);
+      // A merge can carry the delivered candidate as any parent. Compare from
+      // that side to avoid counting its original changes again. Ordinary commits
+      // on every side remain in the log above, including changes later reverted.
+      if (parents.length > 1) paths.push(...(await git(target, [
+        'diff', '--no-renames', '--name-only', '-z', parent ?? parents[0], revision, '--'
+      ])).split('\0').filter(Boolean));
+    }
+  }
   const roots = item.contract.environment.write_paths;
-  return {head, delivered, matches: head === delivered,
+  return {head, delivered, matches: delivered !== null && head === delivered,
     later_in_scope_paths: [...new Set(paths.filter(file => !administrative(file) && roots.some(root => under(file, root))))].sort()};
 }
 /**
