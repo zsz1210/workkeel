@@ -233,7 +233,7 @@ export async function readTaskSummary(target,id,{now=new Date()}={}) {
   if(!policyCurrent)next='Inspect the project policy change and re-establish task authority before continuing.';
   if(activeAuthorityExpired)next='Task approval has expired. Obtain renewed approval through a new task before continuing.';
   const attentionReasons=[];
-  if(candidateHead.later_in_scope_paths.length)attentionReasons.push('head-moved-past-candidate');
+  if(!['done','cancelled'].includes(task.state)&&candidateHead.later_in_scope_paths.length)attentionReasons.push('head-moved-past-candidate');
   if(attemptEvidenceChanged)attentionReasons.push('attempt-evidence-changed');
   if(activeAuthorityExpired)attentionReasons.push('approval-expired');
   if(!policyCurrent)attentionReasons.push('policy-changed');

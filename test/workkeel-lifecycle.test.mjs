@@ -9,6 +9,7 @@ import { createHash } from "node:crypto";
 import { initializeTaskProject } from "../src/workkeel-project.mjs";
 import { createNativeTask, mutateNativeTask, readNativeTask, diagnoseTaskProject, listTaskItems, evidenceStatus } from "../src/workkeel-tasks.mjs";
 import { readTaskSummary } from "../src/workkeel-task-summary.mjs";
+import { readMonitorSnapshot } from "../src/workkeel-monitor.mjs";
 import { formatJson, sha256 } from "../src/files.mjs";
 
 const cli = fileURLToPath(new URL("../bin/workkeel.mjs", import.meta.url));
@@ -119,6 +120,32 @@ for (const later of ['outside', 'in-scope', 'reverted', 'outside-merge', 'in-sco
     git(root, 'checkout', '--detach', revision);
     assert.equal((await mutateNativeTask(root, 'WK-one', 'close', close)).state, 'done');
   }
+});
+
+for (const state of ['done', 'cancelled']) test(`later in-scope work leaves ${state} tasks without summary or monitor attention`, async t => {
+  const root = await fixture(t), {revision, ref} = await deliver(root);
+  if (state === 'done') {
+    await mutateNativeTask(root, 'WK-one', 'review', request(3, reviewer, {revision, judgment:'pass', summary:'Verified candidate', evidence:[ref]}));
+    await mutateNativeTask(root, 'WK-one', 'close', request(4, developer, {revision, summary:'Accepted', rollback:'Revert repair', evidence:[ref]}));
+  } else await mutateNativeTask(root, 'WK-one', 'cancel', request(3, developer, {summary:'Cancelled', evidence:[ref]}));
+  const record = path.join(root, '.ai-org/work-items/WK-one.json'), before = await fs.readFile(record);
+  const checkAttention = async () => {
+    const summary = await readTaskSummary(root, 'WK-one');
+    const monitored = (await readMonitorSnapshot(root)).tasks.find(task => task.id === 'WK-one');
+    for (const item of [summary, monitored]) {
+      assert.equal(item.task_state, state);
+      assert.equal(item.needs_attention, false);
+      assert.deepEqual(item.attention_reasons, []);
+      assert.equal(item.quality.locally_accepted, state === 'done');
+    }
+    return summary;
+  };
+  await checkAttention();
+  await write(root, 'src/other-task.mjs', 'export const other = true;\n');
+  git(root, 'add', 'src/other-task.mjs'); git(root, 'commit', '-qm', 'Independent later work');
+  const summary = await checkAttention();
+  assert.deepEqual(summary.candidate_head, {head:git(root, 'rev-parse', 'HEAD'), delivered:revision, matches:false, later_in_scope_paths:['src/other-task.mjs']});
+  assert.deepEqual(await fs.readFile(record), before, 'summary and monitor preserve terminal task records');
 });
 
 test('close HEAD error names at most ten paths, while summary retains every in-scope path', async t => {

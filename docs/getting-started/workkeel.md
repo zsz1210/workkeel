@@ -311,7 +311,7 @@ workkeel task handoff . --id WK-cart-total --request .ai-org/artifacts/WK-cart-t
 
 The distinct reviewer inspects that candidate and records their own judgment in
 `review-r1.md`. Use a new file for each review round, such as `review-r1.md` and
-`review-r2.md`, because a rework attempt keeps the hash of its review evidence.
+`review-r2.md`, to preserve the contents of earlier reports.
 Only after a passing review, their `review.json` may be:
 
 ```json
