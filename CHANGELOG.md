@@ -11,6 +11,12 @@ repository migration does not republish old tags, archives or npm versions.
   report candidate HEAD and changed historical evidence in task summaries, and
   add opt-in stale-task reporting with round-specific review evidence guidance.
 
+### Known issues
+
+- In a shallow clone that lacks a delivered task's candidate commit, task summaries
+  and the monitor can report a valid done or cancelled task as unreadable. Clone
+  with full history until this is fixed.
+
 ## 1.0.1
 
 - Prepared the first npm release of the 1.0 line. A stable GitHub Release publishes it
