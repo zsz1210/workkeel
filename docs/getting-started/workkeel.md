@@ -57,8 +57,8 @@ workkeel task new --goal "Clarify the guide" --acceptance "The guide names its a
 workkeel task claim --id WK-0001 --actor builder
 # edit, commit, and save evidence under .ai-org/artifacts/WK-0001/
 workkeel task handoff --id WK-0001 --actor builder --summary "Guide updated" --evidence .ai-org/artifacts/WK-0001/check.md
-workkeel task review --id WK-0001 --actor reviewer --judgment pass --summary "Meets the criterion" --evidence .ai-org/artifacts/WK-0001/review.md
-workkeel task close --id WK-0001 --actor builder --summary Accepted --rollback "Revert the guide commit" --evidence .ai-org/artifacts/WK-0001/review.md
+workkeel task review --id WK-0001 --actor reviewer --judgment pass --summary "Meets the criterion" --evidence .ai-org/artifacts/WK-0001/review-r1.md
+workkeel task close --id WK-0001 --actor builder --summary Accepted --rollback "Revert the guide commit" --evidence .ai-org/artifacts/WK-0001/review-r1.md
 ```
 
 Commit the `.ai-org/` task records too, with your work or after closing the task.
@@ -310,7 +310,9 @@ workkeel task handoff . --id WK-cart-total --request .ai-org/artifacts/WK-cart-t
 ```
 
 The distinct reviewer inspects that candidate and records their own judgment in
-`review.md`. Only after a passing review, their `review.json` may be:
+`review-r1.md`. Use a new file for each review round, such as `review-r1.md` and
+`review-r2.md`, because a rework attempt keeps the hash of its review evidence.
+Only after a passing review, their `review.json` may be:
 
 ```json
 {
@@ -318,7 +320,7 @@ The distinct reviewer inspects that candidate and records their own judgment in
   "actor": {"agent_id": "reviewer", "principal_id": "owner"},
   "revision": "<same-full-tested-git-commit>", "judgment": "pass",
   "summary": "Acceptance checked against this exact candidate",
-  "evidence": [".ai-org/artifacts/WK-cart-total/review.md"]
+  "evidence": [".ai-org/artifacts/WK-cart-total/review-r1.md"]
 }
 ```
 
@@ -337,7 +339,7 @@ separates Agents, not humans; approval must still come from the actual owner.
   "revision": "<same-full-tested-git-commit>",
   "summary": "Owner accepts the independently reviewed scope",
   "rollback": "Revert the candidate through a new reviewed change",
-  "evidence": [".ai-org/artifacts/WK-cart-total/review.md"]
+  "evidence": [".ai-org/artifacts/WK-cart-total/review-r1.md"]
 }
 ```
 

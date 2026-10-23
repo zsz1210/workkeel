@@ -131,7 +131,9 @@ export function validateNativeTaskSnapshot(item, id) {
   assertRecord(item, id);
   return item;
 }
-export async function listTaskItems(target, { isolateErrors = false } = {}) {
+export async function listTaskItems(target, { isolateErrors = false, staleAfter, now = new Date() } = {}) {
+  if (staleAfter !== undefined && (!Number.isFinite(staleAfter) || staleAfter <= 0))
+    throw new Error('--stale-after must be a positive finite number of hours');
   await readTaskProject(target);
   if (!await existsEntry(target, ".ai-org/work-items")) return [];
   const dir = await safeDirectory(target, ".ai-org/work-items");
@@ -145,7 +147,11 @@ export async function listTaskItems(target, { isolateErrors = false } = {}) {
     assertRecord(item, id);
     items.push({ id, state: item.state, title: item.contract.goal, mode: "task-first", version: item.version,
       actor: item.claim?.actor ?? null, candidate_revision: item.delivery?.revision ?? null,
-      risk_tier: effectiveRisk(item), risk_escalated: Boolean(item.delivery?.risk) });
+      risk_tier: effectiveRisk(item), risk_escalated: Boolean(item.delivery?.risk),
+      ...(staleAfter !== undefined && !TERMINAL.has(item.state) ? {
+        last_activity_at: item.history.at(-1).at,
+        stale: (now.getTime() - Date.parse(item.history.at(-1).at)) / 3600000 > staleAfter
+      } : {}) });
     } catch (error) {
       if (!isolateErrors) throw error;
       items.push({id,title:id,mode:'unavailable',state:'unknown'});
@@ -282,6 +288,16 @@ const CANDIDATE_MESSAGES = {
   'outside-write-scope': 'Candidate changes paths outside approved write roots',
   'product-drift': 'Candidate verification requires a clean tree inside the approved write roots, including untracked files'
 };
+/** Read-only comparison with all later commits, including changes later reverted. */
+export async function taskCandidateHead(target, item) {
+  const head = (await git(target, ['rev-parse', 'HEAD'])).trim(), delivered = item.delivery?.revision ?? null;
+  const paths = head !== delivered && delivered ? (await git(target, [
+    'log', '--no-show-signature', '--no-ext-diff', '--no-textconv', '--format=', '--name-only', '--no-renames', '--diff-merges=first-parent', '-z', `${delivered}..${head}`, '--'
+  ])).split('\0').filter(Boolean) : [];
+  const roots = item.contract.environment.write_paths;
+  return {head, delivered, matches: head === delivered,
+    later_in_scope_paths: [...new Set(paths.filter(file => !administrative(file) && roots.some(root => under(file, root))))].sort()};
+}
 /**
  * Committed product changes must stay inside the write roots. Drift is checked
  * only inside those roots; `.ai-org/` is always administrative.
@@ -517,6 +533,9 @@ export async function mutateNativeTask(targetInput, id, action, request) {
       const attempt = (await recoveryChain(target, item)).head, reviewed = item.review;
       if ((attempt?.value.attempt_id ?? null) !== (reviewed.attempt_id ?? null) || attempt && (attempt.result?.value.status !== "completed" ||
           attempt.value.revision !== reviewed.attempt_revision || reviewed.attempt_revision !== revision)) throw new Error("Review recovery chain changed after the authored review");
+      const candidateHead = await taskCandidateHead(target, item);
+      if (candidateHead.later_in_scope_paths.length) throw new Error(
+        `HEAD moved past delivered candidate ${candidateHead.delivered} to HEAD ${candidateHead.head}; changed paths (up to 10): ${JSON.stringify(candidateHead.later_in_scope_paths.slice(0, 10))}. Hand off the new commit in a new or reworked task, or check out the delivered revision ${candidateHead.delivered}.`);
       await assertDelivery(target, item);
       await assertElevatedClose(target, item, project.policy, request.actor);
       await assertRequirementOutcomes(target, item, {revision: item.delivery.revision, actor: item.delivery.implementer, evidence: item.delivery.evidence.map(p => p.path)}, 'delivery');

@@ -8,6 +8,8 @@ import test from "node:test";
 import { createHash } from "node:crypto";
 import { initializeTaskProject } from "../src/workkeel-project.mjs";
 import { createNativeTask, mutateNativeTask, readNativeTask, diagnoseTaskProject, listTaskItems, evidenceStatus } from "../src/workkeel-tasks.mjs";
+import { readTaskSummary } from "../src/workkeel-task-summary.mjs";
+import { formatJson, sha256 } from "../src/files.mjs";
 
 const cli = fileURLToPath(new URL("../bin/workkeel.mjs", import.meta.url));
 const developer = { agent_id: "builder", principal_id: "owner" };
@@ -64,6 +66,125 @@ test("task-first init, doctor, exact delivery, distinct review and close need no
   assert.equal((await diagnoseTaskProject(root)).valid, true);
   const status = spawnSync(process.execPath, [cli, "status", root], { encoding: "utf8" });
   assert.equal(status.status, 0, status.stderr); assert.equal(JSON.parse(status.stdout).tasks[0].state, "done");
+});
+
+for (const later of ['outside', 'in-scope', 'reverted']) test(`close and summary compare delivered candidate with later ${later} commits`, async t => {
+  const root = await fixture(t), { revision, ref } = await deliver(root);
+  await mutateNativeTask(root, 'WK-one', 'review', request(3, reviewer, { revision, judgment: 'pass', summary: 'Verified candidate', evidence: [ref] }));
+  let summary = await readTaskSummary(root, 'WK-one');
+  assert.deepEqual(summary.candidate_head, {head:revision, delivered:revision, matches:true, later_in_scope_paths:[]});
+  assert.ok(!summary.attention_reasons.includes('head-moved-past-candidate'));
+  const paths = later === 'outside' ? ['docs/later.md', 'src-other/later.mjs'] : ['src/cart.mjs'];
+  for (const file of paths) await write(root, file, 'Later change\n');
+  git(root, 'add', ...paths); git(root, 'commit', '-qm', 'Later changes');
+  if (later === 'reverted') git(root, 'revert', '--no-edit', 'HEAD');
+  const head = git(root, 'rev-parse', 'HEAD'), record = path.join(root, '.ai-org/work-items/WK-one.json');
+  const before = await fs.readFile(record);
+  summary = await readTaskSummary(root, 'WK-one');
+  assert.deepEqual(summary.candidate_head, {head, delivered:revision, matches:false, later_in_scope_paths:later === 'outside' ? [] : ['src/cart.mjs']});
+  assert.equal(summary.attention_reasons.includes('head-moved-past-candidate'), later !== 'outside');
+  assert.deepEqual(await fs.readFile(record), before, 'summary never writes task state');
+  const close = request(4, developer, {revision, summary:'Accept reviewed candidate', rollback:'Revert repair', evidence:[ref]});
+  if (later === 'outside') assert.equal((await mutateNativeTask(root, 'WK-one', 'close', close)).state, 'done');
+  else {
+    await assert.rejects(mutateNativeTask(root, 'WK-one', 'close', close), error => {
+      assert.ok(error.message.includes(revision)); assert.ok(error.message.includes(head));
+      assert.match(error.message, /src\/cart\.mjs/);
+      assert.match(error.message, /Hand off the new commit in a new or reworked task/);
+      assert.match(error.message, /check out the delivered revision/);
+      return true;
+    });
+    assert.deepEqual(await fs.readFile(record), before, 'failed close preserves task state');
+    git(root, 'checkout', '--detach', revision);
+    assert.equal((await mutateNativeTask(root, 'WK-one', 'close', close)).state, 'done');
+  }
+});
+
+test('close HEAD error names at most ten paths, while summary retains every in-scope path', async t => {
+  const root = await fixture(t), {revision, ref} = await deliver(root);
+  await mutateNativeTask(root, 'WK-one', 'review', request(3, reviewer, {revision, judgment:'pass', summary:'Verified', evidence:[ref]}));
+  const paths = Array.from({length:12}, (_, i) => `src/later-${String(i).padStart(2, '0')}.mjs`);
+  for (const file of paths) await write(root, file, 'Later change');
+  git(root, 'add', 'src'); git(root, 'commit', '-qm', 'Later files');
+  assert.deepEqual((await readTaskSummary(root, 'WK-one')).candidate_head.later_in_scope_paths, paths);
+  await assert.rejects(mutateNativeTask(root, 'WK-one', 'close', request(4, developer, {revision, summary:'Accept', rollback:'Revert', evidence:[ref]})), error => {
+    const listed = JSON.parse(error.message.match(/changed paths \(up to 10\): (\[.*\])/)[1]);
+    assert.deepEqual(listed, paths.slice(0, 10)); return true;
+  });
+});
+
+test('status stale reporting is opt-in, uses the last event and excludes terminal tasks', async t => {
+  const root = await fixture(t), start = Date.parse('2000-01-01T00:00:00Z');
+  t.mock.timers.enable({apis:['Date'], now:start});
+  const {revision, ref} = await deliver(root);
+  await mutateNativeTask(root, 'WK-one', 'review', request(3, reviewer, {revision, judgment:'pass', summary:'Verified', evidence:[ref]}));
+  await mutateNativeTask(root, 'WK-one', 'close', request(4, developer, {revision, summary:'Accepted', rollback:'Revert', evidence:[ref]}));
+  for (const id of ['WK-cancelled', 'WK-stalled', 'WK-active']) await createNativeTask(root, contract(id), request(0));
+  await mutateNativeTask(root, 'WK-cancelled', 'cancel', request(1, developer, {summary:'Cancelled', evidence:[ref]}));
+  t.mock.timers.setTime(start + 3 * 3600000);
+  await mutateNativeTask(root, 'WK-active', 'claim', request(1, developer, {base_revision:git(root, 'rev-parse', 'HEAD')}));
+  t.mock.timers.setTime(start + 4 * 3600000);
+  const before = await fs.readFile(path.join(root, '.ai-org/work-items/WK-stalled.json'));
+  const plain = await listTaskItems(root), enriched = await listTaskItems(root, {staleAfter:2});
+  assert.ok(plain.every(task => !Object.hasOwn(task, 'stale') && !Object.hasOwn(task, 'last_activity_at')));
+  assert.equal(enriched.find(task => task.id === 'WK-stalled').stale, true);
+  assert.equal(enriched.find(task => task.id === 'WK-active').stale, false);
+  for (const task of enriched) {
+    if (['done', 'cancelled'].includes(task.state)) assert.ok(!Object.hasOwn(task, 'stale'));
+    else assert.equal(task.last_activity_at, (await readNativeTask(root, task.id)).history.at(-1).at);
+  }
+  assert.equal((await listTaskItems(root, {staleAfter:4})).find(task => task.id === 'WK-stalled').stale, false, 'exact limit is not older');
+  const run = (...options) => spawnSync(process.execPath, [cli, 'status', root, ...options], {encoding:'utf8'});
+  const expected = {schema_version:'workkeel.status/v1', tasks:plain, authority:'observation-only', mutation_status:'no-write'};
+  assert.equal(run().stdout, JSON.stringify(expected, null, 2) + '\n', 'default status bytes are unchanged');
+  // CLI subprocesses use their own current clock; derive its stale set from a
+  // tiny positive threshold after all fixture events, including the recent claim.
+  const flagged = run('--stale-after', '0.000001');
+  assert.equal(flagged.status, 0, flagged.stderr);
+  const output = JSON.parse(flagged.stdout);
+  assert.deepEqual(output.stale_tasks, ['WK-active', 'WK-stalled']);
+  assert.equal(output.tasks.find(task => task.id === 'WK-active').last_activity_at, new Date(start + 3 * 3600000).toISOString());
+  const generous = run('--stale-after', '1e100');
+  assert.equal(generous.status, 0, generous.stderr);
+  assert.deepEqual(JSON.parse(generous.stdout).stale_tasks, []);
+  for (const value of ['0', '-1', 'NaN', 'Infinity', '1e309', 'no', '']) {
+    const bad = run(`--stale-after=${value}`);
+    assert.notEqual(bad.status, 0); assert.match(bad.stdout + bad.stderr, /positive finite number/);
+  }
+  for (const value of [0, -1, NaN, Infinity]) await assert.rejects(listTaskItems(root, {staleAfter:value}), /positive finite number/);
+  assert.deepEqual(await fs.readFile(path.join(root, '.ai-org/work-items/WK-stalled.json')), before);
+});
+
+test('summary observes changed rejected-attempt evidence hashes without rewriting records', async t => {
+  const root = await fixture(t), {revision, ref} = await deliver(root), reviewRef = '.ai-org/artifacts/WK-one/review-r1.md';
+  await write(root, reviewRef, 'Round one failed\n');
+  await mutateNativeTask(root, 'WK-one', 'review', request(3, reviewer, {revision, judgment:'fail', summary:'Needs repair', evidence:[reviewRef]}));
+  await mutateNativeTask(root, 'WK-one', 'rework', request(4, developer, {summary:'Repair same scope'}));
+  const record = path.join(root, '.ai-org/work-items/WK-one.json');
+  const unpinned = await fs.readFile(record);
+  await write(root, reviewRef, 'Path-only evidence may change');
+  assert.ok(!(await readTaskSummary(root, 'WK-one')).attention_reasons.includes('attempt-evidence-changed'));
+  assert.deepEqual(await fs.readFile(record), unpinned, 'path-only evidence is never given a new hash');
+  await write(root, reviewRef, 'Round one failed\n');
+  // Synthetic retained-hash record: current path-only records stay unchanged.
+  const item = await readNativeTask(root, 'WK-one');
+  for (const stage of ['delivery', 'review']) for (const entry of item.attempts[0][stage].evidence)
+    entry.sha256 = sha256(await fs.readFile(path.join(root, entry.path)));
+  const last = item.history.at(-1);
+  last.record_sha256 = sha256(formatJson(Object.fromEntries(Object.entries(item).filter(([key]) => key !== 'history'))));
+  delete last.hash; last.hash = sha256(formatJson(last));
+  await write(root, '.ai-org/work-items/WK-one.json', formatJson(item));
+  const before = await fs.readFile(record);
+  const changed = async () => (await readTaskSummary(root, 'WK-one')).attention_reasons.includes('attempt-evidence-changed');
+  assert.equal(await changed(), false);
+  await write(root, '.ai-org/artifacts/WK-one/review-r2.md', 'Round two has separate evidence');
+  assert.equal(await changed(), false, 'a new round does not overwrite retained evidence');
+  await write(root, reviewRef, 'Overwritten round one'); assert.equal(await changed(), true);
+  await write(root, reviewRef, 'Round one failed\n'); assert.equal(await changed(), false);
+  await fs.unlink(path.join(root, reviewRef)); assert.equal(await changed(), true);
+  await write(root, reviewRef, 'Round one failed\n');
+  await write(root, ref, 'Overwritten delivery evidence'); assert.equal(await changed(), true);
+  assert.deepEqual(await fs.readFile(record), before, 'evidence diagnostics never mutate history');
 });
 
 test("identity, immutable input, stale claims, duplicate requests and self-review fail closed", async t => {

@@ -5,6 +5,12 @@ line. Historical release entries describe their own versions, not current-main
 qualification. Actual development tasks and validation records stay private;
 repository migration does not republish old tags, archives or npm versions.
 
+## Unreleased changes
+
+- Explain close failures when later commits touch a delivered task's write roots,
+  report candidate HEAD and changed historical evidence in task summaries, and
+  add opt-in stale-task reporting with round-specific review evidence guidance.
+
 ## 1.0.1
 
 - Prepared the first npm release of the 1.0 line. A stable GitHub Release publishes it

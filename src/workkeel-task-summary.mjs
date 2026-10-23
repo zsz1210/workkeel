@@ -1,7 +1,7 @@
 import fs from 'node:fs/promises';
 import { constants } from 'node:fs';
 import path from 'node:path';
-import { readNativeTask, evidenceStatus as taskEvidenceStatus } from './workkeel-tasks.mjs';
+import { readNativeTask, taskCandidateHead, evidenceStatus as taskEvidenceStatus } from './workkeel-tasks.mjs';
 import { readTaskProject, assertActor, safeDirectory, existsEntry } from './workkeel-project.mjs';
 import { readTaskContractInput, readTaskFile } from './task-contract.mjs';
 import { withProjectMutationLock } from './workkeel-lock.mjs';
@@ -196,6 +196,15 @@ async function taskTimeline(target,task) {
 }
 export async function readTaskSummary(target,id,{now=new Date()}={}) {
   const task=await readNativeTask(target,id);
+  const candidateHead=await taskCandidateHead(target,task);
+  let attemptEvidenceChanged=false;
+  // Older attempts may retain evidence hashes. Observe them without adding pins
+  // to path-only records or changing the current lifecycle's evidence rules.
+  for(const attempt of task.attempts.filter(a=>a.kind==='rejected'))for(const stage of ['delivery','review'])for(const entry of attempt[stage]?.evidence??[]) {
+    if(typeof entry.sha256!=='string')continue;
+    try {if((await readTaskFile(target,entry.path)).digest!==entry.sha256)attemptEvidenceChanged=true;}
+    catch {attemptEvidenceChanged=true;}
+  }
   const project=await readTaskProject(target),policyCurrent=executionDigest(project.policy)===task.policy_sha256;
   const authorityExpired=task.contract.authorization.expires_at!==null&&Date.parse(task.contract.authorization.expires_at)<=now.getTime();
   const activeAuthorityExpired=authorityExpired&&!['done','cancelled'].includes(task.state);
@@ -219,6 +228,8 @@ export async function readTaskSummary(target,id,{now=new Date()}={}) {
   if(!policyCurrent)next='Inspect the project policy change and re-establish task authority before continuing.';
   if(activeAuthorityExpired)next='Task approval has expired. Obtain renewed approval through a new task before continuing.';
   const attentionReasons=[];
+  if(candidateHead.later_in_scope_paths.length)attentionReasons.push('head-moved-past-candidate');
+  if(attemptEvidenceChanged)attentionReasons.push('attempt-evidence-changed');
   if(activeAuthorityExpired)attentionReasons.push('approval-expired');
   if(!policyCurrent)attentionReasons.push('policy-changed');
   if(evidenceStatus.some(p=>p.status==='unavailable'))attentionReasons.push('evidence-unavailable');
@@ -235,7 +246,7 @@ export async function readTaskSummary(target,id,{now=new Date()}={}) {
     display_state:runStates[task.state],needs_attention:attentionReasons.length>0,
     next_action:next,attention_reasons:attentionReasons,lifecycle,updated_at:last.at,created_at:task.history[0].at,
     actor:task.claim?.actor??task.contract.actor,acceptance_criteria:task.contract.acceptance.criteria,
-    candidate_revision:task.delivery?.revision??null,delivery:task.delivery,review:task.review,closeout:task.closeout,
+    candidate_revision:task.delivery?.revision??null,candidate_head:candidateHead,delivery:task.delivery,review:task.review,closeout:task.closeout,
     evidence:evidenceStatus,observation:{status:observed.status,value:observed.value},
     quality:{rework_count:rejected,review_judgment:task.review?.judgment??null,
       first_review_pass:rejected>0?false:task.review?task.review.judgment==='pass':null,
