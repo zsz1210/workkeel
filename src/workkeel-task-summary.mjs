@@ -196,7 +196,8 @@ async function taskTimeline(target,task) {
 }
 export async function readTaskSummary(target,id,{now=new Date()}={}) {
   const task=await readNativeTask(target,id);
-  const candidateHead=await taskCandidateHead(target,task);
+  // Missing candidate history, as in a shallow clone, never hides the canonical record.
+  const candidateHead=await taskCandidateHead(target,task,{observe:true});
   let attemptEvidenceChanged=false;
   // Older attempts may retain evidence hashes. Observe them without adding pins
   // to path-only records or changing the current lifecycle's evidence rules.
@@ -234,6 +235,7 @@ export async function readTaskSummary(target,id,{now=new Date()}={}) {
   if(activeAuthorityExpired)next='Task approval has expired. Obtain renewed approval through a new task before continuing.';
   const attentionReasons=[];
   if(!['done','cancelled'].includes(task.state)&&candidateHead.later_in_scope_paths.length)attentionReasons.push('head-moved-past-candidate');
+  if(!['done','cancelled'].includes(task.state)&&candidateHead.history_status==='unavailable')attentionReasons.push('candidate-history-unavailable');
   if(attemptEvidenceChanged)attentionReasons.push('attempt-evidence-changed');
   if(activeAuthorityExpired)attentionReasons.push('approval-expired');
   if(!policyCurrent)attentionReasons.push('policy-changed');

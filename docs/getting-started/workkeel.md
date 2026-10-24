@@ -349,6 +349,19 @@ workkeel status .
 workkeel doctor .
 ```
 
+Close compares HEAD with the reviewed commit. If HEAD has any commit after the
+reviewed one that changes a path outside `.ai-org/`, inside the write roots or
+not, close stops with a non-zero exit status and lists each such commit, oldest
+first. Nobody reviewed those commits. The error gives two options: check out
+the reviewed revision, then close again to accept only what was reviewed; or
+cancel the task and start a new task for the new commits. Commits that change only `.ai-org/`, such as a committed task
+record or review report, do not block close.
+
+In a shallow clone, the reviewed commit or its history to HEAD can be missing.
+Close then stops and asks for the full history (`git fetch --unshallow`). Task
+summaries and the monitor still read done and cancelled tasks from their records
+and report `candidate_head.history_status: "unavailable"` without later paths.
+
 These versions assume no intervening operations. Inspect `task show` before each
 request; do not advance a stale version blindly. A failed review uses `rework`,
 retaining its evidence, followed by a fresh claim/candidate/review. Acceptance

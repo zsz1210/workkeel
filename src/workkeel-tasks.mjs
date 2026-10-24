@@ -288,10 +288,28 @@ const CANDIDATE_MESSAGES = {
   'outside-write-scope': 'Candidate changes paths outside approved write roots',
   'product-drift': 'Candidate verification requires a clean tree inside the approved write roots, including untracked files'
 };
-/** Read-only comparison with all later commits, including changes later reverted. */
-export async function taskCandidateHead(target, item) {
+/**
+ * Whether Git holds the delivered commit and the history linking it to HEAD. A
+ * shallow clone can lack the commit, or hold it fetched apart from HEAD's history,
+ * where `delivered..HEAD` would list the shallow root tree as later changes.
+ */
+async function candidateHistoryAvailable(target, delivered, head) {
+  try { await readNativeGit(target, ['rev-parse', '--verify', '--quiet', `${delivered}^{commit}`]); } catch { return false; }
+  if ((await git(target, ['rev-parse', '--is-shallow-repository'])).trim() !== 'true') return true;
+  try { await readNativeGit(target, ['merge-base', '--is-ancestor', delivered, head]); return true; } catch { return false; }
+}
+/**
+ * Read-only comparison with all later commits, including changes later reverted.
+ * Without the candidate's history it throws, unless `observe` asks for a
+ * `history_status: "unavailable"` result that reports no later paths.
+ */
+export async function taskCandidateHead(target, item, { observe = false } = {}) {
   const delivered = item.delivery?.revision ?? null;
   const head = delivered ? (await git(target, ['rev-parse', '--verify', 'HEAD^{commit}'])).trim() : await headRevision(target);
+  if (delivered && head !== delivered && !await candidateHistoryAvailable(target, delivered, head)) {
+    if (observe) return {head, delivered, matches: false, later_in_scope_paths: [], history_status: 'unavailable'};
+    throw new Error(`History between delivered candidate ${delivered} and HEAD ${head} is unavailable, for example in a shallow clone. Fetch the full history (git fetch --unshallow) before closing.`);
+  }
   const paths = head !== delivered && delivered ? (await git(target, [
     'log', '--no-show-signature', '--no-ext-diff', '--no-textconv', '--format=', '--name-only', '--no-renames', '--no-merges', '-z', `${delivered}..${head}`, '--'
   ])).split('\0').filter(Boolean) : [];
@@ -312,6 +330,23 @@ export async function taskCandidateHead(target, item) {
   const roots = item.contract.environment.write_paths;
   return {head, delivered, matches: delivered !== null && head === delivered,
     later_in_scope_paths: [...new Set(paths.filter(file => !administrative(file) && roots.some(root => under(file, root))))].sort()};
+}
+/**
+ * Commits on HEAD after the reviewed one that change any path outside `.ai-org/`,
+ * in any write root or none, oldest first. A merge counts from its reviewed side.
+ */
+async function commitsAfterReview(target, reviewed) {
+  const lines = (await git(target, ['log', '--no-show-signature', '--no-patch', '--format=%H%x1f%P%x1f%s', '--topo-order', '--reverse', `${reviewed}..HEAD`, '--'])).split('\n').filter(Boolean);
+  const descendants = new Set([reviewed]), commits = [];
+  for (const line of lines) {
+    const [revision, parentList, subject] = line.split('\x1f'), parents = parentList.split(' ').filter(Boolean);
+    const parent = parents.find(value => descendants.has(value));
+    if (parent) descendants.add(revision);
+    const files = (await git(target, parents.length > 1 ? ['diff', '--no-renames', '--name-only', '-z', parent ?? parents[0], revision, '--'] :
+      ['log', '-1', '--no-show-signature', '--no-ext-diff', '--no-textconv', '--format=', '--name-only', '--no-renames', '-z', revision, '--'])).split('\0').filter(Boolean);
+    if (files.some(file => !administrative(file))) commits.push({ revision, subject });
+  }
+  return commits;
 }
 /**
  * Committed product changes must stay inside the write roots. Drift is checked
@@ -548,9 +583,15 @@ export async function mutateNativeTask(targetInput, id, action, request) {
       const attempt = (await recoveryChain(target, item)).head, reviewed = item.review;
       if ((attempt?.value.attempt_id ?? null) !== (reviewed.attempt_id ?? null) || attempt && (attempt.result?.value.status !== "completed" ||
           attempt.value.revision !== reviewed.attempt_revision || reviewed.attempt_revision !== revision)) throw new Error("Review recovery chain changed after the authored review");
-      const candidateHead = await taskCandidateHead(target, item);
-      if (candidateHead.later_in_scope_paths.length) throw new Error(
-        `HEAD moved past delivered candidate ${candidateHead.delivered} to HEAD ${candidateHead.head}; changed paths (up to 10): ${JSON.stringify(candidateHead.later_in_scope_paths.slice(0, 10))}. Hand off the new commit in a new or reworked task, or check out the delivered revision ${candidateHead.delivered}.`);
+      // Every product commit after the reviewed one blocks close, inside the write
+      // roots or not: nobody reviewed it. `.ai-org/`-only commits are records.
+      const candidateHead = await taskCandidateHead(target, item), unreviewed = await commitsAfterReview(target, reviewed.revision);
+      if (unreviewed.length) {
+        const listed = unreviewed.slice(0, 50).map(commit => `${commit.revision.slice(0, 12)} ${JSON.stringify(commit.subject)}`).join('; ');
+        const more = unreviewed.length > 50 ? `; and ${unreviewed.length - 50} more (git log --oneline ${reviewed.revision}..HEAD)` : '';
+        const paths = candidateHead.later_in_scope_paths.length ? ` In-scope changed paths (up to 10): ${JSON.stringify(candidateHead.later_in_scope_paths.slice(0, 10))}.` : '';
+        throw new Error(`Close stopped: HEAD ${candidateHead.head} has ${unreviewed.length} unreviewed commit(s) after reviewed candidate ${reviewed.revision}: ${listed}${more}.${paths} Choose one: (1) check out the reviewed revision ${reviewed.revision}, then close again to accept only what was reviewed; or (2) cancel this task and start a new task for the new commits.`);
+      }
       await assertDelivery(target, item);
       await assertElevatedClose(target, item, project.policy, request.actor);
       await assertRequirementOutcomes(target, item, {revision: item.delivery.revision, actor: item.delivery.implementer, evidence: item.delivery.evidence.map(p => p.path)}, 'delivery');

@@ -10,12 +10,15 @@ repository migration does not republish old tags, archives or npm versions.
 - Explain close failures when later commits touch a delivered task's write roots,
   report candidate HEAD and changed historical evidence in task summaries, and
   add opt-in stale-task reporting with round-specific review evidence guidance.
-
-### Known issues
-
-- In a shallow clone that lacks a delivered task's candidate commit, task summaries
-  and the monitor can report a valid done or cancelled task as unreadable. Clone
-  with full history until this is fixed.
+- `task close` stops with a non-zero exit status when HEAD has commits after the
+  reviewed candidate that change paths outside `.ai-org/`, inside the write roots
+  or not. The error lists each commit and gives two options:
+  check out the reviewed revision and close again, or cancel the task and start
+  a new task for the new commits.
+- Task summaries and the monitor read done and cancelled tasks in shallow clones
+  that lack the candidate commit or its history, and report the candidate history
+  as unavailable instead of listing the shallow root as later changes. Close in
+  such a clone stops until the full history is fetched.
 
 ## 1.0.1
 

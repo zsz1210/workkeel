@@ -171,6 +171,34 @@ test("abbreviated --revision values resolve to the full commit; low work needs n
   assert.equal(item.review.revision, full); assert.deepEqual(item.delivery.evidence, []); assert.deepEqual(item.review.evidence, []);
 });
 
+test("task close exits non-zero and lists commits made after the reviewed candidate", async t => {
+  const root = await repository(t);
+  workkeel(root, "init");
+  await fs.writeFile(path.join(root, ".gitignore"), ".workkeel/\n");
+  git(root, "add", "-A"); git(root, "commit", "-qm", "base");
+  workkeel(root, "task", "new", "--goal", "Tidy the guide", "--acceptance", "The guide is tidy", "--write", "docs", "--actor", "builder");
+  workkeel(root, "task", "claim", "--id", "WK-0001", "--actor", "builder");
+  await fs.appendFile(path.join(root, "docs/guide.md"), "Tidied.\n"); git(root, "commit", "-qam", "tidy");
+  const reviewed = git(root, "rev-parse", "HEAD");
+  workkeel(root, "task", "handoff", "--id", "WK-0001", "--actor", "builder", "--summary", "Tidied");
+  assert.equal(workkeel(root, "task", "review", "--id", "WK-0001", "--actor", "reviewer", "--judgment", "pass", "--summary", "Tidy").state, "release_gate");
+  const later = [];
+  for (const [file, subject] of [["docs/guide.md", "Retitle the guide"], ["NOTES.md", "Add release notes"]]) {
+    await fs.appendFile(path.join(root, file), `${subject}\n`); git(root, "add", file); git(root, "commit", "-qm", subject);
+    later.push(git(root, "rev-parse", "HEAD"));
+  }
+  const close = spawnSync(process.execPath, [cli, "task", "close", "--id", "WK-0001", "--actor", "builder", "--summary", "Accepted", "--rollback", "Revert the tidy commit"], { cwd: root, encoding: "utf8" });
+  assert.notEqual(close.status, 0);
+  const output = close.stdout + close.stderr;
+  assert.ok(output.includes(reviewed));
+  for (const revision of later) assert.ok(output.includes(revision.slice(0, 12)), revision);
+  assert.match(output, /Retitle the guide/); assert.match(output, /Add release notes/);
+  assert.ok(output.includes(`(1) check out the reviewed revision ${reviewed}, then close again`));
+  assert.match(output, /\(2\) cancel this task and start a new task for the new commits/);
+  assert.doesNotMatch(output, /rework/i);
+  assert.equal((await readNativeTask(root, "WK-0001")).state, "release_gate");
+});
+
 test("the local default actor, derived operation IDs and repeated-flag rejection", async t => {
   const root = await repository(t);
   workkeel(root, "init", "--principal", "maria");
