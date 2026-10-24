@@ -201,8 +201,135 @@ for (const fetchCandidate of [false, true]) test(`active close fails closed in a
   assert.ok(summary.attention_reasons.includes('candidate-history-unavailable'));
   assert.ok(!summary.attention_reasons.includes('head-moved-past-candidate'));
   await assert.rejects(mutateNativeTask(clone, 'WK-one', 'close', request(4, developer, {revision, summary:'Accept', rollback:'Revert', evidence:[ref]})),
-    fetchCandidate ? /History between delivered candidate .* is unavailable.*git fetch --unshallow/ : /Close requires the independently accepted exact candidate/);
+    fetchCandidate ? /History between delivered candidate .* is unavailable.*git fetch --unshallow/ : /delivered candidate [a-f0-9]{40} is missing from this repository.*git fetch --unshallow/);
   assert.deepEqual(await fs.readFile(record), before, 'failed close preserves task state');
+});
+
+test('close of a missing candidate commit asks for full history and stays in release_gate', async t => {
+  const root = await fixture(t), {revision, ref} = await deliver(root);
+  await mutateNativeTask(root, 'WK-one', 'review', request(3, reviewer, {revision, judgment:'pass', summary:'Verified candidate', evidence:[ref]}));
+  const clone = await shallowClone(t, root, {fetchCandidate:false});
+  assert.throws(() => git(clone, 'cat-file', '-e', `${revision}^{commit}`));
+  const record = path.join(clone, '.ai-org/work-items/WK-one.json'), before = await fs.readFile(record);
+  for (const named of [revision, revision.slice(0, 12)]) await assert.rejects(mutateNativeTask(clone, 'WK-one', 'close', request(4, developer, {revision:named, summary:'Accept', rollback:'Revert', evidence:[ref]})), error => {
+    assert.ok(error.message.includes(`delivered candidate ${revision} is missing from this repository`));
+    assert.match(error.message, /Fetch the full history \(git fetch --unshallow\) before closing/);
+    assert.doesNotMatch(error.message, /rework/i);
+    return true;
+  });
+  // A revision that is not the delivered candidate keeps the generic error.
+  await assert.rejects(mutateNativeTask(clone, 'WK-one', 'close', request(4, developer, {revision:git(clone, 'rev-parse', 'HEAD'), summary:'Accept', rollback:'Revert', evidence:[ref]})),
+    error => error.message === 'Close requires the independently accepted exact candidate');
+  assert.equal((await readNativeTask(clone, 'WK-one')).state, 'release_gate');
+  assert.deepEqual(await fs.readFile(record), before, 'failed close preserves task state');
+});
+
+/**
+ * Base B, candidate R and record commit A, merged with an `.ai-org/`-only side
+ * commit S from B, cloned with --depth=3. R is a shallow boundary, so Git puts
+ * the old base B in `R..HEAD` through S although R is an ancestor of HEAD.
+ */
+async function shallowMergeClone(t, root, revision) {
+  git(root, 'add', '.ai-org'); git(root, 'commit', '-qm', 'Record task state');
+  const administrativeHead = git(root, 'rev-parse', 'HEAD');
+  git(root, 'checkout', '-qb', 'records-side', `${revision}^`);
+  await write(root, '.ai-org/side.md', 'Administrative note\n'); git(root, 'add', '.ai-org/side.md'); git(root, 'commit', '-qm', 'Side note');
+  git(root, 'checkout', '-q', '--detach', administrativeHead); git(root, 'merge', '--no-ff', '-qm', 'Merge records', 'records-side');
+  const clone = await fs.mkdtemp(path.join(os.tmpdir(), 'workkeel-shallow-merge-'));
+  t.after(() => fs.rm(clone, { recursive: true, force: true }));
+  execFileSync('git', ['clone', '-q', '--depth=3', `file://${root}`, clone], { stdio: 'ignore' });
+  assert.equal(git(clone, 'rev-parse', '--is-shallow-repository'), 'true');
+  git(clone, 'merge-base', '--is-ancestor', revision, 'HEAD');
+  assert.ok(git(clone, 'rev-list', `${revision}..HEAD`).split('\n').includes(git(root, 'rev-parse', `${revision}^`)), 'the shallow boundary puts the old base in the range');
+  assert.equal(git(clone, 'diff', '--name-only', revision, 'HEAD', '--', 'src'), '');
+  return clone;
+}
+for (const state of ['done', 'cancelled', 'release_gate']) test(`shallow merge clone reports unavailable history for a ${state} task`, async t => {
+  const root = await fixture(t), {revision, ref} = await deliver(root);
+  if (state === 'cancelled') await mutateNativeTask(root, 'WK-one', 'cancel', request(3, developer, {summary:'Cancelled', evidence:[ref]}));
+  else await mutateNativeTask(root, 'WK-one', 'review', request(3, reviewer, {revision, judgment:'pass', summary:'Verified candidate', evidence:[ref]}));
+  if (state === 'done') await mutateNativeTask(root, 'WK-one', 'close', request(4, developer, {revision, summary:'Accepted', rollback:'Revert repair', evidence:[ref]}));
+  const clone = await shallowMergeClone(t, root, revision);
+  const full = await readTaskSummary(root, 'WK-one');
+  assert.deepEqual(full.candidate_head, {head:git(root, 'rev-parse', 'HEAD'), delivered:revision, matches:false, later_in_scope_paths:[]});
+  const record = path.join(clone, '.ai-org/work-items/WK-one.json'), before = await fs.readFile(record);
+  assert.equal((await diagnoseTaskProject(clone)).valid, true);
+  const summary = await readTaskSummary(clone, 'WK-one');
+  const monitored = (await readMonitorSnapshot(clone)).tasks.find(task => task.id === 'WK-one');
+  for (const item of [summary, monitored]) {
+    assert.deepEqual(item.candidate_head, {head:git(clone, 'rev-parse', 'HEAD'), delivered:revision, matches:false, later_in_scope_paths:[], history_status:'unavailable'});
+    assert.equal(item.task_state, state);
+    assert.ok(!item.attention_reasons.includes('head-moved-past-candidate'));
+    if (state === 'release_gate') assert.ok(item.attention_reasons.includes('candidate-history-unavailable'));
+    else { assert.equal(item.needs_attention, false); assert.deepEqual(item.attention_reasons, []); }
+  }
+  if (state === 'release_gate') {
+    const close = request(4, developer, {revision, summary:'Accepted', rollback:'Revert repair', evidence:[ref]});
+    await assert.rejects(mutateNativeTask(clone, 'WK-one', 'close', close), error => {
+      assert.match(error.message, /History between delivered candidate .* is unavailable.*git fetch --unshallow/);
+      assert.doesNotMatch(error.message, /unreviewed commit/);
+      return true;
+    });
+    assert.equal((await readNativeTask(clone, 'WK-one')).state, 'release_gate');
+    assert.equal((await mutateNativeTask(root, 'WK-one', 'close', close)).state, 'done', 'complete history closes');
+  }
+  assert.deepEqual(await fs.readFile(record), before, 'summary, monitor and failed close preserve the task record');
+});
+
+test('a shallow clone holding the candidate history keeps the exact comparison', async t => {
+  const root = await fixture(t), {revision, ref} = await deliver(root);
+  await mutateNativeTask(root, 'WK-one', 'review', request(3, reviewer, {revision, judgment:'pass', summary:'Verified candidate', evidence:[ref]}));
+  git(root, 'add', '.ai-org'); git(root, 'commit', '-qm', 'Record review');
+  await write(root, 'src/later.mjs', 'Later change\n'); git(root, 'add', 'src'); git(root, 'commit', '-qm', 'Later work');
+  const later = git(root, 'rev-parse', 'HEAD');
+  const clone = await fs.mkdtemp(path.join(os.tmpdir(), 'workkeel-shallow-'));
+  t.after(() => fs.rm(clone, { recursive: true, force: true }));
+  // HEAD, the record commit and the candidate itself, which is the shallow boundary.
+  execFileSync('git', ['clone', '-q', '--depth=3', `file://${root}`, clone], { stdio: 'ignore' });
+  assert.equal(git(clone, 'rev-parse', '--is-shallow-repository'), 'true');
+  const summary = await readTaskSummary(clone, 'WK-one');
+  assert.deepEqual(summary.candidate_head, {head:later, delivered:revision, matches:false, later_in_scope_paths:['src/later.mjs']});
+  assert.ok(summary.attention_reasons.includes('head-moved-past-candidate'));
+  await assert.rejects(mutateNativeTask(clone, 'WK-one', 'close', request(4, developer, {revision, summary:'Accept', rollback:'Revert', evidence:[ref]})),
+    error => error.message.includes(`has 1 unreviewed commit(s)`) && error.message.includes(`${later.slice(0, 12)} "Later work"`));
+});
+
+/** Like `deliver`, with the developer report committed in the candidate itself. */
+async function deliverCommittedEvidence(root, id = 'WK-one') {
+  await createNativeTask(root, contract(id), request(0));
+  const claimed = await mutateNativeTask(root, id, 'claim', request(1, developer, { base_revision: git(root, 'rev-parse', 'HEAD') }));
+  const ref = `.ai-org/artifacts/${id}/developer.md`;
+  await write(root, 'src/cart.mjs', 'export const total = 2;\n'); await write(root, ref, 'Verified the total repair.\n');
+  git(root, 'add', 'src', ref); git(root, 'commit', '-qm', 'repair');
+  const revision = git(root, 'rev-parse', 'HEAD');
+  await mutateNativeTask(root, id, 'handoff', request(2, developer, { claim_id: claimed.claim.id, revision, summary: 'Total corrected and tested', evidence: [ref], unresolved: [] }));
+  return { revision, ref };
+}
+for (const state of ['done', 'cancelled']) test(`${state} task with candidate evidence keeps its state in a shallow clone without the candidate`, async t => {
+  const root = await fixture(t), {revision, ref} = await deliverCommittedEvidence(root);
+  assert.equal((await readNativeTask(root, 'WK-one')).delivery.evidence[0].source, 'candidate');
+  if (state === 'done') {
+    await mutateNativeTask(root, 'WK-one', 'review', request(3, reviewer, {revision, judgment:'pass', summary:'Verified candidate', evidence:[ref]}));
+    await mutateNativeTask(root, 'WK-one', 'close', request(4, developer, {revision, summary:'Accepted', rollback:'Revert repair', evidence:[ref]}));
+  } else await mutateNativeTask(root, 'WK-one', 'cancel', request(3, developer, {summary:'Cancelled', evidence:[ref]}));
+  const full = await readTaskSummary(root, 'WK-one');
+  assert.ok(full.evidence.every(entry => entry.status !== 'history-unavailable'));
+  assert.equal(full.quality.evidence_current, true);
+  const clone = await shallowClone(t, root, {fetchCandidate:false});
+  const record = path.join(clone, '.ai-org/work-items/WK-one.json'), before = await fs.readFile(record);
+  const summary = await readTaskSummary(clone, 'WK-one');
+  const monitored = (await readMonitorSnapshot(clone)).tasks.find(task => task.id === 'WK-one');
+  const candidateEvidence = summary.evidence.filter(entry => entry.source === 'candidate');
+  assert.ok(candidateEvidence.length);
+  for (const entry of candidateEvidence) assert.equal(entry.status, 'history-unavailable');
+  for (const item of [summary, monitored]) {
+    assert.equal(item.task_state, state);
+    assert.equal(item.needs_attention, false);
+    assert.deepEqual(item.attention_reasons, []);
+    assert.equal(item.quality.locally_accepted, state === 'done');
+    assert.equal(item.quality.evidence_current, false, 'unreadable history is not verified evidence');
+  }
+  assert.deepEqual(await fs.readFile(record), before, 'summary and monitor preserve the task record');
 });
 
 for (const state of ['done', 'cancelled']) test(`later in-scope work leaves ${state} tasks without summary or monitor attention`, async t => {

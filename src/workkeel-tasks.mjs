@@ -288,15 +288,30 @@ const CANDIDATE_MESSAGES = {
   'outside-write-scope': 'Candidate changes paths outside approved write roots',
   'product-drift': 'Candidate verification requires a clean tree inside the approved write roots, including untracked files'
 };
+/** Whether Git holds the delivered commit object. */
+async function hasCommit(target, revision) {
+  try { await readNativeGit(target, ['rev-parse', '--verify', '--quiet', `${revision}^{commit}`]); return true; } catch { return false; }
+}
 /**
- * Whether Git holds the delivered commit and the history linking it to HEAD. A
- * shallow clone can lack the commit, or hold it fetched apart from HEAD's history,
- * where `delivered..HEAD` would list the shallow root tree as later changes.
+ * Whether Git holds the delivered commit and enough history for `delivered..HEAD`
+ * to be exact. A shallow boundary cuts parents: inside the range it hides older
+ * commits, and behind the candidate it lets the old base return through a merged
+ * side history, where the range would list that base as later changes. The range
+ * is exact when it holds no shallow commit and, unless the candidate's own
+ * history is complete, every commit in it descends from the candidate.
  */
 async function candidateHistoryAvailable(target, delivered, head) {
-  try { await readNativeGit(target, ['rev-parse', '--verify', '--quiet', `${delivered}^{commit}`]); } catch { return false; }
+  if (!await hasCommit(target, delivered)) return false;
   if ((await git(target, ['rev-parse', '--is-shallow-repository'])).trim() !== 'true') return true;
-  try { await readNativeGit(target, ['merge-base', '--is-ancestor', delivered, head]); return true; } catch { return false; }
+  try {
+    const commits = async (...args) => (await readNativeGit(target, ['log', '--no-show-signature', '--format=%H', ...args, '--'])).split('\n').filter(Boolean);
+    const shallowFile = path.resolve(target, (await readNativeGit(target, ['rev-parse', '--git-path', 'shallow'])).trim());
+    const shallow = new Set((await fs.readFile(shallowFile, 'utf8')).split('\n').filter(Boolean));
+    const range = await commits(`${delivered}..${head}`);
+    if (range.some(commit => shallow.has(commit))) return false;
+    if ((await commits('--ancestry-path', `${delivered}..${head}`)).length === range.length) return true;
+    return !(await commits(delivered)).some(commit => shallow.has(commit));
+  } catch { return false; }
 }
 /**
  * Read-only comparison with all later commits, including changes later reverted.
@@ -578,7 +593,13 @@ export async function mutateNativeTask(targetInput, id, action, request) {
     } else if (action === "close") {
       assertApprover(project.policy, request.actor);
       const revision = await deliveredRevision(target, item, request.revision);
-      if (item.state !== "release_gate" || item.review?.judgment !== "pass" || !revision) throw new Error("Close requires the independently accepted exact candidate");
+      if (item.state !== "release_gate" || item.review?.judgment !== "pass" || !revision) {
+        // A named candidate that Git lacks, as in a shallow clone, needs history, not another candidate.
+        const missing = item.state === "release_gate" && item.review?.judgment === "pass" && typeof request.revision === "string" &&
+          /^[a-f0-9]{4,64}$/.test(request.revision) && item.delivery.revision.startsWith(request.revision) && !await hasCommit(target, item.delivery.revision);
+        throw new Error(missing ? `Close requires the independently accepted exact candidate, but delivered candidate ${item.delivery.revision} is missing from this repository, for example in a shallow clone. Fetch the full history (git fetch --unshallow) before closing.` :
+          "Close requires the independently accepted exact candidate");
+      }
       // The current recovery attempt must still be the completed one the review named, on the same commit.
       const attempt = (await recoveryChain(target, item)).head, reviewed = item.review;
       if ((attempt?.value.attempt_id ?? null) !== (reviewed.attempt_id ?? null) || attempt && (attempt.result?.value.status !== "completed" ||

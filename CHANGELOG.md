@@ -16,9 +16,13 @@ repository migration does not republish old tags, archives or npm versions.
   check out the reviewed revision and close again, or cancel the task and start
   a new task for the new commits.
 - Task summaries and the monitor read done and cancelled tasks in shallow clones
-  that lack the candidate commit or its history, and report the candidate history
-  as unavailable instead of listing the shallow root as later changes. Close in
-  such a clone stops until the full history is fetched.
+  that lack the candidate commit or its history, including a shallow boundary
+  behind the candidate reached through a merged side history. They report the
+  candidate history as unavailable instead of listing the shallow root as later
+  changes, and evidence committed in a missing candidate as `history-unavailable`
+  without attention and without counting it as current. Close in such a clone
+  stops with a `git fetch --unshallow` hint, also when the candidate commit is
+  missing, until the full history is fetched.
 
 ## 1.0.1
 

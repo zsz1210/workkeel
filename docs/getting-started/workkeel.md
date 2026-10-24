@@ -358,9 +358,15 @@ cancel the task and start a new task for the new commits. Commits that change on
 record or review report, do not block close.
 
 In a shallow clone, the reviewed commit or its history to HEAD can be missing.
-Close then stops and asks for the full history (`git fetch --unshallow`). Task
-summaries and the monitor still read done and cancelled tasks from their records
-and report `candidate_head.history_status: "unavailable"` without later paths.
+A shallow boundary can also cut the history behind the reviewed commit, for
+example when HEAD merges a side branch that started before it. When Workkeel
+cannot show that the history between the reviewed commit and HEAD is complete,
+close stops, names the missing commit or history, and asks for the full history
+(`git fetch --unshallow`). The task stays in `release_gate`. Task summaries and
+the monitor still read done and cancelled tasks from their records, without
+attention, and report `candidate_head.history_status: "unavailable"` without
+later paths. Evidence committed in a reviewed commit that the clone lacks shows
+the status `history-unavailable`, and `quality.evidence_current` is false.
 
 These versions assume no intervening operations. Inspect `task show` before each
 request; do not advance a stale version blindly. A failed review uses `rework`,
