@@ -24,16 +24,17 @@ to an older CLI keep that version, and there is no migration path for their reco
 
 `workkeel.lock` pins a CLI version. A CLI with the same major version that is not
 older than the pin works normally. With any other CLI, read commands such as
-`status` and `doctor` still run and print a warning on stderr, and commands that
+`status` and `doctor` still run and print a warning on stderr. Commands that
 write stop. Run `workkeel upgrade [target] [--actor id]` with the newer CLI to
-move the pin to it and rewrite `workkeelw.mjs`; an approving Principal runs it,
-and it never downgrades the pin or converts task records. Unknown top-level lock
-keys are ignored with a warning and kept when `policy update` or `upgrade`
-rewrites the lock. Unknown task request fields are ignored with a warning and
-never stored. Task policy and execution documents stay strict. `schema_version`
-decides major compatibility. The compatibility check runs before the mutation
-lock is taken, so an upgrade running at the same moment as another write may not
-stop that write.
+move the pin to it and rewrite `workkeelw.mjs`. An approving Principal runs it.
+It never downgrades the pin or converts task records.
+
+Unknown top-level lock keys are ignored with a warning. They are kept when
+`policy update` or `upgrade` rewrites the lock. Unknown task request fields are
+ignored with a warning and never stored. Task policy and execution documents stay
+strict. `schema_version` decides major compatibility. The compatibility check runs
+before the mutation lock is taken. An upgrade running at the same moment as another
+write may therefore not stop that write.
 
 Native projects pinned to `0.2.0-beta.0` can use the `1.0.0` source CLI for reads
 with a compatibility warning. Run `workkeel upgrade` with that CLI and an

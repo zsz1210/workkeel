@@ -34,16 +34,19 @@ it leaves the coding loop to your tool.
   <img src="docs/assets/workkeel-workflow.svg" alt="Agree scope and risk, build with your coding tool, review the exact commit with a different Agent, accept, then done. A failed review stays in test until the approver runs task rework to return it to intake under the same contract; low allows 2 reworks, others 3, then stop and ask a person.">
 </picture>
 
-Agree scope, permissions, acceptance criteria and risk tier, then claim the task,
-build with your coding tool and hand off a commit for another Agent to review.
+1. Agree scope, permissions, acceptance criteria and risk tier.
+2. Claim the task and build with your coding tool.
+3. Hand off a commit for another Agent to review.
+
 After a failed review, the task stays in `test` until the approver runs `task rework`.
 This preserves the failed attempt and returns the task to `intake` under the same
 contract. The builder claims it again and delivers a new commit. Stop and ask a
-person after two reworks for `low` or three for other tiers. After a passing review,
-a registered Agent whose Principal accepts the work closes the exact candidate.
-That Principal must be a registered approver; for `high` and `critical`, the Agent
-must belong to the task's approving Principal, after review by a different model
-family and the required cross-review.
+person after two reworks for `low` or three for other tiers.
+
+After a passing review, a registered Agent whose Principal accepts the work closes
+the exact candidate. That Principal must be a registered approver. For `high` and
+`critical`, the Agent must belong to the task's approving Principal, after review by
+a different model family and the required cross-review.
 
 ## 30-second demo
 
@@ -88,9 +91,9 @@ alias workkeel="node $PWD/bin/workkeel.mjs"
 ```
 
 Or install from npm with `npm install -g @zsz1210/workkeel` to use the `workkeel` command.
-The npm `latest` dist-tag is `1.0.2`; `next` still points to the old
-`0.1.0-beta.1`. Install `@zsz1210/workkeel` or `@zsz1210/workkeel@latest`,
-rather than `@next`, for the current release.
+The npm `latest` dist-tag is `1.0.2`. `next` still points to the old
+`0.1.0-beta.1`. For the current release, install `@zsz1210/workkeel` or
+`@zsz1210/workkeel@latest`. Do not install `@next`.
 
 Shell aliases only work in the interactive shell where they are defined. An alias
 for `workkeel` will not work in non-interactive shells such as agent tool calls or

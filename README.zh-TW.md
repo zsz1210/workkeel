@@ -62,6 +62,7 @@ $ workkeel task handoff --id WK-0001 --actor builder --summary "Guide updated"
 # reviewer 依驗收條件檢查交付的確切 commit。
 $ workkeel task review --id WK-0001 --actor reviewer --judgment pass --summary "Meets the criterion"
 {"id":"WK-0001","state":"release_gate"}
+# owner 驗收；builder 是這位核准 Principal 底下已註冊的 Agent。
 $ workkeel task close --id WK-0001 --actor builder --summary "Owner accepts" --rollback "Revert the guide commit"
 {"id":"WK-0001","state":"done","external_release":"not-performed"}
 ```
@@ -82,11 +83,34 @@ alias workkeel="node $PWD/bin/workkeel.mjs"
 ```
 
 也可以用 `npm install -g @zsz1210/workkeel` 從 npm 安裝，再執行 `workkeel` 指令。
+npm 的 `latest` dist-tag 是 `1.0.2`，`next` 仍指向舊的 `0.1.0-beta.1`。
+要安裝目前版本，請用 `@zsz1210/workkeel` 或 `@zsz1210/workkeel@latest`，不要裝 `@next`。
+
+shell alias 只在定義它的互動式 shell 裡有效。在 Agent 工具呼叫、CI 這類非互動式 shell 中，
+`workkeel` alias 無法使用。初始化後請改用 `node workkeelw.mjs`，本機安裝的話可用 `npx --no-install workkeel`。
+
+開始任務前，儲存庫需要一個 baseline commit。如果是新的儲存庫，先確認要納入哪些檔案，
+再執行 `git add -A && git commit -m baseline`。
 
 切換到你自己的專案 Git 儲存庫，執行 `workkeel start .` 預覽設定步驟，不會寫入檔案。
 完成 `init` 後，再執行 `workkeel start .`，就會看到選用的[指示檔橋接](docs/extensions/workkeel-context.md#connect-native-instructions)建議。
 初始化、政策、證據與回復方式見[快速入門指南](docs/getting-started/workkeel.md)。
 開發 Workkeel 本身則請依[貢獻指南](CONTRIBUTING.md)操作。
+
+### 專案啟動器如何找到 CLI
+
+`node workkeelw.mjs` 會讀取 `workkeel.lock` 鎖定的版本，依序嘗試以下來源：
+
+1. `WORKKEEL_CLI_PATH`，指向相容的原始碼 `bin/workkeel.mjs`。
+2. 本機安裝的 `node_modules/@zsz1210/workkeel/bin/workkeel.mjs`
+   （`npm i -D @zsz1210/workkeel`）。
+3. `PATH` 上的全域 `workkeel`（`npm i -g @zsz1210/workkeel`）。啟動器會解析 symlink，
+   只接受套件名稱為 `@zsz1210/workkeel` 的 `bin/workkeel.mjs`。Windows 不使用這個備援。
+4. 明確下載鎖定版本的套件。只有在設定 `WORKKEEL_ALLOW_PACKAGE_FETCH=1`，
+   而且找不到已安裝的來源時才會這樣做。
+
+CLI 會檢查版本是否與鎖定版本相容。預設不會嘗試下載。既有專案會繼續使用原本的啟動器，
+直到明確執行 `workkeel upgrade`。
 
 ## 風險等級
 
