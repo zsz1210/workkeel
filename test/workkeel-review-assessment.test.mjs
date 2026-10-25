@@ -78,6 +78,30 @@ async function snapshot(root) {
   await visit(''); return result;
 }
 
+test('task assess rejects an unborn repository with baseline guidance and no raw Git error', async t => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), 'workkeel-assess-unborn-'));
+  t.after(() => fs.rm(root, { recursive: true, force: true }));
+  git(root, 'init', '-q');
+  for (const args of [['init', root], ['task', 'new', root, '--goal', 'Guide', '--acceptance', 'Readable', '--write', 'docs', '--actor', 'builder']]) {
+    const run = spawnSync(process.execPath, [cli, ...args], { encoding: 'utf8' });
+    assert.equal(run.status, 0, run.stdout + run.stderr);
+  }
+  const before = await snapshot(root);
+  const message = 'This repository has no commits. Make a baseline commit first (git add -A && git commit -m baseline), then retry.';
+  await assert.rejects(assessNativeTask(root, 'WK-0001'), error => {
+    assert.equal(error.message, message);
+    assert.doesNotMatch(String(error), /fatal:|ambiguous argument|Command failed/);
+    return true;
+  });
+  const run = spawnSync(process.execPath, [cli, 'task', 'assess', root, '--id', 'WK-0001'], { encoding: 'utf8' });
+  assert.equal(run.status, 1);
+  const error = JSON.parse(run.stdout + run.stderr);
+  assert.equal(error.schema_version, 'workkeel.operation-error/v1');
+  assert.equal(error.message, message);
+  assert.doesNotMatch(run.stdout + run.stderr, /fatal:|ambiguous argument|Command failed/);
+  assert.deepEqual(await snapshot(root), before);
+});
+
 test('actual diff and v1 stricter review floor survive, with a byte-for-byte no-write CLI snapshot', async t => {
   const { root, revision } = await fixture(t, { separation: 'distinct-principal' });
   const before = await snapshot(root);

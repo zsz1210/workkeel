@@ -2,7 +2,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { createHash } from "node:crypto";
 import { parseArgs } from "node:util";
-import { readNativeGit, readLocalActor, readTaskProject } from "./workkeel-project.mjs";
+import { readNativeGit, readLocalActor, readTaskProject, requireHeadRevision } from "./workkeel-project.mjs";
 import { readNativeTask, listTaskItems, mutateNativeTask, createNativeTask } from "./workkeel-tasks.mjs";
 import { durableAtomicCreate } from "./files.mjs";
 
@@ -45,7 +45,7 @@ export async function resolveActor(target, project, agentId) {
   return { agent_id: agent.agent_id, principal_id: agent.principal_id };
 }
 
-async function head(target) { return (await readNativeGit(target, ["rev-parse", "HEAD"])).trim(); }
+async function head(target) { return requireHeadRevision(target); }
 const version = (options, item) => {
   if (options["--expect"] === undefined) return item?.version ?? 0;
   const value = Number(options["--expect"]);
@@ -98,6 +98,7 @@ async function saveAttempt(dir, number, value) {
  * preparing, it reads the task again and reselects instead of failing.
  */
 export async function runLifecycleFromFlags(target, id, action, options, hooks = {}) {
+  if (["claim", "handoff", "review", "close"].includes(action)) await requireHeadRevision(target);
   // An abbreviated --revision names the same command and target as the full commit ID.
   if (/^[a-f0-9]{4,39}$/.test(options["--revision"] ?? "")) {
     try { options = { ...options, "--revision": (await readNativeGit(target, ["rev-parse", "--verify", `${options["--revision"]}^{commit}`])).trim() }; }

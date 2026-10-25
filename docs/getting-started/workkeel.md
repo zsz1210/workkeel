@@ -12,10 +12,11 @@ Do not run task initialization in the public framework source checkout.
 
 ## Availability and compatibility
 
-Use Node.js 24.15 or newer and run the current source as in the
-[README quick start](../../README.md#quick-start). Beta.1, published as
-`@zsz1210/workkeel@0.1.0-beta.1` on npm's `next` channel, is an
-[earlier line](../../CHANGELOG.md#010-beta1). Installed projects can
+Use Node.js 24.15 or newer. npm's `latest` dist-tag is `1.0.1`: install
+`@zsz1210/workkeel` or `@zsz1210/workkeel@latest`. The `next` dist-tag still
+points to the old `0.1.0-beta.1` [beta line](../../CHANGELOG.md#010-beta1);
+do not install `@next` for the current release. You can also run the current source
+as in the [README quick start](../../README.md#quick-start). Installed projects can
 use `npx --no-install workkeel`; a reviewed source checkout provides
 `node bin/workkeel.mjs`. Examples below using a source path remain the source
 alternative. Version 0.2 removed the earlier Temple mode; Temple projects pinned
@@ -44,6 +45,9 @@ adds review by another model family and close by the approving Principal.
 Verified or distributed identity workflows are not supported.
 
 ## Fastest path: flags only
+
+Task work requires a baseline Git commit. In an unborn repository, review the
+files, then run `git add -A && git commit -m baseline` before claiming a task.
 
 `init` registers one Principal, `owner`, with two Agents, `builder` and
 `reviewer`; the implementer and reviewer still differ. Commit the

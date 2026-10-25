@@ -3,11 +3,11 @@ import {constants} from 'node:fs';
 import path from 'node:path';
 import {createHash} from 'node:crypto';
 import {readNativeTask} from './workkeel-tasks.mjs';
-import {readNativeGit} from './workkeel-project.mjs';
+import {readNativeGit,requireHeadRevision} from './workkeel-project.mjs';
 
 /** Evidence coverage is not semantic correctness or independent acceptance. */
 export async function checkCompletionEvidence(target,taskId,report){
-  const root=await fs.realpath(target),task=await readNativeTask(root,taskId),head=(await readNativeGit(root,['rev-parse','HEAD'])).trim(),issues=[],seen=new Set();
+  const root=await fs.realpath(target),task=await readNativeTask(root,taskId),head=await requireHeadRevision(root),issues=[],seen=new Set();
   const issue=(code,criterion=null)=>issues.push({code,criterion});
   if(!report||report.schema_version!=='workkeel.completion-evidence/v1'||!['not-applicable','code-first','preview-first','design-led'].includes(report.ui_mode))throw Error('Invalid completion evidence report');
   if(report.candidate_revision!==head)issue('candidate-mismatch');

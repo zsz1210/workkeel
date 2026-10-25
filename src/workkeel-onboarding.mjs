@@ -3,7 +3,7 @@ import fs from "node:fs/promises";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { durableAtomicCreate, durableAtomicWrite, formatJson, sha256 } from "./files.mjs";
-import { readTaskProject, existsEntry } from "./workkeel-project.mjs";
+import { readTaskProject, existsEntry, requireHeadRevision, BASELINE_MESSAGE, BASELINE_COMMAND } from "./workkeel-project.mjs";
 import { readTaskFile, readTaskContractInput } from "./task-contract.mjs";
 import { withProjectMutationLock } from "./workkeel-lock.mjs";
 
@@ -24,6 +24,11 @@ export async function readStartGuide(target, { requestRef = null } = {}) {
     try { gitRoot = (await exec("git", ["-C", root, "rev-parse", "--show-toplevel"], { timeout: 10000 })).stdout.trim(); }
     catch { return step("git", "Choose a Git repository root, or explicitly initialize this directory with git init.", null, ["Git repository root"]); }
     if (await fs.realpath(gitRoot) !== root) return step("git-root", "Run start at the Git repository root.", ["start", gitRoot]);
+    try { await requireHeadRevision(root); }
+    catch (error) {
+      if (error.message !== BASELINE_MESSAGE) throw error;
+      return step("baseline", BASELINE_MESSAGE, ["git", "add", "-A"], [BASELINE_COMMAND]);
+    }
     if (!await existsEntry(root, "workkeel.lock")) {
       for (const ref of ["WORKKEEL.md", "workkeelw.mjs"]) {
         if (await existsEntry(root, ref)) throw Error(`Existing ${ref} requires inspection before initialization; no files were overwritten`);

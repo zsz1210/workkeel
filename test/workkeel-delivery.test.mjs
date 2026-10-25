@@ -135,7 +135,7 @@ test('pre-bound operations report after handoff while new attachments require an
   // The retained claim proof is administrative; dispatch validates it where it is used.
   assert.ok(proofName);
   await fs.writeFile(f.root+'/src/stray.mjs','export {};');
-  await assert.rejects(mutateNativeTask(f.root,f.task.id,'handoff',handoff),/clean tree/);
+  await assert.rejects(mutateNativeTask(f.root,f.task.id,'handoff',handoff),/untracked files present/);
   await fs.unlink(f.root+'/src/stray.mjs');
   assert.equal(await fs.readFile(proofFile,'utf8'),original);
   await mutateNativeTask(f.root,f.task.id,'handoff',{operation_id:'handoff',expected_version:2,actor:f.actor,claim_id:f.task.claim.id,

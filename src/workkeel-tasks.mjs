@@ -6,7 +6,7 @@ import { durableAtomicCreate, durableAtomicWrite, formatJson, sha256 } from "./f
 import { withProjectMutationLock } from "./workkeel-lock.mjs";
 import { warnUnknownFields } from "./workkeel-compat.mjs";
 import { readTaskContractInput, readTaskFile, validateTaskContract } from "./task-contract.mjs";
-import { assertActor, assertApprover, readTaskProject, safeDirectory, existsEntry, readNativeGit } from "./workkeel-project.mjs";
+import { assertActor, assertApprover, readTaskProject, safeDirectory, existsEntry, readNativeGit, requireHeadRevision, BASELINE_MESSAGE, BASELINE_COMMAND } from "./workkeel-project.mjs";
 import {loadTaskRequirements, assertRequirementOutcomes} from './workkeel-requirements.mjs';
 import { completeTaskContract } from "./workkeel-task-draft.mjs";
 import { MAX_REWORKS, assertCriticalApprovalRecord, assertTaskRisk, candidateRisk, elevatedRisk, maxRisk, taskRisk } from "./workkeel-risk.mjs";
@@ -286,7 +286,7 @@ export async function createNativeTask(targetInput, draft, request, { expectedPo
 
 const CANDIDATE_MESSAGES = {
   'outside-write-scope': 'Candidate changes paths outside approved write roots',
-  'product-drift': 'Candidate verification requires a clean tree inside the approved write roots, including untracked files'
+  'product-drift': 'Candidate verification failed inside the approved write roots'
 };
 /** Whether Git holds the delivered commit object. */
 async function hasCommit(target, revision) {
@@ -320,7 +320,7 @@ async function candidateHistoryAvailable(target, delivered, head) {
  */
 export async function taskCandidateHead(target, item, { observe = false } = {}) {
   const delivered = item.delivery?.revision ?? null;
-  const head = delivered ? (await git(target, ['rev-parse', '--verify', 'HEAD^{commit}'])).trim() : await headRevision(target);
+  const head = delivered ? await requireHeadRevision(target) : await headRevision(target);
   if (delivered && head !== delivered && !await candidateHistoryAvailable(target, delivered, head)) {
     if (observe) return {head, delivered, matches: false, later_in_scope_paths: [], history_status: 'unavailable'};
     throw new Error(`History between delivered candidate ${delivered} and HEAD ${head} is unavailable, for example in a shallow clone. Fetch the full history (git fetch --unshallow) before closing.`);
@@ -363,23 +363,47 @@ async function commitsAfterReview(target, reviewed) {
   }
   return commits;
 }
+/** Diagnostics only: a revert can restore the task record to before its review. */
+async function revertedReview(target, item) {
+  const revisions = (await git(target, ['log', '--no-show-signature', '--format=%H', 'HEAD', '--', fileRef(item.id)])).trim().split('\n').filter(Boolean);
+  for (const revision of revisions) {
+    let snapshot;
+    try {
+      snapshot = validateNativeTaskSnapshot(JSON.parse(await readNativeGit(target, ['cat-file', 'blob', `${revision}:${fileRef(item.id)}`])), item.id);
+    } catch { continue; }
+    if (snapshot.state === 'release_gate' && snapshot.review?.judgment === 'pass' &&
+        snapshot.review.revision === snapshot.delivery?.revision && digest(snapshot.contract) === digest(item.contract) &&
+        snapshot.history.length > item.history.length && digest(snapshot.history.slice(0, item.history.length)) === digest(item.history)) return snapshot;
+  }
+  return null;
+}
+async function assertNoUnreviewedCommits(target, item, { reverted = false } = {}) {
+  const reviewed = item.review, candidateHead = await taskCandidateHead(target, item);
+  const unreviewed = await commitsAfterReview(target, reviewed.revision);
+  if (!unreviewed.length) return;
+  const listed = unreviewed.slice(0, 50).map(commit => `${commit.revision.slice(0, 12)} ${JSON.stringify(commit.subject)}`).join('; ');
+  const more = unreviewed.length > 50 ? `; and ${unreviewed.length - 50} more (git log --oneline ${reviewed.revision}..HEAD)` : '';
+  const paths = candidateHead.later_in_scope_paths.length ? ` In-scope changed paths (up to 10): ${JSON.stringify(candidateHead.later_in_scope_paths.slice(0, 10))}.` : '';
+  const record = reverted ? ' The task record was also reverted to before its recorded passing review; historical review is diagnostic only. Recover the reverted task records before retrying close.' : '';
+  throw new Error(`Close stopped: HEAD ${candidateHead.head} has ${unreviewed.length} unreviewed commit(s) after reviewed candidate ${reviewed.revision}: ${listed}${more}.${paths}${record} Choose one: (1) check out the reviewed revision ${reviewed.revision}, then close again to accept only what was reviewed; or (2) cancel this task and start a new task for the new commits.`);
+}
 /**
  * Committed product changes must stay inside the write roots. Drift is checked
  * only inside those roots; `.ai-org/` is always administrative.
  */
 async function candidateFiles(target, item, revision, { handoff = false } = {}) {
   await git(target, ["merge-base", "--is-ancestor", item.base_revision, revision]);
-  if (handoff && (await git(target, ["rev-parse", "HEAD"])).trim() !== revision) throw new Error("Handoff candidate must be the current commit");
+  if (handoff && await requireHeadRevision(target) !== revision) throw new Error("Handoff candidate must be the current commit");
   const roots = item.contract.environment.write_paths, inScope = file => roots.some(root => under(file, root));
   const issues = [], drifted = [];
   const { product } = await changedFiles(target, item.base_revision, revision);
   for (const file of product) if (!inScope(file))
     issues.push({path:file, code:'outside-write-scope', next_action:'Preserve the candidate; obtain approval for the actual scope before a new delivery.'});
-  const drift = [...(await git(target, ["diff", "--no-renames", "--name-only", "-z", revision, "--"])).split("\0"),
-    ...(await git(target, ["ls-files", "--others", "--exclude-standard", "-z"])).split("\0")].filter(Boolean);
-  for (const file of new Set(drift)) {
+  const tracked = (await git(target, ["diff", "--no-renames", "--name-only", "-z", revision, "--"])).split("\0").filter(Boolean);
+  const untracked = (await git(target, ["ls-files", "--others", "--exclude-standard", "-z"])).split("\0").filter(Boolean);
+  for (const [file, cause] of [...tracked.map(file => [file, 'tracked']), ...untracked.map(file => [file, 'untracked'])]) {
     if (administrative(file)) drifted.push(file);
-    else if (inScope(file)) issues.push({path:file, code:'product-drift',
+    else if (inScope(file)) issues.push({path:file, code:'product-drift', cause,
       next_action:'Preserve the change; commit and verify a new candidate, or keep unrelated generated output outside the write roots.'});
   }
   return {issues, administrative: drifted};
@@ -401,7 +425,13 @@ async function deliveryRisk(target, item, policy, revision) {
 }
 async function assertCandidate(target, item, revision, options = {}) {
   const {issues} = await candidateFiles(target,item,revision,options);
-  if (issues.length) throw new Error(`${CANDIDATE_MESSAGES[issues[0].code]}: ${JSON.stringify(issues[0].path)}`);
+  if (!issues.length) return;
+  if (issues[0].code !== 'product-drift') throw new Error(`${CANDIDATE_MESSAGES[issues[0].code]}: ${JSON.stringify(issues[0].path)}`);
+  const drift = issues.filter(issue => issue.code === 'product-drift');
+  const causes = [['tracked', 'tracked files changed since the candidate'], ['untracked', 'untracked files present']]
+    .filter(([cause]) => drift.some(issue => issue.cause === cause))
+    .map(([, message]) => message);
+  throw new Error(`${CANDIDATE_MESSAGES['product-drift']}: ${causes.join('; ')}; paths (up to 10): ${JSON.stringify(drift.slice(0, 10).map(issue => issue.path))}${drift.length > 10 ? `; ${drift.length - 10} more paths` : ''}`);
 }
 
 /** Read-only file diagnostics, not a rehearsal of authority, review or acceptance. */
@@ -410,6 +440,7 @@ export async function inspectTaskCandidate(targetInput, id, input) {
   if (!['handoff','review','close'].includes(input.action)) throw new Error('Candidate inspection action must be handoff, review or close');
   const request=assertRequest(input.request,FIELDS[input.action]);
   const target=await fs.realpath(targetInput),item=await readNativeTask(target,id);
+  await requireHeadRevision(target);
   if (request.expected_version!==item.version) throw new Error('Stale expected version; inspect current task before retrying');
   if (!Array.isArray(request.evidence) || request.evidence.length>64 || request.evidence.some(ref=>typeof ref!=='string')) throw new Error('Bounded evidence paths are required');
   const revision=input.action==='handoff'?await exactRevision(target,request.revision):await deliveredRevision(target,item,request.revision);
@@ -505,13 +536,14 @@ export async function mutateNativeTask(targetInput, id, action, request) {
     if (replay(item, action, request)) return result(item, true);
     if (item.version !== request.expected_version) throw new Error("Stale expected version; inspect current task before retrying");
     if (TERMINAL.has(item.state)) throw new Error("Terminal tasks cannot be reopened");
+    if (["claim", "handoff", "review", "close"].includes(action)) await requireHeadRevision(target);
     // Cancellation remains possible after authority expiry; it cannot grant work.
     if (action !== "cancel") await context(target, item, project);
     if (action === "claim") {
       if (item.state !== "intake" || item.claim) throw new Error("Task already claimed or not available for implementation");
       if (!sameActor(item.contract.actor, request.actor)) throw new Error("Only the approved task Agent may claim");
       const base = await exactRevision(target, request.base_revision);
-      if ((await git(target, ["rev-parse", "HEAD"])).trim() !== base) throw new Error("Claim base must equal current HEAD");
+      if (await requireHeadRevision(target) !== base) throw new Error("Claim base must equal current HEAD");
       const pins = await dependencies(target, { ...item, base_revision: base });
       for (const active of await listTaskItems(target)) if (active.id !== id && active.mode === "task-first" && active.state === "build") {
         const other = await readNativeTask(target, active.id);
@@ -594,6 +626,10 @@ export async function mutateNativeTask(targetInput, id, action, request) {
       assertApprover(project.policy, request.actor);
       const revision = await deliveredRevision(target, item, request.revision);
       if (item.state !== "release_gate" || item.review?.judgment !== "pass" || !revision) {
+        if (!item.review) {
+          const retained = await revertedReview(target, item);
+          if (retained) await assertNoUnreviewedCommits(target, retained, { reverted: true });
+        }
         // A named candidate that Git lacks, as in a shallow clone, needs history, not another candidate.
         const missing = item.state === "release_gate" && item.review?.judgment === "pass" && typeof request.revision === "string" &&
           /^[a-f0-9]{4,64}$/.test(request.revision) && item.delivery.revision.startsWith(request.revision) && !await hasCommit(target, item.delivery.revision);
@@ -606,13 +642,7 @@ export async function mutateNativeTask(targetInput, id, action, request) {
           attempt.value.revision !== reviewed.attempt_revision || reviewed.attempt_revision !== revision)) throw new Error("Review recovery chain changed after the authored review");
       // Every product commit after the reviewed one blocks close, inside the write
       // roots or not: nobody reviewed it. `.ai-org/`-only commits are records.
-      const candidateHead = await taskCandidateHead(target, item), unreviewed = await commitsAfterReview(target, reviewed.revision);
-      if (unreviewed.length) {
-        const listed = unreviewed.slice(0, 50).map(commit => `${commit.revision.slice(0, 12)} ${JSON.stringify(commit.subject)}`).join('; ');
-        const more = unreviewed.length > 50 ? `; and ${unreviewed.length - 50} more (git log --oneline ${reviewed.revision}..HEAD)` : '';
-        const paths = candidateHead.later_in_scope_paths.length ? ` In-scope changed paths (up to 10): ${JSON.stringify(candidateHead.later_in_scope_paths.slice(0, 10))}.` : '';
-        throw new Error(`Close stopped: HEAD ${candidateHead.head} has ${unreviewed.length} unreviewed commit(s) after reviewed candidate ${reviewed.revision}: ${listed}${more}.${paths} Choose one: (1) check out the reviewed revision ${reviewed.revision}, then close again to accept only what was reviewed; or (2) cancel this task and start a new task for the new commits.`);
-      }
+      await assertNoUnreviewedCommits(target, item);
       await assertDelivery(target, item);
       await assertElevatedClose(target, item, project.policy, request.actor);
       await assertRequirementOutcomes(target, item, {revision: item.delivery.revision, actor: item.delivery.implementer, evidence: item.delivery.evidence.map(p => p.path)}, 'delivery');
@@ -640,6 +670,11 @@ export async function diagnoseTaskProject(target) {
   let items = [];
   try {
     const project = await readTaskProject(target);
+    try { await requireHeadRevision(target); }
+    catch (error) {
+      if (error.message !== BASELINE_MESSAGE) throw error;
+      errors.push({ message: BASELINE_MESSAGE, next_action: BASELINE_COMMAND });
+    }
     items = await listTaskItems(target);
     for (const summary of items.filter(i => i.mode === "task-first")) {
       const item = await readNativeTask(target, summary.id);

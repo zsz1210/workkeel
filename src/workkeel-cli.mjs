@@ -13,7 +13,7 @@ const HELP = `Workkeel — repository-native task coordination for coding agents
 workkeel start [target]                     read-only next-step guidance
 workkeel init [target] [--builder family] [--reviewer family]  defaults: claude builder, codex reviewer
 workkeel task new [target] --goal text --acceptance text [--write path]
-workkeel task claim|handoff|review|close [target] --id task-id --actor id [--summary text] [--evidence path] [--judgment pass|fail] [--rollback text]
+workkeel task claim|handoff|review|rework|close|cancel [target] --id task-id --actor id [--summary text] [--evidence path] [--judgment pass|fail] [--rollback text]
 workkeel status [target] [--stale-after hours] | doctor [target]
 workkeel upgrade [target] [--actor id]      move the project pin to this CLI
 workkeel help advanced                      request-file forms and optional subsystems

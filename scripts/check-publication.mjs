@@ -27,7 +27,15 @@ export function readAllowlist(cwd=root){
   files.add(file);
  }
  if(!files.has(manifestPath))throw Error('Manifest must declare itself');
+ identityExceptions(document);
  return files;
+}
+
+function identityExceptions(document){
+ const entries=Object.hasOwn(document,'historical_identities')?document.historical_identities:[];
+ if(!Array.isArray(entries)||entries.length>16||entries.some(hash=>typeof hash!=='string'||!/^[a-f0-9]{40}$/.test(hash))||new Set(entries).size!==entries.length)
+  throw Error('Invalid historical-identity exceptions; use at most 16 unique full lowercase commit hashes');
+ return new Set(entries);
 }
 
 function readHistoryExceptions(cwd){
@@ -79,6 +87,13 @@ export function checkPublication(cwd=root,{mode='working',revisions=[]}={}){
   const tips=new Set(git(cwd,['rev-list','--no-walk',...(revisions.length?revisions:['--all','HEAD'])]).trim().split('\n').filter(Boolean));
   const reachable=git(cwd,['rev-list',...tips]).trim().split('\n').filter(Boolean);commits=reachable.length;
   if(!commits)throw Error('No committed history to verify');
+  const identities=identityExceptions(JSON.parse(fs.readFileSync(path.join(cwd,manifestPath),'utf8')));
+  const allowedIdentity=email=>/@users\.noreply\.github\.com$|^noreply@github\.com$|\.invalid$/i.test(email);
+  for(const line of git(cwd,['log','--no-show-signature','--format=%H%x00%ae%x00%ce',...tips,'--']).trim().split('\n').filter(Boolean)){
+   const [commit,author,committer]=line.split('\0');
+   if(identities.has(commit))continue;
+   for(const [field,email] of [['author',author],['committer',committer]])if(!allowedIdentity(email??''))failures.push({commit,field,rule:'commit-identity'});
+  }
   for(const commit of reachable){
    for(const entry of git(cwd,['ls-tree','-r','-z',commit]).split('\0').filter(Boolean)){
     const match=entry.match(/^(\d+) (\w+) ([a-f0-9]+)\t([\s\S]+)$/);if(!match)throw Error('Malformed Git tree');

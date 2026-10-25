@@ -43,6 +43,37 @@ const warnings = output => output.stderr.split("\n").filter(Boolean).map(line =>
 const lockOf = async root => JSON.parse(await fs.readFile(path.join(root, "workkeel.lock"), "utf8"));
 const taskFiles = async root => fs.readdir(path.join(root, ".ai-org", "work-items")).catch(() => []);
 
+test("launcher finds a verified global package on PATH and skips unrelated commands", { skip: process.platform === "win32" }, async t => {
+  const root = await fixture(t, TEMPLATE_VERSION), bin = path.join(root, "global-bin"), other = path.join(root, "other-bin");
+  const global = path.join(root, "global-package"), entry = path.join(global, "bin", "workkeel.mjs");
+  for (const directory of [bin, other, path.dirname(entry)]) await fs.mkdir(directory, { recursive: true });
+  await fs.writeFile(path.join(global, "package.json"), JSON.stringify({ name: "@zsz1210/workkeel" }));
+  await fs.symlink(path.join(repository, "node_modules"), path.join(global, "node_modules"));
+  await fs.writeFile(entry, `if (process.argv[2] === "version") console.log(${JSON.stringify(TEMPLATE_VERSION)}); else console.log(JSON.stringify({global:true,args:process.argv.slice(2)}));\n`);
+  await fs.writeFile(path.join(other, "workkeel"), 'throw Error("Unrelated PATH command must not run");\n');
+  await fs.symlink(entry, path.join(bin, "workkeel"));
+  const env = { ...process.env, PATH: `${other}${path.delimiter}${bin}`, WORKKEEL_CLI_PATH: "", WORKKEEL_ALLOW_PACKAGE_FETCH: "" };
+  const run = () => spawnSync(process.execPath, [path.join(root, "workkeelw.mjs"), "probe"], { cwd: root, encoding: "utf8", env });
+  const result = run();
+  assert.equal(result.status, 0, result.stderr);
+  assert.deepEqual(JSON.parse(result.stdout), { global: true, args: ["probe"] });
+  await fs.writeFile(path.join(global, "package.json"), JSON.stringify({ name: "unrelated-package" }));
+  assert.equal(run().status, 1, "a matching filename in another package is refused");
+});
+
+test("launcher explains all missing-CLI fixes without fetching or rewriting itself", async t => {
+  const root = await fixture(t, TEMPLATE_VERSION), bin = path.join(root, "empty-bin");
+  await fs.mkdir(bin);
+  const launcher = path.join(root, "workkeelw.mjs"), before = await fs.readFile(launcher);
+  const result = spawnSync(process.execPath, [launcher, "version"], { cwd: root, encoding: "utf8",
+    env: { ...process.env, PATH: bin, WORKKEEL_CLI_PATH: "", WORKKEEL_ALLOW_PACKAGE_FETCH: "" } });
+  assert.equal(result.status, 1);
+  assert.equal(result.stderr.trim().split("\n").length, 1);
+  for (const text of ["npm i -D @zsz1210/workkeel", "npm i -g @zsz1210/workkeel", "WORKKEEL_CLI_PATH", "WORKKEEL_ALLOW_PACKAGE_FETCH=1", "No download was attempted"])
+    assert.ok(result.stderr.includes(text), text);
+  assert.deepEqual(await fs.readFile(launcher), before);
+});
+
 test("compatibility needs the pinned major version and a CLI not older than the pin", () => {
   assert.equal(cliCompatibility("0.2.0", "0.2.3").status, "compatible");
   assert.equal(cliCompatibility("0.2.0", "0.3.1").status, "compatible");

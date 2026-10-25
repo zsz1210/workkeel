@@ -101,7 +101,7 @@ test('native apply rejects out-of-scope candidates and missing evidence',async t
 test('native apply refuses product drift but not an edited approval file',async t=>{
   const f=await fixture(t);await f.apply(await f.prepare('claim'));
   const handoff=await f.prepare('handoff',{summary:'x',evidence:['docs/approval.md'],unresolved:[]});
-  await fs.writeFile(f.root+'/src/a.txt','uncommitted');await assert.rejects(f.apply(handoff),/clean tree/i);assert.equal((await f.read()).state,'build');
+  await fs.writeFile(f.root+'/src/a.txt','uncommitted');await assert.rejects(f.apply(handoff),/tracked files changed since the candidate/i);assert.equal((await f.read()).state,'build');
   await fs.writeFile(f.root+'/src/a.txt','baseline');await fs.writeFile(f.root+'/docs/approval.md','Changed approval');
   await f.apply(handoff);assert.equal((await f.read()).state,'test');
 });

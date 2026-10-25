@@ -39,13 +39,15 @@ build with your coding tool and hand off a commit for another Agent to review.
 After a failed review, the task stays in `test` until the approver runs `task rework`.
 This preserves the failed attempt and returns the task to `intake` under the same
 contract. The builder claims it again and delivers a new commit. Stop and ask a
-person after two reworks for `low` or three for other tiers. After a passing review, an authorized
-approver closes the exact candidate; for `high` and `critical`, the approving
-Principal closes it after review by a different model family and the required cross-review.
+person after two reworks for `low` or three for other tiers. After a passing review,
+a registered Agent whose Principal accepts the work closes the exact candidate.
+That Principal must be a registered approver; for `high` and `critical`, the Agent
+must belong to the task's approving Principal, after review by a different model
+family and the required cross-review.
 
 ## 30-second demo
 
-Install the CLI below, then run the demo in an existing Git project.
+Install the CLI below, then run the demo in a Git project with a baseline commit.
 The output includes selected JSON fields. `init` registers `builder` and `reviewer`
 under one `owner`. Their model families default to `claude` and `codex`; override
 them with `--builder <family>` and `--reviewer <family>`.
@@ -65,6 +67,7 @@ $ workkeel task handoff --id WK-0001 --actor builder --summary "Guide updated"
 # reviewer checks the exact delivered commit against the criterion.
 $ workkeel task review --id WK-0001 --actor reviewer --judgment pass --summary "Meets the criterion"
 {"id":"WK-0001","state":"release_gate"}
+# owner accepts; builder is a registered Agent under that approving Principal.
 $ workkeel task close --id WK-0001 --actor builder --summary "Owner accepts" --rollback "Revert the guide commit"
 {"id":"WK-0001","state":"done","external_release":"not-performed"}
 ```
@@ -85,6 +88,17 @@ alias workkeel="node $PWD/bin/workkeel.mjs"
 ```
 
 Or install from npm with `npm install -g @zsz1210/workkeel` to use the `workkeel` command.
+The npm `latest` dist-tag is `1.0.1`; `next` still points to the old
+`0.1.0-beta.1`. Install `@zsz1210/workkeel` or `@zsz1210/workkeel@latest`,
+rather than `@next`, for the current release.
+
+Shell aliases only work in the interactive shell where they are defined. An alias
+for `workkeel` will not work in non-interactive shells such as agent tool calls or
+CI. Use `node workkeelw.mjs` after initialization, or `npx --no-install workkeel`
+with a local installation.
+
+Your repository needs a baseline commit before task work starts. In a new
+repository, review the files to include, then run `git add -A && git commit -m baseline`.
 
 Switch to your own project's Git repository and run `workkeel start .` for a
 read-only setup preview. After `init`, run `workkeel start .` again for the optional
@@ -92,6 +106,22 @@ read-only setup preview. After `init`, run `workkeel start .` again for the opti
 Follow the [quick start guide](docs/getting-started/workkeel.md)
 for initialization, policies, evidence and rollback. To develop Workkeel itself,
 follow [Contributing](CONTRIBUTING.md).
+
+### How the project launcher finds the CLI
+
+`node workkeelw.mjs` reads the pin in `workkeel.lock` and tries these sources in order:
+
+1. `WORKKEEL_CLI_PATH`, pointing to a compatible source `bin/workkeel.mjs`.
+2. The local `node_modules/@zsz1210/workkeel/bin/workkeel.mjs` installation
+   (`npm i -D @zsz1210/workkeel`).
+3. A global `workkeel` on `PATH` (`npm i -g @zsz1210/workkeel`). The launcher
+   resolves symlinks and accepts only `bin/workkeel.mjs` in a package named
+   `@zsz1210/workkeel`. This fallback is skipped on Windows.
+4. An explicit fetch of the pinned package version, only when
+   `WORKKEEL_ALLOW_PACKAGE_FETCH=1` is set and no installed source was found.
+
+The CLI checks version compatibility with the pin. No download is attempted by
+default. Existing projects retain their launcher until an explicit `workkeel upgrade`.
 
 ## Risk tiers
 

@@ -82,6 +82,34 @@ for (const committed of [false, true]) test(`summary before delivery is read-onl
   assert.deepEqual(await fs.readFile(record), before);
 });
 
+for (const drift of ['tracked', 'committed', 'untracked', 'both']) test(`product-drift identifies ${drift} files and their paths`, async t => {
+  const root = await fixture(t), {revision, ref} = await deliver(root);
+  if (drift !== 'untracked') await write(root, 'src/cart.mjs', 'export const total = 3;\n');
+  if (drift === 'committed') { git(root, 'add', 'src/cart.mjs'); git(root, 'commit', '-qm', 'Later tracked change'); }
+  if (['untracked', 'both'].includes(drift)) await write(root, 'src/new.mjs', 'export const value = 1;\n');
+  const record = path.join(root, '.ai-org/work-items/WK-one.json'), before = await fs.readFile(record);
+  await assert.rejects(mutateNativeTask(root, 'WK-one', 'review', request(3, reviewer,
+    {revision, judgment:'pass', summary:'Review', evidence:[ref]})), error => {
+    assert.equal(error.message.includes('tracked files changed since the candidate'), drift !== 'untracked');
+    assert.equal(error.message.includes('untracked files present'), ['untracked', 'both'].includes(drift));
+    assert.equal(error.message.includes('src/cart.mjs'), drift !== 'untracked');
+    assert.equal(error.message.includes('src/new.mjs'), ['untracked', 'both'].includes(drift));
+    assert.doesNotMatch(error.message, /requires a clean tree/);
+    return true;
+  });
+  assert.deepEqual(await fs.readFile(record), before);
+});
+
+test('product-drift lists at most ten paths', async t => {
+  const root = await fixture(t), {revision, ref} = await deliver(root);
+  for (let index = 0; index < 12; index++) await write(root, `src/untracked-${String(index).padStart(2, '0')}.mjs`, 'New\n');
+  await assert.rejects(mutateNativeTask(root, 'WK-one', 'review', request(3, reviewer,
+    {revision, judgment:'pass', summary:'Review', evidence:[ref]})), error => {
+    assert.equal((error.message.match(/src\/untracked-/g) ?? []).length, 10);
+    assert.match(error.message, /2 more paths/); return true;
+  });
+});
+
 for (const later of ['outside', 'in-scope', 'reverted', 'outside-merge', 'in-scope-merge', 'reverted-merge']) test(`close and summary compare delivered candidate with later ${later} commits`, async t => {
   const root = await fixture(t), { revision, ref } = await deliver(root);
   await mutateNativeTask(root, 'WK-one', 'review', request(3, reviewer, { revision, judgment: 'pass', summary: 'Verified candidate', evidence: [ref] }));
@@ -532,7 +560,7 @@ test("candidate guards cover outside roots, untracked product, evidence paths an
   const handoff = extra => request(2, developer, { claim_id: claimed.claim.id, revision: git(root, "rev-parse", "HEAD"), summary: "Repair", evidence: [ref], unresolved: [], ...extra });
   // Drift is checked only inside the write roots.
   await write(root, "src/untracked.mjs", "Hidden code");
-  await assert.rejects(mutateNativeTask(root, "WK-one", "handoff", handoff()), /clean tree inside the approved write roots/);
+  await assert.rejects(mutateNativeTask(root, "WK-one", "handoff", handoff()), /untracked files present/);
   await fs.unlink(path.join(root, "src/untracked.mjs"));
   await write(root, "outside.txt", "Out of scope"); git(root, "add", "outside.txt"); git(root, "commit", "-qm", "outside");
   await assert.rejects(mutateNativeTask(root, "WK-one", "handoff", handoff()), /outside approved/);
@@ -687,7 +715,7 @@ test("product drift and unintegrated dependencies cannot pass acceptance; admini
   // `.ai-org/` is administrative: its drift never blocks, while product drift in the write roots does.
   await write(root, helper, "export const value = 999;\n");
   await write(root, "src/cart.mjs", "export const total = 3;\n");
-  await assert.rejects(mutateNativeTask(root, "WK-one", "close", request(4, developer, { revision, summary: "Accept", rollback: "Revert", evidence: [report] })), /clean tree/);
+  await assert.rejects(mutateNativeTask(root, "WK-one", "close", request(4, developer, { revision, summary: "Accept", rollback: "Revert", evidence: [report] })), /tracked files changed since the candidate/);
   git(root, "checkout", "-q", "--", "src/cart.mjs");
   await mutateNativeTask(root, "WK-one", "close", request(4, developer, { revision, summary: "Accept", rollback: "Revert", evidence: [report] }));
   git(root, "checkout", "-q", "--", helper);
