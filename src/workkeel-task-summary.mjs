@@ -1,11 +1,11 @@
 import fs from 'node:fs/promises';
 import { constants } from 'node:fs';
 import path from 'node:path';
-import { readNativeTask, evidenceStatus as taskEvidenceStatus } from './workkeel-tasks.mjs';
-import { readTaskProject, assertActor, safeDirectory, existsEntry } from './workkeel-project.mjs';
+import { readNativeTask, taskCandidateHead, evidenceStatus as taskEvidenceStatus } from './workkeel-tasks.mjs';
+import { readTaskProject, assertActor, safeDirectory, existsEntry, readNativeGit } from './workkeel-project.mjs';
 import { readTaskContractInput, readTaskFile } from './task-contract.mjs';
 import { withProjectMutationLock } from './workkeel-lock.mjs';
-import { durableAtomicCreate } from './files.mjs';
+import { durableAtomicCreate, sha256 } from './files.mjs';
 import { executionDigest, exactKeys } from './workkeel-execution-policy.mjs';
 import { projectTaskTiming } from './workkeel-task-timing.mjs';
 import { observeFileRead, observeSource } from './workkeel-read-metrics.mjs';
@@ -196,9 +196,34 @@ async function taskTimeline(target,task) {
 }
 export async function readTaskSummary(target,id,{now=new Date()}={}) {
   const task=await readNativeTask(target,id);
+  // Missing candidate history, as in a shallow clone, never hides the canonical record.
+  const candidateHead=await taskCandidateHead(target,task,{observe:true});
+  const terminal=['done','cancelled'].includes(task.state);
+  // A terminal task's candidate commit can be absent, as in a shallow clone. Its
+  // committed evidence is then unreadable history: neither verified nor a reason
+  // to reopen the record.
+  const unreadableHistory=async revision=>{
+    if(!terminal||!revision)return false;
+    try{await readNativeGit(target,['rev-parse','--verify','--quiet',`${revision}^{commit}`]);return false;}catch{return true;}
+  };
+  let attemptEvidenceChanged=false;
+  // Older attempts may retain evidence hashes. Observe them without adding pins
+  // to path-only records or changing the current lifecycle's evidence rules.
+  for(const attempt of task.attempts.filter(a=>a.kind==='rejected'))for(const stage of ['delivery','review'])for(const entry of attempt[stage]?.evidence??[]) {
+    if(typeof entry.sha256!=='string')continue;
+    // Unreadable history is not a changed file.
+    if(entry.source==='candidate'&&await unreadableHistory(attempt.delivery?.revision))continue;
+    try {
+      const revision=attempt.delivery?.revision;
+      const current=entry.source==='candidate' ? revision&&sha256(await readNativeGit(target,['cat-file','blob',`${revision}:${entry.path}`],{encoding:'buffer'})) :
+        (await readTaskFile(target,entry.path)).digest;
+      if(current!==entry.sha256)attemptEvidenceChanged=true;
+    }
+    catch {attemptEvidenceChanged=true;}
+  }
   const project=await readTaskProject(target),policyCurrent=executionDigest(project.policy)===task.policy_sha256;
   const authorityExpired=task.contract.authorization.expires_at!==null&&Date.parse(task.contract.authorization.expires_at)<=now.getTime();
-  const activeAuthorityExpired=authorityExpired&&!['done','cancelled'].includes(task.state);
+  const activeAuthorityExpired=authorityExpired&&!terminal;
   const rejected=task.attempts.filter(a=>a.kind==='rejected').length;
   let observed;
   try{observed=await observation(target,task);}catch{observed={status:'unavailable',value:null};}
@@ -209,8 +234,9 @@ export async function readTaskSummary(target,id,{now=new Date()}={}) {
   const evidenceStatus=[];
   // Evidence is a recorded path, committed in the candidate or kept under .ai-org/;
   // edits never invalidate it, only a missing path needs attention.
+  const deliveredHistoryUnavailable=await unreadableHistory(task.delivery?.revision);
   for(const stage of ['delivery','review','closeout'])for(const entry of task[stage]?.evidence??[]){
-    const status=await taskEvidenceStatus(target,task.delivery?.revision??null,entry);let current_digest=null;
+    const status=entry.source==='candidate'&&deliveredHistoryUnavailable?'history-unavailable':await taskEvidenceStatus(target,task.delivery?.revision??null,entry);let current_digest=null;
     if(status==='present')try{current_digest=(await readTaskFile(target,entry.path)).digest;}catch{}
     evidenceStatus.push({stage,path:entry.path,source:entry.source??'workspace',status,current_digest});
   }
@@ -219,6 +245,9 @@ export async function readTaskSummary(target,id,{now=new Date()}={}) {
   if(!policyCurrent)next='Inspect the project policy change and re-establish task authority before continuing.';
   if(activeAuthorityExpired)next='Task approval has expired. Obtain renewed approval through a new task before continuing.';
   const attentionReasons=[];
+  if(!['done','cancelled'].includes(task.state)&&candidateHead.later_in_scope_paths.length)attentionReasons.push('head-moved-past-candidate');
+  if(!['done','cancelled'].includes(task.state)&&candidateHead.history_status==='unavailable')attentionReasons.push('candidate-history-unavailable');
+  if(attemptEvidenceChanged)attentionReasons.push('attempt-evidence-changed');
   if(activeAuthorityExpired)attentionReasons.push('approval-expired');
   if(!policyCurrent)attentionReasons.push('policy-changed');
   if(evidenceStatus.some(p=>p.status==='unavailable'))attentionReasons.push('evidence-unavailable');
@@ -235,14 +264,14 @@ export async function readTaskSummary(target,id,{now=new Date()}={}) {
     display_state:runStates[task.state],needs_attention:attentionReasons.length>0,
     next_action:next,attention_reasons:attentionReasons,lifecycle,updated_at:last.at,created_at:task.history[0].at,
     actor:task.claim?.actor??task.contract.actor,acceptance_criteria:task.contract.acceptance.criteria,
-    candidate_revision:task.delivery?.revision??null,delivery:task.delivery,review:task.review,closeout:task.closeout,
+    candidate_revision:task.delivery?.revision??null,candidate_head:candidateHead,delivery:task.delivery,review:task.review,closeout:task.closeout,
     evidence:evidenceStatus,observation:{status:observed.status,value:observed.value},
     quality:{rework_count:rejected,review_judgment:task.review?.judgment??null,
       first_review_pass:rejected>0?false:task.review?task.review.judgment==='pass':null,
       formal_rework_count:rejected,formal_first_review_pass:rejected>0?false:task.review?task.review.judgment==='pass':null,
       metric_scope:'formal-task-review',pre_delivery_review:preDeliverySummary(observed),delivery_progress:summarizeIterations(observed,task.delivery?.revision??null),
       approval_status:authorityExpired?'expired':'current',
-      locally_accepted:task.state==='done',evidence_current:policyCurrent&&evidenceStatus.every(p=>p.status!=='unavailable'),policy_current:policyCurrent,
+      locally_accepted:task.state==='done',evidence_current:policyCurrent&&evidenceStatus.every(p=>!['unavailable','history-unavailable'].includes(p.status)),policy_current:policyCurrent,
       lifecycle_elapsed_ms:['done','cancelled'].includes(task.state)?lifecycle.elapsed_ms:null},
     timeline:await taskTimeline(target,task),
     limitations:['Recorded task state is not process liveness.','Attribution is not provider authentication.','Check and PR observations never satisfy acceptance gates.']};

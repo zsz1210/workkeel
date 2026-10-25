@@ -8,6 +8,7 @@ const registry = 'https://registry.npmjs.org';
 // Only post-publish metadata 404s may wait: 300 seconds of backoff, capped at 60 seconds per retry.
 const publicationRetryDelays = [5000, 10000, 20000, 40000, 60000, 60000, 60000, 45000];
 const hash = (algorithm, bytes, encoding) => createHash(algorithm).update(bytes).digest(encoding);
+const discard = async response => { try { await response.body?.cancel(); } catch {} };
 
 async function boundedBody(response, limit) {
   if (!response.body) throw Error('Registry response has no body');
@@ -30,12 +31,16 @@ export async function checkPublishedPackage({ packageDocument, asset, channel, r
   let response = await get(versionUrl);
   if (requirePublished) for (const delay of publicationRetryDelays) {
     if (response.status !== 404) break;
-    await response.body?.cancel();
+    await discard(response);
     await wait(delay);
     response = await get(versionUrl);
   }
   if (response.status === 404) {
-    if (requirePublished) throw Error('Required published version is absent');
+    if (requirePublished) {
+      await discard(response);
+      throw Error('Required published version is absent');
+    }
+    await discard(response);
     return { action: 'publish', package_name: name, package_version: version, registry_status: 'version-absent' };
   }
   if (response.status !== 200) throw Error(`Registry metadata failed: HTTP ${response.status}`);

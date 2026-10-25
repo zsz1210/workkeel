@@ -544,7 +544,7 @@ test('unsafe recovery requests fail before reservation or inference',async t=>{
   await assert.rejects(recoverInterruptedReview(f.root,await f.request(),{host:{runtimeState:async()=>({state:'stopped'}),launch:async()=>completed}}),/trusted embedding code/);
   // Drift inside the write roots blocks; edits to evidence or policy files outside them do not.
   await fs.writeFile(f.root+'/src/a.mjs','export const a = 2;\n');
-  await assert.rejects(recoverInterruptedReview(f.root,await f.request(),{host}),/clean tree/);
+  await assert.rejects(recoverInterruptedReview(f.root,await f.request(),{host}),/tracked files changed since the candidate/);
   f.git('checkout','--','src/a.mjs');
   assert.equal(calls.launch,0);assert.equal((await readReviewRecovery(f.root,f.id)).attempts.length,0);
   const open=await fixture(t,{closeBinding:false});
@@ -580,7 +580,7 @@ test('probes run unlocked; changes while they are awaited block reservation and 
   const recovered=async c=>{await recoverInterruptedReview(c.root,await c.request({operation_id:'concurrent',source:{thread_id:'other',turn_id:'other'}}),{host:reviewHost().host});};
   const during=[
     [cancel,/Stale expected version/],
-    [c=>fs.writeFile(c.root+'/src/a.mjs','export const a = 2;\n'),/clean tree/],
+    [c=>fs.writeFile(c.root+'/src/a.mjs','export const a = 2;\n'),/tracked files changed since the candidate/],
     [recovered,/stale recovery chain/]
   ];
   for(const [change,pattern] of during) {

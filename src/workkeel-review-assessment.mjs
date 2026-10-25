@@ -2,7 +2,7 @@ import fs from 'node:fs/promises';
 import Ajv from 'ajv';
 import { formatJson, sha256 } from './files.mjs';
 import { readTaskFile, validateTaskContract } from './task-contract.mjs';
-import { readTaskProject, assertActor, safeDirectory, readNativeGit } from './workkeel-project.mjs';
+import { readTaskProject, assertActor, safeDirectory, readNativeGit, requireHeadRevision } from './workkeel-project.mjs';
 import { readNativeTask, inspectTaskCandidate, evidenceStatus } from './workkeel-tasks.mjs';
 import { elevatedRisk, taskRisk } from './workkeel-risk.mjs';
 
@@ -155,7 +155,7 @@ export async function assessNativeTask(targetInput, id, input = {}) {
       project.policy.review_separation === 'distinct-principal' && contract.verification.separation !== 'distinct-principal')
     issue('review-floor-unresolved', 'The task must meet the current project review separation.');
 
-  const head = (await git(target, ['rev-parse', 'HEAD'])).trim();
+  const head = await requireHeadRevision(target);
   const candidate = input.candidate_revision ?? item.delivery?.revision ?? head;
   let inspection = null, changes = [], inspectionInput;
   try {
@@ -223,7 +223,7 @@ export async function assessNativeTask(targetInput, id, input = {}) {
     try { if ((await readTaskFile(target, ref)).bytes_digest !== expected) issue('concurrent-input-change', ref); }
     catch (error) { issue('concurrent-input-change', `${ref}: ${error.message}`); }
   }
-  if ((await git(target, ['rev-parse', 'HEAD'])).trim() !== head) issue('concurrent-head-change', 'HEAD changed during assessment.');
+  if (await requireHeadRevision(target) !== head) issue('concurrent-head-change', 'HEAD changed during assessment.');
   if (inspection) {
     try { if (hash(await inspectTaskCandidate(target, id, inspectionInput)) !== hash(inspection)) issue('concurrent-candidate-change', 'Candidate diagnostics changed during assessment.'); }
     catch (error) { issue('concurrent-candidate-change', error.message); }

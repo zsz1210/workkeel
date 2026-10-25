@@ -12,10 +12,11 @@ Do not run task initialization in the public framework source checkout.
 
 ## Availability and compatibility
 
-Use Node.js 24.15 or newer and run the current source as in the
-[README quick start](../../README.md#quick-start). Beta.1, published as
-`@zsz1210/workkeel@0.1.0-beta.1` on npm's `next` channel, is an
-[earlier line](../../CHANGELOG.md#010-beta1). Installed projects can
+Use Node.js 24.15 or newer. npm's `latest` dist-tag is `1.0.2`: install
+`@zsz1210/workkeel` or `@zsz1210/workkeel@latest`. The `next` dist-tag still
+points to the old `0.1.0-beta.1` [beta line](../../CHANGELOG.md#010-beta1);
+do not install `@next` for the current release. You can also run the current source
+as in the [README quick start](../../README.md#quick-start). Installed projects can
 use `npx --no-install workkeel`; a reviewed source checkout provides
 `node bin/workkeel.mjs`. Examples below using a source path remain the source
 alternative. Version 0.2 removed the earlier Temple mode; Temple projects pinned
@@ -45,6 +46,9 @@ Verified or distributed identity workflows are not supported.
 
 ## Fastest path: flags only
 
+Task work requires a baseline Git commit. In an unborn repository, review the
+files, then run `git add -A && git commit -m baseline` before claiming a task.
+
 `init` registers one Principal, `owner`, with two Agents, `builder` and
 `reviewer`; the implementer and reviewer still differ. Commit the
 generated files and ignore `.workkeel/`, where `local.json` may name your default
@@ -57,8 +61,8 @@ workkeel task new --goal "Clarify the guide" --acceptance "The guide names its a
 workkeel task claim --id WK-0001 --actor builder
 # edit, commit, and save evidence under .ai-org/artifacts/WK-0001/
 workkeel task handoff --id WK-0001 --actor builder --summary "Guide updated" --evidence .ai-org/artifacts/WK-0001/check.md
-workkeel task review --id WK-0001 --actor reviewer --judgment pass --summary "Meets the criterion" --evidence .ai-org/artifacts/WK-0001/review.md
-workkeel task close --id WK-0001 --actor builder --summary Accepted --rollback "Revert the guide commit" --evidence .ai-org/artifacts/WK-0001/review.md
+workkeel task review --id WK-0001 --actor reviewer --judgment pass --summary "Meets the criterion" --evidence .ai-org/artifacts/WK-0001/review-r1.md
+workkeel task close --id WK-0001 --actor builder --summary Accepted --rollback "Revert the guide commit" --evidence .ai-org/artifacts/WK-0001/review-r1.md
 ```
 
 Commit the `.ai-org/` task records too, with your work or after closing the task.
@@ -310,7 +314,9 @@ workkeel task handoff . --id WK-cart-total --request .ai-org/artifacts/WK-cart-t
 ```
 
 The distinct reviewer inspects that candidate and records their own judgment in
-`review.md`. Only after a passing review, their `review.json` may be:
+`review-r1.md`. Use a new file for each review round, such as `review-r1.md` and
+`review-r2.md`, to preserve the contents of earlier reports.
+Only after a passing review, their `review.json` may be:
 
 ```json
 {
@@ -318,7 +324,7 @@ The distinct reviewer inspects that candidate and records their own judgment in
   "actor": {"agent_id": "reviewer", "principal_id": "owner"},
   "revision": "<same-full-tested-git-commit>", "judgment": "pass",
   "summary": "Acceptance checked against this exact candidate",
-  "evidence": [".ai-org/artifacts/WK-cart-total/review.md"]
+  "evidence": [".ai-org/artifacts/WK-cart-total/review-r1.md"]
 }
 ```
 
@@ -337,7 +343,7 @@ separates Agents, not humans; approval must still come from the actual owner.
   "revision": "<same-full-tested-git-commit>",
   "summary": "Owner accepts the independently reviewed scope",
   "rollback": "Revert the candidate through a new reviewed change",
-  "evidence": [".ai-org/artifacts/WK-cart-total/review.md"]
+  "evidence": [".ai-org/artifacts/WK-cart-total/review-r1.md"]
 }
 ```
 
@@ -346,6 +352,25 @@ workkeel task close . --id WK-cart-total --request .ai-org/artifacts/WK-cart-tot
 workkeel status .
 workkeel doctor .
 ```
+
+Close compares HEAD with the reviewed commit. If HEAD has any commit after the
+reviewed one that changes a path outside `.ai-org/`, inside the write roots or
+not, close stops with a non-zero exit status and lists each such commit, oldest
+first. Nobody reviewed those commits. The error gives two options: check out
+the reviewed revision, then close again to accept only what was reviewed; or
+cancel the task and start a new task for the new commits. Commits that change only `.ai-org/`, such as a committed task
+record or review report, do not block close.
+
+In a shallow clone, the reviewed commit or its history to HEAD can be missing.
+A shallow boundary can also cut the history behind the reviewed commit, for
+example when HEAD merges a side branch that started before it. When Workkeel
+cannot show that the history between the reviewed commit and HEAD is complete,
+close stops, names the missing commit or history, and asks for the full history
+(`git fetch --unshallow`). The task stays in `release_gate`. Task summaries and
+the monitor still read done and cancelled tasks from their records, without
+attention, and report `candidate_head.history_status: "unavailable"` without
+later paths. Evidence committed in a reviewed commit that the clone lacks shows
+the status `history-unavailable`, and `quality.evidence_current` is false.
 
 These versions assume no intervening operations. Inspect `task show` before each
 request; do not advance a stale version blindly. A failed review uses `rework`,

@@ -8,6 +8,9 @@ import test from "node:test";
 import { createHash } from "node:crypto";
 import { initializeTaskProject } from "../src/workkeel-project.mjs";
 import { createNativeTask, mutateNativeTask, readNativeTask, diagnoseTaskProject, listTaskItems, evidenceStatus } from "../src/workkeel-tasks.mjs";
+import { readTaskSummary } from "../src/workkeel-task-summary.mjs";
+import { readMonitorSnapshot } from "../src/workkeel-monitor.mjs";
+import { formatJson, sha256 } from "../src/files.mjs";
 
 const cli = fileURLToPath(new URL("../bin/workkeel.mjs", import.meta.url));
 const developer = { agent_id: "builder", principal_id: "owner" };
@@ -26,7 +29,7 @@ function contract(id = "WK-one") {
 }
 function git(root, ...args) { return execFileSync("git", ["-C", root, ...args], { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }).trim(); }
 async function write(root, ref, data) { await fs.mkdir(path.dirname(path.join(root, ref)), { recursive: true }); await fs.writeFile(path.join(root, ref), typeof data === "string" ? data : JSON.stringify(data)); }
-async function fixture(t, { init = true } = {}) {
+async function fixture(t, { init = true, commit = true } = {}) {
   const root = await fs.mkdtemp(path.join(os.tmpdir(), "workkeel-test-"));
   t.after(() => fs.rm(root, { recursive: true, force: true }));
   git(root, "init", "-q"); git(root, "config", "user.name", "Fixture"); git(root, "config", "user.email", "fixture@example.invalid");
@@ -34,7 +37,7 @@ async function fixture(t, { init = true } = {}) {
   await write(root, "src/cart.mjs", "export const total = 1;\n");
   await write(root, "policy.json", policy());
   if (init) await initializeTaskProject(root, policy());
-  git(root, "add", "."); git(root, "commit", "-qm", "base");
+  if (commit) { git(root, "add", "."); git(root, "commit", "-qm", "base"); }
   return root;
 }
 async function deliver(root, id = "WK-one") {
@@ -64,6 +67,440 @@ test("task-first init, doctor, exact delivery, distinct review and close need no
   assert.equal((await diagnoseTaskProject(root)).valid, true);
   const status = spawnSync(process.execPath, [cli, "status", root], { encoding: "utf8" });
   assert.equal(status.status, 0, status.stderr); assert.equal(JSON.parse(status.stdout).tasks[0].state, "done");
+});
+
+for (const committed of [false, true]) test(`summary before delivery is read-only with ${committed ? 'committed' : 'unborn'} HEAD`, async t => {
+  const root = await fixture(t, {commit:committed});
+  await createNativeTask(root, contract(), request(0));
+  const record = path.join(root, '.ai-org/work-items/WK-one.json'), before = await fs.readFile(record);
+  const head = committed ? git(root, 'rev-parse', 'HEAD') : null;
+  assert.equal((await readNativeTask(root, 'WK-one')).approval.approved_at_revision, head);
+  const summary = await readTaskSummary(root, 'WK-one');
+  assert.equal(summary.task_state, 'intake');
+  assert.deepEqual(summary.candidate_head, {head, delivered:null, matches:false, later_in_scope_paths:[]});
+  assert.ok(!summary.attention_reasons.includes('head-moved-past-candidate'));
+  assert.deepEqual(await fs.readFile(record), before);
+});
+
+for (const drift of ['tracked', 'committed', 'untracked', 'both']) test(`product-drift identifies ${drift} files and their paths`, async t => {
+  const root = await fixture(t), {revision, ref} = await deliver(root);
+  if (drift !== 'untracked') await write(root, 'src/cart.mjs', 'export const total = 3;\n');
+  if (drift === 'committed') { git(root, 'add', 'src/cart.mjs'); git(root, 'commit', '-qm', 'Later tracked change'); }
+  if (['untracked', 'both'].includes(drift)) await write(root, 'src/new.mjs', 'export const value = 1;\n');
+  const record = path.join(root, '.ai-org/work-items/WK-one.json'), before = await fs.readFile(record);
+  await assert.rejects(mutateNativeTask(root, 'WK-one', 'review', request(3, reviewer,
+    {revision, judgment:'pass', summary:'Review', evidence:[ref]})), error => {
+    assert.equal(error.message.includes('tracked files changed since the candidate'), drift !== 'untracked');
+    assert.equal(error.message.includes('untracked files present'), ['untracked', 'both'].includes(drift));
+    assert.equal(error.message.includes('src/cart.mjs'), drift !== 'untracked');
+    assert.equal(error.message.includes('src/new.mjs'), ['untracked', 'both'].includes(drift));
+    assert.doesNotMatch(error.message, /requires a clean tree/);
+    return true;
+  });
+  assert.deepEqual(await fs.readFile(record), before);
+});
+
+test('product-drift lists at most ten paths', async t => {
+  const root = await fixture(t), {revision, ref} = await deliver(root);
+  for (let index = 0; index < 12; index++) await write(root, `src/untracked-${String(index).padStart(2, '0')}.mjs`, 'New\n');
+  await assert.rejects(mutateNativeTask(root, 'WK-one', 'review', request(3, reviewer,
+    {revision, judgment:'pass', summary:'Review', evidence:[ref]})), error => {
+    assert.equal((error.message.match(/src\/untracked-/g) ?? []).length, 10);
+    assert.match(error.message, /2 more paths/); return true;
+  });
+});
+
+for (const later of ['outside', 'in-scope', 'reverted', 'outside-merge', 'in-scope-merge', 'reverted-merge']) test(`close and summary compare delivered candidate with later ${later} commits`, async t => {
+  const root = await fixture(t), { revision, ref } = await deliver(root);
+  await mutateNativeTask(root, 'WK-one', 'review', request(3, reviewer, { revision, judgment: 'pass', summary: 'Verified candidate', evidence: [ref] }));
+  let summary = await readTaskSummary(root, 'WK-one');
+  assert.deepEqual(summary.candidate_head, {head:revision, delivered:revision, matches:true, later_in_scope_paths:[]});
+  assert.ok(!summary.attention_reasons.includes('head-moved-past-candidate'));
+  const outside = later.startsWith('outside'), merge = later.endsWith('-merge');
+  if (merge) git(root, 'checkout', '-b', 'later-work', `${revision}^`);
+  // A separate in-scope file lets Git merge the genuine later work cleanly.
+  const paths = outside ? ['docs/later.md', 'src-other/later.mjs'] : [merge ? 'src/later.mjs' : 'src/cart.mjs'];
+  for (const file of paths) await write(root, file, 'Later change\n');
+  git(root, 'add', ...paths); git(root, 'commit', '-qm', 'Later changes');
+  if (later.startsWith('reverted')) git(root, 'revert', '--no-edit', 'HEAD');
+  if (merge) {
+    git(root, 'merge', '--no-ff', '-qm', 'Merge delivered candidate as second parent', revision);
+    assert.equal(git(root, 'rev-parse', 'HEAD^2'), revision);
+    if (outside) assert.deepEqual(git(root, 'diff', '--name-only', revision, 'HEAD').split('\n'), paths);
+  }
+  const head = git(root, 'rev-parse', 'HEAD'), record = path.join(root, '.ai-org/work-items/WK-one.json');
+  const before = await fs.readFile(record);
+  summary = await readTaskSummary(root, 'WK-one');
+  assert.deepEqual(summary.candidate_head, {head, delivered:revision, matches:false, later_in_scope_paths:outside ? [] : paths});
+  assert.equal(summary.attention_reasons.includes('head-moved-past-candidate'), !outside);
+  assert.deepEqual(await fs.readFile(record), before, 'summary never writes task state');
+  const close = request(4, developer, {revision, summary:'Accept reviewed candidate', rollback:'Revert repair', evidence:[ref]});
+  // Every later product commit is unreviewed, inside the write roots or not.
+  const unreviewed = git(root, 'rev-list', '--no-merges', `${revision}..HEAD`).split('\n');
+  assert.equal(unreviewed.length, later.startsWith('reverted') ? 2 : 1);
+  await assert.rejects(mutateNativeTask(root, 'WK-one', 'close', close), error => {
+    assert.ok(error.message.includes(revision)); assert.ok(error.message.includes(head));
+    for (const commit of unreviewed) assert.ok(error.message.includes(commit.slice(0, 12)), commit);
+    assert.equal(error.message.includes(paths[0]), !outside);
+    assert.ok(error.message.includes(`(1) check out the reviewed revision ${revision}, then close again`));
+    assert.match(error.message, /\(2\) cancel this task and start a new task for the new commits/);
+    assert.doesNotMatch(error.message, /rework/i);
+    return true;
+  });
+  assert.deepEqual(await fs.readFile(record), before, 'failed close preserves task state');
+  git(root, 'checkout', '--detach', revision);
+  assert.equal((await mutateNativeTask(root, 'WK-one', 'close', close)).state, 'done');
+});
+
+test('close lists every unreviewed commit after the review and ignores .ai-org-only commits', async t => {
+  const root = await fixture(t), {revision, ref} = await deliver(root);
+  await mutateNativeTask(root, 'WK-one', 'review', request(3, reviewer, {revision, judgment:'pass', summary:'Verified candidate', evidence:[ref]}));
+  // Recording task state and reports in a commit is administrative, not product work.
+  git(root, 'add', '.ai-org'); git(root, 'commit', '-qm', 'Record review');
+  const close = request(4, developer, {revision, summary:'Accept reviewed candidate', rollback:'Revert repair', evidence:[ref]});
+  const record = path.join(root, '.ai-org/work-items/WK-one.json'), before = await fs.readFile(record);
+  const commits = [];
+  for (const [file, subject] of [['CHANGELOG.md', 'Note the repair'], ['src/cart.mjs', 'Tune the total'], ['docs/notes.md', 'Explain the total']]) {
+    await write(root, file, `${subject}\n`); git(root, 'add', file); git(root, 'commit', '-qm', subject);
+    commits.push({revision:git(root, 'rev-parse', 'HEAD'), subject});
+  }
+  await assert.rejects(mutateNativeTask(root, 'WK-one', 'close', close), error => {
+    assert.match(error.message, /has 3 unreviewed commit\(s\) after reviewed candidate/);
+    for (const commit of commits) assert.ok(error.message.includes(`${commit.revision.slice(0, 12)} ${JSON.stringify(commit.subject)}`), commit.subject);
+    const at = commit => error.message.indexOf(`${commit.revision.slice(0, 12)} "`);
+    assert.ok(at(commits[0]) < at(commits[1]) && at(commits[1]) < at(commits[2]), 'oldest first');
+    assert.ok(!error.message.includes(git(root, 'rev-parse', `${commits[0].revision}^`).slice(0, 12)), 'administrative commit is not listed');
+    assert.ok(error.message.includes(`(1) check out the reviewed revision ${revision}, then close again`));
+    assert.match(error.message, /\(2\) cancel this task and start a new task for the new commits/);
+    assert.doesNotMatch(error.message, /rework/i);
+    return true;
+  });
+  assert.deepEqual(await fs.readFile(record), before, 'failed close preserves task state');
+  git(root, 'reset', '-q', '--hard', `${commits[0].revision}^`);
+  assert.equal((await mutateNativeTask(root, 'WK-one', 'close', close)).state, 'done');
+});
+
+/** A delivered task whose record and evidence reach Git only in a later administrative commit, cloned with --depth=1. */
+async function shallowClone(t, root, {fetchCandidate}) {
+  git(root, 'add', '.ai-org'); git(root, 'commit', '-qm', 'Record task state');
+  const clone = await fs.mkdtemp(path.join(os.tmpdir(), 'workkeel-shallow-'));
+  t.after(() => fs.rm(clone, { recursive: true, force: true }));
+  execFileSync('git', ['clone', '-q', '--depth=1', `file://${root}`, clone], { stdio: 'ignore' });
+  assert.equal(git(clone, 'rev-parse', '--is-shallow-repository'), 'true');
+  if (fetchCandidate) {
+    const revision = (await readNativeTask(clone, 'WK-one')).delivery.revision;
+    git(clone, 'fetch', '-q', '--depth=1', 'origin', revision);
+    assert.equal(git(clone, 'cat-file', '-t', revision), 'commit');
+    // Without connecting history, `revision..HEAD` lists the shallow root tree.
+    assert.deepEqual(git(clone, 'diff', '--name-only', revision, 'HEAD', '--', 'src'), '');
+  }
+  return clone;
+}
+for (const state of ['done', 'cancelled']) for (const fetchCandidate of [false, true]) test(`${state} task stays readable in a shallow clone ${fetchCandidate ? 'with a separately fetched' : 'without its'} candidate`, async t => {
+  const root = await fixture(t), {revision, ref} = await deliver(root);
+  if (state === 'done') {
+    await mutateNativeTask(root, 'WK-one', 'review', request(3, reviewer, {revision, judgment:'pass', summary:'Verified candidate', evidence:[ref]}));
+    await mutateNativeTask(root, 'WK-one', 'close', request(4, developer, {revision, summary:'Accepted', rollback:'Revert repair', evidence:[ref]}));
+  } else await mutateNativeTask(root, 'WK-one', 'cancel', request(3, developer, {summary:'Cancelled', evidence:[ref]}));
+  const clone = await shallowClone(t, root, {fetchCandidate});
+  const record = path.join(clone, '.ai-org/work-items/WK-one.json'), before = await fs.readFile(record);
+  assert.equal((await diagnoseTaskProject(clone)).valid, true);
+  const summary = await readTaskSummary(clone, 'WK-one');
+  const monitored = (await readMonitorSnapshot(clone)).tasks.find(task => task.id === 'WK-one');
+  assert.deepEqual(summary.candidate_head, {head:git(clone, 'rev-parse', 'HEAD'), delivered:revision, matches:false, later_in_scope_paths:[], history_status:'unavailable'});
+  for (const item of [summary, monitored]) {
+    assert.equal(item.task_state, state);
+    assert.equal(item.needs_attention, false);
+    assert.deepEqual(item.attention_reasons, []);
+    assert.equal(item.quality.locally_accepted, state === 'done');
+  }
+  assert.equal(monitored.read_status, 'available');
+  assert.deepEqual(await fs.readFile(record), before, 'summary and monitor preserve the task record');
+});
+
+for (const fetchCandidate of [false, true]) test(`active close fails closed in a shallow clone ${fetchCandidate ? 'with a separately fetched' : 'without its'} candidate`, async t => {
+  const root = await fixture(t), {revision, ref} = await deliver(root);
+  await mutateNativeTask(root, 'WK-one', 'review', request(3, reviewer, {revision, judgment:'pass', summary:'Verified candidate', evidence:[ref]}));
+  const clone = await shallowClone(t, root, {fetchCandidate});
+  const record = path.join(clone, '.ai-org/work-items/WK-one.json'), before = await fs.readFile(record);
+  const summary = await readTaskSummary(clone, 'WK-one');
+  assert.equal(summary.task_state, 'release_gate');
+  assert.equal(summary.candidate_head.history_status, 'unavailable');
+  assert.ok(summary.attention_reasons.includes('candidate-history-unavailable'));
+  assert.ok(!summary.attention_reasons.includes('head-moved-past-candidate'));
+  await assert.rejects(mutateNativeTask(clone, 'WK-one', 'close', request(4, developer, {revision, summary:'Accept', rollback:'Revert', evidence:[ref]})),
+    fetchCandidate ? /History between delivered candidate .* is unavailable.*git fetch --unshallow/ : /delivered candidate [a-f0-9]{40} is missing from this repository.*git fetch --unshallow/);
+  assert.deepEqual(await fs.readFile(record), before, 'failed close preserves task state');
+});
+
+test('close of a missing candidate commit asks for full history and stays in release_gate', async t => {
+  const root = await fixture(t), {revision, ref} = await deliver(root);
+  await mutateNativeTask(root, 'WK-one', 'review', request(3, reviewer, {revision, judgment:'pass', summary:'Verified candidate', evidence:[ref]}));
+  const clone = await shallowClone(t, root, {fetchCandidate:false});
+  assert.throws(() => git(clone, 'cat-file', '-e', `${revision}^{commit}`));
+  const record = path.join(clone, '.ai-org/work-items/WK-one.json'), before = await fs.readFile(record);
+  for (const named of [revision, revision.slice(0, 12)]) await assert.rejects(mutateNativeTask(clone, 'WK-one', 'close', request(4, developer, {revision:named, summary:'Accept', rollback:'Revert', evidence:[ref]})), error => {
+    assert.ok(error.message.includes(`delivered candidate ${revision} is missing from this repository`));
+    assert.match(error.message, /Fetch the full history \(git fetch --unshallow\) before closing/);
+    assert.doesNotMatch(error.message, /rework/i);
+    return true;
+  });
+  // A revision that is not the delivered candidate keeps the generic error.
+  await assert.rejects(mutateNativeTask(clone, 'WK-one', 'close', request(4, developer, {revision:git(clone, 'rev-parse', 'HEAD'), summary:'Accept', rollback:'Revert', evidence:[ref]})),
+    error => error.message === 'Close requires the independently accepted exact candidate');
+  assert.equal((await readNativeTask(clone, 'WK-one')).state, 'release_gate');
+  assert.deepEqual(await fs.readFile(record), before, 'failed close preserves task state');
+});
+
+/**
+ * Base B, candidate R and record commit A, merged with an `.ai-org/`-only side
+ * commit S from B, cloned with --depth=3. R is a shallow boundary, so Git puts
+ * the old base B in `R..HEAD` through S although R is an ancestor of HEAD.
+ */
+async function shallowMergeClone(t, root, revision) {
+  git(root, 'add', '.ai-org'); git(root, 'commit', '-qm', 'Record task state');
+  const administrativeHead = git(root, 'rev-parse', 'HEAD');
+  git(root, 'checkout', '-qb', 'records-side', `${revision}^`);
+  await write(root, '.ai-org/side.md', 'Administrative note\n'); git(root, 'add', '.ai-org/side.md'); git(root, 'commit', '-qm', 'Side note');
+  git(root, 'checkout', '-q', '--detach', administrativeHead); git(root, 'merge', '--no-ff', '-qm', 'Merge records', 'records-side');
+  const clone = await fs.mkdtemp(path.join(os.tmpdir(), 'workkeel-shallow-merge-'));
+  t.after(() => fs.rm(clone, { recursive: true, force: true }));
+  execFileSync('git', ['clone', '-q', '--depth=3', `file://${root}`, clone], { stdio: 'ignore' });
+  assert.equal(git(clone, 'rev-parse', '--is-shallow-repository'), 'true');
+  git(clone, 'merge-base', '--is-ancestor', revision, 'HEAD');
+  assert.ok(git(clone, 'rev-list', `${revision}..HEAD`).split('\n').includes(git(root, 'rev-parse', `${revision}^`)), 'the shallow boundary puts the old base in the range');
+  assert.equal(git(clone, 'diff', '--name-only', revision, 'HEAD', '--', 'src'), '');
+  return clone;
+}
+for (const state of ['done', 'cancelled', 'release_gate']) test(`shallow merge clone reports unavailable history for a ${state} task`, async t => {
+  const root = await fixture(t), {revision, ref} = await deliver(root);
+  if (state === 'cancelled') await mutateNativeTask(root, 'WK-one', 'cancel', request(3, developer, {summary:'Cancelled', evidence:[ref]}));
+  else await mutateNativeTask(root, 'WK-one', 'review', request(3, reviewer, {revision, judgment:'pass', summary:'Verified candidate', evidence:[ref]}));
+  if (state === 'done') await mutateNativeTask(root, 'WK-one', 'close', request(4, developer, {revision, summary:'Accepted', rollback:'Revert repair', evidence:[ref]}));
+  const clone = await shallowMergeClone(t, root, revision);
+  const full = await readTaskSummary(root, 'WK-one');
+  assert.deepEqual(full.candidate_head, {head:git(root, 'rev-parse', 'HEAD'), delivered:revision, matches:false, later_in_scope_paths:[]});
+  const record = path.join(clone, '.ai-org/work-items/WK-one.json'), before = await fs.readFile(record);
+  assert.equal((await diagnoseTaskProject(clone)).valid, true);
+  const summary = await readTaskSummary(clone, 'WK-one');
+  const monitored = (await readMonitorSnapshot(clone)).tasks.find(task => task.id === 'WK-one');
+  for (const item of [summary, monitored]) {
+    assert.deepEqual(item.candidate_head, {head:git(clone, 'rev-parse', 'HEAD'), delivered:revision, matches:false, later_in_scope_paths:[], history_status:'unavailable'});
+    assert.equal(item.task_state, state);
+    assert.ok(!item.attention_reasons.includes('head-moved-past-candidate'));
+    if (state === 'release_gate') assert.ok(item.attention_reasons.includes('candidate-history-unavailable'));
+    else { assert.equal(item.needs_attention, false); assert.deepEqual(item.attention_reasons, []); }
+  }
+  if (state === 'release_gate') {
+    const close = request(4, developer, {revision, summary:'Accepted', rollback:'Revert repair', evidence:[ref]});
+    await assert.rejects(mutateNativeTask(clone, 'WK-one', 'close', close), error => {
+      assert.match(error.message, /History between delivered candidate .* is unavailable.*git fetch --unshallow/);
+      assert.doesNotMatch(error.message, /unreviewed commit/);
+      return true;
+    });
+    assert.equal((await readNativeTask(clone, 'WK-one')).state, 'release_gate');
+    assert.equal((await mutateNativeTask(root, 'WK-one', 'close', close)).state, 'done', 'complete history closes');
+  }
+  assert.deepEqual(await fs.readFile(record), before, 'summary, monitor and failed close preserve the task record');
+});
+
+test('a shallow clone holding the candidate history keeps the exact comparison', async t => {
+  const root = await fixture(t), {revision, ref} = await deliver(root);
+  await mutateNativeTask(root, 'WK-one', 'review', request(3, reviewer, {revision, judgment:'pass', summary:'Verified candidate', evidence:[ref]}));
+  git(root, 'add', '.ai-org'); git(root, 'commit', '-qm', 'Record review');
+  await write(root, 'src/later.mjs', 'Later change\n'); git(root, 'add', 'src'); git(root, 'commit', '-qm', 'Later work');
+  const later = git(root, 'rev-parse', 'HEAD');
+  const clone = await fs.mkdtemp(path.join(os.tmpdir(), 'workkeel-shallow-'));
+  t.after(() => fs.rm(clone, { recursive: true, force: true }));
+  // HEAD, the record commit and the candidate itself, which is the shallow boundary.
+  execFileSync('git', ['clone', '-q', '--depth=3', `file://${root}`, clone], { stdio: 'ignore' });
+  assert.equal(git(clone, 'rev-parse', '--is-shallow-repository'), 'true');
+  const summary = await readTaskSummary(clone, 'WK-one');
+  assert.deepEqual(summary.candidate_head, {head:later, delivered:revision, matches:false, later_in_scope_paths:['src/later.mjs']});
+  assert.ok(summary.attention_reasons.includes('head-moved-past-candidate'));
+  await assert.rejects(mutateNativeTask(clone, 'WK-one', 'close', request(4, developer, {revision, summary:'Accept', rollback:'Revert', evidence:[ref]})),
+    error => error.message.includes(`has 1 unreviewed commit(s)`) && error.message.includes(`${later.slice(0, 12)} "Later work"`));
+});
+
+/** Like `deliver`, with the developer report committed in the candidate itself. */
+async function deliverCommittedEvidence(root, id = 'WK-one') {
+  await createNativeTask(root, contract(id), request(0));
+  const claimed = await mutateNativeTask(root, id, 'claim', request(1, developer, { base_revision: git(root, 'rev-parse', 'HEAD') }));
+  const ref = `.ai-org/artifacts/${id}/developer.md`;
+  await write(root, 'src/cart.mjs', 'export const total = 2;\n'); await write(root, ref, 'Verified the total repair.\n');
+  git(root, 'add', 'src', ref); git(root, 'commit', '-qm', 'repair');
+  const revision = git(root, 'rev-parse', 'HEAD');
+  await mutateNativeTask(root, id, 'handoff', request(2, developer, { claim_id: claimed.claim.id, revision, summary: 'Total corrected and tested', evidence: [ref], unresolved: [] }));
+  return { revision, ref };
+}
+for (const state of ['done', 'cancelled']) test(`${state} task with candidate evidence keeps its state in a shallow clone without the candidate`, async t => {
+  const root = await fixture(t), {revision, ref} = await deliverCommittedEvidence(root);
+  assert.equal((await readNativeTask(root, 'WK-one')).delivery.evidence[0].source, 'candidate');
+  if (state === 'done') {
+    await mutateNativeTask(root, 'WK-one', 'review', request(3, reviewer, {revision, judgment:'pass', summary:'Verified candidate', evidence:[ref]}));
+    await mutateNativeTask(root, 'WK-one', 'close', request(4, developer, {revision, summary:'Accepted', rollback:'Revert repair', evidence:[ref]}));
+  } else await mutateNativeTask(root, 'WK-one', 'cancel', request(3, developer, {summary:'Cancelled', evidence:[ref]}));
+  const full = await readTaskSummary(root, 'WK-one');
+  assert.ok(full.evidence.every(entry => entry.status !== 'history-unavailable'));
+  assert.equal(full.quality.evidence_current, true);
+  const clone = await shallowClone(t, root, {fetchCandidate:false});
+  const record = path.join(clone, '.ai-org/work-items/WK-one.json'), before = await fs.readFile(record);
+  const summary = await readTaskSummary(clone, 'WK-one');
+  const monitored = (await readMonitorSnapshot(clone)).tasks.find(task => task.id === 'WK-one');
+  const candidateEvidence = summary.evidence.filter(entry => entry.source === 'candidate');
+  assert.ok(candidateEvidence.length);
+  for (const entry of candidateEvidence) assert.equal(entry.status, 'history-unavailable');
+  for (const item of [summary, monitored]) {
+    assert.equal(item.task_state, state);
+    assert.equal(item.needs_attention, false);
+    assert.deepEqual(item.attention_reasons, []);
+    assert.equal(item.quality.locally_accepted, state === 'done');
+    assert.equal(item.quality.evidence_current, false, 'unreadable history is not verified evidence');
+  }
+  assert.deepEqual(await fs.readFile(record), before, 'summary and monitor preserve the task record');
+});
+
+for (const state of ['done', 'cancelled']) test(`later in-scope work leaves ${state} tasks without summary or monitor attention`, async t => {
+  const root = await fixture(t), {revision, ref} = await deliver(root);
+  if (state === 'done') {
+    await mutateNativeTask(root, 'WK-one', 'review', request(3, reviewer, {revision, judgment:'pass', summary:'Verified candidate', evidence:[ref]}));
+    await mutateNativeTask(root, 'WK-one', 'close', request(4, developer, {revision, summary:'Accepted', rollback:'Revert repair', evidence:[ref]}));
+  } else await mutateNativeTask(root, 'WK-one', 'cancel', request(3, developer, {summary:'Cancelled', evidence:[ref]}));
+  const record = path.join(root, '.ai-org/work-items/WK-one.json'), before = await fs.readFile(record);
+  const checkAttention = async () => {
+    const summary = await readTaskSummary(root, 'WK-one');
+    const monitored = (await readMonitorSnapshot(root)).tasks.find(task => task.id === 'WK-one');
+    for (const item of [summary, monitored]) {
+      assert.equal(item.task_state, state);
+      assert.equal(item.needs_attention, false);
+      assert.deepEqual(item.attention_reasons, []);
+      assert.equal(item.quality.locally_accepted, state === 'done');
+    }
+    return summary;
+  };
+  await checkAttention();
+  await write(root, 'src/other-task.mjs', 'export const other = true;\n');
+  git(root, 'add', 'src/other-task.mjs'); git(root, 'commit', '-qm', 'Independent later work');
+  const summary = await checkAttention();
+  assert.deepEqual(summary.candidate_head, {head:git(root, 'rev-parse', 'HEAD'), delivered:revision, matches:false, later_in_scope_paths:['src/other-task.mjs']});
+  assert.deepEqual(await fs.readFile(record), before, 'summary and monitor preserve terminal task records');
+});
+
+test('close HEAD error names at most ten paths, while summary retains every in-scope path', async t => {
+  const root = await fixture(t), {revision, ref} = await deliver(root);
+  await mutateNativeTask(root, 'WK-one', 'review', request(3, reviewer, {revision, judgment:'pass', summary:'Verified', evidence:[ref]}));
+  const paths = Array.from({length:12}, (_, i) => `src/later-${String(i).padStart(2, '0')}.mjs`);
+  for (const file of paths) await write(root, file, 'Later change');
+  git(root, 'add', 'src'); git(root, 'commit', '-qm', 'Later files');
+  assert.deepEqual((await readTaskSummary(root, 'WK-one')).candidate_head.later_in_scope_paths, paths);
+  await assert.rejects(mutateNativeTask(root, 'WK-one', 'close', request(4, developer, {revision, summary:'Accept', rollback:'Revert', evidence:[ref]})), error => {
+    const listed = JSON.parse(error.message.match(/changed paths \(up to 10\): (\[.*\])/)[1]);
+    assert.deepEqual(listed, paths.slice(0, 10)); return true;
+  });
+});
+
+test('status stale reporting is opt-in, uses the last event and excludes terminal tasks', async t => {
+  const root = await fixture(t), start = Date.parse('2000-01-01T00:00:00Z');
+  t.mock.timers.enable({apis:['Date'], now:start});
+  const {revision, ref} = await deliver(root);
+  await mutateNativeTask(root, 'WK-one', 'review', request(3, reviewer, {revision, judgment:'pass', summary:'Verified', evidence:[ref]}));
+  await mutateNativeTask(root, 'WK-one', 'close', request(4, developer, {revision, summary:'Accepted', rollback:'Revert', evidence:[ref]}));
+  for (const id of ['WK-cancelled', 'WK-stalled', 'WK-active']) await createNativeTask(root, contract(id), request(0));
+  await mutateNativeTask(root, 'WK-cancelled', 'cancel', request(1, developer, {summary:'Cancelled', evidence:[ref]}));
+  t.mock.timers.setTime(start + 3 * 3600000);
+  await mutateNativeTask(root, 'WK-active', 'claim', request(1, developer, {base_revision:git(root, 'rev-parse', 'HEAD')}));
+  t.mock.timers.setTime(start + 4 * 3600000);
+  const before = await fs.readFile(path.join(root, '.ai-org/work-items/WK-stalled.json'));
+  const plain = await listTaskItems(root), enriched = await listTaskItems(root, {staleAfter:2});
+  assert.ok(plain.every(task => !Object.hasOwn(task, 'stale') && !Object.hasOwn(task, 'last_activity_at')));
+  assert.equal(enriched.find(task => task.id === 'WK-stalled').stale, true);
+  assert.equal(enriched.find(task => task.id === 'WK-active').stale, false);
+  for (const task of enriched) {
+    if (['done', 'cancelled'].includes(task.state)) assert.ok(!Object.hasOwn(task, 'stale'));
+    else assert.equal(task.last_activity_at, (await readNativeTask(root, task.id)).history.at(-1).at);
+  }
+  assert.equal((await listTaskItems(root, {staleAfter:4})).find(task => task.id === 'WK-stalled').stale, false, 'exact limit is not older');
+  const run = (...options) => spawnSync(process.execPath, [cli, 'status', root, ...options], {encoding:'utf8'});
+  const expected = {schema_version:'workkeel.status/v1', tasks:plain, authority:'observation-only', mutation_status:'no-write'};
+  assert.equal(run().stdout, JSON.stringify(expected, null, 2) + '\n', 'default status bytes are unchanged');
+  // CLI subprocesses use their own current clock; derive its stale set from a
+  // tiny positive threshold after all fixture events, including the recent claim.
+  const flagged = run('--stale-after', '0.000001');
+  assert.equal(flagged.status, 0, flagged.stderr);
+  const output = JSON.parse(flagged.stdout);
+  assert.deepEqual(output.stale_tasks, ['WK-active', 'WK-stalled']);
+  assert.equal(output.tasks.find(task => task.id === 'WK-active').last_activity_at, new Date(start + 3 * 3600000).toISOString());
+  const generous = run('--stale-after', '1e100');
+  assert.equal(generous.status, 0, generous.stderr);
+  assert.deepEqual(JSON.parse(generous.stdout).stale_tasks, []);
+  for (const value of ['0', '-1', 'NaN', 'Infinity', '1e309', 'no', '']) {
+    const bad = run(`--stale-after=${value}`);
+    assert.notEqual(bad.status, 0); assert.match(bad.stdout + bad.stderr, /positive finite number/);
+  }
+  for (const value of [0, -1, NaN, Infinity]) await assert.rejects(listTaskItems(root, {staleAfter:value}), /positive finite number/);
+  assert.deepEqual(await fs.readFile(path.join(root, '.ai-org/work-items/WK-stalled.json')), before);
+});
+
+test('summary observes changed rejected-attempt evidence hashes without rewriting records', async t => {
+  const root = await fixture(t), {revision, ref} = await deliver(root), reviewRef = '.ai-org/artifacts/WK-one/review-r1.md';
+  await write(root, reviewRef, 'Round one failed\n');
+  await mutateNativeTask(root, 'WK-one', 'review', request(3, reviewer, {revision, judgment:'fail', summary:'Needs repair', evidence:[reviewRef]}));
+  await mutateNativeTask(root, 'WK-one', 'rework', request(4, developer, {summary:'Repair same scope'}));
+  const record = path.join(root, '.ai-org/work-items/WK-one.json');
+  const unpinned = await fs.readFile(record);
+  await write(root, reviewRef, 'Path-only evidence may change');
+  assert.ok(!(await readTaskSummary(root, 'WK-one')).attention_reasons.includes('attempt-evidence-changed'));
+  assert.deepEqual(await fs.readFile(record), unpinned, 'path-only evidence is never given a new hash');
+  await write(root, reviewRef, 'Round one failed\n');
+  // Synthetic retained-hash record: current path-only records stay unchanged.
+  const item = await readNativeTask(root, 'WK-one');
+  for (const stage of ['delivery', 'review']) for (const entry of item.attempts[0][stage].evidence)
+    entry.sha256 = sha256(await fs.readFile(path.join(root, entry.path)));
+  const last = item.history.at(-1);
+  last.record_sha256 = sha256(formatJson(Object.fromEntries(Object.entries(item).filter(([key]) => key !== 'history'))));
+  delete last.hash; last.hash = sha256(formatJson(last));
+  await write(root, '.ai-org/work-items/WK-one.json', formatJson(item));
+  const before = await fs.readFile(record);
+  const changed = async () => (await readTaskSummary(root, 'WK-one')).attention_reasons.includes('attempt-evidence-changed');
+  assert.equal(await changed(), false);
+  await write(root, '.ai-org/artifacts/WK-one/review-r2.md', 'Round two has separate evidence');
+  assert.equal(await changed(), false, 'a new round does not overwrite retained evidence');
+  await write(root, reviewRef, 'Overwritten round one'); assert.equal(await changed(), true);
+  await write(root, reviewRef, 'Round one failed\n'); assert.equal(await changed(), false);
+  await fs.unlink(path.join(root, reviewRef)); assert.equal(await changed(), true);
+  await write(root, reviewRef, 'Round one failed\n');
+  await write(root, ref, 'Overwritten delivery evidence'); assert.equal(await changed(), true);
+  assert.deepEqual(await fs.readFile(record), before, 'evidence diagnostics never mutate history');
+});
+
+test('summary checks retained candidate evidence at the rejected revision, independently of workspace bytes', async t => {
+  const root = await fixture(t), {revision} = await deliver(root), ref = 'src/cart.mjs';
+  await mutateNativeTask(root, 'WK-one', 'review', request(3, reviewer, {revision, judgment:'fail', summary:'Needs repair', evidence:[ref]}));
+  await mutateNativeTask(root, 'WK-one', 'rework', request(4, developer, {summary:'Repair same scope'}));
+  // Synthetic retained hashes: supported lifecycle records remain path-only.
+  const item = await readNativeTask(root, 'WK-one'), entry = item.attempts[0].review.evidence[0];
+  assert.equal(entry.source, 'candidate');
+  entry.sha256 = sha256(await fs.readFile(path.join(root, ref)));
+  const save = async () => {
+    const last = item.history.at(-1);
+    last.record_sha256 = sha256(formatJson(Object.fromEntries(Object.entries(item).filter(([key]) => key !== 'history'))));
+    delete last.hash; last.hash = sha256(formatJson(last));
+    await write(root, '.ai-org/work-items/WK-one.json', formatJson(item));
+  };
+  await save();
+  const record = path.join(root, '.ai-org/work-items/WK-one.json'), before = await fs.readFile(record);
+  const changed = async () => (await readTaskSummary(root, 'WK-one')).attention_reasons.includes('attempt-evidence-changed');
+  assert.equal(await changed(), false);
+  await write(root, ref, 'Next attempt\n');
+  git(root, 'add', ref); git(root, 'commit', '-qm', 'Next attempt evidence');
+  assert.equal(await changed(), false, 'the current commit is not the rejected attempt');
+  await write(root, ref, 'Uncommitted next attempt\n');
+  assert.equal(await changed(), false, 'changed workspace evidence does not change the retained blob');
+  await fs.unlink(path.join(root, ref));
+  assert.equal(await changed(), false, 'missing workspace evidence does not remove the retained blob');
+  assert.deepEqual(await fs.readFile(record), before, 'summary preserves retained history');
+  entry.sha256 = '0'.repeat(64); await save();
+  assert.equal(await changed(), true, 'a retained hash that differs from the blob is still reported');
 });
 
 test("identity, immutable input, stale claims, duplicate requests and self-review fail closed", async t => {
@@ -123,7 +560,7 @@ test("candidate guards cover outside roots, untracked product, evidence paths an
   const handoff = extra => request(2, developer, { claim_id: claimed.claim.id, revision: git(root, "rev-parse", "HEAD"), summary: "Repair", evidence: [ref], unresolved: [], ...extra });
   // Drift is checked only inside the write roots.
   await write(root, "src/untracked.mjs", "Hidden code");
-  await assert.rejects(mutateNativeTask(root, "WK-one", "handoff", handoff()), /clean tree inside the approved write roots/);
+  await assert.rejects(mutateNativeTask(root, "WK-one", "handoff", handoff()), /untracked files present/);
   await fs.unlink(path.join(root, "src/untracked.mjs"));
   await write(root, "outside.txt", "Out of scope"); git(root, "add", "outside.txt"); git(root, "commit", "-qm", "outside");
   await assert.rejects(mutateNativeTask(root, "WK-one", "handoff", handoff()), /outside approved/);
@@ -278,7 +715,7 @@ test("product drift and unintegrated dependencies cannot pass acceptance; admini
   // `.ai-org/` is administrative: its drift never blocks, while product drift in the write roots does.
   await write(root, helper, "export const value = 999;\n");
   await write(root, "src/cart.mjs", "export const total = 3;\n");
-  await assert.rejects(mutateNativeTask(root, "WK-one", "close", request(4, developer, { revision, summary: "Accept", rollback: "Revert", evidence: [report] })), /clean tree/);
+  await assert.rejects(mutateNativeTask(root, "WK-one", "close", request(4, developer, { revision, summary: "Accept", rollback: "Revert", evidence: [report] })), /tracked files changed since the candidate/);
   git(root, "checkout", "-q", "--", "src/cart.mjs");
   await mutateNativeTask(root, "WK-one", "close", request(4, developer, { revision, summary: "Accept", rollback: "Revert", evidence: [report] }));
   git(root, "checkout", "-q", "--", helper);

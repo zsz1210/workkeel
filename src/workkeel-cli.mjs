@@ -13,8 +13,8 @@ const HELP = `Workkeel — repository-native task coordination for coding agents
 workkeel start [target]                     read-only next-step guidance
 workkeel init [target] [--builder family] [--reviewer family]  defaults: claude builder, codex reviewer
 workkeel task new [target] --goal text --acceptance text [--write path]
-workkeel task claim|handoff|review|close [target] --id task-id --actor id [--summary text] [--evidence path] [--judgment pass|fail] [--rollback text]
-workkeel status|doctor [target]
+workkeel task claim|handoff|review|rework|close|cancel [target] --id task-id --actor id [--summary text] [--evidence path] [--judgment pass|fail] [--rollback text]
+workkeel status [target] [--stale-after hours] | doctor [target]
 workkeel upgrade [target] [--actor id]      move the project pin to this CLI
 workkeel help advanced                      request-file forms and optional subsystems
 
@@ -27,7 +27,7 @@ Core lifecycle, every form:
 workkeel start [target] [--request brief.json]
 workkeel init [target] [--principal id] [--builder family] [--reviewer family] | [--policy repository-policy.json]  defaults: claude builder, codex reviewer
 workkeel policy show [target] | policy update [target] --policy repository-policy.json [--actor id]
-workkeel status|doctor [target]
+workkeel status [target] [--stale-after hours] | doctor [target]
 workkeel upgrade [target] [--actor id]
 workkeel task new [target] --goal text --acceptance text [--acceptance text] [--write path] [--read path] [--risk tier] [--approval path] [--id id] [--actor id]
 workkeel task create [target] --source contract.json --request request.json
@@ -166,10 +166,13 @@ async function runCommand(args) {
       output = await updateProjectPolicy(target, (await readTaskContractInput(target, required(options, "--policy"))).document, await resolveActor(target, project, options["--actor"]));
     } else throw new Error("Policy requires show or update");
   } else if (["status", "doctor"].includes(command)) {
-    allow(options, []);
+    allow(options, command === 'status' ? ['--stale-after'] : []);
     output = command === "doctor" ? await diagnoseTaskProject(target) : {
-      schema_version: "workkeel.status/v1", tasks: await listTaskItems(target), authority: "observation-only", mutation_status: "no-write"
+      schema_version: "workkeel.status/v1", tasks: await listTaskItems(target, {
+        staleAfter: options['--stale-after'] === undefined ? undefined : Number(options['--stale-after'])
+      }), authority: "observation-only", mutation_status: "no-write"
     };
+    if (options['--stale-after'] !== undefined) output.stale_tasks = output.tasks.filter(task => task.stale).map(task => task.id);
   } else if (command === "stats" && options["--report"]) {
     allow(options, ["--report", "--days", "--previous", "--cutoff", "--timezone"]);
     const { readStatsReport, formatStatsReport } = await import("./workkeel-stats-report.mjs");

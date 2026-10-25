@@ -18,7 +18,7 @@ const exec = promisify(execFile);
 /** Bounded native Git observation. Never inherit executable Git configuration
  * from the caller's environment or run repository hooks/content converters. */
 export async function readNativeGit(target, args, { maxBuffer = 4 * 1024 * 1024, encoding = "utf8" } = {}) {
-  if (!["rev-parse", "merge-base", "diff", "ls-files", "ls-tree"].includes(args[0]) &&
+  if (!["rev-parse", "merge-base", "diff", "log", "ls-files", "ls-tree"].includes(args[0]) &&
       !(args[0] === "cat-file" && args.length === 3 && args[1] === "blob")) throw Error("Unsupported native Git read");
   const env = {
     GIT_CONFIG_GLOBAL: os.devNull, GIT_CONFIG_SYSTEM: os.devNull, GIT_CONFIG_NOSYSTEM: "1",
@@ -53,6 +53,17 @@ async function assertGitRoot(target) {
   try { root = (await readNativeGit(target, ["rev-parse", "--show-toplevel"])).trim(); }
   catch { throw new Error("Task-first coordination requires an initialized Git repository; run `git init` here or choose the repository root"); }
   if (await fs.realpath(root) !== await fs.realpath(target)) throw new Error("Task-first project must be the Git repository root");
+}
+export const BASELINE_COMMAND = "git add -A && git commit -m baseline";
+export const BASELINE_MESSAGE = `This repository has no commits. Make a baseline commit first (${BASELINE_COMMAND}), then retry.`;
+/** Commands that operate on a candidate need a baseline, unlike setup and intake. */
+export async function requireHeadRevision(target) {
+  try { return (await readNativeGit(target, ["rev-parse", "--verify", "--quiet", "HEAD^{commit}"])).trim(); }
+  catch (error) {
+    if (error.code !== 1) throw error;
+    await assertGitRoot(target);
+    throw new Error(BASELINE_MESSAGE);
+  }
 }
 export const identifier = { type: "string", pattern: "^[A-Za-z0-9][A-Za-z0-9._-]{0,95}$" };
 const ids = { type: "array", items: identifier, minItems: 1, uniqueItems: true };
@@ -137,13 +148,26 @@ const pin = JSON.parse(fs.readFileSync(path.join(root, "workkeel.lock"), "utf8")
 const VERSION = /^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(?:-((?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\\.(?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\\+([0-9a-zA-Z-]+(?:\\.[0-9a-zA-Z-]+)*))?$/;
 if (pin?.package_name !== ${JSON.stringify(WORKKEEL_PACKAGE)} || typeof pin.version !== "string" || !VERSION.test(pin.version)) throw Error("workkeel.lock must pin an exact Workkeel version");
 const installed = path.join(root, "node_modules", "@zsz1210", "workkeel", "bin", "workkeel.mjs");
-const source = process.env.WORKKEEL_CLI_PATH || (fs.existsSync(installed) ? installed : null);
+function globalCli() {
+  if (process.platform === "win32") return null;
+  for (const directory of (process.env.PATH ?? "").split(path.delimiter)) {
+    try {
+      const real = fs.realpathSync(path.resolve(directory, "workkeel"));
+      if (path.basename(real) !== "workkeel.mjs" || path.basename(path.dirname(real)) !== "bin" || !fs.statSync(real).isFile()) continue;
+      const manifest = JSON.parse(fs.readFileSync(path.join(path.dirname(real), "..", "package.json"), "utf8"));
+      if (manifest.name === ${JSON.stringify(WORKKEEL_PACKAGE)}) return real;
+    } catch { /* Ignore missing entries and unrelated executables. */ }
+  }
+  return null;
+}
+const source = process.env.WORKKEEL_CLI_PATH || (fs.existsSync(installed) ? installed : globalCli());
 if (source) {
   // The CLI itself checks semver compatibility with the pin on every command.
   const check = spawnSync(process.execPath, [source, "version"], { cwd: root, encoding: "utf8" });
   if (check.status !== 0 || !createRequire(path.resolve(root, source))("semver").valid(check.stdout.trim())) throw Error("Workkeel override did not report a version");
 } else if (process.env.WORKKEEL_ALLOW_PACKAGE_FETCH !== "1") {
-  throw Error("Pinned Workkeel CLI is not installed. Set WORKKEEL_CLI_PATH to a compatible source bin/workkeel.mjs, or explicitly allow a published package fetch with WORKKEEL_ALLOW_PACKAGE_FETCH=1. No download was attempted.");
+  console.error("Pinned Workkeel CLI is not installed. Run npm i -D @zsz1210/workkeel, npm i -g @zsz1210/workkeel, or set WORKKEEL_CLI_PATH to a compatible source bin/workkeel.mjs. Explicit package fetch is available with WORKKEEL_ALLOW_PACKAGE_FETCH=1. No download was attempted.");
+  process.exit(1);
 }
 const run = source
   ? spawnSync(process.execPath, [source, ...process.argv.slice(2)], { cwd: root, stdio: "inherit" })
@@ -169,7 +193,8 @@ Claim before work and stay inside the task's approved paths, tools, network and 
 Match and read applicable Skills; report what was applied, checked and left unverified.
 Hand off the exact committed candidate with evidence; \`task evidence-check\` helps map criteria.
 A different registered Agent reviews it; an approving Principal closes it. Closing never publishes.
-Commit \`workkeel.lock\`, \`workkeelw.mjs\`, this file and \`.ai-org/\`; ignore \`.workkeel/\` (local settings).
+Commit \`workkeel.lock\`, \`workkeelw.mjs\` and this file now; commit \`.ai-org/\` after task records are created.
+Ignore \`.workkeel/\` (local settings). Make a baseline Git commit before starting task work.
 Details: https://github.com/${TEMPLATE_REPOSITORY}/blob/main/docs/getting-started/workkeel.md
 `;
     const created = [];
@@ -183,7 +208,9 @@ Details: https://github.com/${TEMPLATE_REPOSITORY}/blob/main/docs/getting-starte
       throw error;
     }
     return { schema_version: TASK_PROJECT_SCHEMA, initialized: true, mode: "task-first",
-      commit: ["workkeel.lock", "workkeelw.mjs", "WORKKEEL.md", ".ai-org/"], suggested_gitignore: [LOCAL_SETTINGS_DIRECTORY + "/"],
+      commit: ["workkeel.lock", "workkeelw.mjs", "WORKKEEL.md"],
+      next_action: "Commit the generated setup files now; commit .ai-org/ after task records are created.",
+      suggested_gitignore: [LOCAL_SETTINGS_DIRECTORY + "/"],
       execution_authorized: false, boundary_enforcement: "host-responsibility" };
   });
 }

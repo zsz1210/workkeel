@@ -64,7 +64,7 @@ test('candidate diagnostics report drift inside the write roots and ignore admin
   const result=await inspectTaskCandidate(f.root,'WK-preflight',{action:'handoff',request});
   assert.equal(result.candidate_files_passed,false);
   assert.deepEqual(result.issues.map(i=>[i.path,i.code]),[['src/stray.mjs','product-drift']]);
-  await assert.rejects(mutateNativeTask(f.root,'WK-preflight','handoff',request),/clean tree inside the approved write roots.*stray/);
+  await assert.rejects(mutateNativeTask(f.root,'WK-preflight','handoff',request),/untracked files present.*stray/);
   await fs.unlink(f.root+'/src/stray.mjs');
   assert.equal((await mutateNativeTask(f.root,'WK-preflight','handoff',request)).state,'test');
   // A committed evidence path is read from the candidate, not from the edited working copy.

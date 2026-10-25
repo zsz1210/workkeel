@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import {createHash} from 'node:crypto';
-import {spawnSync} from 'node:child_process';
+import {execFileSync,spawnSync} from 'node:child_process';
 import {fileURLToPath} from 'node:url';
 import {createMonitorFixture} from '../scripts/workkeel-monitor-fixture.mjs';
 import {readNativeTask} from '../src/workkeel-tasks.mjs';
@@ -21,6 +21,25 @@ async function fixture(t){
 test('complete coverage checks artifact consistency but never grants semantic or independent acceptance',async t=>{
   const {root,report}=await fixture(t),result=await checkCompletionEvidence(root,'WK-working',report);
   assert.equal(result.coverage_consistent,true);assert.equal(result.approved_criteria,result.covered_criteria);assert.equal(result.visual_review_rounds,2);assert.equal(result.semantic_correctness,'requires-review');assert.equal(result.independent_acceptance,'not-evaluated');assert.equal(result.model_calls,0);assert.equal(result.mutation_status,'no-write');
+});
+test('completion evidence rejects an unborn repository with baseline guidance and no raw Git error',async t=>{
+  const {root,report}=await fixture(t);
+  assert.equal((await checkCompletionEvidence(root,'WK-working',report)).coverage_consistent,true);
+  await fs.rm(root+'/.git',{recursive:true,force:true});
+  execFileSync('git',['-C',root,'init','-q']);
+  const ref='.ai-org/artifacts/WK-working/completion.json',canonical=root+'/.ai-org/work-items/WK-working.json';
+  await fs.writeFile(root+'/'+ref,JSON.stringify(report));
+  const before=await fs.readFile(canonical),message='This repository has no commits. Make a baseline commit first (git add -A && git commit -m baseline), then retry.';
+  await assert.rejects(checkCompletionEvidence(root,'WK-working',report),error=>{
+    assert.equal(error.message,message);
+    assert.doesNotMatch(String(error),/fatal:|ambiguous argument|Command failed/);
+    return true;
+  });
+  const run=spawnSync(process.execPath,[fileURLToPath(new URL('../bin/workkeel.mjs',import.meta.url)),'task','evidence-check',root,'--id','WK-working','--request',ref],{encoding:'utf8'});
+  assert.equal(run.status,1);
+  const error=JSON.parse(run.stdout+run.stderr);assert.equal(error.schema_version,'workkeel.operation-error/v1');assert.equal(error.message,message);
+  assert.doesNotMatch(run.stdout+run.stderr,/fatal:|ambiguous argument|Command failed/);
+  assert.deepEqual(await fs.readFile(canonical),before);
 });
 test('green test evidence cannot cover an omitted requirement or missing visual review',async t=>{
   const {root,report}=await fixture(t);report.requirements=[];report.self_reviews=[];

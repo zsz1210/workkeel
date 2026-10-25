@@ -11,13 +11,25 @@ import {applyTaskIntake} from '../src/workkeel-intake.mjs';
 
 const actor = {agent_id:'builder', principal_id:'owner'};
 const policy = {schema_version:'workkeel.task-policy/v1', principals:['owner'], agents:[actor], approvers:['owner'], review_separation:'distinct-agent'};
-async function fixture(t, native=false) {
+async function fixture(t, native=false, {commit=true}={}) {
   const root = await fs.mkdtemp(path.join(os.tmpdir(),'workkeel-start-'));
   t.after(()=>fs.rm(root,{recursive:true,force:true}));
   execFileSync('git',['-C',root,'init','-q']);
   if(native) await initializeTaskProject(root,policy);
+  if(commit) execFileSync('git',['-C',root,'-c','user.name=Fixture','-c','user.email=fixture@example.invalid','commit','--allow-empty','-qm','Baseline']);
   return root;
 }
+for(const native of [false,true]) test(`start identifies an unborn repository ${native?'after':'before'} init without writing`,async t=>{
+  const root=await fixture(t,native,{commit:false}),before=await files(root),guide=await readStartGuide(root);
+  assert.equal(guide.stage,'baseline'); assert.equal(guide.ready,false);
+  assert.match(guide.next_action,/This repository has no commits/);
+  assert.ok(guide.next_action.includes('git add -A && git commit -m baseline'));
+  assert.deepEqual(guide.next_command,['git','add','-A']);
+  assert.deepEqual(await files(root),before);
+  const cli=fileURLToPath(new URL('../bin/workkeel.mjs',import.meta.url));
+  const result=spawnSync(process.execPath,[cli,'start',root],{encoding:'utf8'});
+  assert.equal(result.status,0,result.stderr); assert.equal(JSON.parse(result.stdout).stage,'baseline');
+});
 async function files(root) {
   const result = {};
   async function walk(dir, prefix='') {

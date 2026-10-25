@@ -31,6 +31,58 @@ const fails = (root, ...args) => {
 const jsonFiles = async root => (await fs.readdir(root, { recursive: true }))
   .filter(name => name.endsWith(".json") && !name.startsWith(".git/") && !name.startsWith(".ai-org/")).sort();
 
+test("unborn HEAD is diagnosed by doctor and candidate operations without raw Git errors", async t => {
+  const root = await repository(t), initialized = workkeel(root, "init");
+  assert.deepEqual(initialized.commit, ["workkeel.lock", "workkeelw.mjs", "WORKKEEL.md"]);
+  assert.match(initialized.next_action, /after task records are created/);
+  const doctor = spawnSync(process.execPath, [cli, "doctor"], { cwd: root, encoding: "utf8" });
+  assert.equal(doctor.status, 1);
+  const diagnostic = JSON.parse(doctor.stdout);
+  assert.equal(diagnostic.valid, false);
+  assert.ok(diagnostic.errors.some(error => error.next_action === "git add -A && git commit -m baseline"));
+  workkeel(root, "task", "new", "--goal", "Guide", "--acceptance", "Readable", "--write", "docs", "--actor", "builder");
+  const record = path.join(root, ".ai-org/work-items/WK-0001.json"), before = await fs.readFile(record);
+  for (const [action, flags] of [["claim", []], ["claim", ["--base", "a".repeat(40)]],
+    ["handoff", ["--summary", "Done"]], ["handoff", ["--summary", "Done", "--revision", "abcd"]],
+    ["review", ["--summary", "Reviewed", "--judgment", "pass"]], ["close", ["--summary", "Accept", "--rollback", "Revert"]]]) {
+    const error = JSON.parse(fails(root, "task", action, "--id", "WK-0001", "--actor", "builder", ...flags));
+    assert.equal(error.schema_version, "workkeel.operation-error/v1");
+    assert.equal(error.message, "This repository has no commits. Make a baseline commit first (git add -A && git commit -m baseline), then retry.");
+    assert.doesNotMatch(error.message, /fatal:|ambiguous argument|Command failed/);
+  }
+  assert.deepEqual(await fs.readFile(record), before);
+});
+
+for (const later of ["outside", "reverted-records"]) test(`CLI close explains unreviewed ${later} commits`, async t => {
+  const root = await repository(t);
+  workkeel(root, "init"); git(root, "add", "-A"); git(root, "commit", "-qm", "Baseline");
+  workkeel(root, "task", "new", "--goal", "Guide", "--acceptance", "Readable", "--write", "docs", "--risk", "low", "--actor", "builder");
+  workkeel(root, "task", "claim", "--id", "WK-0001", "--actor", "builder");
+  await fs.appendFile(path.join(root, "docs/guide.md"), "Audience: readers\n");
+  git(root, "add", "-A"); git(root, "commit", "-qm", "Guide candidate");
+  const revision = git(root, "rev-parse", "HEAD");
+  workkeel(root, "task", "handoff", "--id", "WK-0001", "--actor", "builder", "--summary", "Done");
+  workkeel(root, "task", "review", "--id", "WK-0001", "--actor", "reviewer", "--judgment", "pass", "--summary", "Reviewed");
+  let extra;
+  if (later === "outside") {
+    await fs.writeFile(path.join(root, "app.js"), "export const value = 1;\n");
+    git(root, "add", "app.js"); git(root, "commit", "-qm", "Outside work"); extra = git(root, "rev-parse", "HEAD");
+  } else {
+    await fs.appendFile(path.join(root, "docs/guide.md"), "Extra\n");
+    git(root, "commit", "-qam", "Extra work and review record"); extra = git(root, "rev-parse", "HEAD");
+    git(root, "revert", "--no-edit", "HEAD");
+    assert.equal((await readNativeTask(root, "WK-0001")).state, "build");
+  }
+  const record = path.join(root, ".ai-org/work-items/WK-0001.json"), before = await fs.readFile(record);
+  const error = JSON.parse(fails(root, "task", "close", "--id", "WK-0001", "--actor", "builder", "--summary", "Accept", "--rollback", "Revert"));
+  assert.match(error.message, /unreviewed commit\(s\) after reviewed candidate/);
+  assert.ok(error.message.includes(revision)); assert.ok(error.message.includes(extra.slice(0, 12)));
+  assert.ok(error.message.includes("(1) check out the reviewed revision"));
+  assert.ok(error.message.includes("(2) cancel this task and start a new task"));
+  if (later === "reverted-records") assert.match(error.message, /task record was also reverted/);
+  assert.deepEqual(await fs.readFile(record), before);
+});
+
 test("CLI errors preserve their envelope and give command-appropriate recovery guidance", async t => {
   const root = await fs.mkdtemp(path.join(os.tmpdir(), "workkeel-error-guidance-"));
   t.after(() => fs.rm(root, { recursive: true, force: true }));
@@ -169,6 +221,34 @@ test("abbreviated --revision values resolve to the full commit; low work needs n
   assert.equal(workkeel(root, "task", "review", "--id", "WK-0001", "--actor", "reviewer", "--judgment", "pass", "--summary", "Tidy", "--revision", short).state, "release_gate");
   const item = await readNativeTask(root, "WK-0001");
   assert.equal(item.review.revision, full); assert.deepEqual(item.delivery.evidence, []); assert.deepEqual(item.review.evidence, []);
+});
+
+test("task close exits non-zero and lists commits made after the reviewed candidate", async t => {
+  const root = await repository(t);
+  workkeel(root, "init");
+  await fs.writeFile(path.join(root, ".gitignore"), ".workkeel/\n");
+  git(root, "add", "-A"); git(root, "commit", "-qm", "base");
+  workkeel(root, "task", "new", "--goal", "Tidy the guide", "--acceptance", "The guide is tidy", "--write", "docs", "--actor", "builder");
+  workkeel(root, "task", "claim", "--id", "WK-0001", "--actor", "builder");
+  await fs.appendFile(path.join(root, "docs/guide.md"), "Tidied.\n"); git(root, "commit", "-qam", "tidy");
+  const reviewed = git(root, "rev-parse", "HEAD");
+  workkeel(root, "task", "handoff", "--id", "WK-0001", "--actor", "builder", "--summary", "Tidied");
+  assert.equal(workkeel(root, "task", "review", "--id", "WK-0001", "--actor", "reviewer", "--judgment", "pass", "--summary", "Tidy").state, "release_gate");
+  const later = [];
+  for (const [file, subject] of [["docs/guide.md", "Retitle the guide"], ["NOTES.md", "Add release notes"]]) {
+    await fs.appendFile(path.join(root, file), `${subject}\n`); git(root, "add", file); git(root, "commit", "-qm", subject);
+    later.push(git(root, "rev-parse", "HEAD"));
+  }
+  const close = spawnSync(process.execPath, [cli, "task", "close", "--id", "WK-0001", "--actor", "builder", "--summary", "Accepted", "--rollback", "Revert the tidy commit"], { cwd: root, encoding: "utf8" });
+  assert.notEqual(close.status, 0);
+  const output = close.stdout + close.stderr;
+  assert.ok(output.includes(reviewed));
+  for (const revision of later) assert.ok(output.includes(revision.slice(0, 12)), revision);
+  assert.match(output, /Retitle the guide/); assert.match(output, /Add release notes/);
+  assert.ok(output.includes(`(1) check out the reviewed revision ${reviewed}, then close again`));
+  assert.match(output, /\(2\) cancel this task and start a new task for the new commits/);
+  assert.doesNotMatch(output, /rework/i);
+  assert.equal((await readNativeTask(root, "WK-0001")).state, "release_gate");
 });
 
 test("the local default actor, derived operation IDs and repeated-flag rejection", async t => {

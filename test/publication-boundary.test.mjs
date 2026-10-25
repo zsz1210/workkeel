@@ -22,6 +22,38 @@ test('clean working, staged and committed content passes without publishing',t=>
  const {cwd}=fixture(t);
  for(const mode of ['working','staged','history'])assert.equal(checkPublication(cwd,{mode}).passed,true,mode);
 });
+for(const field of ['author','committer']) test(`history rejects a personal ${field} identity without exposing its email`,t=>{
+ const {cwd,git}=fixture(t),email='fixture@personal.example';
+ if(field==='author')git('commit','--allow-empty','-qm','Synthetic author','--author',`Fixture <${email}>`);
+ else git('-c',`user.email=${email}`,'commit','--allow-empty','-qm','Synthetic committer','--author','Fixture <fixture@example.invalid>');
+ const commit=git('rev-parse','HEAD'),report=checkPublication(cwd,{mode:'history'});
+ assert.equal(report.passed,false);
+ assert.deepEqual(report.failures,[{commit,field,rule:'commit-identity'}]);
+ assert.ok(!JSON.stringify(report).includes(email));
+ const manifest=path.join(cwd,'public-files.json'),document=JSON.parse(fs.readFileSync(manifest,'utf8'));
+ document.historical_identities=[commit];fs.writeFileSync(manifest,JSON.stringify(document));
+ assert.equal(checkPublication(cwd,{mode:'history'}).passed,true);
+});
+for(const email of ['fixture@users.noreply.github.com','noreply@github.com','fixture@example.invalid']) test(`history permits ${email.endsWith('.invalid')?'invalid-domain':'noreply'} identities`,t=>{
+ const {cwd,git}=fixture(t);
+ git('-c',`user.email=${email}`,'commit','--allow-empty','-qm','Allowed identity','--author',`Fixture <${email}>`);
+ assert.equal(checkPublication(cwd,{mode:'history'}).passed,true);
+});
+test('history checks merge identities even when all tree bytes were already scanned',t=>{
+ const {cwd,git}=fixture(t),base=git('rev-parse','HEAD');
+ git('checkout','-qb','side');git('commit','--allow-empty','-qm','Side');
+ git('checkout','-qb','target',base);git('commit','--allow-empty','-qm','Main');
+ git('-c','user.email=fixture@personal.example','merge','--no-ff','-qm','Synthetic merge','side');
+ const report=checkPublication(cwd,{mode:'history'}),commit=git('rev-parse','HEAD');
+ assert.deepEqual(report.failures,[{commit,field:'author',rule:'commit-identity'},{commit,field:'committer',rule:'commit-identity'}]);
+});
+test('historical identity exceptions require bounded unique full lowercase hashes',t=>{
+ const {cwd}=fixture(t),manifest=path.join(cwd,'public-files.json'),document=JSON.parse(fs.readFileSync(manifest,'utf8'));
+ for(const entries of [null,{},['abc'],['A'.repeat(40)],['a'.repeat(40),'a'.repeat(40)],Array.from({length:17},(_,i)=>i.toString(16).padStart(40,'0'))]){
+  fs.writeFileSync(manifest,JSON.stringify({...document,historical_identities:entries}));
+  assert.throws(()=>readAllowlist(cwd),/historical-identity/);
+ }
+});
 test('clean public checkout permits dependencies and nested synthetic framework templates',t=>{
  const {cwd}=fixture(t);
  for(const directory of ['node_modules','project-overlay/.ai-org','docs/getting-started'])fs.mkdirSync(path.join(cwd,directory),{recursive:true});
