@@ -63,6 +63,7 @@ $ workkeel task handoff --id WK-0001 --actor builder --summary "Guide updated"
 # reviewer が提出されたコミットを受け入れ条件と照らし合わせる。
 $ workkeel task review --id WK-0001 --actor reviewer --judgment pass --summary "Meets the criterion"
 {"id":"WK-0001","state":"release_gate"}
+# owner が受け入れる。builder は、承認する Principal の下に登録された Agent。
 $ workkeel task close --id WK-0001 --actor builder --summary "Owner accepts" --rollback "Revert the guide commit"
 {"id":"WK-0001","state":"done","external_release":"not-performed"}
 ```
@@ -83,11 +84,35 @@ alias workkeel="node $PWD/bin/workkeel.mjs"
 ```
 
 または `npm install -g @zsz1210/workkeel` で npm からインストールすると、`workkeel` コマンドを使えます。
+npm の `latest` dist-tag は `1.0.2` です。`next` は古い `0.1.0-beta.1` を指したままです。
+現在のリリースには `@zsz1210/workkeel` か `@zsz1210/workkeel@latest` をインストールしてください。`@next` は使いません。
+
+シェルのエイリアスは、定義した対話シェルの中でしか使えません。Agent のツール呼び出しや CI のような
+非対話シェルでは、`workkeel` のエイリアスは動きません。初期化後は `node workkeelw.mjs` を、
+ローカルにインストールした場合は `npx --no-install workkeel` を使ってください。
+
+タスクを始める前に、リポジトリにはベースラインのコミットが必要です。新しいリポジトリでは、
+含めるファイルを確認してから `git add -A && git commit -m baseline` を実行します。
 
 自分のプロジェクトの Git リポジトリに移り、`workkeel start .` で書き込みを伴わないセットアップ案内を確認します。
 `init` の後にもう一度 `workkeel start .` を実行すると、任意で使える[指示ファイルの連携](docs/extensions/workkeel-context.md#connect-native-instructions)の案内を確認できます。
 初期化、ポリシー、証跡、ロールバックは[クイックスタートガイド](docs/getting-started/workkeel.md)を参照してください。
 Workkeel 自体の開発は[貢献ガイド](CONTRIBUTING.md)に従ってください。
+
+### プロジェクトのランチャーが CLI を探す順序
+
+`node workkeelw.mjs` は `workkeel.lock` で固定したバージョンを読み、次の順に探します。
+
+1. `WORKKEEL_CLI_PATH`。互換性のあるソースの `bin/workkeel.mjs` を指定します。
+2. ローカルにインストールした `node_modules/@zsz1210/workkeel/bin/workkeel.mjs`
+   （`npm i -D @zsz1210/workkeel`）。
+3. `PATH` 上のグローバルな `workkeel`（`npm i -g @zsz1210/workkeel`）。ランチャーはシンボリックリンクを解決し、
+   `@zsz1210/workkeel` という名前のパッケージにある `bin/workkeel.mjs` だけを受け付けます。Windows ではこの方法を使いません。
+4. 固定したバージョンのパッケージを明示的に取得する方法。`WORKKEEL_ALLOW_PACKAGE_FETCH=1` が設定されていて、
+   インストール済みのソースが見つからない場合に限ります。
+
+CLI は固定したバージョンとの互換性を確認します。既定ではダウンロードを試みません。
+既存のプロジェクトは、`workkeel upgrade` を明示的に実行するまで今のランチャーを使い続けます。
 
 ## リスク区分
 

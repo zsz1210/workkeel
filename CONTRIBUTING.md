@@ -37,12 +37,15 @@ For a pull request:
 4. Describe the exact candidate tested, what the checks prove, and any
    unverified behavior. Have a different registered Agent review it before
    task acceptance. A passing test or PR check does not itself accept a task.
-5. Promote only reviewed source commits to the clean public checkout; never copy
+5. Promote only reviewed source commits to the clean public checkout. Never copy
    the private workspace wholesale. Install its local pre-push hook with
-   `npm run setup:hooks`; it pushes only `workkeel/*` branches. Run
-   `npm run check:source-checkout`, review additions to `public-files.json` and run `npm run check:publication` and
-   `npm run check:public-history` before any public push. Follow the
-   [publication boundary guide](docs/operations/publication-boundary.md).
+   `npm run setup:hooks`. The hook allows pushes only to `workkeel/*` branches.
+   Before any public push:
+   - Run `npm run check:source-checkout`.
+   - Review additions to `public-files.json`.
+   - Run `npm run check:publication` and `npm run check:public-history`.
+
+   Follow the [publication boundary guide](docs/operations/publication-boundary.md).
    Publication and package release require separate maintainer authorization.
 
 Include a concise, non-sensitive verification summary in a PR: candidate revision,
