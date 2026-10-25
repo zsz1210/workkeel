@@ -12,7 +12,7 @@ Do not run task initialization in the public framework source checkout.
 
 ## Availability and compatibility
 
-Use Node.js 24.15 or newer. npm's `latest` dist-tag is `1.0.1`: install
+Use Node.js 24.15 or newer. npm's `latest` dist-tag is `1.0.2`: install
 `@zsz1210/workkeel` or `@zsz1210/workkeel@latest`. The `next` dist-tag still
 points to the old `0.1.0-beta.1` [beta line](../../CHANGELOG.md#010-beta1);
 do not install `@next` for the current release. You can also run the current source

@@ -9,7 +9,7 @@ English · [繁體中文](README.zh-TW.md) · [日本語](README.ja.md)
 
 [![CI](https://github.com/zsz1210/workkeel/actions/workflows/ci.yml/badge.svg)](https://github.com/zsz1210/workkeel/actions/workflows/ci.yml)
 
-[npm](https://www.npmjs.com/package/@zsz1210/workkeel) 1.0.1 · Node.js 24.15+ · [MIT](LICENSE)
+[npm](https://www.npmjs.com/package/@zsz1210/workkeel) 1.0.2 · Node.js 24.15+ · [MIT](LICENSE)
 
 The [1.0 compatibility guarantees](docs/concepts/compatibility.md) list what is stable, best effort or experimental.
 
@@ -88,7 +88,7 @@ alias workkeel="node $PWD/bin/workkeel.mjs"
 ```
 
 Or install from npm with `npm install -g @zsz1210/workkeel` to use the `workkeel` command.
-The npm `latest` dist-tag is `1.0.1`; `next` still points to the old
+The npm `latest` dist-tag is `1.0.2`; `next` still points to the old
 `0.1.0-beta.1`. Install `@zsz1210/workkeel` or `@zsz1210/workkeel@latest`,
 rather than `@next`, for the current release.
 

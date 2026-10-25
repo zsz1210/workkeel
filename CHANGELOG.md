@@ -5,7 +5,9 @@ line. Historical release entries describe their own versions, not current-main
 qualification. Actual development tasks and validation records stay private;
 repository migration does not republish old tags, archives or npm versions.
 
-## Unreleased changes
+## 1.0.2
+
+Released 2026-10-25.
 
 - New project launchers also find a global Workkeel CLI on `PATH`, after the
   explicit override and local installation, and explain all installation choices
@@ -17,9 +19,9 @@ repository migration does not republish old tags, archives or npm versions.
   the task record to before review. Historical records provide diagnostics only;
   close remains blocked. Candidate drift errors distinguish tracked changes since
   the candidate from untracked files and list up to ten paths.
-- Corrected stable npm installation and dist-tag guidance (`latest` is `1.0.1`,
-  `next` is `0.1.0-beta.1`), non-interactive shell usage, close actors and initial
-  commit hints. Main help now lists `task rework` and `task cancel`.
+- Corrected stable npm installation and dist-tag guidance (`latest` is the stable
+  release, `next` is still `0.1.0-beta.1`), non-interactive shell usage, close
+  actors and initial commit hints. Main help now lists `task rework` and `task cancel`.
 - Updated zod to `4.6.7` and fast-uri to `3.1.9` to address dependency advisories.
 - Public history checks validate author and committer identities on every commit,
   including merges, without printing email addresses. A bounded hash-only
@@ -46,7 +48,7 @@ repository migration does not republish old tags, archives or npm versions.
 ## Known issues in 1.0.1
 
 In 1.0.1, `task close` can accept commits made after review, including out-of-scope
-commits. The fix is in Unreleased. Until release, close only at the reviewed revision.
+commits. Fixed in 1.0.2. On 1.0.1, close only at the reviewed revision, or upgrade.
 
 ## 1.0.1
 
