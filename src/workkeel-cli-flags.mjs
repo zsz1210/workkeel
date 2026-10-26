@@ -9,9 +9,9 @@ import { durableAtomicCreate } from "./files.mjs";
 const GROUPS = ["task", "usage", "dispatch", "intake", "runtime", "instructions", "workflow", "headroom", "skills", "context",
   "learning", "workspace", "model-policy", "skill-lifecycle", "autonomy", "retention", "goal", "policy"];
 const SINGLE = ["policy", "source", "request", "id", "fingerprint", "actor", "revision", "base", "claim", "summary",
-  "judgment", "rollback", "mode", "expect", "goal", "risk", "principal", "builder", "reviewer", "attempt", "approval", "days", "previous", "cutoff", "timezone", "stale-after"];
-const MULTIPLE = ["evidence", "acceptance", "write", "read", "include", "exclude", "unresolved"];
-const BOOLEAN = ["json", "report"];
+  "judgment", "rollback", "mode", "expect", "goal", "risk", "principal", "builder", "reviewer", "attempt", "approval", "days", "previous", "cutoff", "timezone", "stale-after", "projects-file"];
+const MULTIPLE = ["evidence", "acceptance", "write", "read", "include", "exclude", "unresolved", "project"];
+const BOOLEAN = ["json", "report", "strict"];
 
 /** Parses `command [action] [target] --flags` with Node's own argument parser. */
 export function parseCommandLine(args) {
@@ -27,13 +27,13 @@ export function parseCommandLine(args) {
   }
   const positionals = [...parsed.positionals], command = positionals.shift() ?? "help";
   const action = GROUPS.includes(command) ? positionals.shift() ?? null : null;
-  const target = positionals.shift() ?? ".";
+  const targetGiven = positionals.length > 0, target = positionals.shift() ?? ".";
   if (positionals.length) throw new Error(`Unexpected argument: ${positionals[0]}`);
   // Keep the established `--name` keys so command handlers can allow-list them.
   // `--json` is accepted everywhere: output is JSON unless a command offers Markdown.
   const result = {};
   for (const [name, value] of Object.entries(parsed.values)) if (name !== "json") result[`--${name}`] = value;
-  return { command, action, target: path.resolve(target), options: result, json: parsed.values.json === true };
+  return { command, action, target: path.resolve(target), targetGiven, options: result, json: parsed.values.json === true };
 }
 
 /** Resolves `--actor agent-id`, or the checkout's local default, to a registered actor. */

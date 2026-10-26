@@ -5,6 +5,23 @@ line. Historical release entries describe their own versions, not current-main
 qualification. Actual development tasks and validation records stay private;
 repository migration does not republish old tags, archives or npm versions.
 
+## Unreleased changes
+
+- `stats --report` accepts several project roots with repeated `--project` or a
+  `--projects-file` list. One cutoff, time zone and period apply to all sources.
+  The new `workkeel.stats-multi-report/v1` output keeps each source's counts,
+  coverage, errors and fingerprint, and merges the readable sources.
+- `stats --report` reads 0.1.0-beta.1 task records for statistics only. It does
+  not write, migrate or upgrade them. Other commands still refuse the old pin.
+  It checks every level of a record against the 0.1.0-beta.1 format. Records it
+  cannot read go to `coverage.errors`, never to zero.
+- `stats --report` skips backup copies in project paths and task stores: names
+  `backup` or `backups`, and names that end with `.bak`, `.backup` (with an
+  optional label) or `~`. A `<task-id>.json` file is always read as a task.
+- A failed source sets `stop_reason` to `source-error`. The new `--strict` flag
+  exits 3 on source errors, the wall-clock limit or any `coverage.errors` entry.
+  Without `--strict`, exit codes do not change.
+
 ## 1.0.2
 
 Released 2026-10-25.

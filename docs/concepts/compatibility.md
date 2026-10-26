@@ -9,6 +9,7 @@ Breaking changes to the following require a new major release (2.0):
 - Risk-tier and rework-cap rules.
 - File formats of `workkeel.lock`, `WORKKEEL.md`, `workkeelw.mjs` and `.ai-org/` task records. A 1.x CLI reads all 1.x records; move older pins with `workkeel upgrade`, without converting records.
 - `workkeel stats` and `--report` output schemas.
+- `stats --report` reads 0.1.0-beta.1 task records for statistics only. Other commands keep the version check.
 - The Node.js 24.15+ requirement.
 
 ## Optional parts, best effort

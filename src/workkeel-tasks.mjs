@@ -131,7 +131,12 @@ export function validateNativeTaskSnapshot(item, id) {
   assertRecord(item, id);
   return item;
 }
-export async function listTaskItems(target, { isolateErrors = false, staleAfter, now = new Date() } = {}) {
+/**
+ * `excludeRule` lets a read-only caller skip entries by name, such as backup
+ * copies; each skipped entry goes to `excluded`. Without it, any entry other
+ * than a task record is an error.
+ */
+export async function listTaskItems(target, { isolateErrors = false, staleAfter, now = new Date(), excludeRule = null, excluded = [] } = {}) {
   if (staleAfter !== undefined && (!Number.isFinite(staleAfter) || staleAfter <= 0))
     throw new Error('--stale-after must be a positive finite number of hours');
   await readTaskProject(target);
@@ -139,6 +144,8 @@ export async function listTaskItems(target, { isolateErrors = false, staleAfter,
   const dir = await safeDirectory(target, ".ai-org/work-items");
   const items = [];
   for (const entry of (await fs.readdir(dir)).sort()) {
+    const rule = excludeRule?.(entry);
+    if (rule) { excluded.push({ path: `.ai-org/work-items/${entry}`, rule }); continue; }
     if (!entry.endsWith(".json")) throw new Error("Unexpected file in task store");
     const id = entry.slice(0, -5);
     if (!ID.test(id)) throw new Error('Invalid task filename');
