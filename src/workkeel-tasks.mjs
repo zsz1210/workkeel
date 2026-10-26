@@ -426,9 +426,40 @@ async function changedFiles(target, from, revision) {
  * rejected or released attempt cannot hide its paths behind a newer claim base. */
 async function deliveryRisk(target, item, policy, revision) {
   const first = item.attempts[0]?.base_revision ?? item.base_revision;
-  const from = first === item.base_revision ? first : (await git(target, ["merge-base", first, revision])).trim();
+  let from = first === item.base_revision ? first : (await git(target, ["merge-base", first, revision])).trim();
+  // A pre-claim base on a later claim can be older than the first base; widen the span to cover it.
+  const older = [...item.attempts.filter(a => a.pre_claim).map(a => a.base_revision), ...(item.pre_claim ? [item.base_revision] : [])];
+  if (older.some(base => base !== from)) from = (await git(target, ["merge-base", "--octopus", from, ...new Set(older)])).trim();
   const span = await changedFiles(target, from, revision);
   return { ...candidateRisk(policy, span.product, span.administrative), compared_from: from };
+}
+/**
+ * Commits made for a task before its claim. An explicit older base is accepted
+ * only when it is an ancestor of HEAD and every product path changed in
+ * base..HEAD, by any commit or the net diff, is inside the write roots. Handoff,
+ * review and close then compare from that base, so these commits are reviewed.
+ */
+const MAX_PRE_CLAIM_COMMITS = 100;
+async function preClaimCommits(target, item, base, head) {
+  try { await readNativeGit(target, ["merge-base", "--is-ancestor", base, head]); }
+  catch { throw new Error(`Claim base ${base} is not an ancestor of HEAD ${head}; a pre-claim base must be an earlier commit on the current branch`); }
+  const lines = (await git(target, ["log", "--no-show-signature", "--no-patch", "--format=%H%x1f%P%x1f%s", "--topo-order", "--reverse", `${base}..${head}`, "--"])).split("\n").filter(Boolean);
+  if (lines.length > MAX_PRE_CLAIM_COMMITS) throw new Error(`Claim base ${base} is ${lines.length} commits before HEAD; a pre-claim base allows at most ${MAX_PRE_CLAIM_COMMITS}`);
+  const roots = item.contract.environment.write_paths, descendants = new Set([base]), commits = [];
+  const paths = new Set((await changedFiles(target, base, head)).product);
+  for (const line of lines) {
+    const [revision, parentList, subject] = line.split("\x1f"), parents = parentList.split(" ").filter(Boolean);
+    const parent = parents.find(value => descendants.has(value));
+    if (parent) descendants.add(revision);
+    // A merge counts from its side that descends from the base, as close does.
+    for (const file of (await git(target, parents.length > 1 ? ["diff", "--no-renames", "--name-only", "-z", parent ?? parents[0], revision, "--"] :
+      ["log", "-1", "--no-show-signature", "--no-ext-diff", "--no-textconv", "--format=", "--name-only", "--no-renames", "-z", revision, "--"])).split("\0").filter(Boolean))
+      if (!administrative(file)) paths.add(file);
+    commits.push({ revision, subject: subject.slice(0, 200) });
+  }
+  const outside = [...paths].filter(file => !roots.some(root => under(file, root))).sort();
+  if (outside.length) throw new Error(`Claim base ${base} stopped: commits before the claim change paths outside the task's write roots (up to 10): ${JSON.stringify(outside.slice(0, 10))}. Claim at HEAD, or approve a task whose write roots cover these paths.`);
+  return { base_revision: base, head_revision: head, commits };
 }
 async function assertCandidate(target, item, revision, options = {}) {
   const {issues} = await candidateFiles(target,item,revision,options);
@@ -526,7 +557,7 @@ async function recoveryChain(target, item) {
 }
 
 const FIELDS = {
-  claim: ["base_revision"], release: ["claim_id", "summary"],
+  claim: ["base_revision", "pre_claim"], release: ["claim_id", "summary"],
   handoff: ["claim_id", "revision", "summary", "evidence", "unresolved", "rollback"],
   review: ["revision", "judgment", "summary", "evidence", "review_attempt_id"],
   rework: ["summary", "mode"], close: ["revision", "summary", "rollback", "evidence"], cancel: ["summary", "evidence"]
@@ -549,8 +580,15 @@ export async function mutateNativeTask(targetInput, id, action, request) {
     if (action === "claim") {
       if (item.state !== "intake" || item.claim) throw new Error("Task already claimed or not available for implementation");
       if (!sameActor(item.contract.actor, request.actor)) throw new Error("Only the approved task Agent may claim");
-      const base = await exactRevision(target, request.base_revision);
-      if (await requireHeadRevision(target) !== base) throw new Error("Claim base must equal current HEAD");
+      if (request.pre_claim !== undefined && request.pre_claim !== true) throw new Error("pre_claim must be true when given");
+      const base = await exactRevision(target, request.base_revision), head = await requireHeadRevision(target);
+      let preClaim = null;
+      if (head !== base && request.pre_claim) preClaim = await preClaimCommits(target, item, base, head);
+      else if (head !== base) {
+        let ancestor = false;
+        try { await readNativeGit(target, ["merge-base", "--is-ancestor", base, head]); ancestor = true; } catch {}
+        throw new Error(`Claim base must equal current HEAD${ancestor ? `; if commits after ${base} were made for this task before the claim, claim again with pre_claim (CLI: --base ${base} --pre-claim) so review covers them` : ""}`);
+      }
       const pins = await dependencies(target, { ...item, base_revision: base });
       for (const active of await listTaskItems(target)) if (active.id !== id && active.mode === "task-first" && active.state === "build") {
         const other = await readNativeTask(target, active.id);
@@ -558,12 +596,14 @@ export async function mutateNativeTask(targetInput, id, action, request) {
       }
       item.claim = { id: `claim-${crypto.randomUUID()}`, actor: request.actor, at: new Date().toISOString() };
       item.base_revision = base; item.dependency_pins = pins; item.state = "build";
+      if (preClaim?.commits.length) item.pre_claim = preClaim; else delete item.pre_claim;
     } else if (["handoff", "release"].includes(action)) {
       if (item.state !== "build" || !item.claim || item.claim.id !== request.claim_id || !sameActor(item.claim.actor, request.actor)) throw new Error("Operation requires the current matching implementation claim");
       assertText(request.summary);
       if (action === "release") {
-        item.attempts.push({ kind: "released", claim: item.claim, base_revision: item.base_revision, summary: request.summary });
-        item.claim = null; item.state = "intake"; item.dependency_pins = null;
+        item.attempts.push({ kind: "released", claim: item.claim, base_revision: item.base_revision,
+          ...(item.pre_claim ? { pre_claim: item.pre_claim } : {}), summary: request.summary });
+        delete item.pre_claim; item.claim = null; item.state = "intake"; item.dependency_pins = null;
       } else {
         if (!Array.isArray(request.unresolved) || request.unresolved.length > 32 ||
             request.unresolved.some(x => typeof x !== "string" || !x.trim() || x.length > 1000)) throw new Error("Unresolved issues must be a bounded list of nonempty notes");
@@ -626,9 +666,9 @@ export async function mutateNativeTask(targetInput, id, action, request) {
       if (item.state !== "test" || item.review?.judgment !== "fail") throw new Error("Rework requires a failed review and preserves the same approved contract");
       const tier = effectiveRisk(item), rounds = item.attempts.filter(a => a.kind === "rejected").length;
       if (rounds >= MAX_REWORKS[tier]) throw new Error(`Rework limit reached for ${tier} risk (${MAX_REWORKS[tier]} rounds); stop and ask the human to re-scope, approve a new task or cancel`);
-      item.attempts.push({ kind: "rejected", base_revision: item.base_revision, delivery: item.delivery, review: item.review, summary: request.summary,
-        ...(request.mode ? { rework_mode: request.mode } : {}) });
-      item.delivery = null; item.review = null; item.claim = null; item.state = "intake"; item.dependency_pins = null;
+      item.attempts.push({ kind: "rejected", base_revision: item.base_revision, ...(item.pre_claim ? { pre_claim: item.pre_claim } : {}),
+        delivery: item.delivery, review: item.review, summary: request.summary, ...(request.mode ? { rework_mode: request.mode } : {}) });
+      delete item.pre_claim; item.delivery = null; item.review = null; item.claim = null; item.state = "intake"; item.dependency_pins = null;
     } else if (action === "close") {
       assertApprover(project.policy, request.actor);
       const revision = await deliveredRevision(target, item, request.revision);

@@ -69,6 +69,87 @@ test("task-first init, doctor, exact delivery, distinct review and close need no
   assert.equal(status.status, 0, status.stderr); assert.equal(JSON.parse(status.stdout).tasks[0].state, "done");
 });
 
+test("claim with pre_claim adopts earlier in-scope commits; handoff, review and close cover them", async t => {
+  const root = await fixture(t), base = git(root, "rev-parse", "HEAD");
+  // The work was committed before the task existed.
+  await write(root, "src/cart.mjs", "export const total = 2;\n"); git(root, "add", "src"); git(root, "commit", "-qm", "early repair");
+  const revision = git(root, "rev-parse", "HEAD");
+  await createNativeTask(root, contract(), request(0));
+  await assert.rejects(mutateNativeTask(root, "WK-one", "claim", request(1, developer, { base_revision: base })),
+    error => /Claim base must equal current HEAD/.test(error.message) && /--pre-claim/.test(error.message));
+  const claimRequest = request(1, developer, { base_revision: base.slice(0, 12), pre_claim: true });
+  const claimed = await mutateNativeTask(root, "WK-one", "claim", claimRequest);
+  assert.equal((await mutateNativeTask(root, "WK-one", "claim", claimRequest)).replayed, true);
+  let item = await readNativeTask(root, "WK-one");
+  assert.equal(item.base_revision, base);
+  assert.deepEqual(item.pre_claim, { base_revision: base, head_revision: revision, commits: [{ revision, subject: "early repair" }] });
+  const ref = ".ai-org/artifacts/WK-one/developer.md"; await write(root, ref, `Verified ${revision}.\n`);
+  await mutateNativeTask(root, "WK-one", "handoff", request(2, developer, { claim_id: claimed.claim.id, revision, summary: "Total corrected before the claim", evidence: [ref], unresolved: [] }));
+  const reviewRef = ".ai-org/artifacts/WK-one/review.md"; await write(root, reviewRef, `Independent review of ${base}..${revision}.\n`);
+  await mutateNativeTask(root, "WK-one", "review", request(3, reviewer, { revision, judgment: "pass", summary: "Pre-claim change reviewed", evidence: [reviewRef] }));
+  assert.equal((await mutateNativeTask(root, "WK-one", "close", request(4, developer, { revision, summary: "Accepted", rollback: "Revert the early repair", evidence: [reviewRef] }))).state, "done");
+  item = await readNativeTask(root, "WK-one");
+  assert.equal(item.pre_claim.commits[0].revision, revision);
+  assert.equal((await diagnoseTaskProject(root)).valid, true);
+});
+
+test("claim with pre_claim rejects a non-ancestor base, paths outside the write roots and a bad flag", async t => {
+  const root = await fixture(t), base = git(root, "rev-parse", "HEAD"), branch = git(root, "branch", "--show-current");
+  git(root, "checkout", "-qb", "side"); await write(root, "src/side.mjs", "export const side = 1;\n"); git(root, "add", "src"); git(root, "commit", "-qm", "side");
+  const side = git(root, "rev-parse", "HEAD"); git(root, "checkout", "-q", branch);
+  // An outside file added and then removed still counts: every commit is checked, not only the net diff.
+  await write(root, "README.md", "Outside.\n"); git(root, "add", "README.md"); git(root, "commit", "-qm", "outside");
+  git(root, "rm", "-q", "README.md"); git(root, "commit", "-qm", "remove outside");
+  await write(root, "src/cart.mjs", "export const total = 2;\n"); git(root, "add", "src"); git(root, "commit", "-qm", "early repair");
+  const inScope = git(root, "rev-parse", "HEAD~1");
+  await createNativeTask(root, contract(), request(0));
+  const claim = extra => mutateNativeTask(root, "WK-one", "claim", request(1, developer, extra));
+  await assert.rejects(claim({ base_revision: side, pre_claim: true }), /is not an ancestor of HEAD/);
+  await assert.rejects(claim({ base_revision: side }), error => /^Claim base must equal current HEAD$/.test(error.message));
+  await assert.rejects(claim({ base_revision: base, pre_claim: true }), /outside the task's write roots.*README\.md/);
+  await assert.rejects(claim({ base_revision: inScope, pre_claim: "yes" }), /pre_claim must be true/);
+  const item = await readNativeTask(root, "WK-one");
+  assert.equal(item.state, "intake"); assert.equal(item.version, 1);
+  // The commit after the outside removal is in scope.
+  await claim({ base_revision: inScope, pre_claim: true });
+  assert.equal((await readNativeTask(root, "WK-one")).pre_claim.commits.length, 1);
+});
+
+test("a reclaim with an older pre_claim base widens the risk span to that base", async t => {
+  const root = await fixture(t, { init: false, commit: false });
+  await initializeTaskProject(root, { ...policy(), risk_paths: { high: ["src/auth/**"] } });
+  git(root, "add", "."); git(root, "commit", "-qm", "base");
+  const base = git(root, "rev-parse", "HEAD");
+  await write(root, "src/auth/token.mjs", "export const token = 1;\n"); git(root, "add", "src"); git(root, "commit", "-qm", "auth change");
+  const revision = git(root, "rev-parse", "HEAD");
+  await createNativeTask(root, contract(), request(0));
+  const first = await mutateNativeTask(root, "WK-one", "claim", request(1, developer, { base_revision: revision }));
+  await mutateNativeTask(root, "WK-one", "release", request(2, developer, { claim_id: first.claim.id, summary: "Pause" }));
+  const again = await mutateNativeTask(root, "WK-one", "claim", request(3, developer, { base_revision: base, pre_claim: true }));
+  const ref = ".ai-org/artifacts/WK-one/developer.md"; await write(root, ref, `Verified ${revision}.\n`);
+  await mutateNativeTask(root, "WK-one", "handoff", request(4, developer, { claim_id: again.claim.id, revision, summary: "Auth change made before the claim", evidence: [ref], unresolved: [] }));
+  const item = await readNativeTask(root, "WK-one");
+  assert.equal(item.delivery.risk.tier, "high"); assert.equal(item.delivery.risk.compared_from, base);
+  assert.deepEqual(item.delivery.risk.paths, ["src/auth/token.mjs"]);
+});
+
+test("a default claim at HEAD records no pre-claim commits, and release keeps them with the attempt", async t => {
+  const root = await fixture(t);
+  await createNativeTask(root, contract(), request(0));
+  const head = git(root, "rev-parse", "HEAD");
+  const claimed = await mutateNativeTask(root, "WK-one", "claim", request(1, developer, { base_revision: head }));
+  let item = await readNativeTask(root, "WK-one");
+  assert.equal(item.base_revision, head); assert.equal(Object.hasOwn(item, "pre_claim"), false);
+  await mutateNativeTask(root, "WK-one", "release", request(2, developer, { claim_id: claimed.claim.id, summary: "Pause" }));
+  await write(root, "src/cart.mjs", "export const total = 2;\n"); git(root, "add", "src"); git(root, "commit", "-qm", "early repair");
+  const again = await mutateNativeTask(root, "WK-one", "claim", request(3, developer, { base_revision: head, pre_claim: true }));
+  assert.equal((await readNativeTask(root, "WK-one")).pre_claim.commits.length, 1);
+  await mutateNativeTask(root, "WK-one", "release", request(4, developer, { claim_id: again.claim.id, summary: "Pause again" }));
+  item = await readNativeTask(root, "WK-one");
+  assert.equal(Object.hasOwn(item, "pre_claim"), false);
+  assert.equal(item.attempts[0].pre_claim, undefined); assert.equal(item.attempts[1].pre_claim.commits.length, 1);
+});
+
 for (const committed of [false, true]) test(`summary before delivery is read-only with ${committed ? 'committed' : 'unborn'} HEAD`, async t => {
   const root = await fixture(t, {commit:committed});
   await createNativeTask(root, contract(), request(0));

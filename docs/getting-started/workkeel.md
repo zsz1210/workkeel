@@ -255,7 +255,7 @@ changing parameters under that ID is rejected. No claim is silently stolen.
 
 | Action | Additional request fields | Guard / result |
 | --- | --- | --- |
-| `claim` | `base_revision` (current commit; full or abbreviated ID) | Approved Agent; accepted dependencies; no overlapping active write roots; returns `claim.id` |
+| `claim` | `base_revision` (current commit; full or abbreviated ID), optional `pre_claim: true` | Approved Agent; accepted dependencies; no overlapping active write roots; returns `claim.id` |
 | `release` | `claim_id`, `summary` | Owner returns work to intake, without acceptance |
 | `handoff` | `claim_id`, `revision`, `summary`, `evidence` (paths), `unresolved` (notes) | Current commit descends from base; committed changes fit write roots; no tracked or untracked drift inside the write roots |
 | `review` | `revision`, `judgment: "pass"` or `"fail"`, `summary`, `evidence` | Distinct reviewer; exact delivered candidate |
@@ -279,6 +279,31 @@ For a report-only correction after a failed review, an approver can record
 `"mode": "evidence-only"` in the rework request. Either mode needs a new commit:
 commit the corrected evidence, hand off that commit and obtain a fresh distinct
 review. The rejected revision itself cannot be delivered again.
+
+### Claim work that started before the task
+
+Sometimes an Agent commits work before the task exists or before it claims the
+task. A claim at HEAD then records the wrong base, and review does not cover the
+earlier commits. To include them, claim with the commit where the work started
+and set `"pre_claim": true` (CLI: `--base <commit> --pre-claim`).
+
+Workkeel accepts this claim only when all of these are true:
+
+- The base is an ancestor of HEAD.
+- Every product path that a commit in `base..HEAD` changes is inside the task's
+  write roots. Workkeel checks each commit, so a change that a later commit
+  reverts still counts. Paths under `.ai-org/` do not count.
+- `base..HEAD` holds at most 100 commits.
+
+If a check fails, the claim stops with the reason and the task stays at intake.
+If the claim succeeds, `base_revision` is the older commit and the record gets
+`pre_claim` with that base, the HEAD at claim time and the list of earlier
+commits. Handoff, review and close compare from that base, so the reviewer sees
+all of `base..candidate`. The risk check also starts at that base, even when an
+earlier claim used a newer one. Release and rework keep `pre_claim` with the attempt.
+
+Without `pre_claim`, `base_revision` must be the current HEAD, as before. If you
+name an older commit without it, the error tells you about `--pre-claim`.
 
 For example, after creation returns version 1, prepare `claim.json`:
 

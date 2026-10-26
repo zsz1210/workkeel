@@ -7,6 +7,13 @@ repository migration does not republish old tags, archives or npm versions.
 
 ## Unreleased changes
 
+- `task claim` accepts an older base for work committed before the claim. Set
+  `pre_claim: true` in the request, or use `--base <commit> --pre-claim`. The
+  base must be an ancestor of HEAD, and every product path that a commit in
+  `base..HEAD` changes must be inside the task's write roots. Paths under
+  `.ai-org/` do not count. The task record lists these commits in `pre_claim`.
+  Handoff, review, close and the risk check compare from the older base.
+  Without `pre_claim`, a claim still needs the current HEAD as its base.
 - `stats --report` accepts several project roots with repeated `--project` or a
   `--projects-file` list. One cutoff, time zone and period apply to all sources.
   The new `workkeel.stats-multi-report/v1` output keeps each source's counts,

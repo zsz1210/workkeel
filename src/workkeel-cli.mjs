@@ -33,6 +33,7 @@ workkeel task new [target] --goal text --acceptance text [--acceptance text] [--
 workkeel task create [target] --source contract.json --request request.json
 workkeel task show [target] --id task-id
 workkeel task claim|release|handoff|review|rework|close|cancel [target] --id task-id [--actor id] [--summary text] [--evidence path] [--judgment pass|fail] [--revision sha] [--rollback text] [--expect version]
+workkeel task claim [target] --id task-id --base sha --pre-claim   (adopt earlier commits made for this task; see docs)
 workkeel task <operation> [target] --id task-id --request request.json   (integration form)
 workkeel task observe [target] --id task-id --request observation.json   (writes an observation record; task state unchanged)
 workkeel intake preview [target] --request brief.json
@@ -315,7 +316,7 @@ async function runCommand(args) {
       const project = await readTaskProject(target), draft = (await readTaskContractInput(target, options["--source"])).document;
       output = await createNativeTask(target, draft, { operation_id: `cli-create-${createHash("sha256").update(JSON.stringify(draft ?? null)).digest("hex").slice(0, 24)}`, expected_version: 0, actor: await resolveActor(target, project, options["--actor"]) });
     } else {
-      allow(options, ["--id", "--actor", "--revision", "--base", "--claim", "--summary", "--evidence", "--judgment", "--rollback", "--unresolved", "--mode", "--expect", "--attempt"]);
+      allow(options, ["--id", "--actor", "--revision", "--base", "--claim", "--summary", "--evidence", "--judgment", "--rollback", "--unresolved", "--mode", "--expect", "--attempt", "--pre-claim"]);
       const id = required(options, "--id");
       output = await runLifecycleFromFlags(target, id, action, options);
     }
