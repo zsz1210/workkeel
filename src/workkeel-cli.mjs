@@ -44,8 +44,10 @@ workkeel task assess [target] --id task-id [--request assessment.json]
 workkeel task evidence-check [target] --id task-id --request completion-evidence.json
 workkeel task metrics|summary [target] --id task-id
 workkeel stats [target]                     review scores and rework by risk tier
-workkeel stats [target] --report --cutoff ISO --timezone IANA [--previous sha256] [--json]
+workkeel stats [target] --report --cutoff ISO --timezone IANA [--previous sha256] [--strict] [--json]
                                             one-pass improvement suggestions (Markdown)
+workkeel stats --report --project path [--project path] [--projects-file list] --cutoff ISO --timezone IANA [--previous sha256] [--strict] [--json]
+                                            one merged report over several projects
 workkeel runtime plan [target] --id task-id
 workkeel context prepare [target] --id task-id --request material-request.json
 workkeel skills audit [target] --request skill-use.json
@@ -103,6 +105,24 @@ async function checkCompatibility(target, command, action) {
   } else assertMutationCompatible(cliCompatibility((await readTaskProject(target)).cli.version));
 }
 
+/** Weekly report over one project or several; --strict exits 3 on any read failure. */
+async function statsReport(target, options, json, { targetGiven, multiSource = false }) {
+  allow(options, ["--report", "--days", "--previous", "--cutoff", "--timezone", "--project", "--projects-file", "--strict"]);
+  const stats = await import("./workkeel-stats-report.mjs");
+  const days = options["--days"] === undefined ? undefined : Number(options["--days"]);
+  if (!options["--cutoff"] || !options["--timezone"]) throw Error("Weekly report requires --cutoff and --timezone");
+  const settings = { days, cutoff: options["--cutoff"], timezone: options["--timezone"], previous: options["--previous"] ?? null };
+  let report;
+  if (multiSource) {
+    if (targetGiven) throw Error("Name every project with --project or --projects-file, not as a positional target");
+    const roots = [...(options["--project"] ?? []), ...(options["--projects-file"] ? await stats.readSourceList(options["--projects-file"]) : [])];
+    report = await stats.readMultiSourceStatsReport(roots, settings);
+  } else report = await stats.readStatsReport(target, settings);
+  // The report is printed in every case, so a scheduler can read why it failed.
+  process.stdout.write(json ? JSON.stringify(report, null, 2) + "\n" : stats.formatStatsReport(report));
+  return options["--strict"] && stats.strictFailure(report) ? 3 : 0;
+}
+
 export async function workkeelMain(args) {
   try { return await runCommand(args); }
   finally { printWarnings(); }
@@ -122,8 +142,10 @@ async function runCommand(args) {
     const { monitorMain } = await import("./workkeel-monitor.mjs");
     return monitorMain(args.slice(1));
   }
-  const { command, action, target, options, json } = parseCommandLine(args);
-  if (!["init", "workspace", "upgrade"].includes(command) && await existsEntry(target, "workkeel.lock")) await checkCompatibility(target, command, action);
+  const { command, action, target, targetGiven, options, json } = parseCommandLine(args);
+  // A multi-source report names its projects with --project; each one reports its own format.
+  const multiSource = command === "stats" && (options["--project"] || options["--projects-file"]);
+  if (!multiSource && !["init", "workspace", "upgrade"].includes(command) && await existsEntry(target, "workkeel.lock")) await checkCompatibility(target, command, action);
   let output;
   if (command === "start") {
     allow(options, ["--request"]);
@@ -153,6 +175,9 @@ async function runCommand(args) {
       else if(action==='integration')output=await workspace.inspectWorkspaceIntegration(await workspace.readWorkspaceSnapshot(target),request);
       else throw Error('Unknown workspace action');
     }
+  } else if (multiSource && options["--report"]) {
+    // Each --project is checked by the report itself, so the current directory needs no project.
+    return statsReport(target, options, json, { targetGiven, multiSource });
   } else if (!await existsEntry(target, "workkeel.lock")) {
     throw new Error("Initialize the project with workkeel init before using task commands");
   } else if (command === "upgrade") {
@@ -174,13 +199,7 @@ async function runCommand(args) {
     };
     if (options['--stale-after'] !== undefined) output.stale_tasks = output.tasks.filter(task => task.stale).map(task => task.id);
   } else if (command === "stats" && options["--report"]) {
-    allow(options, ["--report", "--days", "--previous", "--cutoff", "--timezone"]);
-    const { readStatsReport, formatStatsReport } = await import("./workkeel-stats-report.mjs");
-    const days = options["--days"] === undefined ? undefined : Number(options["--days"]);
-    if (!options["--cutoff"] || !options["--timezone"]) throw Error("Weekly report requires --cutoff and --timezone");
-    const report = await readStatsReport(target, { days, cutoff: options["--cutoff"], timezone: options["--timezone"], previous: options["--previous"] ?? null });
-    if (!json) { process.stdout.write(formatStatsReport(report)); return 0; }
-    output = report;
+    return statsReport(target, options, json, { targetGiven });
   } else if (command === "stats") {
     allow(options, []);
     const { readScoreStats } = await import("./workkeel-scoring.mjs");

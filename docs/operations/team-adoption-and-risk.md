@@ -205,6 +205,85 @@ normal outcomes. Missing data never becomes a pass or a measured zero. The only
 suggested follow-up is to submit one L2 proposal for explicit user approval.
 The report does not create tasks, lessons or Skill versions.
 
+### Several projects in one report
+
+Pass each project root with `--project`, or list the roots in a file with
+`--projects-file`:
+
+```sh
+workkeel stats --report --project ../app --project ../tools \
+  --cutoff 2026-10-19T00:00:00Z --timezone UTC [--previous sha256] [--strict] [--json]
+workkeel stats --report --projects-file weekly-projects.txt --cutoff ... --timezone ...
+```
+
+The list file has one path per line. Blank lines and lines that start with `#`
+are ignored. A relative path is relative to the list file. You can use both flags
+in one command. Do not also give a positional target.
+
+The output schema is `workkeel.stats-multi-report/v1`. All sources use the same
+cutoff, time zone and period. `sources` holds one entry per project root with
+its `format`, `status` (`ok`, `partial` or `failed`), `fingerprint`, `by_risk`
+and `coverage`. A source fingerprint equals the fingerprint of a single-source
+report for that root. The top-level `by_risk`, `tasks`, `reasons` and
+`suggestions` merge all readable sources. Each task, error and missing-data
+record names its `root`. A task with the same ID and the same last history hash
+in two sources counts once and is listed in `coverage.duplicates`.
+
+A source is `failed` when the report cannot list its tasks, for example a
+missing directory or an unknown project pin. A failed source is not zero. Its
+counts are `null`, the merged report sets `stop_reason` to `source-error`, the
+merged complete rework totals become unknown, and `coverage.complete` is false.
+A `partial` source has some unreadable records; those records appear in
+`coverage.errors`.
+
+The report does not read backup copies. The rule checks each segment of a
+project path and each entry name in a task store (`.ai-org/work-items/`), for
+both current and 0.1.0-beta.1 projects:
+
+- A name `backup` or `backups`, in any case, is a backup directory.
+- A name that ends with `.bak` or `.backup`, in any case, is a backup copy. A
+  label after it, which starts with `.`, `_` or `-`, also matches, such as
+  `app.bak-2026`, `RN-1.json.bak` or `app.backup.1`. A name that ends with `~`
+  also matches.
+- A task store file named `<task-id>.json` is always a task record. The report
+  reads `WK-backup-check.json` and `RN-1.bak.json` as tasks.
+- Other names do not match, such as `app-backup`, `mybackup` or `bakery`.
+
+Skipped projects appear in `excluded_sources`, with a repeated root as
+`duplicate`. Skipped task store entries appear in the source's
+`coverage.excluded`. Only the report skips them. `workkeel status` and the
+lifecycle commands still stop on an unexpected entry in a task store.
+
+### Reading 0.1.0-beta.1 projects
+
+The report reads a project with a `workkeel.project/v1` lock pinned to
+`0.1.0-beta.1` for statistics only. It reads the task records and their history,
+and writes nothing. It does not migrate or upgrade the project. All other
+commands, including `status`, `task claim` and `task close`, still refuse that
+pin. The report checks each record against the format that 0.1.0-beta.1
+wrote, at every level: the record, its contract, claim, delivery, review,
+closeout, attempts, pins and history. It also checks the hash chain, the record
+digest and the contract digest. A record with an unknown field or value at any
+level, or a broken chain, goes to `coverage.errors` with its task ID and the
+first failing path. The report does not
+guess the missing parts and does not count them as zero. A legacy project has no
+goal history, so check repairs stay unknown, as for current projects without
+goals.
+
+This changes two single-source results. Before, a report on a 0.1.0-beta.1
+project stopped with `source-error` and no data. Now it reads the records and
+adds `input.format` and `input.excluded`. Before, a backup entry in a current
+task store made the listing fail with `source-error`. Now the report skips it and
+adds `input.excluded`. Reports on current projects without backup entries keep
+the same fields, fingerprint and exit code.
+
+### Exit codes for schedulers
+
+Without `--strict`, the report exits 0 when it prints a report, as before.
+With `--strict`, it exits 3 when `stop_reason` is `source-error` or
+`wall-clock-limit`, or when `coverage.errors` is not empty. The report is still
+printed, so the scheduler can read the cause. Invalid arguments exit 1.
+
 The optional trial infrastructure, including persistent run limits and sealed
 comparison records, is described in [the loop trial guide](loop-trial.md).
 
