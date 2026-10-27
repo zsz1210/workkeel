@@ -9,7 +9,7 @@
 
 [![CI](https://github.com/zsz1210/workkeel/actions/workflows/ci.yml/badge.svg)](https://github.com/zsz1210/workkeel/actions/workflows/ci.yml)
 
-[npm](https://www.npmjs.com/package/@zsz1210/workkeel) 1.0.2 · Node.js 24.15+ · [MIT](LICENSE)
+[npm](https://www.npmjs.com/package/@zsz1210/workkeel) 1.1.0 · Node.js 24.15+ · [MIT](LICENSE)
 
 どの部分が安定版・ベストエフォート・実験的機能かは、[1.0 の互換性保証](docs/concepts/compatibility.md)（英語）にまとめています。
 
@@ -36,6 +36,9 @@ Workkeel はサンドボックスでもエージェントランタイムでも�
 
 範囲、権限、受け入れ条件、リスク区分を合意してからタスクを引き受け、
 普段のツールで実装し、コミットを別の Agent に渡してレビューを受けます。
+引き受ける前に作業をコミットしていた場合は、`--base <commit> --pre-claim` で引き受けます。
+`<commit>` には作業を始める直前のコミットの完全な ID を指定します。ID は `git rev-parse <最初の作業コミット>~1` で確認できます。base 自体はタスクに含まれません。
+base より後のコミットはタスクの書き込み範囲内のプロダクトファイルだけを変更でき、レビューの対象にもなります。
 レビューが不合格なら、承認者が `task rework` を実行するまでタスクは `test` に留まります。
 実行すると、不合格の記録を残して同じ契約のまま `intake` に戻ります。
 builder が再び引き受け、新しいコミットを提出します。
@@ -84,7 +87,7 @@ alias workkeel="node $PWD/bin/workkeel.mjs"
 ```
 
 または `npm install -g @zsz1210/workkeel` で npm からインストールすると、`workkeel` コマンドを使えます。
-npm の `latest` dist-tag は `1.0.2` です。`next` は古い `0.1.0-beta.1` を指したままです。
+npm の `latest` dist-tag は `1.1.0` です。`next` は古い `0.1.0-beta.1` を指したままです。
 現在のリリースには `@zsz1210/workkeel` か `@zsz1210/workkeel@latest` をインストールしてください。`@next` は使いません。
 
 シェルのエイリアスは、定義した対話シェルの中でしか使えません。Agent のツール呼び出しや CI のような
@@ -133,7 +136,7 @@ CLI は登録済みのモデルファミリーを検査しますが、それだ�
 
 - **[Workspace 観測画面](docs/operations/workkeel-workspace.md)：**`workkeel workspace serve` で起動し、プロジェクトの記録を閲覧します。待機中のモデル呼び出しはありません。別の[読み取り専用オブザーバー](docs/operations/workkeel-observer.md)は `workkeel monitor` で起動します。
 - **[ワークフロー／LangGraph](docs/operations/workkeel-workflows.md)：**承認済みのグラフとモデルポリシーに従い、再開可能なステップを実行するランナーを選べます。実験的機能（EXPERIMENTAL）：[1.0 の互換性保証](docs/concepts/compatibility.md)の対象外で、マイナーリリースで変更または削除する場合があります。
-- **[Workkeel Loop L1 レポート](docs/operations/loop-trial.md)：**`workkeel stats --report --cutoff 2026-10-19T00:00:00Z --timezone UTC` が読み取り専用の週次レポートを生成します。モデル／API の費用はかかりません。
+- **[Workkeel Loop L1 レポート](docs/operations/loop-trial.md)：**`workkeel stats --report --cutoff 2026-10-19T00:00:00Z --timezone UTC` が読み取り専用の週次レポートを生成します。モデル／API の費用はかかりません。`--project` を繰り返すと、複数のプロジェクトをまとめて集計できます。0.1.0-beta.1 のタスク記録も、変更せずに読み取ります。
 - **[ネイティブディスパッチ](docs/operations/workkeel-native-dispatch.md)：**実行の引き継ぎと指定モデルを記録し、何が実行されたかをホストが報告します。
 - **[Bot レイヤーの参考運用](docs/operations/reference-usage-bot-layer.md)：**プロジェクト Bot、Claude Code、Codex を人の承認で連携させる一例です。コアには含まれません。
 

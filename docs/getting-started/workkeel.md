@@ -12,7 +12,7 @@ Do not run task initialization in the public framework source checkout.
 
 ## Availability and compatibility
 
-Use Node.js 24.15 or newer. npm's `latest` dist-tag is `1.0.2`: install
+Use Node.js 24.15 or newer. npm's `latest` dist-tag is `1.1.0`: install
 `@zsz1210/workkeel` or `@zsz1210/workkeel@latest`. The `next` dist-tag still
 points to the old `0.1.0-beta.1` [beta line](../../CHANGELOG.md#010-beta1);
 do not install `@next` for the current release. You can also run the current source
@@ -284,8 +284,10 @@ review. The rejected revision itself cannot be delivered again.
 
 Sometimes an Agent commits work before the task exists or before it claims the
 task. A claim at HEAD then records the wrong base, and review does not cover the
-earlier commits. To include them, claim with the commit where the work started
-and set `"pre_claim": true` (CLI: `--base <commit> --pre-claim`).
+earlier commits. To include them, claim with the last commit before the work
+started and set `"pre_claim": true` (CLI: `--base <commit> --pre-claim`). The
+base must be a commit ID. To get the full ID, run
+`git rev-parse <first-work-commit>~1`. The base itself is not part of the task.
 
 Workkeel accepts this claim only when all of these are true:
 

@@ -5,7 +5,9 @@ line. Historical release entries describe their own versions, not current-main
 qualification. Actual development tasks and validation records stay private;
 repository migration does not republish old tags, archives or npm versions.
 
-## Unreleased changes
+## 1.1.0
+
+Released 2026-10-27.
 
 - `task claim` accepts an older base for work committed before the claim. Set
   `pre_claim: true` in the request, or use `--base <commit> --pre-claim`. The
