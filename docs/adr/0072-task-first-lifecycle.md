@@ -21,6 +21,14 @@ write roots, stable approval/evidence bytes, completed dependencies and a distin
 registered reviewer. Completion is local acceptance, not external release. Native
 host execution is the default; a runtime-plan document never launches anything.
 
+The claim base is HEAD at claim time. An Agent can commit work before it claims
+the task, or before the task exists. For this case the claim can name an older
+base with an explicit `pre_claim` flag. The base must be an ancestor of HEAD, and
+each commit in `base..HEAD` may change only product paths inside the write roots.
+The record lists these commits. Delivery, risk, review and close then compare
+from the older base, so review covers the earlier commits. Without the flag, the
+base must equal HEAD.
+
 Existing Temple projects keep their pinned CLI, Position policies and schemas.
 An explicit preview/fingerprint migration supports only quiescent Solo history;
 legacy files remain byte-for-byte and legacy writers reject task-first projects.

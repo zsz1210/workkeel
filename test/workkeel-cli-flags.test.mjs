@@ -362,6 +362,18 @@ test("a rejected implicit claim refreshes its base when HEAD moves", async t => 
   assert.equal(workkeel(root, ...args).replayed, true, "a landed claim keeps its original base");
 });
 
+test("task claim --pre-claim adopts earlier commits only with an explicit --base", async t => {
+  const root = await initialized(t), base = head(root);
+  await fs.appendFile(path.join(root, "docs/guide.md"), "Early.\n"); git(root, "commit", "-qam", "early");
+  workkeel(root, "task", "new", "--goal", "Tidy", "--acceptance", "Tidy", "--write", "docs", "--actor", B);
+  assert.match(fails(root, "task", "claim", "--id", ID, "--actor", B, "--pre-claim"), /explicit --base/);
+  assert.match(fails(root, "task", "release", "--id", ID, "--actor", B, "--summary", "x", "--pre-claim"), /only to task claim/);
+  assert.match(fails(root, "task", "claim", "--id", ID, "--actor", B, "--base", base), /current HEAD.*--pre-claim/);
+  assert.equal(workkeel(root, "task", "claim", "--id", ID, "--actor", B, "--base", base, "--pre-claim").state, "build");
+  const item = await readNativeTask(root, ID);
+  assert.equal(item.base_revision, base); assert.equal(item.pre_claim.commits[0].subject, "early");
+});
+
 for (const state of ["cancelled", "done"]) test(`task new refuses an identical ${state} task and explains how to file another`, async t => {
   const root = await initialized(t);
   const args = ["task", "new", "--goal", "Tidy", "--acceptance", "Tidy", "--write", "docs", "--actor", B];

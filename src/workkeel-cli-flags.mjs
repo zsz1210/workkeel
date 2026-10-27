@@ -11,7 +11,7 @@ const GROUPS = ["task", "usage", "dispatch", "intake", "runtime", "instructions"
 const SINGLE = ["policy", "source", "request", "id", "fingerprint", "actor", "revision", "base", "claim", "summary",
   "judgment", "rollback", "mode", "expect", "goal", "risk", "principal", "builder", "reviewer", "attempt", "approval", "days", "previous", "cutoff", "timezone", "stale-after", "projects-file"];
 const MULTIPLE = ["evidence", "acceptance", "write", "read", "include", "exclude", "unresolved", "project"];
-const BOOLEAN = ["json", "report", "strict"];
+const BOOLEAN = ["json", "report", "strict", "pre-claim"];
 
 /** Parses `command [action] [target] --flags` with Node's own argument parser. */
 export function parseCommandLine(args) {
@@ -195,7 +195,8 @@ export async function lifecycleRequestFromFlags(target, id, action, options, sna
   const request = { operation_id: `cli-${action}-${expected + 1}-${key.slice(0, 16)}-${attempt}`, expected_version: expected, actor: await resolveActor(target, project, options["--actor"]) };
   const summary = () => { if (!options["--summary"]) throw new Error(`task ${action} needs --summary`); return options["--summary"]; };
   const evidence = () => options["--evidence"] ?? [];
-  if (action === "claim") request.base_revision = options["--base"] ?? derivedHead;
+  if (options["--pre-claim"] && (action !== "claim" || !("--base" in options))) throw new Error("--pre-claim applies only to task claim with an explicit --base");
+  if (action === "claim") Object.assign(request, { base_revision: options["--base"] ?? derivedHead, ...(options["--pre-claim"] ? { pre_claim: true } : {}) });
   else if (action === "release") Object.assign(request, { claim_id: options["--claim"] ?? item.claim?.id, summary: summary() });
   else if (action === "handoff") Object.assign(request, { claim_id: options["--claim"] ?? item.claim?.id, revision: options["--revision"] ?? derivedHead,
     summary: summary(), evidence: evidence(), unresolved: options["--unresolved"] ?? [], ...(options["--rollback"] ? { rollback: options["--rollback"] } : {}) });

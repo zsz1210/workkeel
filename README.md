@@ -9,7 +9,7 @@ English · [繁體中文](README.zh-TW.md) · [日本語](README.ja.md)
 
 [![CI](https://github.com/zsz1210/workkeel/actions/workflows/ci.yml/badge.svg)](https://github.com/zsz1210/workkeel/actions/workflows/ci.yml)
 
-[npm](https://www.npmjs.com/package/@zsz1210/workkeel) 1.0.2 · Node.js 24.15+ · [MIT](LICENSE)
+[npm](https://www.npmjs.com/package/@zsz1210/workkeel) 1.1.0 · Node.js 24.15+ · [MIT](LICENSE)
 
 The [1.0 compatibility guarantees](docs/concepts/compatibility.md) list what is stable, best effort or experimental.
 
@@ -37,6 +37,13 @@ it leaves the coding loop to your tool.
 1. Agree scope, permissions, acceptance criteria and risk tier.
 2. Claim the task and build with your coding tool.
 3. Hand off a commit for another Agent to review.
+
+If you committed work before you claimed the task, claim with
+`--base <commit> --pre-claim`. Use the last commit before the work started. To
+get its full ID, run `git rev-parse <first-work-commit>~1`. The base itself is
+not part of the task. Each
+commit after the base may change only product files inside the task's write
+roots, and the review covers all of them.
 
 After a failed review, the task stays in `test` until the approver runs `task rework`.
 This preserves the failed attempt and returns the task to `intake` under the same
@@ -91,7 +98,7 @@ alias workkeel="node $PWD/bin/workkeel.mjs"
 ```
 
 Or install from npm with `npm install -g @zsz1210/workkeel` to use the `workkeel` command.
-The npm `latest` dist-tag is `1.0.2`. `next` still points to the old
+The npm `latest` dist-tag is `1.1.0`. `next` still points to the old
 `0.1.0-beta.1`. For the current release, install `@zsz1210/workkeel` or
 `@zsz1210/workkeel@latest`. Do not install `@next`.
 
@@ -145,7 +152,7 @@ registered model families, but that check does not prove cross-review happened.
 
 - **[Workspace observatory](docs/operations/workkeel-workspace.md):** start with `workkeel workspace serve`; browse project records without idle model calls. The separate [read-only observer](docs/operations/workkeel-observer.md) uses `workkeel monitor`.
 - **[Workflows / LangGraph](docs/operations/workkeel-workflows.md):** opt into a runner with approved graphs, model policy and recoverable steps. EXPERIMENTAL: outside the [1.0 compatibility guarantees](docs/concepts/compatibility.md); we may change or remove this runner in a minor release.
-- **[Workkeel Loop L1 report](docs/operations/loop-trial.md):** `workkeel stats --report --cutoff 2026-10-19T00:00:00Z --timezone UTC` produces a weekly read-only report with zero model/API spend.
+- **[Workkeel Loop L1 report](docs/operations/loop-trial.md):** `workkeel stats --report --cutoff 2026-10-19T00:00:00Z --timezone UTC` produces a weekly read-only report with zero model/API spend. Repeat `--project` to report on several projects at once. It also reads 0.1.0-beta.1 task records and does not change them.
 - **[Native dispatch](docs/operations/workkeel-native-dispatch.md):** record execution handoffs and requested models; the host reports what ran.
 - **[Reference Bot-layer usage](docs/operations/reference-usage-bot-layer.md):** one way to coordinate project Bots, Claude Code and Codex through human gates, outside the core.
 

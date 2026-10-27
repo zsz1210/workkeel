@@ -9,7 +9,7 @@
 
 [![CI](https://github.com/zsz1210/workkeel/actions/workflows/ci.yml/badge.svg)](https://github.com/zsz1210/workkeel/actions/workflows/ci.yml)
 
-[npm](https://www.npmjs.com/package/@zsz1210/workkeel) 1.0.2 · Node.js 24.15+ · [MIT](LICENSE)
+[npm](https://www.npmjs.com/package/@zsz1210/workkeel) 1.1.0 · Node.js 24.15+ · [MIT](LICENSE)
 
 哪些部分穩定、盡力維護或屬於實驗性功能，見 [1.0 相容性保證](docs/concepts/compatibility.md)（英文）。
 
@@ -36,6 +36,9 @@ Workkeel 不是 sandbox，也不是 agent runtime，不會替你部署。
 
 先約定範圍、權限、驗收條件和風險等級，再認領任務，用 coding tool 實作，
 交付 commit 給另一個 Agent 審查。
+如果認領前就已經提交了實作，用 `--base <commit> --pre-claim` 認領。
+`<commit>` 要填實作開始前的最後一個 commit 的完整 ID，可用 `git rev-parse <第一個實作 commit>~1` 取得；base 本身不算在任務裡。
+base 之後的每個 commit 只能改任務寫入範圍內的產品檔案，審查也會涵蓋這些 commit。
 審查失敗後，任務會停在 `test`，直到 approver 執行 `task rework`，
 保存失敗紀錄，沿用同一份契約回到 `intake`。接著由 builder 重新認領，交付新的 commit。
 `low` 最多重做兩次，其餘等級三次，達上限就停下來問人。
@@ -83,7 +86,7 @@ alias workkeel="node $PWD/bin/workkeel.mjs"
 ```
 
 也可以用 `npm install -g @zsz1210/workkeel` 從 npm 安裝，再執行 `workkeel` 指令。
-npm 的 `latest` dist-tag 是 `1.0.2`，`next` 仍指向舊的 `0.1.0-beta.1`。
+npm 的 `latest` dist-tag 是 `1.1.0`，`next` 仍指向舊的 `0.1.0-beta.1`。
 要安裝目前版本，請用 `@zsz1210/workkeel` 或 `@zsz1210/workkeel@latest`，不要裝 `@next`。
 
 shell alias 只在定義它的互動式 shell 裡有效。在 Agent 工具呼叫、CI 這類非互動式 shell 中，
@@ -131,7 +134,7 @@ CLI 會檢查已註冊的模型家族，但這項檢查本身不能證明交叉�
 
 - **[Workspace 觀測台](docs/operations/workkeel-workspace.md)：**以 `workkeel workspace serve` 啟動，瀏覽專案紀錄，閒置時不呼叫模型。另有獨立的[唯讀觀察器](docs/operations/workkeel-observer.md)，使用 `workkeel monitor`。
 - **[工作流程／LangGraph](docs/operations/workkeel-workflows.md)：**選用 runner，依核准的流程圖、模型政策執行可復原步驟。實驗性功能（EXPERIMENTAL）：不在 [1.0 相容性保證](docs/concepts/compatibility.md)範圍內，未來可能在次版本更新中變更或移除。
-- **[Workkeel Loop L1 報告](docs/operations/loop-trial.md)：**`workkeel stats --report --cutoff 2026-10-19T00:00:00Z --timezone UTC` 產生每週唯讀報告，模型／API 花費為零。
+- **[Workkeel Loop L1 報告](docs/operations/loop-trial.md)：**`workkeel stats --report --cutoff 2026-10-19T00:00:00Z --timezone UTC` 產生每週唯讀報告，模型／API 花費為零。重複 `--project` 可以一次統計多個專案；也能讀取 0.1.0-beta.1 的任務紀錄，不會改動它們。
 - **[原生派工](docs/operations/workkeel-native-dispatch.md)：**記錄執行交接和指定模型，實際執行結果由 host 回報。
 - **[Bot 層參考用法](docs/operations/reference-usage-bot-layer.md)：**示範如何用人工關卡協調專案 Bot、Claude Code 與 Codex，屬於核心以外的用法。
 
