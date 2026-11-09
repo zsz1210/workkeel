@@ -10,6 +10,10 @@ repository migration does not republish old tags, archives or npm versions.
 - The getting-started guide describes the `[category]` label at the start of a
   rework summary or a `P1`/`P2` finding note. `workkeel stats --report` uses
   this label to sort rework reasons. Text without a known label counts as `unknown`.
+- `stats --report` reads 0.1.0-beta.1 task records that have
+  `attempts[].rework_mode` or `delivery.evidence_rework`. Unpublished source
+  that still reported 0.1.0-beta.1 wrote these two fields. Other unknown fields
+  still make the record a source error.
 
 ## 1.1.0
 

@@ -130,6 +130,33 @@ test("legacy records are read for stats only when every part is understood", () 
   ]) assert.throws(() => legacyStatsTask(legacyRecord("RN-4", start, { mutate }), "RN-4"), message);
 });
 
+test("legacy records accept rework_mode and evidence_rework from source labelled 0.1.0-beta.1", () => {
+  const start = Date.parse("2026-10-17T10:00:00Z");
+  // Modelled on an evidence-only rework: the rejected attempt names its mode, and the next delivery binds the rejected review.
+  const evidenceRework = { rejected_review_sha256: "3".repeat(64), previous_evidence_sha256: "4".repeat(64) };
+  const rework = mode => item => { item.attempts[0].rework_mode = mode; if (mode === "evidence-only") item.delivery.evidence_rework = { ...evidenceRework }; };
+  for (const mode of ["source", "evidence-only"]) {
+    const item = legacyStatsTask(legacyRecord("RN-6", start, { mutate: rework(mode) }), "RN-6");
+    assert.equal(item.attempts[0].rework_mode, mode);
+    assert.deepEqual(item.delivery.evidence_rework, mode === "evidence-only" ? evidenceRework : undefined);
+  }
+  // A rejected attempt keeps the delivery it had, including its evidence_rework.
+  assert.ok(legacyStatsTask(legacyRecord("RN-6", start, { mutate: item => { item.attempts[0].delivery.evidence_rework = { ...evidenceRework }; } }), "RN-6"));
+  // Only a rejected attempt has a rework mode.
+  const released = { kind: "released", claim: { id: "claim-0", actor: builder, at: new Date(start).toISOString() }, base_revision: null, summary: "Released" };
+  assert.ok(legacyStatsTask(legacyRecord("RN-6", start, { mutate: item => { item.attempts[1] = released; } }), "RN-6"));
+  // The two fields have exact shapes, and other unknown fields still fail.
+  for (const [mutate, message] of [
+    [item => { rework("evidence-only")(item); item.future_field = 1; }, /\/ must NOT have additional properties \(future_field\)/],
+    [item => { item.attempts[0].rework_mode = "other"; }, /\/attempts\/0\/rework_mode must be equal to one of the allowed values/],
+    [item => { item.attempts[1] = { ...released, rework_mode: "source" }; }, /\/attempts\/1 /],
+    [item => { rework("evidence-only")(item); item.delivery.evidence_rework.note = "x"; }, /\/delivery\/evidence_rework must NOT have additional properties \(note\)/],
+    [item => { rework("evidence-only")(item); delete item.delivery.evidence_rework.previous_evidence_sha256; }, /\/delivery\/evidence_rework must have required property 'previous_evidence_sha256'/],
+    [item => { rework("evidence-only")(item); item.delivery.evidence_rework.rejected_review_sha256 = "not-a-hash"; }, /\/delivery\/evidence_rework\/rejected_review_sha256 must match pattern/],
+    [item => { item.delivery.evidence_rework = null; }, /\/delivery\/evidence_rework must be object/]
+  ]) assert.throws(() => legacyStatsTask(legacyRecord("RN-7", start, { mutate }), "RN-7"), message);
+});
+
 test("stats --report merges current and legacy projects with one period and keeps each source", async t => {
   const parent = await fs.mkdtemp(path.join(os.tmpdir(), "workkeel-multi-"));
   t.after(() => fs.rm(parent, { recursive: true, force: true }));
