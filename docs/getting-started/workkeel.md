@@ -280,6 +280,31 @@ For a report-only correction after a failed review, an approver can record
 commit the corrected evidence, hand off that commit and obtain a fresh distinct
 review. The rejected revision itself cannot be delivered again.
 
+### Label the rework reason
+
+`workkeel stats --report` sorts each rework round by its reason. To set the
+reason, start the text with a category label in square brackets:
+
+```sh
+workkeel task rework --id task-id --actor approver --summary "[code-error] Fix the r1 audio crash"
+```
+
+The allowed labels are `requirements`, `code-error`, `tests`, `evidence`,
+`scope`, `false-block` and `unknown`. Write the label in lowercase, with no
+spaces inside the brackets. The report reads the label from one of two places:
+
+- If the failed review has `P1` or `P2` findings in the reviewer's own
+  `workkeel.review-report/v1` score, the report reads each finding note. It
+  ignores the rework summary.
+- If not, the report reads the rework summary.
+
+Text without a label, or with a label that is not in the list, counts as
+`unknown`. The report groups labeled reasons by category. It groups `unknown`
+reasons only when their notes have the same words, after it ignores case and
+punctuation. If two `unknown` rounds have the same cause in different words, the
+report gives no `repeated-rework-reason` signal. A repair after a failed
+mandatory check always counts as `tests`.
+
 ### Claim work that started before the task
 
 Sometimes an Agent commits work before the task exists or before it claims the

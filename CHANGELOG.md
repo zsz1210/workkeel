@@ -5,6 +5,12 @@ line. Historical release entries describe their own versions, not current-main
 qualification. Actual development tasks and validation records stay private;
 repository migration does not republish old tags, archives or npm versions.
 
+## Unreleased changes
+
+- The getting-started guide describes the `[category]` label at the start of a
+  rework summary or a `P1`/`P2` finding note. `workkeel stats --report` uses
+  this label to sort rework reasons. Text without a known label counts as `unknown`.
+
 ## 1.1.0
 
 Released 2026-10-27.
