@@ -13,6 +13,9 @@ import { fileURLToPath } from "node:url";
 import { walkFiles } from "../src/files.mjs";
 import { parseCommandLine } from "../src/workkeel-cli-flags.mjs";
 import { RISK_TIERS } from "../src/workkeel-risk.mjs";
+import { validateTaskContract } from "../src/task-contract.mjs";
+import { completeTaskContract } from "../src/workkeel-task-draft.mjs";
+import { defaultPolicy } from "../src/workkeel-project.mjs";
 import { gitIgnoredFiles, markdownLines } from "./check-doc-links.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -109,6 +112,23 @@ export function shellSegments(line) {
     else if (c === "\\" && i + 1 < line.length) word = (word ?? "") + line[++i];
     else if (/\s/.test(c)) end();
     else if (c === "#" && word === null) break;
+    else if (c === "<" && /^<[^\s<>]+>/.test(line.slice(i))) {
+      // Documentation writes placeholders as <name>; keep them as words, not as redirects.
+      const placeholderText = /^<[^\s<>]+>/.exec(line.slice(i))[0];
+      word = (word ?? "") + placeholderText; i += placeholderText.length - 1;
+    } else if ((c === ">" || c === "<") && (word === null || /^(?:\d*|&)$/.test(word))) {
+      // A shell redirect (>, >>, <, 2>, &>, 2>&1) and its target never reach the CLI.
+      word = null;
+      while (line[i + 1] === ">" || line[i + 1] === "&" || line[i + 1] === "|") i += 1;
+      if (/[\d-]/.test(line[i + 1] ?? "") && line[i] === "&") { while (/[\d-]/.test(line[i + 1] ?? "")) i += 1; continue; }
+      while (/\s/.test(line[i + 1] ?? "")) i += 1;
+      let quoted = null;
+      while (i + 1 < line.length && (quoted || !/[\s;|&<>]/.test(line[i + 1]))) {
+        i += 1;
+        if (quoted) { if (line[i] === quoted) quoted = null; }
+        else if (line[i] === "'" || line[i] === '"') quoted = line[i];
+      }
+    }
     else if (c === ";" || c === "|" || c === "&" && line[i + 1] === "&") {
       end(); segments.push([]);
       if (line[i + 1] === c) i += 1;
@@ -169,7 +189,8 @@ function formProblem(entry, parsed, given) {
   if (entry.actions.length ? !entry.actions.includes(parsed.action) : parsed.action !== null) return "action";
   const unknown = given.filter(name => !entry.flags.includes(name));
   if (unknown.length) return `--${unknown[0]} is not accepted by this form`;
-  const missing = entry.required.filter(name => !given.includes(name));
+  // required() in the CLI rejects an absent flag and an empty value alike.
+  const missing = entry.required.filter(name => !given.includes(name) || parsed.options[`--${name}`] === "");
   if (missing.length) return `--${missing[0]} is required by this form`;
   if (entry.report && parsed.targetGiven && (given.includes("project") || given.includes("projects-file")))
     return "a multi-project report takes --project or --projects-file, not a positional target";
@@ -213,6 +234,25 @@ function valueProblems(parsed) {
   return problems;
 }
 
+// The draft `task new` builds from flags (draftFromFlags in src/workkeel-cli-flags.mjs),
+// completed and validated by the task contract code itself. Placeholders become a
+// neutral valid value, so only concrete example values are judged.
+function contractProblems(parsed) {
+  const value = (name, neutral) => { const given = parsed.options[`--${name}`]; return placeholder(given) ? neutral : given; };
+  const list = (name, neutral) => parsed.options[`--${name}`]?.map(item => placeholder(item) ? neutral : item);
+  const id = value("id", "WK-0001") ?? "WK-0001", goal = value("goal", "Goal");
+  const draft = { id, goal, scope: { include: list("include", "scope") ?? [goal], exclude: list("exclude", "scope") ?? [] },
+    acceptance: { criteria: list("acceptance", "Criterion") } };
+  const write = list("write", "docs"), read = list("read", "docs");
+  if (write || read) draft.environment = { ...(write ? { write_paths: write } : {}), ...(read ? { read_paths: read } : {}) };
+  if (parsed.options["--risk"] !== undefined) draft.verification = { risk_tier: value("risk", "low") };
+  const actor = { agent_id: "builder", principal_id: "owner" };
+  if (parsed.options["--approval"] !== undefined) draft.authorization = { approved_by: actor.principal_id, approval_ref: value("approval", "docs/approval.md"),
+    operations: ["read", "write"], expires_at: null };
+  try { return validateTaskContract(completeTaskContract(draft, defaultPolicy(), actor)).errors.map(error => `task contract: ${error}`); }
+  catch (error) { return [`task contract: ${error.message}`]; }
+}
+
 /** Problems with one example's arguments; an empty list means the CLI would accept its form and values. */
 export function validateCommand(args, forms = COMMAND_FORMS) {
   if (!args.length || ["help", "--help", "-h"].includes(args[0])) return args.length > 2 || (args[1] && args[1] !== "advanced") ? ["help takes no argument but advanced"] : [];
@@ -232,7 +272,10 @@ export function validateCommand(args, forms = COMMAND_FORMS) {
     specific.sort((a, b) => covered(b) - covered(a));
     return [specific.length ? specific[0].problem : `unknown action ${parsed.action ?? "(none)"} for ${parsed.command}`];
   }
-  return valueProblems(parsed);
+  const problems = valueProblems(parsed);
+  if (!problems.length && parsed.command === "task" && ["new", "create"].includes(parsed.action) && parsed.options["--source"] === undefined)
+    problems.push(...contractProblems(parsed));
+  return problems;
 }
 
 /** Files whose code blocks hold user-facing examples: README*.md at the root and docs/**\/*.md, minus Git-ignored files. */

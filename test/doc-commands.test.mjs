@@ -49,6 +49,11 @@ test("examples are read from fenced code blocks only, with prompts, continuation
   ]);
   assert.deepEqual(shellSegments(`a "b c" 'd\\e' f\\ g | h; i`), [["a", "b c", "d\\e", "f g"], ["h"], ["i"]]);
   assert.equal(workkeelArgs(["npx", "left-pad", "status"]), null);
+  // Shell redirects and their targets never reach the CLI; <name> placeholders stay words.
+  for (const line of ["workkeel status . > status.json", "workkeel status . 2>/dev/null", "workkeel status . >>out 2>&1", "workkeel status . &> 'a b'"])
+    assert.deepEqual(shellSegments(line), [["workkeel", "status", "."]], line);
+  assert.deepEqual(shellSegments("workkeel task show --id <task-id> < in.json | jq ."), [["workkeel", "task", "show", "--id", "<task-id>"], ["jq", "."]]);
+  assert.deepEqual(shellSegments(`workkeel task new --goal ">" --acceptance a`), [["workkeel", "task", "new", "--goal", ">", "--acceptance", "a"]]);
 });
 
 test("invalid examples are flagged: unknown commands, actions and flags, and failed value checks", () => {
@@ -70,8 +75,14 @@ test("invalid examples are flagged: unknown commands, actions and flags, and fai
     "task review --id WK-1 --summary reviewed": "task review needs --judgment pass or fail",
     "task close --id WK-1 --summary accepted": "task close needs a nonempty --rollback",
     "task handoff --id WK-1 --summary s --rollback=": "task handoff --rollback must not be empty",
-    "task new --goal= --acceptance ok": "task new needs a nonempty --goal",
+    "task new --goal= --acceptance ok": "--goal is required by this form",
     "task new --goal g --acceptance=": "task new --acceptance must not be empty",
+    "workspace create --request=": "--request is required by this form",
+    "goal show --id=": "--id is required by this form",
+    "task new --goal g --acceptance a --write ../outside": "task contract: /environment/write_paths must contain normalized repository-relative roots",
+    "task new --goal g --acceptance a --write src/**": "task contract: /environment/write_paths must contain normalized repository-relative roots",
+    "task new --goal g --acceptance a --read /etc": "task contract: /environment/read_paths",
+    "task new --goal g --acceptance a --approval ../x.md": "task contract: /authorization/approval_ref",
     "task handoff --id WK-1 --summary s --pre-claim": "--pre-claim applies only to task claim with an explicit --base",
     "task show --id ../x": "is not a valid task ID",
     "status --stale-after soon": "--stale-after \"soon\": must be a positive number of hours",
@@ -101,6 +112,8 @@ test("valid forms, placeholders and the CLI's longer allow lists pass", () => {
     "task claim --id WK-1 --base 531f9fd5 --pre-claim", "task claim --id WK-1 --base <sha>", "task rework --id WK-1 --summary s --mode evidence-only", "workspace serve --request config.json", "task new --goal g --acceptance a --include src --exclude test",
     "task create --source c.json --actor builder", "task create --goal g --acceptance a", "intake apply --request b.json --fingerprint <fingerprint>",
     "stats --report --cutoff 2026-10-19T00:00:00Z --timezone UTC --days 7 --previous " + "a".repeat(64),
+    "task new --goal g --acceptance a --write src/app --read . --risk standard --approval docs/approval.md --id WK-cart",
+    "task new --goal <goal> --acceptance <criterion> --write <path>",
     "task claim . --id WK-1 --request claim.json", "task review . --id WK-1 --request review.json", "task close --id WK-1 --summary s --rollback <plan>", "task handoff --id WK-1 --summary s --unresolved x --claim c --revision $SHA",
     "stats --report --projects-file list.txt --cutoff ... --timezone ...", "stats --report --project a --projects-file b --cutoff 2026-10-19T00:00:00+09:00 --timezone Asia/Tokyo --strict --json",
     "task new --goal g --acceptance a --acceptance b --write docs --risk low --actor builder"
