@@ -751,3 +751,28 @@ test("a request left pending for an old candidate is never resent to a newer one
   const after = await readNativeTask(root, ID);
   assert.notEqual(after.delivery.revision, candidateA); assert.equal(after.state, "test", "B was not archived by A's rework");
 });
+
+// The label warning is advisory: same exit code, same stdout and the same stored summary.
+for (const [name, summary, warned] of [
+  ["labeled", "[code-error] Fix the off-by-one", false],
+  ["unlabeled", "Fix the off-by-one", true],
+  ["unknown-label", "[typo] Fix the off-by-one", true]
+]) test(`rework with a ${name} summary ${warned ? "warns on stderr" : "does not warn"} and still records it unchanged`, async t => {
+  const root = await initialized(t);
+  await states.failed(root);
+  const result = spawnSync(process.execPath, [cli, "task", "rework", "--id", ID, "--actor", B, "--summary", summary], { cwd: root, encoding: "utf8" });
+  assert.equal(result.status, 0, result.stdout + result.stderr);
+  const output = JSON.parse(result.stdout), item = await readNativeTask(root, ID);
+  assert.equal(output.schema_version, "workkeel.operation-result/v1"); assert.equal(output.mutation_status, "applied");
+  assert.doesNotMatch(result.stdout, /rework-summary-unlabeled|accepted_labels/);
+  assert.equal(item.state, "intake");
+  const event = item.history.at(-1);
+  assert.equal(event.action, "rework"); assert.equal(event.summary, summary);
+  assert.doesNotMatch(await fs.readFile(path.join(root, `.ai-org/work-items/${ID}.json`), "utf8"), /rework-summary-unlabeled|accepted_labels/);
+  const warnings = result.stderr.split("\n").filter(Boolean).map(line => JSON.parse(line)).filter(entry => entry.code === "rework-summary-unlabeled");
+  if (!warned) { assert.equal(warnings.length, 0, result.stderr); return; }
+  assert.equal(warnings.length, 1, result.stderr);
+  assert.equal(warnings[0].schema_version, "workkeel.warning/v1");
+  assert.deepEqual(warnings[0].accepted_labels, ["[requirements]", "[code-error]", "[tests]", "[evidence]", "[scope]", "[false-block]", "[unknown]"]);
+  for (const label of warnings[0].accepted_labels) assert.ok(warnings[0].message.includes(label), label);
+});

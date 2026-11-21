@@ -305,6 +305,13 @@ punctuation. If two `unknown` rounds have the same cause in different words, the
 report gives no `repeated-rework-reason` signal. A repair after a failed
 mandatory check always counts as `tests`.
 
+If the `task rework --summary` text does not start with an allowed label, the
+CLI writes one `workkeel.warning/v1` line with the code
+`rework-summary-unlabeled` to stderr. The warning lists the allowed labels. A
+label in brackets that is not in the list also gets this warning. The command
+continues. It records the summary as written and exits with the same code as
+a labeled rework. The `--request` form gives no warning.
+
 ### Claim work that started before the task
 
 Sometimes an Agent commits work before the task exists or before it claims the

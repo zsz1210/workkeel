@@ -129,6 +129,11 @@ export async function readScoreStats(target) {
 }
 
 export const REWORK_CATEGORIES = Object.freeze(['requirements', 'code-error', 'tests', 'evidence', 'scope', 'false-block', 'unknown']);
+/** The accepted leading `[category]` label of a rework note, or null when it has none. */
+export function reworkSummaryLabel(note) {
+  const label = /^\[([^\]]+)\]/.exec(note ?? '')?.[1];
+  return REWORK_CATEGORIES.includes(label) ? label : null;
+}
 const sameReviewer = (a, b) => a?.agent_id === b?.agent_id && a?.principal_id === b?.principal_id;
 
 /** Historical review rounds, including an unresolved FAIL and an unscored last
@@ -153,9 +158,7 @@ export async function taskObservationRecord(target, item, errors = [], { cutoff 
 /** Full correction history, including failed-check repairs before handoff.
  * Preserve task-global ordinals before applying a report's period filter. */
 export function projectReworkIterations(taskId, history, reviews, operations) {
-  const at=value=>Date.parse(value), category=note=>{
-    const label=/^\[([^\]]+)\]/.exec(note??'')?.[1];return REWORK_CATEGORIES.includes(label)?label:'unknown';
-  };
+  const at=value=>Date.parse(value), category=note=>reworkSummaryLabel(note)??'unknown';
   const ops=[...operations].sort((a,b)=>at(a.at)-at(b.at)),allReworks=[];
   for(const event of history.filter(e=>e.action==='rework')){
     const rejected=reviews.filter(r=>at(r.at)<=at(event.at)&&r.judgment==='fail').at(-1);

@@ -132,6 +132,16 @@ function printWarnings() {
   for (const warning of drainCompatibilityWarnings()) console.error(JSON.stringify({ schema_version: "workkeel.warning/v1", ...warning }));
 }
 
+/** Advisory only: an unlabeled rework summary is still recorded unchanged and the command still succeeds. */
+async function warnUnlabeledRework(summary) {
+  const { REWORK_CATEGORIES, reworkSummaryLabel } = await import("./workkeel-scoring.mjs");
+  if (reworkSummaryLabel(summary)) return;
+  const labels = REWORK_CATEGORIES.map(category => `[${category}]`);
+  console.error(JSON.stringify({ schema_version: "workkeel.warning/v1", code: "rework-summary-unlabeled", accepted_labels: labels,
+    message: `The rework summary does not start with an accepted category label. The rework was recorded unchanged. Accepted labels: ${labels.join(", ")}.`,
+    next_action: "Start the next rework summary with one accepted label, for example: [code-error] Fix the off-by-one in the parser." }));
+}
+
 async function runCommand(args) {
   if (!args.length || ["help", "--help", "-h"].includes(args[0])) { console.log(args[1] === "advanced" ? ADVANCED_HELP : HELP); return 0; }
   if (["version", "--version"].includes(args[0])) { console.log(TEMPLATE_VERSION); return 0; }
@@ -319,6 +329,7 @@ async function runCommand(args) {
       allow(options, ["--id", "--actor", "--revision", "--base", "--claim", "--summary", "--evidence", "--judgment", "--rollback", "--unresolved", "--mode", "--expect", "--attempt", "--pre-claim"]);
       const id = required(options, "--id");
       output = await runLifecycleFromFlags(target, id, action, options);
+      if (action === "rework") await warnUnlabeledRework(options["--summary"]);
     }
   } else if (command === "context" && action === "prepare") {
     allow(options, ["--id", "--request"]);
