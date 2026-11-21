@@ -4,7 +4,7 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
-import { extractFragmentLinks, extractLocalLinks, findBrokenLinks, headingSlug, linkFragment, markdownAnchors, resolveLocalLink } from "../scripts/check-doc-links.mjs";
+import { extractFragmentLinks, extractLocalLinks, findBrokenLinks, headingSlug, linkFragment, markdownAnchors, markdownLines, resolveLocalLink } from "../scripts/check-doc-links.mjs";
 
 test("documentation link extraction keeps local targets and ignores external destinations", () => {
   const markdown = [
@@ -79,4 +79,14 @@ test("links and headings inside tilde fences and list or quote fences are code, 
   assert.deepEqual(extractFragmentLinks(markdown), ["#real"]);
   assert.deepEqual(extractLocalLinks(markdown), ["guide.md"]);
   assert.deepEqual([...markdownAnchors(markdown)], ["real"]);
+});
+
+test("a quote or list fence ends with its container, and quoted headings define anchors", () => {
+  const markdown = ["> ```text", "> sample", "", "[Broken](missing.md) [Jump](#quoted-heading)", "", "> ## Quoted heading", "",
+    "- Item", "  ```sh", "  workkeel status .", "Outside the list [Also](other.md)", "```", "workkeel frobnicate", "```"].join("\n");
+  assert.deepEqual(extractLocalLinks(markdown), ["missing.md", "other.md"]);
+  assert.deepEqual(extractFragmentLinks(markdown), ["#quoted-heading"]);
+  assert.ok(markdownAnchors(markdown).has("quoted-heading"));
+  const code = markdownLines(markdown).filter(line => line.code).map(line => line.text);
+  assert.deepEqual(code, ["sample", "workkeel status .", "workkeel frobnicate"]);
 });

@@ -65,7 +65,13 @@ test("invalid examples are flagged: unknown commands, actions and flags, and fai
     "task review --id WK-1 --summary s --judgment maybe": "--judgment \"maybe\": must be pass or fail",
     "task new --goal g --acceptance a --risk huge": "--risk \"huge\": must be one of low, standard, high, critical",
     "task claim --id WK-1 --expect 1.5": "--expect \"1.5\": must be a task version",
-    "task handoff --id WK-1": "task handoff needs --summary",
+    "task handoff --id WK-1": "task handoff needs a nonempty --summary",
+    "task cancel --id WK-1 --summary  ": "task cancel needs a nonempty --summary",
+    "task review --id WK-1 --summary reviewed": "task review needs --judgment pass or fail",
+    "task close --id WK-1 --summary accepted": "task close needs a nonempty --rollback",
+    "task handoff --id WK-1 --summary s --rollback=": "task handoff --rollback must not be empty",
+    "task new --goal= --acceptance ok": "task new needs a nonempty --goal",
+    "task new --goal g --acceptance=": "task new --acceptance must not be empty",
     "task handoff --id WK-1 --summary s --pre-claim": "--pre-claim applies only to task claim with an explicit --base",
     "task show --id ../x": "is not a valid task ID",
     "status --stale-after soon": "--stale-after \"soon\": must be a positive number of hours",
@@ -95,7 +101,7 @@ test("valid forms, placeholders and the CLI's longer allow lists pass", () => {
     "task claim --id WK-1 --base 531f9fd5 --pre-claim", "task claim --id WK-1 --base <sha>", "task rework --id WK-1 --summary s --mode evidence-only", "workspace serve --request config.json", "task new --goal g --acceptance a --include src --exclude test",
     "task create --source c.json --actor builder", "task create --goal g --acceptance a", "intake apply --request b.json --fingerprint <fingerprint>",
     "stats --report --cutoff 2026-10-19T00:00:00Z --timezone UTC --days 7 --previous " + "a".repeat(64),
-    "task claim . --id WK-1 --request claim.json", "task handoff --id WK-1 --summary s --unresolved x --claim c --revision $SHA",
+    "task claim . --id WK-1 --request claim.json", "task review . --id WK-1 --request review.json", "task close --id WK-1 --summary s --rollback <plan>", "task handoff --id WK-1 --summary s --unresolved x --claim c --revision $SHA",
     "stats --report --projects-file list.txt --cutoff ... --timezone ...", "stats --report --project a --projects-file b --cutoff 2026-10-19T00:00:00+09:00 --timezone Asia/Tokyo --strict --json",
     "task new --goal g --acceptance a --acceptance b --write docs --risk low --actor builder"
   ]) assert.deepEqual(validateCommand(command.split(" ")), [], command);

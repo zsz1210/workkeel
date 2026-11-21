@@ -10,24 +10,38 @@ const EXTERNAL_LINK = /^(?:[a-z][a-z0-9+.-]*:|#)/i;
 
 /**
  * Classifies each line of a Markdown source as prose or fenced code. Fences open
- * with ``` or ~~~ and may sit inside block quotes and list items; a fence closes
- * on a line with at least as many of the same character and nothing else. For
- * code lines, `text` drops the container prefix (quote markers and indentation).
+ * with ``` or ~~~ and may sit inside block quotes and list items. A fence closes
+ * on a line with at least as many of the same character and nothing else, or
+ * when its container ends: a line with fewer quote markers, or a nonblank line
+ * indented less than a list fence. `inner` is the line without its quote
+ * markers and leading indentation.
  */
 export function markdownLines(markdown) {
   const result = [];
-  let fence = null;
+  let fence = null, listContent = 0;
   for (const line of markdown.split("\n")) {
-    const inner = line.replace(/^(?:[ \t]*>)*[ \t]*/, "");
+    const prefix = /^((?:[ \t]*>)*)([ \t]*)/.exec(line), depth = (prefix[1].match(/>/g) ?? []).length;
+    const indent = prefix[2].replace(/\t/g, "    ").length, inner = line.slice(prefix[0].length);
+    if (fence && (depth < fence.depth || fence.indent && inner.trim() && depth === fence.depth && indent < fence.indent)) fence = null;
     if (fence) {
       const close = /^(`{3,}|~{3,})\s*$/.exec(inner);
-      if (close && close[1][0] === fence[0] && close[1].length >= fence.length) { fence = null; result.push({ text: line, code: false, fence: true }); }
-      else result.push({ text: inner, code: true, fence: false });
+      if (close && close[1][0] === fence.marker[0] && close[1].length >= fence.marker.length) { fence = null; result.push({ text: line, inner, code: false, fence: true }); }
+      else result.push({ text: inner, inner, code: true, fence: false });
       continue;
     }
-    const open = /^(?:(?:[-*+]|\d+[.)])[ \t]+)?(`{3,}|~{3,})(.*)$/.exec(inner);
-    if (open && !(open[1][0] === "`" && open[2].includes("`"))) { fence = open[1]; result.push({ text: line, code: false, fence: true }); continue; }
-    result.push({ text: line, code: false, fence: false });
+    const open = /^((?:[-*+]|\d+[.)])[ \t]+)?(`{3,}|~{3,})(.*)$/.exec(inner);
+    if (open && !(open[2][0] === "`" && open[3].includes("`"))) {
+      // A fence in a list item, or indented under one, ends with that item.
+      const listIndent = open[1] ? indent + open[1].length : listContent && indent >= listContent ? listContent : indent >= 4 ? indent : 0;
+      fence = { marker: open[2], depth, indent: listIndent };
+      result.push({ text: line, inner, code: false, fence: true });
+      continue;
+    }
+    // Remember the content indent of the current list item; unindented prose ends the list.
+    const item = /^((?:[-*+]|\d+[.)])[ \t]+)/.exec(inner);
+    if (item) listContent = indent + item[1].length;
+    else if (inner.trim() && indent === 0) listContent = 0;
+    result.push({ text: line, inner, code: false, fence: false });
   }
   return result;
 }
@@ -67,7 +81,8 @@ export function headingSlug(text) {
 /** Every anchor a Markdown file defines: heading slugs (numbered when repeated, as GitHub does) and HTML id or name attributes. */
 export function markdownAnchors(markdown) {
   const anchors = new Set(), counts = new Map(), classified = markdownLines(markdown);
-  const lines = classified.map(line => line.code || line.fence ? "" : line.text);
+  // Headings are read without quote markers, so "> ## Title" defines an anchor too.
+  const lines = classified.map(line => line.code || line.fence ? "" : line.text.replace(/^(?:[ \t]*>)+ ?/, ""));
   const add = (slug) => {
     const count = counts.get(slug) ?? 0;
     counts.set(slug, count + 1);

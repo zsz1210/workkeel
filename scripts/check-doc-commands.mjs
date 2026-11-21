@@ -196,8 +196,20 @@ function valueProblems(parsed) {
   check("timezone", value => { try { new Intl.DateTimeFormat("en", { timeZone: value }); return true; } catch { return false; } }, "must be an IANA time zone");
   if (parsed.command === "task") check("id", value => TASK_ID.test(value), "is not a valid task ID");
   if (option("pre-claim") && (parsed.action !== "claim" || option("base") === undefined)) problems.push("--pre-claim applies only to task claim with an explicit --base");
-  if (parsed.command === "task" && SUMMARY_ACTIONS.has(parsed.action) && option("request") === undefined && !option("summary"))
-    problems.push(`task ${parsed.action} needs --summary`);
+  // Flag-form task operations build the request from flags, so the values the task
+  // store requires must be present and nonempty (src/workkeel-tasks.mjs assertText).
+  const text = value => typeof value === "string" && value.trim() !== "";
+  const needText = (name, message) => { const value = option(name); if (!text(value) && !placeholder(value)) problems.push(message); };
+  if (parsed.command === "task" && option("request") === undefined && option("source") === undefined) {
+    if (SUMMARY_ACTIONS.has(parsed.action)) needText("summary", `task ${parsed.action} needs a nonempty --summary`);
+    if (parsed.action === "review" && option("judgment") === undefined) problems.push("task review needs --judgment pass or fail");
+    if (parsed.action === "close") needText("rollback", "task close needs a nonempty --rollback");
+    if (parsed.action === "handoff" && option("rollback") !== undefined) needText("rollback", "task handoff --rollback must not be empty");
+    if (["new", "create"].includes(parsed.action)) {
+      needText("goal", "task new needs a nonempty --goal");
+      if ((option("acceptance") ?? []).some(value => !text(value))) problems.push("task new --acceptance must not be empty");
+    }
+  }
   return problems;
 }
 
