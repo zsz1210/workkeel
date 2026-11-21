@@ -5,7 +5,7 @@ import os from 'node:os';
 import path from 'node:path';
 import {execFileSync,spawnSync} from 'node:child_process';
 import {fileURLToPath} from 'node:url';
-import {checkPublication,inspectPublicFile,readAllowlist} from '../scripts/check-publication.mjs';
+import {HISTORICAL_TRAILER_COMMITS,checkPublication,commitTrailerFailures,inspectPublicFile,readAllowlist} from '../scripts/check-publication.mjs';
 import {checkSourceCheckout} from '../scripts/check-source-checkout.mjs';
 
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
@@ -46,6 +46,42 @@ test('history checks merge identities even when all tree bytes were already scan
  git('-c','user.email=fixture@personal.example','merge','--no-ff','-qm','Synthetic merge','side');
  const report=checkPublication(cwd,{mode:'history'}),commit=git('rev-parse','HEAD');
  assert.deepEqual(report.failures,[{commit,field:'author',rule:'commit-identity'},{commit,field:'committer',rule:'commit-identity'}]);
+});
+test('history rejects Co-Authored-By and Generated with trailers on new commits',t=>{
+ const {cwd,git}=fixture(t);
+ git('commit','--allow-empty','-qm','Synthetic change','-m','Co-Authored-By: Fixture Model <noreply@example.invalid>');
+ const coauthored=git('rev-parse','HEAD');
+ git('commit','--allow-empty','-qm','Synthetic change','-m','\u{1F916} Generated with [Fixture Tool](https://example.invalid)');
+ const generated=git('rev-parse','HEAD');
+ git('commit','--allow-empty','-qm','Mention co-authored-by: and generated with in prose only');
+ assert.deepEqual(checkPublication(cwd,{mode:'history'}).failures.sort((a,b)=>a.commit.localeCompare(b.commit)),
+  [{commit:coauthored,trailer:'Co-Authored-By',rule:'commit-trailer'},{commit:generated,trailer:'Generated with',rule:'commit-trailer'}].sort((a,b)=>a.commit.localeCompare(b.commit)));
+});
+test('trailer detection reads whole lines and ignores prose that only mentions them',()=>{
+ const commit='0'.repeat(40),found=message=>commitTrailerFailures(commit,message).map(f=>f.trailer);
+ assert.deepEqual(found('Fix\n\nco-authored-by:someone <a@b.invalid>'),['Co-Authored-By']);
+ assert.deepEqual(found('Fix\n\n  Co-Authored-By : someone'),['Co-Authored-By']);
+ assert.deepEqual(found('Fix\n\nGenerated with Fixture Tool'),['Generated with']);
+ assert.deepEqual(found('Fix\n\n\u{1F916} Generated with [Tool](https://example.invalid)\nCo-Authored-By: x'),['Co-Authored-By','Generated with']);
+ for(const message of ['Explain the Co-Authored-By rule','Fix\n\nRegenerated with care','Fix\n\nGenerated without a tool','Fix\n\nThe docs, generated with a script'])assert.deepEqual(found(message),[],message);
+});
+test('only the frozen 2026-10-18 to 2026-10-20 commits keep a Co-Authored-By trailer',()=>{
+ const list=HISTORICAL_TRAILER_COMMITS;
+ assert.equal(new Set(list).size,38);
+ assert.ok(list.every(hash=>/^[a-f0-9]{40}$/.test(hash)));
+ assert.ok(list.includes('29d755e24dd45d51736947e843505f2e6e438b01')&&list.includes('7bcf970101d4043ecab661887c555321b4eb1921'));
+ const exempt='29d755e24dd45d51736947e843505f2e6e438b01';
+ assert.deepEqual(commitTrailerFailures(exempt,'Old\n\nCo-Authored-By: Model <noreply@example.invalid>'),[]);
+ assert.deepEqual(commitTrailerFailures(exempt,'Old\n\nGenerated with Tool'),[{commit:exempt,trailer:'Generated with',rule:'commit-trailer'}]);
+ assert.ok(Object.isFrozen(list));
+});
+test('the frozen trailer commits are exactly the 7bcf9701..29d755e2 range when this checkout has it',t=>{
+ const git=(...args)=>spawnSync('git',['-C',root,...args],{encoding:'utf8'});
+ if(git('cat-file','-e','29d755e24dd45d51736947e843505f2e6e438b01^{commit}').status!==0){t.skip('history range not in this checkout');return;}
+ const range=git('rev-list','7bcf970101d4043ecab661887c555321b4eb1921^..29d755e24dd45d51736947e843505f2e6e438b01').stdout.trim().split('\n');
+ assert.deepEqual(range.sort(),[...HISTORICAL_TRAILER_COMMITS].sort());
+ const dates=git('log','--no-walk','--format=%ad','--date=format:%Y-%m-%d',...range).stdout.trim().split('\n');
+ assert.ok(dates.every(date=>date>='2026-10-18'&&date<='2026-10-20'),dates.join(','));
 });
 test('historical identity exceptions require bounded unique full lowercase hashes',t=>{
  const {cwd}=fixture(t),manifest=path.join(cwd,'public-files.json'),document=JSON.parse(fs.readFileSync(manifest,'utf8'));

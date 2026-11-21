@@ -5,7 +5,7 @@ import { spawnSync } from "node:child_process";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 export const fastFiles = [
-  "ci-scope", "doc-links", "import-boundary", "npm-release-workflow", "publication-audit", "publication-boundary",
+  "ci-scope", "doc-commands", "doc-links", "import-boundary", "npm-release-workflow", "publication-audit", "publication-boundary",
   "release-package", "test-groups", "workkeel-visuals"
 ].map((name) => `test/${name}.test.mjs`);
 export const dailyFiles = [...new Set([...fastFiles, ...[

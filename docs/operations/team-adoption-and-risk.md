@@ -214,9 +214,11 @@ Pass each project root with `--project`, or list the roots in a file with
 
 ```sh
 workkeel stats --report --project ../app --project ../tools \
-  --cutoff 2026-10-19T00:00:00Z --timezone UTC [--previous sha256] [--strict] [--json]
+  --cutoff 2026-10-19T00:00:00Z --timezone UTC --strict --json
 workkeel stats --report --projects-file weekly-projects.txt --cutoff ... --timezone ...
 ```
+
+The `--previous sha256`, `--strict` and `--json` flags are optional.
 
 The list file has one path per line. Blank lines and lines that start with `#`
 are ignored. A relative path is relative to the list file. You can use both flags

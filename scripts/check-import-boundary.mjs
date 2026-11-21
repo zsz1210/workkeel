@@ -11,6 +11,7 @@ import { isBuiltin } from "node:module";
 import { parse } from "acorn";
 import validatePackageName from "validate-npm-package-name";
 import { PACKAGE_NAME } from "../src/workkeel-version.mjs";
+import { optionalFiles } from "./test-groups.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -120,12 +121,148 @@ export function checkImportBoundary(target = root, entries = nativeEntries(targe
   return { entries, reached: [...reached].sort(), errors };
 }
 
+// Layer rule: core code must not import optional-subsystem modules. The optional
+// set comes from two sources. First, the optional test group in
+// scripts/test-groups.mjs: each test maps to src/<test name>.mjs, or to the
+// modules in OPTIONAL_TEST_MODULES when no module has that name. Second, the
+// optional subsystems of `workkeel help advanced` and
+// docs/concepts/compatibility.md, which OPTIONAL_TIERS lists by command name.
+// "loop" stands for the experimental Workkeel Loop features of that document.
+export const OPTIONAL_TIERS = {
+  monitor: ["src/workkeel-monitor.mjs", "src/workkeel-monitor-analytics.mjs", "src/workkeel-monitor-client.mjs", "src/workkeel-monitor-data.mjs",
+    "src/workkeel-monitor-dom.mjs", "src/workkeel-monitor-page.mjs", "src/workkeel-monitor-time.mjs", "src/workkeel-monitor-view.mjs",
+    "src/workkeel-observer-index.mjs", "src/workkeel-tailnet.mjs", "scripts/serve-workkeel-observer.mjs", "scripts/verify-workkeel-monitor.mjs",
+    "scripts/workkeel-monitor-fixture.mjs", "scripts/workkeel-observer-fixture.mjs", "scripts/workkeel-execution-clarity-browser.mjs",
+    "scripts/workkeel-observer-release-browser.mjs"],
+  workspace: ["src/workkeel-workspace.mjs", "src/workkeel-workspace-server.mjs", "src/workkeel-workspace-ui.mjs", "src/workkeel-workspace-scene.mjs",
+    "src/workkeel-workspace-hooks.mjs"],
+  workflow: ["src/workkeel-workflows.mjs", "src/workkeel-workflow-schema.mjs", "src/workkeel-continuation.mjs", "src/workkeel-checkpoints.mjs"],
+  dispatch: ["src/workkeel-dispatch.mjs", "src/workkeel-dispatch-classifier.mjs", "scripts/prepare-workkeel-dispatch.mjs"],
+  usage: ["src/workkeel-host-usage.mjs", "scripts/collect-workkeel-host-usage.mjs", "scripts/workkeel-background-collector.mjs",
+    "scripts/workkeel-execution-capture.mjs"],
+  "model-policy": ["src/workkeel-model-policy.mjs", "src/workkeel-model-policy-resolution.mjs", "src/workkeel-model-routing.mjs",
+    "src/workkeel-model-rules-ui.mjs"],
+  headroom: ["src/workkeel-headroom.mjs", "src/headroom-adapter.mjs"],
+  learning: ["src/workkeel-learning.mjs", "src/workkeel-learning-context.mjs", "src/workkeel-learning-lifecycle.mjs", "src/workkeel-learning-receipts.mjs"],
+  "skill-lifecycle": ["src/workkeel-learning-lifecycle.mjs"],
+  goal: ["src/workkeel-goals.mjs", "src/workkeel-goal-runtime.mjs"],
+  autonomy: ["src/workkeel-autonomy.mjs", "src/workkeel-autonomy-admission.mjs", "src/workkeel-improvement-cycle.mjs"],
+  retention: ["src/workkeel-retention.mjs"],
+  loop: ["src/workkeel-loop-run.mjs", "src/workkeel-loop-comparison.mjs"]
+};
+
+// Optional tests without a src/<test name>.mjs module, mapped to the modules they cover.
+export const OPTIONAL_TEST_MODULES = {
+  "headroom-preservation": ["src/headroom-adapter.mjs"],
+  "workkeel-background-collector": ["scripts/workkeel-background-collector.mjs"],
+  "workkeel-capture-observer": ["scripts/workkeel-execution-capture.mjs"],
+  "workkeel-desktop-product": ["src/workkeel-model-rules-ui.mjs", "src/workkeel-workspace-scene.mjs"],
+  "workkeel-dispatch-history": ["src/workkeel-dispatch.mjs"],
+  "workkeel-execution-capture": ["scripts/workkeel-execution-capture.mjs"],
+  "workkeel-flow-browser": ["src/workkeel-workspace-server.mjs", "scripts/workkeel-monitor-fixture.mjs"],
+  "workkeel-host-observer": ["src/workkeel-monitor-view.mjs"],
+  "workkeel-learning-observer": ["src/workkeel-learning.mjs", "scripts/workkeel-monitor-fixture.mjs"],
+  "workkeel-monitor-catalogue": ["src/workkeel-monitor-data.mjs", "scripts/workkeel-observer-fixture.mjs"],
+  "workkeel-observer": ["src/workkeel-monitor-data.mjs", "scripts/workkeel-observer-fixture.mjs"],
+  "workkeel-usage-scope": ["src/workkeel-host-usage.mjs"]
+};
+
+// Core-to-optional edges that existed when the rule was introduced. Each entry
+// is one importer and one imported module. "lazy" entries accept import() only,
+// so a static import of the same module still fails. An entry that no longer
+// matches an edge fails the check, so the list cannot go stale.
+const router = (to, command) => ({ from: "src/workkeel-cli.mjs", to: `src/${to}`, lazy: true, reason: `command router loads ${command} on demand` });
+export const OPTIONAL_IMPORT_ALLOWLIST = [
+  router("workkeel-monitor.mjs", "`workkeel monitor`"),
+  router("workkeel-workspace.mjs", "`workkeel workspace`"),
+  router("workkeel-workspace-server.mjs", "`workkeel workspace serve`"),
+  router("workkeel-workspace-hooks.mjs", "`workkeel workspace serve`"),
+  router("workkeel-scoring.mjs", "`workkeel stats`"),
+  router("workkeel-retention.mjs", "`workkeel retention`"),
+  router("workkeel-model-policy.mjs", "`workkeel model-policy`"),
+  router("workkeel-learning-lifecycle.mjs", "`workkeel skill-lifecycle`"),
+  router("workkeel-goals.mjs", "`workkeel goal`"),
+  router("workkeel-autonomy-admission.mjs", "`workkeel goal extend-admission|dispose-proposal`"),
+  router("workkeel-autonomy.mjs", "`workkeel autonomy`"),
+  router("workkeel-learning.mjs", "`workkeel learning`"),
+  router("workkeel-dispatch.mjs", "`workkeel dispatch`"),
+  router("workkeel-host-usage.mjs", "`workkeel usage`"),
+  router("workkeel-workflows.mjs", "`workkeel workflow`"),
+  router("workkeel-continuation.mjs", "`workkeel workflow continuation-plan|continue`"),
+  router("workkeel-headroom.mjs", "`workkeel headroom`"),
+  { from: "src/workkeel-codex-host.mjs", to: "src/workkeel-learning-lifecycle.mjs", reason: "the Codex host records skill-lifecycle use for workflow runs" },
+  { from: "src/workkeel-execution-policy.mjs", to: "src/workkeel-model-routing.mjs", reason: "execution policy resolves the model route of each role" },
+  { from: "src/workkeel-material.mjs", to: "src/workkeel-learning-context.mjs", lazy: true, reason: "`workkeel context prepare` adds approved learning context when requested" },
+  { from: "src/workkeel-measurements.mjs", to: "src/workkeel-host-usage.mjs", reason: "task metrics include bound host usage records" },
+  { from: "src/workkeel-review-recovery.mjs", to: "src/workkeel-dispatch.mjs", reason: "review recovery reads the dispatch record of the failed review" },
+  { from: "src/workkeel-review-recovery.mjs", to: "src/workkeel-host-usage.mjs", reason: "review recovery reads the usage binding of the failed review" },
+  { from: "src/workkeel-stats-report.mjs", to: "src/workkeel-scoring.mjs", reason: "`stats --report` reuses the review score model" },
+  { from: "src/workkeel-tasks.mjs", to: "src/workkeel-loop-run.mjs", reason: "task records carry the Workkeel Loop run fields" },
+  { from: "scripts/verify-workkeel-process-recovery.mjs", to: "src/workkeel-workflows.mjs", reason: "process recovery verification drives a workflow run" },
+  { from: "scripts/workkeel-delivery.mjs", to: "src/workkeel-dispatch.mjs", reason: "delivery reads the dispatch record of the task" },
+  { from: "scripts/workkeel-delivery.mjs", to: "src/workkeel-host-usage.mjs", reason: "delivery reads the usage binding of the task" }
+];
+
+/** Returns the sorted optional module set, and errors for mappings that name missing files. */
+export function optionalModules(target = root, { tests = optionalFiles, tiers = OPTIONAL_TIERS, testModules = OPTIONAL_TEST_MODULES } = {}) {
+  const modules = new Set(), errors = [];
+  const add = (file, source) => {
+    if (fs.existsSync(path.join(target, file))) modules.add(file);
+    else errors.push(`${source}: optional module ${file} does not exist`);
+  };
+  for (const test of tests) {
+    const name = path.posix.basename(test).replace(/\.test\.mjs$/, ""), own = `src/${name}.mjs`;
+    if (Object.hasOwn(testModules, name)) for (const file of testModules[name]) add(file, `optional test ${test}`);
+    else if (fs.existsSync(path.join(target, own))) modules.add(own);
+    else errors.push(`optional test ${test}: no src/${name}.mjs; map it in OPTIONAL_TEST_MODULES`);
+  }
+  for (const [tier, files] of Object.entries(tiers)) for (const file of files) add(file, `optional tier ${tier}`);
+  return { modules: [...modules].sort(), errors };
+}
+
+function moduleFiles(target, dir) {
+  if (!fs.existsSync(path.join(target, dir))) return [];
+  return fs.readdirSync(path.join(target, dir)).filter((name) => name.endsWith(".mjs")).sort().map((name) => `${dir}/${name}`);
+}
+
+/** Checks that core modules in bin/, src/ and scripts/ do not import optional modules outside the allowlist. */
+export function checkOptionalBoundary(target = root, { allowlist = OPTIONAL_IMPORT_ALLOWLIST, ...sources } = {}) {
+  const { modules, errors } = optionalModules(target, sources);
+  const optional = new Set(modules), edges = new Set();
+  const allowed = new Map(allowlist.map((entry, index) => [`${entry.from} -> ${entry.to}`, { ...entry, index }]));
+  for (const entry of allowlist) {
+    if (!entry.reason?.trim()) errors.push(`allowlist ${entry.from} -> ${entry.to}: a reason is required`);
+    if (optional.has(entry.from)) errors.push(`allowlist ${entry.from} -> ${entry.to}: the importer is optional, so no entry is needed`);
+  }
+  if (allowed.size !== allowlist.length) errors.push("allowlist: duplicate entries");
+  for (const file of ["bin/workkeel.mjs", ...moduleFiles(target, "src"), ...moduleFiles(target, "scripts")]) {
+    if (optional.has(file) || !fs.existsSync(path.join(target, file))) continue;
+    let imports;
+    try { imports = readImports(fs.readFileSync(path.join(target, file), "utf8")); }
+    catch (error) { errors.push(`${file}: cannot be parsed as a module (${error.message})`); continue; }
+    for (const item of imports) {
+      if (item.specifier === null) { errors.push(`${file}: computed import() in core code cannot be checked against optional modules`); continue; }
+      if (!item.specifier.startsWith(".")) continue;
+      const dependency = path.posix.normalize(path.posix.join(path.posix.dirname(file), item.specifier));
+      if (!optional.has(dependency)) continue;
+      const edge = `${file} -> ${dependency}`, entry = allowed.get(edge);
+      edges.add(edge);
+      if (!entry) errors.push(`${edge}: core code must not import the optional module; add an allowlist entry with a reason only for an approved edge`);
+      else if (entry.lazy && !item.dynamic) errors.push(`${edge}: the allowlist accepts import() only, not a static import`);
+    }
+  }
+  for (const edge of allowed.keys()) if (!edges.has(edge)) errors.push(`allowlist ${edge}: no such import; remove the entry`);
+  return { optional: modules, edges: [...edges].sort(), errors };
+}
+
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
-  const result = checkImportBoundary();
-  if (result.errors.length) {
-    for (const error of result.errors) console.error(`import boundary: ${error}`);
+  const result = checkImportBoundary(), layer = checkOptionalBoundary();
+  const errors = [...result.errors, ...layer.errors];
+  if (errors.length) {
+    for (const error of errors) console.error(`import boundary: ${error}`);
     process.exitCode = 1;
   } else {
-    console.log(`Import boundary passed: ${result.entries.length} native entry points, ${result.reached.length} modules checked.`);
+    console.log(`Import boundary passed: ${result.entries.length} native entry points, ${result.reached.length} modules checked; ` +
+      `${layer.optional.length} optional modules, ${layer.edges.length} allowlisted core-to-optional edges.`);
   }
 }

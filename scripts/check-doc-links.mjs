@@ -20,10 +20,59 @@ export function extractLocalLinks(markdown) {
   return targets;
 }
 
+/** Same-file fragment links such as [Section](#section), outside code. */
+export function extractFragmentLinks(markdown) {
+  const withoutCode = markdown.replace(/```[\s\S]*?```/g, "").replace(/`[^`\n]*`/g, "");
+  return [...withoutCode.matchAll(/!?\[[^\]]*\]\((<#[^>]*>|#[^)\s]*)(?:\s+["'][^"']*["'])?\)/g)]
+    .map(match => match[1].startsWith("<") ? match[1].slice(1, -1) : match[1]);
+}
+
+/** The heading anchor GitHub generates for one heading's text. */
+export function headingSlug(text) {
+  return text
+    .replace(/<[^>]+>/g, "")
+    .replace(/!?\[([^\]]*)\]\([^)]*\)/g, "$1")
+    .trim()
+    .toLowerCase()
+    .replace(/[^\p{L}\p{M}\p{N}\p{Pc} -]/gu, "")
+    .replace(/ /g, "-");
+}
+
+/** Every anchor a Markdown file defines: heading slugs (numbered when repeated, as GitHub does) and HTML id or name attributes. */
+export function markdownAnchors(markdown) {
+  const anchors = new Set(), counts = new Map(), lines = markdown.split("\n");
+  const add = (slug) => {
+    const count = counts.get(slug) ?? 0;
+    counts.set(slug, count + 1);
+    anchors.add(count ? `${slug}-${count}` : slug);
+  };
+  let fence = null;
+  for (let i = 0; i < lines.length; i += 1) {
+    const line = lines[i], marker = /^ {0,3}(`{3,}|~{3,})/.exec(line);
+    if (fence) { if (marker && marker[1][0] === fence[0] && marker[1].length >= fence.length && !line.slice(marker[0].length).trim()) fence = null; continue; }
+    if (marker) { fence = marker[1]; continue; }
+    for (const match of line.matchAll(/<[a-z][^>]*\s(?:id|name)=["']([^"']+)["']/gi)) anchors.add(match[1]);
+    const atx = /^ {0,3}#{1,6}(?:\s+(.*?))?(?:\s+#+)?\s*$/.exec(line);
+    if (atx) { add(headingSlug(atx[1] ?? "")); continue; }
+    // A setext heading: one line of text underlined with = or -.
+    const underline = /^ {0,3}(?:=+|-+)\s*$/.test(lines[i + 1] ?? "");
+    if (underline && line.trim() && !/^ {0,3}(?:[-*+>|]|\d+[.)]\s)/.test(line) && !/^ {4}/.test(line)) add(headingSlug(line));
+  }
+  return anchors;
+}
+
 export function resolveLocalLink(sourceFile, target) {
   const withoutFragment = target.split("#", 1)[0].split("?", 1)[0];
   if (!withoutFragment) return null;
   return path.resolve(path.dirname(sourceFile), decodeURIComponent(withoutFragment));
+}
+
+/** The decoded fragment of a link, or null when it has none. An empty fragment ("#") names the top of the page. */
+export function linkFragment(target) {
+  const index = target.indexOf("#");
+  if (index < 0 || index === target.length - 1) return null;
+  const raw = target.slice(index + 1);
+  try { return decodeURIComponent(raw); } catch { return raw; }
 }
 
 // Git-ignored Markdown (for example .workkeel-private/) is local state, not
@@ -43,6 +92,11 @@ export async function findBrokenLinks(markdownRoot = root) {
       !candidate.startsWith("node_modules/")
   );
   const ignored = gitIgnoredFiles(markdownRoot, candidates);
+  const anchorCache = new Map();
+  const anchorsOf = async (file) => {
+    if (!anchorCache.has(file)) anchorCache.set(file, markdownAnchors(await fs.readFile(file, "utf8")));
+    return anchorCache.get(file);
+  };
   const markdownFiles = candidates.filter((candidate) => !ignored.has(candidate));
 
   for (const relativeFile of markdownFiles) {
@@ -55,7 +109,14 @@ export async function findBrokenLinks(markdownRoot = root) {
         await fs.access(resolved);
       } catch {
         failures.push(`${relativeFile} -> ${target}`);
+        continue;
       }
+      const fragment = linkFragment(target);
+      if (fragment !== null && resolved.endsWith(".md") && !(await anchorsOf(resolved)).has(fragment)) failures.push(`${relativeFile} -> ${target} (no such heading anchor)`);
+    }
+    for (const target of extractFragmentLinks(content)) {
+      const fragment = linkFragment(target);
+      if (fragment !== null && !(await anchorsOf(sourceFile)).has(fragment)) failures.push(`${relativeFile} -> ${target} (no such heading anchor)`);
     }
   }
 
