@@ -6,7 +6,8 @@ import path from "node:path";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { parseCommandLine } from "../src/workkeel-cli-flags.mjs";
-import { COMMAND_FORMS, extractDocCommands, findInvalidDocCommands, helpForms, placeholder, shellSegments, validateCommand, workkeelArgs } from "../scripts/check-doc-commands.mjs";
+import { readTaskFile } from "../src/task-contract.mjs";
+import { COMMAND_FORMS, extractDocCommands, findInvalidDocCommands, helpForms, inputPathValid, placeholder, shellSegments, validateCommand, workkeelArgs } from "../scripts/check-doc-commands.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -54,6 +55,15 @@ test("examples are read from fenced code blocks only, with prompts, continuation
     assert.deepEqual(shellSegments(line), [["workkeel", "status", "."]], line);
   assert.deepEqual(shellSegments("workkeel task show --id <task-id> < in.json | jq ."), [["workkeel", "task", "show", "--id", "<task-id>"], ["jq", "."]]);
   assert.deepEqual(shellSegments(`workkeel task new --goal ">" --acceptance a`), [["workkeel", "task", "new", "--goal", ">", "--acceptance", "a"]]);
+  // A redirect right after a word ends that word; the word is still an argument.
+  assert.deepEqual(shellSegments("workkeel task show --id WK-1>/dev/null"), [["workkeel", "task", "show", "--id", "WK-1"]]);
+  assert.deepEqual(shellSegments("workkeel task claim --id WK-1 --base deadbeef>claim.json"), [["workkeel", "task", "claim", "--id", "WK-1", "--base", "deadbeef"]]);
+  assert.deepEqual(shellSegments("workkeel status .>out 2>&1"), [["workkeel", "status", "."]]);
+  assert.deepEqual(shellSegments("workkeel task show --id WK-1<in.json"), [["workkeel", "task", "show", "--id", "WK-1"]]);
+  // Quoted or escaped operators are literal text, and a quoted number is an argument, not a file descriptor.
+  assert.deepEqual(shellSegments(`workkeel task new --goal a\\>b --acceptance 'c>d'`), [["workkeel", "task", "new", "--goal", "a>b", "--acceptance", "c>d"]]);
+  assert.deepEqual(shellSegments(`workkeel task new --goal "2">x --acceptance y`), [["workkeel", "task", "new", "--goal", "2", "--acceptance", "y"]]);
+  assert.deepEqual(validateCommand(shellSegments("workkeel task show --id WK-1>/dev/null")[0].slice(1)), []);
 });
 
 test("invalid examples are flagged: unknown commands, actions and flags, and failed value checks", () => {
@@ -98,7 +108,13 @@ test("invalid examples are flagged: unknown commands, actions and flags, and fai
     "stats --report --cutoff 2026-10-19T00:00:00Z --timezone Mars/Base": "must be an IANA time zone",
     "stats . --report --project ../a --cutoff 2026-10-19T00:00:00Z --timezone UTC": "a multi-project report takes --project or --projects-file, not a positional target",
     "stats --project ../a": "--report is required by this form",
-    "monitor . --port 1": "monitor takes at most one project path"
+    "monitor . --port 1": "monitor takes at most one project path",
+    "workspace create --request ./workspace.json": "--request \"./workspace.json\": must be a normalized repository-relative file path",
+    "task create --source /tmp/contract.json": "--source \"/tmp/contract.json\": must be a normalized repository-relative file path",
+    "init --policy ../policy.json": "--policy \"../policy.json\": must be a normalized repository-relative file path",
+    "task claim --id WK-1 --request a/../claim.json": "--request \"a/../claim.json\": must be a normalized repository-relative file path",
+    "intake preview --request docs/*.json": "--request \"docs/*.json\": must be a normalized repository-relative file path",
+    "task assess --id WK-1 --request C:/a.json": "--request \"C:/a.json\": must be a normalized repository-relative file path"
   };
   for (const [command, expected] of Object.entries(cases)) {
     const problems = validateCommand(command.split(" "));
@@ -116,7 +132,8 @@ test("valid forms, placeholders and the CLI's longer allow lists pass", () => {
     "task new --goal <goal> --acceptance <criterion> --write <path>",
     "task claim . --id WK-1 --request claim.json", "task review . --id WK-1 --request review.json", "task close --id WK-1 --summary s --rollback <plan>", "task handoff --id WK-1 --summary s --unresolved x --claim c --revision $SHA",
     "stats --report --projects-file list.txt --cutoff ... --timezone ...", "stats --report --project a --projects-file b --cutoff 2026-10-19T00:00:00+09:00 --timezone Asia/Tokyo --strict --json",
-    "task new --goal g --acceptance a --acceptance b --write docs --risk low --actor builder"
+    "task new --goal g --acceptance a --acceptance b --write docs --risk low --actor builder",
+    "init --policy policy/repository-policy.json", "task create --source <contract.json> --request $REQUEST", "workspace create --request .workkeel/request.json"
   ]) assert.deepEqual(validateCommand(command.split(" ")), [], command);
   assert.ok(placeholder("<id>") && placeholder("...") && placeholder("${SHA}") && !placeholder("main"));
 });
@@ -169,4 +186,18 @@ test("a fixture document with a broken example fails the check with its file and
   const result = await findInvalidDocCommands(dir);
   assert.equal(result.count, 2);
   assert.deepEqual(result.failures, ["README.ja.md:2: workkeel task claim --id WK-1 --base HEAD: --base \"HEAD\": must be a full or abbreviated hexadecimal commit ID"]);
+});
+
+test("the input path check gives the same answer as the CLI's own input reader, without reading files", async () => {
+  // readTaskFile checks the path before it touches the file system. With a root that does
+  // not exist, an accepted path fails at realpath (ENOENT), so no named file is read.
+  const missingRoot = path.join(os.tmpdir(), `workkeel-doc-commands-missing-${process.pid}-${Date.now()}`);
+  assert.equal(fs.existsSync(missingRoot), false);
+  const pathError = "Contract input must be a normalized repository-relative file path";
+  for (const value of ["request.json", "a/b.json", "~/x.json", ".workkeel/r.json", "a b.json", "./r.json", "/tmp/c.json", "../p.json", "a/../b.json",
+    "a//b.json", "a/", ".", "", " r.json", "docs/*.json", "a\\b.json", "C:/a.json", "a:b.json", "x[1].json", "{a}.json"]) {
+    let rejected = false;
+    try { await readTaskFile(missingRoot, value); } catch (error) { rejected = error.message === pathError; if (!rejected) assert.equal(error.code, "ENOENT", value); }
+    assert.equal(inputPathValid(value), !rejected, JSON.stringify(value));
+  }
 });

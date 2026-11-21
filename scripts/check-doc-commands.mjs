@@ -100,25 +100,29 @@ export const placeholder = value => typeof value === "string" && (/<[^>]*>/.test
 /** Splits one shell line into words, honouring quotes and backslashes; returns segments split at ;, &&, || and |. */
 export function shellSegments(line) {
   const segments = [[]];
-  let word = null, quote = null;
-  const end = () => { if (word !== null) segments.at(-1).push(word); word = null; };
+  // literal: the current word holds a quoted or escaped character, so it cannot be a file descriptor number.
+  let word = null, quote = null, literal = false;
+  const end = () => { if (word !== null) segments.at(-1).push(word); word = null; literal = false; };
   for (let i = 0; i < line.length; i += 1) {
     const c = line[i];
     if (quote) {
       if (c === quote) quote = null;
       else if (c === "\\" && quote === '"' && i + 1 < line.length) word += line[++i];
       else word += c;
-    } else if (c === "'" || c === '"') { quote = c; word ??= ""; }
-    else if (c === "\\" && i + 1 < line.length) word = (word ?? "") + line[++i];
+    } else if (c === "'" || c === '"') { quote = c; word ??= ""; literal = true; }
+    else if (c === "\\" && i + 1 < line.length) { word = (word ?? "") + line[++i]; literal = true; }
     else if (/\s/.test(c)) end();
     else if (c === "#" && word === null) break;
     else if (c === "<" && /^<[^\s<>]+>/.test(line.slice(i))) {
       // Documentation writes placeholders as <name>; keep them as words, not as redirects.
       const placeholderText = /^<[^\s<>]+>/.exec(line.slice(i))[0];
       word = (word ?? "") + placeholderText; i += placeholderText.length - 1;
-    } else if ((c === ">" || c === "<") && (word === null || /^(?:\d*|&)$/.test(word))) {
+    } else if (c === ">" || c === "<") {
       // A shell redirect (>, >>, <, 2>, &>, 2>&1) and its target never reach the CLI.
-      word = null;
+      // An unquoted file descriptor number or & before it belongs to the redirect;
+      // any other word before it ends there and is an argument (WK-1>/dev/null).
+      if (word !== null && !literal && /^(?:\d+|&)$/.test(word)) { word = null; literal = false; }
+      else end();
       while (line[i + 1] === ">" || line[i + 1] === "&" || line[i + 1] === "|") i += 1;
       if (/[\d-]/.test(line[i + 1] ?? "") && line[i] === "&") { while (/[\d-]/.test(line[i + 1] ?? "")) i += 1; continue; }
       while (/\s/.test(line[i + 1] ?? "")) i += 1;
@@ -216,6 +220,7 @@ function valueProblems(parsed) {
   check("cutoff", value => Number.isFinite(new Date(value).getTime()) && /(Z|[+-]\d\d:\d\d)$/.test(value), "needs an ISO time with an explicit UTC offset");
   check("timezone", value => { try { new Intl.DateTimeFormat("en", { timeZone: value }); return true; } catch { return false; } }, "must be an IANA time zone");
   if (parsed.command === "task") check("id", value => TASK_ID.test(value), "is not a valid task ID");
+  for (const name of INPUT_FILE_FLAGS) check(name, inputPathValid, "must be a normalized repository-relative file path");
   if (option("pre-claim") && (parsed.action !== "claim" || option("base") === undefined)) problems.push("--pre-claim applies only to task claim with an explicit --base");
   // Flag-form task operations build the request from flags, so the values the task
   // store requires must be present and nonempty (src/workkeel-tasks.mjs assertText).
@@ -232,6 +237,24 @@ function valueProblems(parsed) {
     }
   }
   return problems;
+}
+
+// --request, --source and --policy name JSON files that the CLI reads with
+// readTaskContractInput, which rejects any path that repositoryPath() in
+// src/task-contract.mjs does not accept. That function is not exported, but
+// validateTaskContract applies the same repositoryPath() rule to
+// authorization.approval_ref, so a contract that carries the value there gives
+// the CLI's own answer without reading any file. test/doc-commands.test.mjs
+// checks that the two answers agree.
+const INPUT_FILE_FLAGS = ["request", "source", "policy"];
+const DOC_ACTOR = { agent_id: "builder", principal_id: "owner" };
+let approvalContract = null;
+export function inputPathValid(value) {
+  approvalContract ??= completeTaskContract({ id: "WK-0001", goal: "Goal", scope: { include: ["Goal"], exclude: [] }, acceptance: { criteria: ["Criterion"] },
+    authorization: { approved_by: DOC_ACTOR.principal_id, approval_ref: "docs/approval.md", operations: ["read", "write"], expires_at: null } }, defaultPolicy(), DOC_ACTOR);
+  const contract = structuredClone(approvalContract);
+  contract.authorization.approval_ref = value;
+  return !validateTaskContract(contract).errors.some(error => error.startsWith("/authorization/approval_ref"));
 }
 
 // The draft `task new` builds from flags (draftFromFlags in src/workkeel-cli-flags.mjs),
