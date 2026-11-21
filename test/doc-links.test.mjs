@@ -72,3 +72,11 @@ test("documentation link checks report missing heading anchors and keep file che
     "docs/guide.md -> #gone (no such heading anchor)"
   ]);
 });
+
+test("links and headings inside tilde fences and list or quote fences are code, not prose", () => {
+  const markdown = ["~~~md", "[Example](#placeholder)", "# Not a heading", "~~~", "1. Step", "", "    ```md", "    [Shown](missing.md)", "    ```",
+    "> ```", "> [Quoted](#quoted)", "> ```", "# Real", "[Link](#real) [File](guide.md)"].join("\n");
+  assert.deepEqual(extractFragmentLinks(markdown), ["#real"]);
+  assert.deepEqual(extractLocalLinks(markdown), ["guide.md"]);
+  assert.deepEqual([...markdownAnchors(markdown)], ["real"]);
+});

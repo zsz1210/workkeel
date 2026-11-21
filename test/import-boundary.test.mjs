@@ -313,14 +313,20 @@ test("a new core import of an optional module fails, including from scripts/", a
     "src/workkeel-usage.mjs": "export const usage = 1;\n",
     "src/workkeel-tasks.mjs": 'import "./workkeel-usage.mjs";\n',
     "scripts/report.mjs": 'const x = await import("../src/workkeel-usage.mjs");\n',
-    "scripts/computed.mjs": 'const name = "usage"; await import(`../src/workkeel-${name}.mjs`);\n'
+    "scripts/computed.mjs": 'const name = "usage"; await import(`../src/workkeel-${name}.mjs`);\n',
+    "scripts/reports/nested.mjs": 'import "../../src/workkeel-usage.mjs?report";\n',
+    "bin/report.js": 'import "../src/workkeel-%75sage.mjs#x";\n'
   });
   assert.deepEqual(layer(root).errors.sort(), [
+    "bin/report.js -> src/workkeel-usage.mjs: core code must not import the optional module; add an allowlist entry with a reason only for an approved edge",
     "scripts/computed.mjs: computed import() in core code cannot be checked against optional modules",
     "scripts/report.mjs -> src/workkeel-usage.mjs: core code must not import the optional module; add an allowlist entry with a reason only for an approved edge",
+    "scripts/reports/nested.mjs -> src/workkeel-usage.mjs: core code must not import the optional module; add an allowlist entry with a reason only for an approved edge",
     "src/workkeel-tasks.mjs -> src/workkeel-usage.mjs: core code must not import the optional module; add an allowlist entry with a reason only for an approved edge"]);
   const allowlist = [{ from: "src/workkeel-tasks.mjs", to: "src/workkeel-usage.mjs", reason: "fixture" },
-    { from: "scripts/report.mjs", to: "src/workkeel-usage.mjs", reason: "fixture", lazy: true }];
+    { from: "scripts/report.mjs", to: "src/workkeel-usage.mjs", reason: "fixture", lazy: true },
+    { from: "scripts/reports/nested.mjs", to: "src/workkeel-usage.mjs", reason: "fixture" },
+    { from: "bin/report.js", to: "src/workkeel-usage.mjs", reason: "fixture" }];
   assert.deepEqual(layer(root, { allowlist }).errors, ["scripts/computed.mjs: computed import() in core code cannot be checked against optional modules"]);
 });
 

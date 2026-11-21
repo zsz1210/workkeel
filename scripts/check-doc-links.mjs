@@ -8,10 +8,37 @@ import { walkFiles } from "../src/files.mjs";
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const EXTERNAL_LINK = /^(?:[a-z][a-z0-9+.-]*:|#)/i;
 
+/**
+ * Classifies each line of a Markdown source as prose or fenced code. Fences open
+ * with ``` or ~~~ and may sit inside block quotes and list items; a fence closes
+ * on a line with at least as many of the same character and nothing else. For
+ * code lines, `text` drops the container prefix (quote markers and indentation).
+ */
+export function markdownLines(markdown) {
+  const result = [];
+  let fence = null;
+  for (const line of markdown.split("\n")) {
+    const inner = line.replace(/^(?:[ \t]*>)*[ \t]*/, "");
+    if (fence) {
+      const close = /^(`{3,}|~{3,})\s*$/.exec(inner);
+      if (close && close[1][0] === fence[0] && close[1].length >= fence.length) { fence = null; result.push({ text: line, code: false, fence: true }); }
+      else result.push({ text: inner, code: true, fence: false });
+      continue;
+    }
+    const open = /^(?:(?:[-*+]|\d+[.)])[ \t]+)?(`{3,}|~{3,})(.*)$/.exec(inner);
+    if (open && !(open[1][0] === "`" && open[2].includes("`"))) { fence = open[1]; result.push({ text: line, code: false, fence: true }); continue; }
+    result.push({ text: line, code: false, fence: false });
+  }
+  return result;
+}
+
+/** The prose of a Markdown source: fenced code and inline code spans removed. */
+function proseOnly(markdown) {
+  return markdownLines(markdown).map(line => line.code || line.fence ? "" : line.text).join("\n").replace(/`[^`\n]*`/g, "");
+}
+
 export function extractLocalLinks(markdown) {
-  const withoutCode = markdown
-    .replace(/```[\s\S]*?```/g, "")
-    .replace(/`[^`\n]*`/g, "");
+  const withoutCode = proseOnly(markdown);
   const targets = [];
   for (const match of withoutCode.matchAll(/!?\[[^\]]*\]\((<[^>]+>|[^)\s]+)(?:\s+["'][^"']*["'])?\)/g)) {
     const raw = match[1].startsWith("<") ? match[1].slice(1, -1) : match[1];
@@ -22,8 +49,7 @@ export function extractLocalLinks(markdown) {
 
 /** Same-file fragment links such as [Section](#section), outside code. */
 export function extractFragmentLinks(markdown) {
-  const withoutCode = markdown.replace(/```[\s\S]*?```/g, "").replace(/`[^`\n]*`/g, "");
-  return [...withoutCode.matchAll(/!?\[[^\]]*\]\((<#[^>]*>|#[^)\s]*)(?:\s+["'][^"']*["'])?\)/g)]
+  return [...proseOnly(markdown).matchAll(/!?\[[^\]]*\]\((<#[^>]*>|#[^)\s]*)(?:\s+["'][^"']*["'])?\)/g)]
     .map(match => match[1].startsWith("<") ? match[1].slice(1, -1) : match[1]);
 }
 
@@ -40,17 +66,16 @@ export function headingSlug(text) {
 
 /** Every anchor a Markdown file defines: heading slugs (numbered when repeated, as GitHub does) and HTML id or name attributes. */
 export function markdownAnchors(markdown) {
-  const anchors = new Set(), counts = new Map(), lines = markdown.split("\n");
+  const anchors = new Set(), counts = new Map(), classified = markdownLines(markdown);
+  const lines = classified.map(line => line.code || line.fence ? "" : line.text);
   const add = (slug) => {
     const count = counts.get(slug) ?? 0;
     counts.set(slug, count + 1);
     anchors.add(count ? `${slug}-${count}` : slug);
   };
-  let fence = null;
   for (let i = 0; i < lines.length; i += 1) {
-    const line = lines[i], marker = /^ {0,3}(`{3,}|~{3,})/.exec(line);
-    if (fence) { if (marker && marker[1][0] === fence[0] && marker[1].length >= fence.length && !line.slice(marker[0].length).trim()) fence = null; continue; }
-    if (marker) { fence = marker[1]; continue; }
+    const line = lines[i];
+    if (classified[i].code || classified[i].fence) continue;
     for (const match of line.matchAll(/<[a-z][^>]*\s(?:id|name)=["']([^"']+)["']/gi)) anchors.add(match[1]);
     const atx = /^ {0,3}#{1,6}(?:\s+(.*?))?(?:\s+#+)?\s*$/.exec(line);
     if (atx) { add(headingSlug(atx[1] ?? "")); continue; }

@@ -220,12 +220,22 @@ export function optionalModules(target = root, { tests = optionalFiles, tiers = 
   return { modules: [...modules].sort(), errors };
 }
 
+// Every JavaScript module under one directory, at any depth.
 function moduleFiles(target, dir) {
   if (!fs.existsSync(path.join(target, dir))) return [];
-  return fs.readdirSync(path.join(target, dir)).filter((name) => name.endsWith(".mjs")).sort().map((name) => `${dir}/${name}`);
+  return fs.readdirSync(path.join(target, dir), { recursive: true, withFileTypes: true })
+    .filter((entry) => entry.isFile() && /\.(?:mjs|js|cjs)$/.test(entry.name))
+    .map((entry) => path.relative(target, path.join(entry.parentPath, entry.name)).split(path.sep).join("/")).sort();
 }
 
-/** Checks that core modules in bin/, src/ and scripts/ do not import optional modules outside the allowlist. */
+// The repository file a relative specifier names: Node drops a ?query or #hash and decodes percent-escapes.
+function localDependency(file, specifier) {
+  let name = specifier.replace(/[?#].*$/s, "");
+  try { name = decodeURIComponent(name); } catch { /* an invalid escape cannot name an optional module */ }
+  return path.posix.normalize(path.posix.join(path.posix.dirname(file), name));
+}
+
+/** Checks that core modules anywhere in bin/, src/ and scripts/ do not import optional modules outside the allowlist. */
 export function checkOptionalBoundary(target = root, { allowlist = OPTIONAL_IMPORT_ALLOWLIST, ...sources } = {}) {
   const { modules, errors } = optionalModules(target, sources);
   const optional = new Set(modules), edges = new Set();
@@ -235,15 +245,15 @@ export function checkOptionalBoundary(target = root, { allowlist = OPTIONAL_IMPO
     if (optional.has(entry.from)) errors.push(`allowlist ${entry.from} -> ${entry.to}: the importer is optional, so no entry is needed`);
   }
   if (allowed.size !== allowlist.length) errors.push("allowlist: duplicate entries");
-  for (const file of ["bin/workkeel.mjs", ...moduleFiles(target, "src"), ...moduleFiles(target, "scripts")]) {
-    if (optional.has(file) || !fs.existsSync(path.join(target, file))) continue;
+  for (const file of [...moduleFiles(target, "bin"), ...moduleFiles(target, "src"), ...moduleFiles(target, "scripts")]) {
+    if (optional.has(file)) continue;
     let imports;
     try { imports = readImports(fs.readFileSync(path.join(target, file), "utf8")); }
     catch (error) { errors.push(`${file}: cannot be parsed as a module (${error.message})`); continue; }
     for (const item of imports) {
       if (item.specifier === null) { errors.push(`${file}: computed import() in core code cannot be checked against optional modules`); continue; }
       if (!item.specifier.startsWith(".")) continue;
-      const dependency = path.posix.normalize(path.posix.join(path.posix.dirname(file), item.specifier));
+      const dependency = localDependency(file, item.specifier);
       if (!optional.has(dependency)) continue;
       const edge = `${file} -> ${dependency}`, entry = allowed.get(edge);
       edges.add(edge);
