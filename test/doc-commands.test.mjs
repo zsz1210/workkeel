@@ -136,6 +136,7 @@ test("valid forms, placeholders and the CLI's longer allow lists pass", () => {
     "task claim . --id WK-1 --request claim.json", "task review . --id WK-1 --request review.json", "task close --id WK-1 --summary s --rollback <plan>", "task handoff --id WK-1 --summary s --unresolved x --claim c --revision $SHA",
     "stats --report --projects-file list.txt --cutoff ... --timezone ...", "stats --report --project a --projects-file b --cutoff 2026-10-19T00:00:00+09:00 --timezone Asia/Tokyo --strict --json",
     "task new --goal g --acceptance a --acceptance b --write docs --risk low --actor builder",
+    "task new --goal g --acceptance a --skill .agents/skills/intake/SKILL.md --skill <skill-path>",
     "init --policy policy/repository-policy.json", "task create --source <contract.json> --request $REQUEST", "goal create --request .workkeel/request.json"
   ]) assert.deepEqual(validateCommand(command.split(" ")), [], command);
   assert.ok(placeholder("<id>") && placeholder("...") && placeholder("${SHA}") && !placeholder("main"));

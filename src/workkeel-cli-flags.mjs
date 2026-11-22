@@ -10,7 +10,7 @@ const GROUPS = ["task", "usage", "dispatch", "intake", "runtime", "instructions"
   "learning", "model-policy", "skill-lifecycle", "autonomy", "retention", "goal", "policy"];
 const SINGLE = ["policy", "source", "request", "id", "fingerprint", "actor", "revision", "base", "claim", "summary",
   "judgment", "rollback", "mode", "expect", "goal", "risk", "principal", "builder", "reviewer", "attempt", "approval", "days", "previous", "cutoff", "timezone", "stale-after", "projects-file"];
-const MULTIPLE = ["evidence", "acceptance", "write", "read", "include", "exclude", "unresolved", "project"];
+const MULTIPLE = ["evidence", "acceptance", "write", "read", "include", "exclude", "unresolved", "project", "skill"];
 const BOOLEAN = ["json", "report", "strict", "pre-claim"];
 
 /** Parses `command [action] [target] --flags` with Node's own argument parser. */
@@ -55,7 +55,7 @@ const version = (options, item) => {
 const hash = value => createHash("sha256").update(JSON.stringify(value)).digest("hex");
 // Repeated flags that name a set are compared as sets; ordered ones (such as
 // --acceptance criteria) keep their order, so reordering them is a new command.
-const SET_LIKE = new Set(["--write", "--read", "--include", "--exclude", "--evidence", "--unresolved"]);
+const SET_LIKE = new Set(["--write", "--read", "--include", "--exclude", "--evidence", "--unresolved", "--skill"]);
 const commandKey = (action, id, options) => hash({ action, id, options: Object.entries(options)
   .map(([name, value]) => [name, SET_LIKE.has(name) && Array.isArray(value) ? [...value].sort() : value])
   .sort(([a], [b]) => a.localeCompare(b)) });
@@ -239,6 +239,8 @@ export async function draftFromFlags(target, options) {
     acceptance: { criteria: options["--acceptance"] } };
   if (options["--write"] || options["--read"]) draft.environment = { ...(options["--write"] ? { write_paths: options["--write"] } : {}), ...(options["--read"] ? { read_paths: options["--read"] } : {}) };
   if (options["--risk"]) draft.verification = { risk_tier: options["--risk"] };
+  // Each --skill names a repository Skill file; creation pins its digest with the approval.
+  if (options["--skill"]) draft.skills = options["--skill"];
   if (options["--approval"]) draft.authorization = { approved_by: actor.principal_id, approval_ref: options["--approval"],
     operations: ["read", "write"], expires_at: null };
   // Bounded and collision-resistant, whatever the length of the task ID.

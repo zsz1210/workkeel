@@ -90,6 +90,8 @@ network and authority are never inferred from the goal. Optional `include`,
 `dependencies`, `risk_tier`, `skills`, `execution` and `operation_id` preserve
 the full native contract's controls. Defaults are native host execution, standard
 risk and the project's existing review separation, with no claim or dispatch.
+`task new` takes the same `skills` as repeated `--skill path` flags. A named
+Skill guides the work; it never widens the approved paths or authority.
 
 ```sh
 workkeel intake preview . --request brief.json

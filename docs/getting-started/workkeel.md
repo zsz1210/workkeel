@@ -72,7 +72,10 @@ Work on one task at a time per branch or worktree: a handoff includes all change
 `task new` needs only a goal and acceptance criteria. Unstated fields get recorded
 defaults: the repository root as read and write path, no network, native
 execution, and the lowest risk tier the write paths and data allow. Critical work also
-needs `--approval path` to a committed approval record. Operation IDs and
+needs `--approval path` to a committed approval record. Repeat `--skill path` to
+name the repository Skill files the task follows; they are recorded in the
+contract's `skills` and their digests are pinned with the approval. Without
+`--skill`, `skills` stays empty. Operation IDs and
 expected versions are derived, and rerunning a command that already succeeded
 replays it. Replay uses the exact requests this checkout saved under its Git
 directory (`.git/workkeel/cli-operations/`); a fresh clone or another machine

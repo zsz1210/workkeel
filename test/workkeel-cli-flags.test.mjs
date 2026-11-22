@@ -781,3 +781,37 @@ for (const [name, summary, warned] of [
   assert.deepEqual(warnings[0].accepted_labels, ["[requirements]", "[code-error]", "[tests]", "[evidence]", "[scope]", "[false-block]", "[unknown]"]);
   for (const label of warnings[0].accepted_labels) assert.ok(warnings[0].message.includes(label), label);
 });
+
+test("task new --skill records each named Skill and pins its digest; without it skills stay empty", async t => {
+  const root = await initialized(t);
+  for (const name of ["intake-new", "intake-change"]) {
+    await fs.mkdir(path.join(root, `.agents/skills/${name}`), { recursive: true });
+    await fs.writeFile(path.join(root, `.agents/skills/${name}/SKILL.md`), `# ${name}\n`);
+  }
+  git(root, "add", "-A"); git(root, "commit", "-qm", "skills");
+  const NEW = ".agents/skills/intake-new/SKILL.md", CHANGE = ".agents/skills/intake-change/SKILL.md";
+  const sha = file => execFileSync("shasum", ["-a", "256", path.join(root, file)], { encoding: "utf8" }).split(" ")[0];
+
+  const one = workkeel(root, "task", "new", "--goal", "New command", "--acceptance", "Runs", "--write", "docs", "--skill", NEW, "--actor", "builder");
+  const item = await readNativeTask(root, one.id);
+  assert.deepEqual(item.contract.skills, [NEW]);
+  assert.deepEqual(item.authority_pins.filter(pin => pin.path === NEW), [{ path: NEW, sha256: sha(NEW) }]);
+
+  const both = workkeel(root, "task", "new", "--goal", "Two Skills", "--acceptance", "Runs", "--write", "docs", "--skill", NEW, "--skill", CHANGE, "--actor", "builder");
+  assert.deepEqual((await readNativeTask(root, both.id)).contract.skills, [NEW, CHANGE]);
+  // A Skill is a set member: naming the same Skills in another order replays the first task.
+  const swapped = workkeel(root, "task", "new", "--goal", "Two Skills", "--acceptance", "Runs", "--write", "docs", "--skill", CHANGE, "--skill", NEW, "--actor", "builder");
+  assert.equal(swapped.id, both.id); assert.equal(swapped.replayed, true);
+
+  const plain = workkeel(root, "task", "new", "--goal", "No Skill", "--acceptance", "Runs", "--write", "docs", "--actor", "builder");
+  const plainItem = await readNativeTask(root, plain.id);
+  assert.deepEqual(plainItem.contract.skills, []);
+  assert.ok(!plainItem.authority_pins.some(pin => pin.path.startsWith(".agents/")));
+
+  // Invalid Skill references create no task.
+  const before = (await fs.readdir(path.join(root, ".ai-org/work-items"))).length;
+  assert.match(fails(root, "task", "new", "--goal", "Bad path", "--acceptance", "Runs", "--skill", "../outside/SKILL.md", "--actor", "builder"), /skills|repository-relative/);
+  assert.match(fails(root, "task", "new", "--goal", "Missing", "--acceptance", "Runs", "--skill", ".agents/skills/missing/SKILL.md", "--actor", "builder"), /ENOENT|no such file/);
+  assert.match(fails(root, "task", "new", "--goal", "Twice", "--acceptance", "Runs", "--skill", NEW, "--skill", NEW, "--actor", "builder"), /skills/);
+  assert.equal((await fs.readdir(path.join(root, ".ai-org/work-items"))).length, before);
+});

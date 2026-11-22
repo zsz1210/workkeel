@@ -7,6 +7,9 @@ repository migration does not republish old tags, archives or npm versions.
 
 ## Unreleased changes
 
+- CLI: `task new` accepts a repeatable `--skill path` that records repository
+  Skill files in the contract's `skills` and pins their digests at creation.
+  Without it, behavior is unchanged.
 - Documentation: the QA gate now requires a reproduction for each must-fix
   finding, and a stated premise and check after a second failed review.
 - Documentation: `stats --report` examples use `<ISO-time>` and `<IANA-zone>`
