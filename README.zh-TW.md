@@ -9,7 +9,7 @@
 
 [![CI](https://github.com/zsz1210/workkeel/actions/workflows/ci.yml/badge.svg)](https://github.com/zsz1210/workkeel/actions/workflows/ci.yml)
 
-[npm](https://www.npmjs.com/package/@zsz1210/workkeel) 1.1.0 · Node.js 24.15+ · [MIT](LICENSE)
+[npm](https://www.npmjs.com/package/@zsz1210/workkeel) 1.1.1 · Node.js 24.15+ · [MIT](LICENSE)
 
 哪些部分穩定、盡力維護或屬於實驗性功能，見 [1.0 相容性保證](docs/concepts/compatibility.md)（英文）。
 
@@ -86,7 +86,7 @@ alias workkeel="node $PWD/bin/workkeel.mjs"
 ```
 
 也可以用 `npm install -g @zsz1210/workkeel` 從 npm 安裝，再執行 `workkeel` 指令。
-npm 的 `latest` dist-tag 是 `1.1.0`，`next` 仍指向舊的 `0.1.0-beta.1`。
+npm 的 `latest` dist-tag 是 `1.1.1`，`next` 仍指向舊的 `0.1.0-beta.1`。
 要安裝目前版本，請用 `@zsz1210/workkeel` 或 `@zsz1210/workkeel@latest`，不要裝 `@next`。
 
 shell alias 只在定義它的互動式 shell 裡有效。在 Agent 工具呼叫、CI 這類非互動式 shell 中，
