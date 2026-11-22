@@ -5,6 +5,33 @@ line. Historical release entries describe their own versions, not current-main
 qualification. Actual development tasks and validation records stay private;
 repository migration does not republish old tags, archives or npm versions.
 
+## 1.1.1
+
+Released 2026-11-22.
+
+- The getting-started guide describes the `[category]` label at the start of a
+  rework summary or a `P1`/`P2` finding note. `workkeel stats --report` uses
+  this label to sort rework reasons. Text without a known label counts as `unknown`.
+- `task rework --summary` writes a `rework-summary-unlabeled` warning to stderr
+  when the summary does not start with an allowed label. The warning lists the
+  allowed labels. The command still records the summary as written and exits
+  with the same code.
+- `stats --report` reads 0.1.0-beta.1 task records that have
+  `attempts[].rework_mode` or `delivery.evidence_rework`. Unpublished source
+  that still reported 0.1.0-beta.1 wrote these two fields. Other unknown fields
+  still make the record a source error.
+- `npm run verify` has new source checks. Core code must not import modules of
+  optional subsystems; the check lists the 28 current imports, each with a
+  reason. README and docs command examples must pass the CLI parser and its
+  value checks, without running. Required flags need a nonempty value, and
+  `--request`, `--source` and `--policy` need a repository-relative path.
+  Local links to Markdown headings must point to a heading that exists.
+- `check-publication --history` rejects commits with a `Co-Authored-By` or
+  `Generated with` trailer. Only the 38 commits from 2026-10-18 to 2026-10-20
+  can keep their `Co-Authored-By` trailer.
+- The goals test waits less time in its idle checks, so it finishes inside the
+  suite time limit.
+
 ## 1.1.0
 
 Released 2026-10-27.

@@ -40,6 +40,8 @@ export async function isLegacyStatsProject(target) {
 
 // The 0.1.0-beta.1 record format, frozen from that release's task-contract.mjs
 // and workkeel-tasks.mjs. Every object rejects fields that release did not write.
+// Unpublished source up to 83359cf6 still reported 0.1.0-beta.1 and also wrote
+// the optional `rework_mode` and `delivery.evidence_rework`; these are the only additions.
 const text = { type: 'string', minLength: 1, pattern: '\\S' };
 const strings = { type: 'array', items: text, uniqueItems: true };
 const nonempty = { ...strings, minItems: 1 };
@@ -92,7 +94,8 @@ const contractSchema = object({
 const actor = object({ agent_id: identifier, principal_id: identifier });
 const pins = { type: 'array', minItems: 1, items: object({ path: text, sha256: sha }) };
 const claim = object({ id: text, actor, at: time });
-const delivery = object({ revision, summary: text, implementer: actor, claim_id: text, evidence: pins });
+const evidenceRework = object({ rejected_review_sha256: sha, previous_evidence_sha256: sha });
+const delivery = object({ revision, summary: text, implementer: actor, claim_id: text, evidence: pins, evidence_rework: evidenceRework }, ['evidence_rework']);
 const review = object({ actor, revision, judgment: choice('pass', 'fail'), summary: text, evidence: pins });
 const STATES = ['intake', 'build', 'test', 'release_gate', 'done', 'cancelled'];
 const event = object({ sequence: { type: 'integer', minimum: 1 }, action: choice('create', 'claim', 'release', 'handoff', 'review', 'rework', 'close', 'cancel'),
@@ -108,7 +111,8 @@ const recordSchema = object({
     object({ actor, revision, summary: text, rollback: text, evidence: pins, external_release: { const: 'not-performed' } }),
     object({ actor, summary: text, evidence: pins, external_release: { const: 'not-performed' } })] }),
   attempts: { type: 'array', items: { oneOf: [
-    object({ kind: { const: 'rejected' }, base_revision: nullable(revision), delivery, review, summary: text }),
+    object({ kind: { const: 'rejected' }, base_revision: nullable(revision), delivery, review, summary: text,
+      rework_mode: choice('source', 'evidence-only') }, ['rework_mode']),
     object({ kind: { const: 'released' }, claim, base_revision: nullable(revision), summary: text })] } },
   history: { type: 'array', minItems: 1, items: event }
 });

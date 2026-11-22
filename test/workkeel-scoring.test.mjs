@@ -371,3 +371,14 @@ test('task listing errors without samples report unknown tier totals and source-
   }
   assert.deepEqual(JSON.parse(formatStatsReport(report).split('```json\n')[1].split('\n```')[0]), report);
 });
+
+test('rework summary labels follow the stats recognizer exactly', async () => {
+  const {reworkSummaryLabel,projectReworkIterations,REWORK_CATEGORIES}=await import('../src/workkeel-scoring.mjs');
+  for(const category of REWORK_CATEGORIES)assert.equal(reworkSummaryLabel(`[${category}] Reason`),category);
+  assert.equal(reworkSummaryLabel('[tests]'),'tests');
+  for(const note of ['Fix it','[typo] Fix it','[Tests] Fix it',' [tests] Fix it','[code-error Fix it','[] Fix it','(tests) Fix it','',null,undefined])
+    assert.equal(reworkSummaryLabel(note),null,String(note));
+  const notes=['[tests] A','Fix it','[typo] B','[unknown] C'];
+  const rounds=projectReworkIterations('WK-1',notes.map((summary,i)=>({action:'rework',at:new Date(i*1000).toISOString(),summary})),[],[]);
+  assert.deepEqual(rounds.map(r=>r.reasons[0].category),notes.map(note=>reworkSummaryLabel(note)??'unknown'));
+});

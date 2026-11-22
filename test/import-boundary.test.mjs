@@ -5,7 +5,7 @@ import path from "node:path";
 import { spawnSync } from "node:child_process";
 import { pathToFileURL } from "node:url";
 import test from "node:test";
-import { checkImportBoundary, readImports } from "../scripts/check-import-boundary.mjs";
+import { OPTIONAL_IMPORT_ALLOWLIST, OPTIONAL_TIERS, checkImportBoundary, checkOptionalBoundary, optionalModules, readImports } from "../scripts/check-import-boundary.mjs";
 
 async function fixture(t, files) {
   const root = await fs.mkdtemp(path.join(os.tmpdir(), "workkeel-boundary-"));
@@ -285,4 +285,79 @@ test("a native module the parser rejects fails the check instead of passing", as
     assert.equal(errors.length, 1, source);
     assert.match(errors[0], /^src\/workkeel-cli\.mjs: cannot be parsed as a module \(/, source);
   }
+});
+
+const layer = (root, options) => checkOptionalBoundary(root, { tests: [], tiers: { usage: ["src/workkeel-usage.mjs"] }, testModules: {}, allowlist: [], ...options });
+
+test("the repository's core modules import optional modules only through allowlisted edges", () => {
+  const result = checkOptionalBoundary();
+  assert.deepEqual(result.errors, []);
+  assert.deepEqual(result.edges, OPTIONAL_IMPORT_ALLOWLIST.map(entry => `${entry.from} -> ${entry.to}`).sort());
+  assert.ok(OPTIONAL_IMPORT_ALLOWLIST.every(entry => entry.reason.trim() && !entry.reason.includes("\n")));
+  for (const file of ["src/workkeel-dispatch.mjs", "src/workkeel-host-usage.mjs", "src/workkeel-loop-run.mjs", "src/workkeel-model-routing.mjs",
+    "src/workkeel-learning-lifecycle.mjs", "src/workkeel-continuation.mjs", "scripts/workkeel-execution-capture.mjs"]) assert.ok(result.optional.includes(file), file);
+  for (const file of ["src/workkeel-tasks.mjs", "src/workkeel-execution-policy.mjs", "src/workkeel-codex-host.mjs", "src/workkeel-review-recovery.mjs"])
+    assert.ok(!result.optional.includes(file), file);
+});
+
+test("the optional tiers name exactly the optional subsystems of `workkeel help advanced`", () => {
+  const help = spawnSync(process.execPath, ["bin/workkeel.mjs", "help", "advanced"], { encoding: "utf8" });
+  assert.equal(help.status, 0, help.stderr);
+  const section = help.stdout.split(/^Optional subsystems\..*$/m)[1].split(/\n\n/)[0];
+  const commands = new Set([...section.matchAll(/^workkeel ([a-z-]+)/gm)].map(match => match[1]));
+  assert.deepEqual([...commands].sort(), Object.keys(OPTIONAL_TIERS).filter(tier => tier !== "loop").sort());
+});
+
+test("a new core import of an optional module fails, including from scripts/", async t => {
+  const root = await fixture(t, {
+    "src/workkeel-usage.mjs": "export const usage = 1;\n",
+    "src/workkeel-tasks.mjs": 'import "./workkeel-usage.mjs";\n',
+    "scripts/report.mjs": 'const x = await import("../src/workkeel-usage.mjs");\n',
+    "scripts/computed.mjs": 'const name = "usage"; await import(`../src/workkeel-${name}.mjs`);\n',
+    "scripts/reports/nested.mjs": 'import "../../src/workkeel-usage.mjs?report";\n',
+    "bin/report.js": 'import "../src/workkeel-%75sage.mjs#x";\n'
+  });
+  assert.deepEqual(layer(root).errors.sort(), [
+    "bin/report.js -> src/workkeel-usage.mjs: core code must not import the optional module; add an allowlist entry with a reason only for an approved edge",
+    "scripts/computed.mjs: computed import() in core code cannot be checked against optional modules",
+    "scripts/report.mjs -> src/workkeel-usage.mjs: core code must not import the optional module; add an allowlist entry with a reason only for an approved edge",
+    "scripts/reports/nested.mjs -> src/workkeel-usage.mjs: core code must not import the optional module; add an allowlist entry with a reason only for an approved edge",
+    "src/workkeel-tasks.mjs -> src/workkeel-usage.mjs: core code must not import the optional module; add an allowlist entry with a reason only for an approved edge"]);
+  const allowlist = [{ from: "src/workkeel-tasks.mjs", to: "src/workkeel-usage.mjs", reason: "fixture" },
+    { from: "scripts/report.mjs", to: "src/workkeel-usage.mjs", reason: "fixture", lazy: true },
+    { from: "scripts/reports/nested.mjs", to: "src/workkeel-usage.mjs", reason: "fixture" },
+    { from: "bin/report.js", to: "src/workkeel-usage.mjs", reason: "fixture" }];
+  assert.deepEqual(layer(root, { allowlist }).errors, ["scripts/computed.mjs: computed import() in core code cannot be checked against optional modules"]);
+});
+
+test("optional modules may import each other and core modules", async t => {
+  const root = await fixture(t, {
+    "src/workkeel-usage.mjs": 'import "./workkeel-goals.mjs";\nimport "./project.mjs";\n',
+    "src/workkeel-goals.mjs": 'import "./workkeel-usage.mjs";\n'
+  });
+  assert.deepEqual(layer(root, { tiers: { usage: ["src/workkeel-usage.mjs"], goal: ["src/workkeel-goals.mjs"] } }).errors, []);
+});
+
+test("a lazy allowlist entry rejects a static import, and stale or unexplained entries fail", async t => {
+  const root = await fixture(t, { "src/workkeel-usage.mjs": "export {};\n", "src/workkeel-cli.mjs": 'import "./workkeel-usage.mjs";\n' });
+  assert.deepEqual(layer(root, { allowlist: [
+    { from: "src/workkeel-cli.mjs", to: "src/workkeel-usage.mjs", reason: "router", lazy: true },
+    { from: "src/project.mjs", to: "src/workkeel-usage.mjs", reason: " " },
+    { from: "src/workkeel-usage.mjs", to: "src/workkeel-usage.mjs", reason: "self" }
+  ] }).errors.sort(), [
+    "allowlist src/project.mjs -> src/workkeel-usage.mjs: a reason is required",
+    "allowlist src/project.mjs -> src/workkeel-usage.mjs: no such import; remove the entry",
+    "allowlist src/workkeel-usage.mjs -> src/workkeel-usage.mjs: no such import; remove the entry",
+    "allowlist src/workkeel-usage.mjs -> src/workkeel-usage.mjs: the importer is optional, so no entry is needed",
+    "src/workkeel-cli.mjs -> src/workkeel-usage.mjs: the allowlist accepts import() only, not a static import"]);
+});
+
+test("optional tests map to their src modules, and unmapped or missing ones fail", async t => {
+  const root = await fixture(t, { "src/workkeel-usage.mjs": "export {};\n", "src/workkeel-view.mjs": "export {};\n" });
+  const tests = ["test/workkeel-usage.test.mjs", "test/workkeel-observer.test.mjs", "test/workkeel-browser.test.mjs"];
+  const result = optionalModules(root, { tests, tiers: { monitor: ["src/workkeel-gone.mjs"] }, testModules: { "workkeel-observer": ["src/workkeel-view.mjs"] } });
+  assert.deepEqual(result.modules, ["src/workkeel-usage.mjs", "src/workkeel-view.mjs"]);
+  assert.deepEqual(result.errors, [
+    "optional test test/workkeel-browser.test.mjs: no src/workkeel-browser.mjs; map it in OPTIONAL_TEST_MODULES",
+    "optional tier monitor: optional module src/workkeel-gone.mjs does not exist"]);
 });

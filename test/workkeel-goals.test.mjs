@@ -271,9 +271,11 @@ test('service does not spin on its own uncertain result writes or invoke inferen
     assert.equal(runtimeReports,expected,'the requested runtime step reported its persisted result');
   };
   const assertQuiescent=async expectedReconciliations=>{
-    // A full virtual second covers fifty debounce opportunities. The 60-second
-    // interval stays dormant throughout startup and both idle windows.
-    for(let n=0;n<50;n++){
+    // An injected self-triggering spin (write, notification, debounce, step) was
+    // observed to fail within the first few advances, so ten leave margin; each advance
+    // performs real Git-backed reads, so fifty per window outlasted the timeout
+    // under full-suite load. The 60-second interval stays dormant throughout.
+    for(let n=0;n<10;n++){
       await advance();
       assert.equal(calls,1,'uncertain work must not be executed again');
       assert.equal(reconciliations,expectedReconciliations,'uncertain result writes must leave the service quiescent');

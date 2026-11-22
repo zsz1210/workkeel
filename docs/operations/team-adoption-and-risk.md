@@ -144,7 +144,9 @@ rework is decided by the risk tier and the findings, as before.
   cases or problems that only occur under concurrent use; record those as known
   issues instead.
 - **Findings** give the reasons for a failed review as `P1` to `P3` with a short
-  note. `P3` findings are never counted as rework reasons.
+  note. `P3` findings are never counted as rework reasons. Start the note with
+  a category label, such as `[code-error]`; see
+  [Label the rework reason](../getting-started/workkeel.md#label-the-rework-reason).
 
 The unused `self_eval` placeholder is ignored when reading historical score blocks
 and is not emitted in statistics. New score blocks must omit it. Reports should
@@ -212,9 +214,11 @@ Pass each project root with `--project`, or list the roots in a file with
 
 ```sh
 workkeel stats --report --project ../app --project ../tools \
-  --cutoff 2026-10-19T00:00:00Z --timezone UTC [--previous sha256] [--strict] [--json]
+  --cutoff 2026-10-19T00:00:00Z --timezone UTC --strict --json
 workkeel stats --report --projects-file weekly-projects.txt --cutoff ... --timezone ...
 ```
+
+The `--previous sha256`, `--strict` and `--json` flags are optional.
 
 The list file has one path per line. Blank lines and lines that start with `#`
 are ignored. A relative path is relative to the list file. You can use both flags

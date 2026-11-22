@@ -12,7 +12,7 @@ Do not run task initialization in the public framework source checkout.
 
 ## Availability and compatibility
 
-Use Node.js 24.15 or newer. npm's `latest` dist-tag is `1.1.0`: install
+Use Node.js 24.15 or newer. npm's `latest` dist-tag is `1.1.1`: install
 `@zsz1210/workkeel` or `@zsz1210/workkeel@latest`. The `next` dist-tag still
 points to the old `0.1.0-beta.1` [beta line](../../CHANGELOG.md#010-beta1);
 do not install `@next` for the current release. You can also run the current source
@@ -279,6 +279,38 @@ For a report-only correction after a failed review, an approver can record
 `"mode": "evidence-only"` in the rework request. Either mode needs a new commit:
 commit the corrected evidence, hand off that commit and obtain a fresh distinct
 review. The rejected revision itself cannot be delivered again.
+
+### Label the rework reason
+
+`workkeel stats --report` sorts each rework round by its reason. To set the
+reason, start the text with a category label in square brackets:
+
+```sh
+workkeel task rework --id task-id --actor approver --summary "[code-error] Fix the r1 audio crash"
+```
+
+The allowed labels are `requirements`, `code-error`, `tests`, `evidence`,
+`scope`, `false-block` and `unknown`. Write the label in lowercase, with no
+spaces inside the brackets. The report reads the label from one of two places:
+
+- If the failed review has `P1` or `P2` findings in the reviewer's own
+  `workkeel.review-report/v1` score, the report reads each finding note. It
+  ignores the rework summary.
+- If not, the report reads the rework summary.
+
+Text without a label, or with a label that is not in the list, counts as
+`unknown`. The report groups labeled reasons by category. It groups `unknown`
+reasons only when their notes have the same words, after it ignores case and
+punctuation. If two `unknown` rounds have the same cause in different words, the
+report gives no `repeated-rework-reason` signal. A repair after a failed
+mandatory check always counts as `tests`.
+
+If the `task rework --summary` text does not start with an allowed label, the
+CLI writes one `workkeel.warning/v1` line with the code
+`rework-summary-unlabeled` to stderr. The warning lists the allowed labels. A
+label in brackets that is not in the list also gets this warning. The command
+continues. It records the summary as written and exits with the same code as
+a labeled rework. The `--request` form gives no warning.
 
 ### Claim work that started before the task
 
