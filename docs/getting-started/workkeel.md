@@ -154,15 +154,30 @@ WORKKEEL_CLI_PATH=/path/to/workkeel/bin/workkeel.mjs node ./workkeelw.mjs doctor
 Init creates `workkeel.lock`, `workkeelw.mjs` and `WORKKEEL.md`, refusing existing
 framework files. It preserves native instructions. Preview and apply the additive
 [AGENTS/CLAUDE bridge](../extensions/workkeel-context.md#connect-native-instructions)
-so the coding agent can discover Workkeel. The source override must report a version,
-and the CLI checks it against the pin.
-The launcher uses a matching local package when present; it never silently fetches
-an unpublished package. Network package fetching requires the explicit
-`WORKKEEL_ALLOW_PACKAGE_FETCH=1` opt-in and an actually published pinned version.
+so the coding agent can discover Workkeel.
 Prepare the approved policy, guidance and baseline product commit before claiming
 work. Follow the target project's data policy when deciding what to commit.
 Workkeel framework development keeps all actual task policy and evidence in its
 private workspace, outside the public source checkout and public Git history.
+
+### How the project launcher finds the CLI
+
+`node workkeelw.mjs` reads the pin in `workkeel.lock` and tries these sources in order:
+
+1. `WORKKEEL_CLI_PATH`, pointing to a compatible source `bin/workkeel.mjs`. The
+   source override must report a version.
+2. The local `node_modules/@zsz1210/workkeel/bin/workkeel.mjs` installation
+   (`npm i -D @zsz1210/workkeel`).
+3. A global `workkeel` on `PATH` (`npm i -g @zsz1210/workkeel`). The launcher
+   resolves symlinks and accepts only `bin/workkeel.mjs` in a package named
+   `@zsz1210/workkeel`. This fallback is skipped on Windows.
+4. An explicit fetch of the pinned package version, only when
+   `WORKKEEL_ALLOW_PACKAGE_FETCH=1` is set and no installed source was found.
+   The pinned version must be published. The launcher never silently fetches a
+   package.
+
+The CLI checks version compatibility with the pin. No download is attempted by
+default. Existing projects retain their launcher until an explicit `workkeel upgrade`.
 
 Below, `workkeel` means the installed command or
 `node /path/to/workkeel/bin/workkeel.mjs` from the reviewed source checkout.

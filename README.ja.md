@@ -11,7 +11,7 @@
 
 [npm](https://www.npmjs.com/package/@zsz1210/workkeel) 2.0.0 · Node.js 24.15+ · [MIT](LICENSE)
 
-どの部分が安定版・ベストエフォート・実験的機能かは、[1.0 の互換性保証](docs/concepts/compatibility.md)（英語）にまとめています。
+どの部分が安定版・ベストエフォート・実験的機能かは、[2.0 の互換性保証](docs/concepts/compatibility.md)（英語）にまとめています。
 
 ## Workkeel を使う理由
 
@@ -36,9 +36,7 @@ Workkeel はサンドボックスでもエージェントランタイムでも�
 
 範囲、権限、受け入れ条件、リスク区分を合意してからタスクを引き受け、
 普段のツールで実装し、コミットを別の Agent に渡してレビューを受けます。
-引き受ける前に作業をコミットしていた場合は、`--base <commit> --pre-claim` で引き受けます。
-`<commit>` には作業を始める直前のコミットの完全な ID を指定します。ID は `git rev-parse <最初の作業コミット>~1` で確認できます。base 自体はタスクに含まれません。
-base より後のコミットはタスクの書き込み範囲内のプロダクトファイルだけを変更でき、レビューの対象にもなります。
+引き受ける前に作業をコミットしていた場合は、[タスクより前に始めた作業の引き受け方](docs/getting-started/workkeel.md#claim-work-that-started-before-the-task)（英語）を参照してください。
 レビューが不合格なら、承認者が `task rework` を実行するまでタスクは `test` に留まります。
 実行すると、不合格の記録を残して同じ契約のまま `intake` に戻ります。
 builder が再び引き受け、新しいコミットを提出します。
@@ -77,7 +75,15 @@ CLI はライフサイクルを記録するだけで、編集やレビューは 
 
 ## クイックスタート
 
-Git、Node.js 24.15+、コーディングツールが必要です。現在のソースを用意します。
+Git、Node.js 24.15+、コーディングツールが必要です。npm から CLI をインストールすると、`workkeel` コマンドを使えます。
+
+```sh
+npm install -g @zsz1210/workkeel
+```
+
+`@next` はインストールしないでください。この dist-tag は古い `0.1.0-beta.1` を指したままです。
+
+現在のソースから動かす場合は、clone します。
 
 ```sh
 git clone https://github.com/zsz1210/workkeel.git
@@ -85,10 +91,6 @@ cd workkeel
 npm ci --omit=optional --ignore-scripts
 alias workkeel="node $PWD/bin/workkeel.mjs"
 ```
-
-または `npm install -g @zsz1210/workkeel` で npm からインストールすると、`workkeel` コマンドを使えます。
-npm の `latest` dist-tag は `2.0.0` です。`next` は古い `0.1.0-beta.1` を指したままです。
-現在のリリースには `@zsz1210/workkeel` か `@zsz1210/workkeel@latest` をインストールしてください。`@next` は使いません。
 
 シェルのエイリアスは、定義した対話シェルの中でしか使えません。Agent のツール呼び出しや CI のような
 非対話シェルでは、`workkeel` のエイリアスは動きません。初期化後は `node workkeelw.mjs` を、
@@ -101,21 +103,7 @@ npm の `latest` dist-tag は `2.0.0` です。`next` は古い `0.1.0-beta.1` �
 `init` の後にもう一度 `workkeel start .` を実行すると、任意で使える[指示ファイルの連携](docs/extensions/workkeel-context.md#connect-native-instructions)の案内を確認できます。
 初期化、ポリシー、証跡、ロールバックは[クイックスタートガイド](docs/getting-started/workkeel.md)を参照してください。
 Workkeel 自体の開発は[貢献ガイド](CONTRIBUTING.md)に従ってください。
-
-### プロジェクトのランチャーが CLI を探す順序
-
-`node workkeelw.mjs` は `workkeel.lock` で固定したバージョンを読み、次の順に探します。
-
-1. `WORKKEEL_CLI_PATH`。互換性のあるソースの `bin/workkeel.mjs` を指定します。
-2. ローカルにインストールした `node_modules/@zsz1210/workkeel/bin/workkeel.mjs`
-   （`npm i -D @zsz1210/workkeel`）。
-3. `PATH` 上のグローバルな `workkeel`（`npm i -g @zsz1210/workkeel`）。ランチャーはシンボリックリンクを解決し、
-   `@zsz1210/workkeel` という名前のパッケージにある `bin/workkeel.mjs` だけを受け付けます。Windows ではこの方法を使いません。
-4. 固定したバージョンのパッケージを明示的に取得する方法。`WORKKEEL_ALLOW_PACKAGE_FETCH=1` が設定されていて、
-   インストール済みのソースが見つからない場合に限ります。
-
-CLI は固定したバージョンとの互換性を確認します。既定ではダウンロードを試みません。
-既存のプロジェクトは、`workkeel upgrade` を明示的に実行するまで今のランチャーを使い続けます。
+`node workkeelw.mjs` が CLI を探す順序は、[プロジェクトのランチャーが CLI を探す順序](docs/getting-started/workkeel.md#how-the-project-launcher-finds-the-cli)（英語）を参照してください。
 
 ## リスク区分
 
@@ -150,7 +138,7 @@ Workkeel 2.0.0 では、任意のコマンドを 4 つ削除しました。
 ## 任意の追加機能
 
 - **[タスク計測とネイティブ実行レポート](docs/operations/workkeel-usage.md)：**`workkeel task metrics` で記録済みのトークンと時間を読み取ります。`workkeel usage` はホストのレポートを紐づけて収集します。
-- **[Workkeel Loop L1 レポート](docs/operations/loop-trial.md)：**`workkeel stats --report --cutoff 2026-10-19T00:00:00Z --timezone UTC` が読み取り専用の週次レポートを生成します。モデル／API の費用はかかりません。`--project` を繰り返すと、複数のプロジェクトをまとめて集計できます。0.1.0-beta.1 のタスク記録も、変更せずに読み取ります。
+- **[Workkeel Loop L1 レポート](docs/operations/loop-trial.md)：**`workkeel stats --report --cutoff <ISO-time> --timezone <IANA-zone>` が読み取り専用の週次レポートを生成します。モデル／API の費用はかかりません。`--project` を繰り返すと、複数のプロジェクトをまとめて集計できます。0.1.0-beta.1 のタスク記録も、変更せずに読み取ります。
 - **[ネイティブディスパッチ](docs/operations/workkeel-native-dispatch.md)：**実行の引き継ぎと指定モデルを記録し、何が実行されたかをホストが報告します。
 - **[Bot レイヤーの参考運用](docs/operations/reference-usage-bot-layer.md)：**プロジェクト Bot、Claude Code、Codex を人の承認で連携させる一例です。コアには含まれません。
 

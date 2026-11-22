@@ -11,7 +11,7 @@ English · [繁體中文](README.zh-TW.md) · [日本語](README.ja.md)
 
 [npm](https://www.npmjs.com/package/@zsz1210/workkeel) 2.0.0 · Node.js 24.15+ · [MIT](LICENSE)
 
-The [1.0 compatibility guarantees](docs/concepts/compatibility.md) list what is stable, best effort or experimental.
+The [2.0 compatibility guarantees](docs/concepts/compatibility.md) list what is stable, best effort or experimental.
 
 ## Why Workkeel
 
@@ -38,12 +38,8 @@ it leaves the coding loop to your tool.
 2. Claim the task and build with your coding tool.
 3. Hand off a commit for another Agent to review.
 
-If you committed work before you claimed the task, claim with
-`--base <commit> --pre-claim`. Use the last commit before the work started. To
-get its full ID, run `git rev-parse <first-work-commit>~1`. The base itself is
-not part of the task. Each
-commit after the base may change only product files inside the task's write
-roots, and the review covers all of them.
+If you committed work before you claimed the task, see
+[Claim work that started before the task](docs/getting-started/workkeel.md#claim-work-that-started-before-the-task).
 
 After a failed review, the task stays in `test` until the approver runs `task rework`.
 This preserves the failed attempt and returns the task to `intake` under the same
@@ -88,7 +84,16 @@ Commit the `.ai-org/` task records too, with your work or after closing the task
 
 ## Quick start
 
-You need Git, Node.js 24.15+ and a coding tool. Install the current source:
+You need Git, Node.js 24.15+ and a coding tool. Install the CLI from npm to get
+the `workkeel` command:
+
+```sh
+npm install -g @zsz1210/workkeel
+```
+
+Do not install `@next`. That dist-tag still points to the old `0.1.0-beta.1`.
+
+To run the current source instead, clone it:
 
 ```sh
 git clone https://github.com/zsz1210/workkeel.git
@@ -96,11 +101,6 @@ cd workkeel
 npm ci --omit=optional --ignore-scripts
 alias workkeel="node $PWD/bin/workkeel.mjs"
 ```
-
-Or install from npm with `npm install -g @zsz1210/workkeel` to use the `workkeel` command.
-The npm `latest` dist-tag is `2.0.0`. `next` still points to the old
-`0.1.0-beta.1`. For the current release, install `@zsz1210/workkeel` or
-`@zsz1210/workkeel@latest`. Do not install `@next`.
 
 Shell aliases only work in the interactive shell where they are defined. An alias
 for `workkeel` will not work in non-interactive shells such as agent tool calls or
@@ -116,22 +116,8 @@ read-only setup preview. After `init`, run `workkeel start .` again for the opti
 Follow the [quick start guide](docs/getting-started/workkeel.md)
 for initialization, policies, evidence and rollback. To develop Workkeel itself,
 follow [Contributing](CONTRIBUTING.md).
-
-### How the project launcher finds the CLI
-
-`node workkeelw.mjs` reads the pin in `workkeel.lock` and tries these sources in order:
-
-1. `WORKKEEL_CLI_PATH`, pointing to a compatible source `bin/workkeel.mjs`.
-2. The local `node_modules/@zsz1210/workkeel/bin/workkeel.mjs` installation
-   (`npm i -D @zsz1210/workkeel`).
-3. A global `workkeel` on `PATH` (`npm i -g @zsz1210/workkeel`). The launcher
-   resolves symlinks and accepts only `bin/workkeel.mjs` in a package named
-   `@zsz1210/workkeel`. This fallback is skipped on Windows.
-4. An explicit fetch of the pinned package version, only when
-   `WORKKEEL_ALLOW_PACKAGE_FETCH=1` is set and no installed source was found.
-
-The CLI checks version compatibility with the pin. No download is attempted by
-default. Existing projects retain their launcher until an explicit `workkeel upgrade`.
+For the order in which `node workkeelw.mjs` looks for the CLI, see
+[How the project launcher finds the CLI](docs/getting-started/workkeel.md#how-the-project-launcher-finds-the-cli).
 
 ## Risk tiers
 
@@ -171,7 +157,7 @@ the 2.0.0 CLI in each project. An approving Principal runs it. See the
 ## Optional extras
 
 - **[Task metrics and native reports](docs/operations/workkeel-usage.md):** `workkeel task metrics` reads recorded tokens and time. `workkeel usage` binds and collects host reports.
-- **[Workkeel Loop L1 report](docs/operations/loop-trial.md):** `workkeel stats --report --cutoff 2026-10-19T00:00:00Z --timezone UTC` produces a weekly read-only report with zero model/API spend. Repeat `--project` to report on several projects at once. It also reads 0.1.0-beta.1 task records and does not change them.
+- **[Workkeel Loop L1 report](docs/operations/loop-trial.md):** `workkeel stats --report --cutoff <ISO-time> --timezone <IANA-zone>` produces a weekly read-only report with zero model/API spend. Repeat `--project` to report on several projects at once. It also reads 0.1.0-beta.1 task records and does not change them.
 - **[Native dispatch](docs/operations/workkeel-native-dispatch.md):** record execution handoffs and requested models; the host reports what ran.
 - **[Reference Bot-layer usage](docs/operations/reference-usage-bot-layer.md):** one way to coordinate project Bots, Claude Code and Codex through human gates, outside the core.
 
