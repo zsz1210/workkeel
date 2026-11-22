@@ -5,6 +5,13 @@ line. Historical release entries describe their own versions, not current-main
 qualification. Actual development tasks and validation records stay private;
 repository migration does not republish old tags, archives or npm versions.
 
+## Unreleased changes
+
+- Documentation: the QA gate now requires a reproduction for each must-fix
+  finding, and a stated premise and check after a second failed review.
+- Documentation: `stats --report` examples use `<ISO-time>` and `<IANA-zone>`
+  placeholders instead of a fixed cutoff date.
+
 ## 2.0.0
 
 Released 2026-11-22. This release has breaking changes.

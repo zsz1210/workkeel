@@ -164,7 +164,7 @@ only from the actual reviewer's own report for that candidate and judgment; an
 author's report or a delivered file is ignored, and two different reviewer scores
 for one review are left unknown.
 
-`workkeel stats --report --cutoff 2026-10-19T00:00:00Z --timezone UTC
+`workkeel stats --report --cutoff <ISO-time> --timezone <IANA-zone>
 [--previous sha256] [--json]` observes the preceding seven days once, then stops.
 The fixed cutoff must have an offset and the timezone must be an IANA zone.
 The interval includes its start and excludes its cutoff. Selection uses task
@@ -214,7 +214,7 @@ Pass each project root with `--project`, or list the roots in a file with
 
 ```sh
 workkeel stats --report --project ../app --project ../tools \
-  --cutoff 2026-10-19T00:00:00Z --timezone UTC --strict --json
+  --cutoff <ISO-time> --timezone <IANA-zone> --strict --json
 workkeel stats --report --projects-file weekly-projects.txt --cutoff ... --timezone ...
 ```
 
