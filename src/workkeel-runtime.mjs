@@ -34,7 +34,7 @@ export function planTaskRuntime(contract) {
     schema_version: "workkeel.runtime-plan/v1", authority: "observation-only", mutation_status: "no-write",
     runtime, model_connection: contract.execution.model_connection, execution_authorized: false,
     automatic_launch_supported: false, provider_contact: false, boundary_enforcement: "host-responsibility",
-    next_action: "Use workflow plan with the pinned policy and definition; execution requires a registered enforcing runtime host."
+    next_action: "Run the task in your enforcing runtime host under the pinned policy, then record it with task claim, handoff, review and close. Workkeel 2.0.0 removed workflow plan."
   };
   const parameters = codexModelConnectionParams(contract.execution.model_connection);
   return { schema_version: "workkeel.runtime-plan/v1", authority: "observation-only", mutation_status: "no-write",

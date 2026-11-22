@@ -45,6 +45,8 @@ Target: 2.0.0. This release has breaking changes.
 - The import-boundary check, the test groups, the package path list and the
   documentation command check no longer list the removed modules and commands.
 - Core tests use a new task fixture that does not run a workflow.
+- For a policy-backed contract, `runtime plan` now points to the task lifecycle
+  instead of `workflow plan`.
 
 ### Compatibility and known issues
 
@@ -63,6 +65,9 @@ Target: 2.0.0. This release has breaking changes.
   `workkeel model-policy draft|approve|preview`.
 - The offline explorer `docs/assets/workkeel-flow.html` still shows the removed
   graph runner scenarios. A later change will update it.
+- No test now covers how `task metrics` reads workflow journals recorded before
+  2.0.0. The removed tests created those journals with the workflow runner.
+  A later change will add static journal fixtures.
 - The version number stays 1.1.1 until the 2.0.0 release.
 
 ## 1.1.1

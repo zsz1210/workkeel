@@ -36,4 +36,9 @@ test("documented policy and native/gateway runtime plans are executable but neve
   const plan = planTaskRuntime(contract);
   assert.deepEqual(plan.thread_start_overrides, plan.thread_resume_overrides);
   assert.equal(plan.provider_contact, false); assert.equal(plan.execution_authorized, false); assert.equal(plan.automatic_launch_supported, false);
+  contract.execution.model_connection = { kind: "policy", policy_ref: contract.environment.data.policy_refs[0] };
+  const policyPlan = planTaskRuntime(contract);
+  assert.equal(policyPlan.execution_authorized, false);
+  // Workkeel 2.0.0 removed `workflow plan`; the guidance must not point to it.
+  assert.doesNotMatch(policyPlan.next_action, /^Use workflow plan/); assert.match(policyPlan.next_action, /task claim, handoff, review and close/);
 });
