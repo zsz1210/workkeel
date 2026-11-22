@@ -5,9 +5,9 @@ line. Historical release entries describe their own versions, not current-main
 qualification. Actual development tasks and validation records stay private;
 repository migration does not republish old tags, archives or npm versions.
 
-## Unreleased changes
+## 2.0.0
 
-Target: 2.0.0. This release has breaking changes.
+Released 2026-11-22. This release has breaking changes.
 
 ### Breaking changes
 
@@ -68,7 +68,6 @@ Target: 2.0.0. This release has breaking changes.
 - No test now covers how `task metrics` reads workflow journals recorded before
   2.0.0. The removed tests created those journals with the workflow runner.
   A later change will add static journal fixtures.
-- The version number stays 1.1.1 until the 2.0.0 release.
 
 ## 1.1.1
 

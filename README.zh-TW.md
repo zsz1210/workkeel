@@ -9,7 +9,7 @@
 
 [![CI](https://github.com/zsz1210/workkeel/actions/workflows/ci.yml/badge.svg)](https://github.com/zsz1210/workkeel/actions/workflows/ci.yml)
 
-[npm](https://www.npmjs.com/package/@zsz1210/workkeel) 1.1.1 · Node.js 24.15+ · [MIT](LICENSE)
+[npm](https://www.npmjs.com/package/@zsz1210/workkeel) 2.0.0 · Node.js 24.15+ · [MIT](LICENSE)
 
 哪些部分穩定、盡力維護或屬於實驗性功能，見 [1.0 相容性保證](docs/concepts/compatibility.md)（英文）。
 
@@ -86,7 +86,7 @@ alias workkeel="node $PWD/bin/workkeel.mjs"
 ```
 
 也可以用 `npm install -g @zsz1210/workkeel` 從 npm 安裝，再執行 `workkeel` 指令。
-npm 的 `latest` dist-tag 是 `1.1.1`，`next` 仍指向舊的 `0.1.0-beta.1`。
+npm 的 `latest` dist-tag 是 `2.0.0`，`next` 仍指向舊的 `0.1.0-beta.1`。
 要安裝目前版本，請用 `@zsz1210/workkeel` 或 `@zsz1210/workkeel@latest`，不要裝 `@next`。
 
 shell alias 只在定義它的互動式 shell 裡有效。在 Agent 工具呼叫、CI 這類非互動式 shell 中，
@@ -130,9 +130,9 @@ CLI 會檢查版本是否與鎖定版本相容。預設不會嘗試下載。既�
 並要求 `high`、`critical` 由 Codex／Claude 獨立交叉審查；
 CLI 會檢查已註冊的模型家族，但這項檢查本身不能證明交叉審查已完成。
 
-## 下一版的破壞性變更
+## 從 1.x 升級
 
-下一版 2.0.0 會移除四個選用指令。原始碼已經改好，但 npm 上的 `latest`（1.1.1）還沒有這項變更。
+Workkeel 2.0.0 移除了四個選用指令：
 
 | 移除的指令 | 改用 |
 | --- | --- |
@@ -141,7 +141,9 @@ CLI 會檢查已註冊的模型家族，但這項檢查本身不能證明交叉�
 | `workkeel workflow` | 直接在 agent host 裡做，再用 `workkeel task claim\|handoff\|review\|close` 記錄 |
 | `workkeel headroom` | 直接讀工具輸出 |
 
-執行已移除的指令時，CLI 會印出 `command-removed` 錯誤和替代做法，並以結束碼 1 結束，不會讀取或修改專案檔案。既有紀錄仍留在原處。詳見 [CHANGELOG](CHANGELOG.md)。
+執行已移除的指令時，CLI 會印出 `command-removed` 錯誤和替代做法，並以結束碼 1 結束，不會讀取或修改專案檔案。既有紀錄仍留在原處。
+
+鎖定 1.x 的專案改用 2.0.0 CLI 後，會寫入的指令都會停下，讀取的指令仍可執行，但會出現警告。請在每個專案用 2.0.0 CLI 執行 `workkeel upgrade --actor <id>` 更新鎖定版本，這個指令要由有核准權的 Principal 執行。詳見 [CHANGELOG](CHANGELOG.md#200)。
 
 ## 選用功能
 

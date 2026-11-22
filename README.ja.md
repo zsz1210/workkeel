@@ -9,7 +9,7 @@
 
 [![CI](https://github.com/zsz1210/workkeel/actions/workflows/ci.yml/badge.svg)](https://github.com/zsz1210/workkeel/actions/workflows/ci.yml)
 
-[npm](https://www.npmjs.com/package/@zsz1210/workkeel) 1.1.1 · Node.js 24.15+ · [MIT](LICENSE)
+[npm](https://www.npmjs.com/package/@zsz1210/workkeel) 2.0.0 · Node.js 24.15+ · [MIT](LICENSE)
 
 どの部分が安定版・ベストエフォート・実験的機能かは、[1.0 の互換性保証](docs/concepts/compatibility.md)（英語）にまとめています。
 
@@ -87,7 +87,7 @@ alias workkeel="node $PWD/bin/workkeel.mjs"
 ```
 
 または `npm install -g @zsz1210/workkeel` で npm からインストールすると、`workkeel` コマンドを使えます。
-npm の `latest` dist-tag は `1.1.1` です。`next` は古い `0.1.0-beta.1` を指したままです。
+npm の `latest` dist-tag は `2.0.0` です。`next` は古い `0.1.0-beta.1` を指したままです。
 現在のリリースには `@zsz1210/workkeel` か `@zsz1210/workkeel@latest` をインストールしてください。`@next` は使いません。
 
 シェルのエイリアスは、定義した対話シェルの中でしか使えません。Agent のツール呼び出しや CI のような
@@ -132,9 +132,9 @@ Must fix は進行を止める指摘、Consider／Note／Dismiss は記録する
 `high` と `critical` には Codex／Claude による独立した相互レビューを求めます。
 CLI は登録済みのモデルファミリーを検査しますが、それだけでは相互レビューの実施を証明できません。
 
-## 次のリリースでの互換性のない変更
+## 1.x からのアップグレード
 
-次のリリース 2.0.0 では、任意のコマンドを 4 つ削除します。ソースにはすでに反映済みですが、npm の `latest`（1.1.1）にはまだ含まれていません。
+Workkeel 2.0.0 では、任意のコマンドを 4 つ削除しました。
 
 | 削除するコマンド | 代わりの方法 |
 | --- | --- |
@@ -143,7 +143,9 @@ CLI は登録済みのモデルファミリーを検査しますが、それだ�
 | `workkeel workflow` | エージェントのホストで作業し、`workkeel task claim\|handoff\|review\|close` で記録 |
 | `workkeel headroom` | ツールの出力を直接読む |
 
-削除したコマンドを実行すると、`command-removed` エラーと代わりの方法を表示し、終了コード 1 で終わります。プロジェクトのファイルは読み書きしません。既存の記録はそのまま残ります。詳しくは [CHANGELOG](CHANGELOG.md) を参照してください。
+削除したコマンドを実行すると、`command-removed` エラーと代わりの方法を表示し、終了コード 1 で終わります。プロジェクトのファイルは読み書きしません。既存の記録はそのまま残ります。
+
+1.x を固定したプロジェクトでは、2.0.0 の CLI で書き込みを伴うコマンドが止まります。読み取りのコマンドは警告付きで動きます。固定バージョンを移すには、各プロジェクトで 2.0.0 の CLI を使って `workkeel upgrade --actor <id>` を実行します。実行するのは承認権を持つ Principal です。詳しくは [CHANGELOG](CHANGELOG.md#200) を参照してください。
 
 ## 任意の追加機能
 
