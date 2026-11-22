@@ -61,6 +61,8 @@ Target: 2.0.0. This release has breaking changes.
 - `src/workkeel-model-rules-ui.mjs` stays in the model-policy subsystem, but no
   page serves it without the workspace. Use
   `workkeel model-policy draft|approve|preview`.
+- The offline explorer `docs/assets/workkeel-flow.html` still shows the removed
+  graph runner scenarios. A later change will update it.
 - The version number stays 1.1.1 until the 2.0.0 release.
 
 ## 1.1.1

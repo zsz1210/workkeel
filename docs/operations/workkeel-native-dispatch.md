@@ -180,10 +180,10 @@ bounded to 1,024 entries. A ticket does not prove execution. Usage bindings reco
 the exact host source, selected/reported model and activity kind. Export deliberately;
 task metrics contain no raw prompt, private source path or credential.
 
-Usage analysis sums operation durations; task execution time takes their interval
-union. Parallel operations can overlap, including across kinds. Explicit activity
-labels take precedence over old lifecycle attribution. Unknown, partial and measured
-zero remain distinct. See [native reporting](workkeel-usage.md#native-execution-reports).
+`task metrics` reports the measured duration of each operation and sums them.
+Parallel operations can overlap, including across kinds, so the sum can exceed
+wall time. `task summary` reports lifecycle residence separately; do not add the
+two. Unknown, partial and measured zero remain distinct. See [native reporting](workkeel-usage.md#native-execution-reports).
 
 Hosts must actually consume tickets and report execution. Workkeel cannot intercept
 arbitrary desktop tool calls. Repository instructions require this path for new
