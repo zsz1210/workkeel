@@ -33,7 +33,7 @@ For a wider edit, choose an explicit local group:
 | `npm run test:daily` | Curated representative lifecycle, risk, recovery and JSON-RPC paths for a broad routine check |
 | `npm run test:fast` | Small contracts, package-validator edge cases, and evidence Git-read behavior |
 
-Every product test belongs to the core or the optional group, and new test files are core by default. The optional group covers the monitor and desktop workspace, workflows, native dispatch, usage, model policy and routing, Headroom, Learning and Skill versions, whole goals, autonomy and retention. The complete suite runs both groups. Fast tests overlap these groups intentionally; they are not another full suite. Historical development experiment harnesses and their results belong in the private archive.
+Every product test belongs to the core or the optional group, and new test files are core by default. The optional group covers native dispatch, usage, model policy and routing, Learning and Skill versions, whole goals, autonomy and retention. The complete suite runs both groups. Fast tests overlap these groups intentionally; they are not another full suite. Historical development experiment harnesses and their results belong in the private archive.
 
 Use `npm run verify:daily` for a broad routine check when the changed area needs more than the fast contracts. It covers representative production CLI, lifecycle, risk-tier, review recovery, delivery request, lock and JSON-RPC paths in one Node process. It is intentionally not an exhaustive matrix: changed test files still select their whole group, and every retained product test remains in the complete suite. A final behavioral candidate or Release still requires `npm run verify`.
 
@@ -58,33 +58,7 @@ npm run verify
 
 Run it once on the final behavioral candidate, not after every intermediate edit. Further code, fixture, dependency, or contract changes invalidate that result. Later evidence/prose-only updates require their applicable checks and an explicit link to the tested code revision; they do not turn an untested code revision into a tested one. Release verification remains complete regardless of local selection.
 
-The workspace UI/observatory is optional; core task and goal delivery does not
-depend on it. Its browser tests are optional, not a merge or release gate,
-including for monitor and workspace changes. When running browser checks, use
-the private workspace so failure screenshots and raw results stay there:
-
-```bash
-npm run test:browser
-```
-
-It uses synthetic task journals and installed Chrome at desktop/mobile sizes,
-including unknown/partial data, changed snapshots, stale errors, read recovery,
-access-link handling, keyboard controls and escaped task text. It makes no model
-calls; its report distinguishes real journal states from injected UI projections.
-
-## Desktop workspace and whole goals
-
-For optional workspace browser coverage, run the actual scenarios in the private checkout:
-
-```sh
-WORKKEEL_WORKSPACE_BROWSER=1 node --test test/workkeel-workspace.test.mjs
-```
-
-An optional `WORKKEEL_WORKSPACE_EVIDENCE_DIR` must point to a private screenshot
-directory. These scenarios cover multi-repository goals, scoped standing
-improvement, independent model dimensions, control confirmation, stale data,
-navigation, keyboard/zoom behavior and unavailable measurements. They use
-synthetic projects, never paid models or real maintainer task state.
+## Whole goals
 
 Whole-goal/improvement tests cover retained reviewer FAIL, bounded repair, exact
 integration sets, crash ownership, partial intake and authority/resource drift.
@@ -113,12 +87,11 @@ Ordinary GitHub Actions is a remote consistency check, not Workkeel's complete t
 
 The workflow reports every required result and fails if any required step fails. It uses immutable Action revisions, read-only repository permission, and cancels an older in-progress run when the same pull request receives a newer commit.
 
-Ordinary PR/push CI does not run `npm run test:browser`. The separate GitHub Release publishing workflow runs `npm run verify` again against the Release source before publication. A green ordinary CI badge is only the remote repository gate: it does not prove browser behavior, independent review, or release readiness.
+The separate GitHub Release publishing workflow runs `npm run verify` again against the Release source before publication. A green ordinary CI badge is only the remote repository gate: it does not prove browser behavior, independent review, or release readiness.
 
 Complete candidate evidence stays private and revision-specific:
 
 - run `npm run verify` before proposing a behavioral candidate;
-- optionally run `npm run test:browser` for monitor or workspace UI coverage; it is not a merge or release gate;
 - record the exact tested revision and preserve the native task's independent review and authorized acceptance gates. Tests do not accept a task or authorize publication.
 
 ## Release and live validation

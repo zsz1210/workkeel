@@ -9,7 +9,7 @@
 
 [![CI](https://github.com/zsz1210/workkeel/actions/workflows/ci.yml/badge.svg)](https://github.com/zsz1210/workkeel/actions/workflows/ci.yml)
 
-[npm](https://www.npmjs.com/package/@zsz1210/workkeel) 1.1.1 · Node.js 24.15+ · [MIT](LICENSE)
+[npm](https://www.npmjs.com/package/@zsz1210/workkeel) 2.0.0 · Node.js 24.15+ · [MIT](LICENSE)
 
 哪些部分穩定、盡力維護或屬於實驗性功能，見 [1.0 相容性保證](docs/concepts/compatibility.md)（英文）。
 
@@ -86,7 +86,7 @@ alias workkeel="node $PWD/bin/workkeel.mjs"
 ```
 
 也可以用 `npm install -g @zsz1210/workkeel` 從 npm 安裝，再執行 `workkeel` 指令。
-npm 的 `latest` dist-tag 是 `1.1.1`，`next` 仍指向舊的 `0.1.0-beta.1`。
+npm 的 `latest` dist-tag 是 `2.0.0`，`next` 仍指向舊的 `0.1.0-beta.1`。
 要安裝目前版本，請用 `@zsz1210/workkeel` 或 `@zsz1210/workkeel@latest`，不要裝 `@next`。
 
 shell alias 只在定義它的互動式 shell 裡有效。在 Agent 工具呼叫、CI 這類非互動式 shell 中，
@@ -130,10 +130,24 @@ CLI 會檢查版本是否與鎖定版本相容。預設不會嘗試下載。既�
 並要求 `high`、`critical` 由 Codex／Claude 獨立交叉審查；
 CLI 會檢查已註冊的模型家族，但這項檢查本身不能證明交叉審查已完成。
 
+## 從 1.x 升級
+
+Workkeel 2.0.0 移除了四個選用指令：
+
+| 移除的指令 | 改用 |
+| --- | --- |
+| `workkeel monitor` | `workkeel status`，以及 `workkeel task show\|summary\|metrics` |
+| `workkeel workspace` | 在每個專案各自執行 `workkeel status` |
+| `workkeel workflow` | 直接在 agent host 裡做，再用 `workkeel task claim\|handoff\|review\|close` 記錄 |
+| `workkeel headroom` | 直接讀工具輸出 |
+
+執行已移除的指令時，CLI 會印出 `command-removed` 錯誤和替代做法，並以結束碼 1 結束，不會讀取或修改專案檔案。既有紀錄仍留在原處。
+
+鎖定 1.x 的專案改用 2.0.0 CLI 後，會寫入的指令都會停下，讀取的指令仍可執行，但會出現警告。請在每個專案用 2.0.0 CLI 執行 `workkeel upgrade --actor <id>` 更新鎖定版本，這個指令要由有核准權的 Principal 執行。詳見 [CHANGELOG](CHANGELOG.md#200)。
+
 ## 選用功能
 
-- **[Workspace 觀測台](docs/operations/workkeel-workspace.md)：**以 `workkeel workspace serve` 啟動，瀏覽專案紀錄，閒置時不呼叫模型。另有獨立的[唯讀觀察器](docs/operations/workkeel-observer.md)，使用 `workkeel monitor`。
-- **[工作流程／LangGraph](docs/operations/workkeel-workflows.md)：**選用 runner，依核准的流程圖、模型政策執行可復原步驟。實驗性功能（EXPERIMENTAL）：不在 [1.0 相容性保證](docs/concepts/compatibility.md)範圍內，未來可能在次版本更新中變更或移除。
+- **[任務量測與原生執行回報](docs/operations/workkeel-usage.md)：**`workkeel task metrics` 讀取已記錄的 token 與時間；`workkeel usage` 負責綁定與收集 host 回報。
 - **[Workkeel Loop L1 報告](docs/operations/loop-trial.md)：**`workkeel stats --report --cutoff 2026-10-19T00:00:00Z --timezone UTC` 產生每週唯讀報告，模型／API 花費為零。重複 `--project` 可以一次統計多個專案；也能讀取 0.1.0-beta.1 的任務紀錄，不會改動它們。
 - **[原生派工](docs/operations/workkeel-native-dispatch.md)：**記錄執行交接和指定模型，實際執行結果由 host 回報。
 - **[Bot 層參考用法](docs/operations/reference-usage-bot-layer.md)：**示範如何用人工關卡協調專案 Bot、Claude Code 與 Codex，屬於核心以外的用法。

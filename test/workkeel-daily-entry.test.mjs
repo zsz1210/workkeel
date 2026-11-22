@@ -5,14 +5,12 @@ import path from 'node:path';
 import os from 'node:os';
 import {execFileSync} from 'node:child_process';
 import {initializeTaskProject} from '../src/workkeel-project.mjs';
-import {createMonitorFixture} from '../scripts/workkeel-monitor-fixture.mjs';
+import {createTaskFixture} from './fixtures/workkeel-task-fixture.mjs';
 import {previewTaskIntake,applyTaskIntake} from '../src/workkeel-intake.mjs';
 import {readNativeTask,listTaskItems,mutateNativeTask} from '../src/workkeel-tasks.mjs';
 import {recordTaskObservation,readTaskSummary,safeObservationLink} from '../src/workkeel-task-summary.mjs';
-import {readMonitorSnapshot} from '../src/workkeel-monitor.mjs';
-import {readTaskMeasurements} from '../src/workkeel-measurements.mjs';
 
-async function fixture(t){const root=await createMonitorFixture();t.after(()=>fs.rm(root,{recursive:true,force:true}));return root;}
+async function fixture(t){const root=await createTaskFixture();t.after(()=>fs.rm(root,{recursive:true,force:true}));return root;}
 async function brief(root){const {contract:c}=await readNativeTask(root,'WK-unobserved');return {schema_version:'workkeel.task-brief/v1',id:'WK-new',goal:'A real bounded change',actor:c.actor,acceptance:['Checks pass'],environment:c.environment,authorization:c.authorization};}
 test('one brief previews without writes, applies idempotently and rejects stale authority',async t=>{
  const root=await fixture(t),input=await brief(root),before=await listTaskItems(root),preview=await previewTaskIntake(root,input);
@@ -34,7 +32,6 @@ test('expired active authority requires attention and cannot be claimed',async t
  const preview=await previewTaskIntake(root,input);await applyTaskIntake(root,input,preview.fingerprint);
  t.mock.timers.enable({apis:['Date'],now:Date.now()+120000});
  const summary=await readTaskSummary(root,input.id);assert.equal(summary.needs_attention,true);assert.equal(summary.quality.approval_status,'expired');assert.match(summary.next_action,/expired.*renewed approval/);
- const snapshot=await readMonitorSnapshot(root);assert.match(snapshot.tasks.find(x=>x.id===input.id).next_action,/expired/);
  await assert.rejects(mutateNativeTask(root,input.id,'claim',{operation_id:'expired-claim',expected_version:1,actor:input.actor,base_revision:execFileSync('git',['-C',root,'rev-parse','HEAD'],{encoding:'utf8'}).trim()}),/authorization.expired/);
 });
 test('first review failure survives rework and later acceptance',async t=>{
@@ -51,9 +48,6 @@ test('first review failure survives rework and later acceptance',async t=>{
  let claim=await mutate('claim',{base_revision:git('rev-parse','HEAD')});
  await recordTaskObservation(root,input.id,{schema_version:'workkeel.task-observation/v1',task_id:input.id,task_version:claim.version,actor,candidate_revision:null,observed_at:new Date().toISOString(),source:'Synthetic integration fixture',sample_kind:'fixture',comparison_group:null,checks:[],links:{conversation:null,pull_request:null},note:'Observation must not block the lifecycle'});
  await mutate('handoff',{claim_id:claim.claim.id,revision:git('rev-parse','HEAD'),summary:'Synthetic initial delivery',evidence:['docs/approval.md'],unresolved:[]});
- await fs.mkdir(root+'/.ai-org/execution/broken',{recursive:true});await fs.writeFile(root+'/.ai-org/execution/broken/run.json','broken');
- const partial=(await readMonitorSnapshot(root)).tasks[0];assert.match(partial.next_action,/Inspect.*workflow.*Review the delivered candidate/);
- await fs.rm(root+'/.ai-org/execution/broken',{recursive:true});
  await mutate('review',{actor:reviewer,revision:git('rev-parse','HEAD'),judgment:'fail',summary:'Synthetic defect',evidence:['docs/approval.md']});
  await mutate('rework',{summary:'Correct same scope'});
  let summary=await readTaskSummary(root,input.id);assert.equal(summary.quality.first_review_pass,false);assert.equal(summary.quality.review_judgment,null);assert.equal(summary.quality.rework_count,1);
@@ -80,52 +74,10 @@ test('observations are bounded idempotent metadata, never acceptance; changed ev
  const drift=await readTaskSummary(root,value.task_id);
  // The observation's own pinned bytes changed; the task's approval edit alone is not stale evidence.
  assert.equal(drift.observation.status,'unavailable');assert.equal(drift.quality.evidence_current,true);
- assert.match(drift.next_action,/observation record/);assert.equal((await readMonitorSnapshot(root)).complete,false);
+ assert.match(drift.next_action,/observation record/);
 });
 test('unsafe links, stale versions, unknown actors and invalid observation references reject',async t=>{
  const root=await fixture(t),value=await observed(root);
  for(const url of ['javascript:alert(1)','https://github.com.evil.test/a/b/pull/1','file:///etc/passwd','https://github.com/a/b/pull/1?token=secret'])assert.equal(safeObservationLink(url,'pull_request'),null);
  for(const change of [{task_version:0},{actor:{agent_id:'other',principal_id:'owner'}},{links:{...value.links,pull_request:'javascript:alert(1)'}},{checks:[{name:'bad',status:'pass',evidence_ref:'../escape'}]}])await assert.rejects(recordTaskObservation(root,value.task_id,{...value,...change}));
-});
-test('observer reads execution inventory once and isolates attributable corruption without certifying totals',async t=>{
- const root=await fixture(t);let snapshot=await readMonitorSnapshot(root);assert.equal(snapshot.inventory_reads,2);
- await fs.writeFile(path.join(root,'.ai-org/execution/completed/status.json'),'broken');
- snapshot=await readMonitorSnapshot(root);assert.equal(snapshot.complete,false);
- assert.equal(snapshot.tasks.find(t=>t.id==='WK-completed').coverage,'incomplete-journal');
- assert.equal(snapshot.tasks.find(t=>t.id==='WK-interrupted').usage.input_tokens.known_subtotal,1200);
- await assert.rejects(readTaskMeasurements(root,'WK-completed'));
- await fs.writeFile(path.join(root,'.ai-org/execution/completed/run.json'),'broken');
- snapshot=await readMonitorSnapshot(root);
- for(const task of snapshot.tasks){assert.equal(task.usage.input_tokens.total,null);assert.equal(task.usage.input_tokens.complete,false);}
- await fs.writeFile(path.join(root,'.ai-org/work-items/WK-unobserved.json'),'broken');
- snapshot=await readMonitorSnapshot(root);assert.equal(snapshot.tasks.find(t=>t.id==='WK-unobserved').read_status,'unavailable');
- assert.equal(snapshot.tasks.find(t=>t.id==='WK-interrupted').read_status,'available');
-});
-test('observer keeps summaries ordered and revalidates changed evidence across concurrent reads',async t=>{
- const root=await fixture(t),input=await brief(root);
- for(let i=0;i<10;i++){
-  const value={...input,id:'WK-batch-'+i},preview=await previewTaskIntake(root,value);
-  await applyTaskIntake(root,value,preview.fingerprint);
- }
- const baseline=await readMonitorSnapshot(root);
- const expected=baseline.tasks.map(task=>task.id);
- const read=fs.readFile.bind(fs);
- // Deliberately invert task read completion order without changing any bytes.
- t.mock.method(fs,'readFile',async(file,...args)=>{
-  if(String(file).endsWith('/WK-batch-0.json'))await new Promise(resolve=>setTimeout(resolve,30));
-  return read(file,...args);
- });
- assert.deepEqual((await readMonitorSnapshot(root)).tasks.map(task=>task.id),expected);
- const file=path.join(root,'.ai-org/work-items/WK-batch-0.json'),original=await read(file);
- await fs.writeFile(file,'broken');
- const broken=await readMonitorSnapshot(root);
- assert.equal(broken.complete,false);
- assert.equal(broken.tasks.find(task=>task.id==='WK-batch-0').read_status,'unavailable');
- assert.equal(broken.tasks.filter(task=>task.read_status==='available').length,12);
- await fs.writeFile(file,original);
- assert.equal((await readMonitorSnapshot(root)).tasks.find(task=>task.id==='WK-batch-0').read_status,'available');
- await fs.appendFile(path.join(root,'docs/approval.md'),' Changed authority.');
- // Approval is the Principal plus its commit: an edited approval file leaves evidence current.
- const changed=await readMonitorSnapshot(root);
- assert.ok(changed.tasks.every(task=>task.quality.evidence_current===true),JSON.stringify(changed.tasks.map(task=>task.attention_reasons)));
 });

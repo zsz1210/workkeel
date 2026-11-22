@@ -277,7 +277,12 @@ test("the short help lists only the everyday commands", async t => {
   assert.match(advanced, /workkeel task create \[target\] --source contract\.json --request request\.json/);
   assert.match(advanced, /policy update/);
   // Optional subsystems stay out of the short help and are grouped in advanced help.
-  const optional = ["monitor", "workspace", "workflow", "dispatch", "usage", "model-policy", "headroom", "learning", "skill-lifecycle", "goal", "autonomy", "retention"];
+  const optional = ["dispatch", "usage", "model-policy", "learning", "skill-lifecycle", "goal", "autonomy", "retention"];
+  // Commands removed in 2.0.0 stay out of both help texts.
+  for (const command of ["monitor", "workspace", "workflow", "headroom"]) {
+    assert.doesNotMatch(help.stdout, new RegExp(`^workkeel ${command}\\b`, "m"));
+    assert.doesNotMatch(advanced, new RegExp(`^workkeel ${command}\\b`, "m"));
+  }
   const [core, extra] = advanced.split("Optional subsystems.");
   for (const command of optional) {
     assert.doesNotMatch(help.stdout, new RegExp(`workkeel ${command}\\b`));

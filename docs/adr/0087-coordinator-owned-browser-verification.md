@@ -47,6 +47,5 @@ project-installed libraries already covered by their project policy; Workkeel
 does not install them. Public framework browser tests continue to use the existing
 lockfile-pinned Playwright Core dependency and installed Chrome.
 
-See the [goal guide](../operations/workkeel-goals.md),
-[workspace guide](../operations/workkeel-workspace.md) and the primary
+See the [goal guide](../operations/workkeel-goals.md) and the primary
 [Chrome DevTools Page protocol](https://chromedevtools.github.io/devtools-protocol/tot/Page/).

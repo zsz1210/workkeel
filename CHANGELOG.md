@@ -5,6 +5,70 @@ line. Historical release entries describe their own versions, not current-main
 qualification. Actual development tasks and validation records stay private;
 repository migration does not republish old tags, archives or npm versions.
 
+## 2.0.0
+
+Released 2026-11-22. This release has breaking changes.
+
+### Breaking changes
+
+- Workkeel removes four optional subsystems and their commands:
+
+  | Removed command | Use instead |
+  | --- | --- |
+  | `workkeel monitor` | `workkeel status` and `workkeel task show\|summary\|metrics` |
+  | `workkeel workspace` | `workkeel status` in each project |
+  | `workkeel workflow` | Your agent host, recorded with `workkeel task claim\|handoff\|review\|close` |
+  | `workkeel headroom` | Read the tool output directly |
+
+- A removed command prints one `workkeel.operation-error/v1` line to stderr,
+  with `code: "command-removed"`, `mutation_status: "no-write"` and the
+  replacement in `next_action`. It exits with status 1. It does not read or
+  change project files.
+- `workkeel help advanced` no longer lists the removed commands.
+- Workkeel removes `npm run test:browser`. It tested only the monitor and the
+  workspace pages.
+- The package has no optional dependencies now. Workkeel drops `@langchain/core`,
+  `@langchain/langgraph`, `@langchain/langgraph-checkpoint` and `zod`.
+- The removed source includes the local observer and its Tailscale access, the
+  desktop workspace server and pages, the workflow runner with its checkpoints
+  and confirmed continuation, and the Headroom adapter and its Python worker.
+  The release also deletes `docs/operations/workkeel-observer.md`,
+  `workkeel-workspace.md` and `workkeel-workflows.md`,
+  `docs/concepts/tool-identity.md`, and ADR-0071, ADR-0073, ADR-0074 and
+  ADR-0080. Git history keeps them.
+
+### Changes
+
+- `docs/operations/workkeel-usage.md` is new. It keeps the `task metrics`,
+  `usage bind|collect|report|close` and capture-helper guidance from the
+  removed observer guide.
+- The import-boundary check, the test groups, the package path list and the
+  documentation command check no longer list the removed modules and commands.
+- Core tests use a new task fixture that does not run a workflow.
+- For a policy-backed contract, `runtime plan` now points to the task lifecycle
+  instead of `workflow plan`.
+
+### Compatibility and known issues
+
+- Existing records stay on disk. Workkeel does not delete or migrate
+  `.ai-org/execution/` workflow journals or workspace state directories.
+  `task metrics` still reads workflow journals recorded before 2.0.0.
+- The headroom subsystem is removed, but `execution-policy` and `goal-runtime`
+  keep the `headroom` key for compatibility. Execution policies must still
+  contain `headroom: { "mode": "off" | "lossless" }`. Workkeel no longer
+  compresses tool output.
+- `scripts/workkeel-background-collector.mjs` has no entry point, because its
+  only launcher, `scripts/serve-workkeel-observer.mjs`, is gone. Run `workkeel usage collect`
+  for each binding instead.
+- `src/workkeel-model-rules-ui.mjs` stays in the model-policy subsystem, but no
+  page serves it without the workspace. Use
+  `workkeel model-policy draft|approve|preview`.
+- The offline explorer `docs/assets/workkeel-flow.html` still shows the removed
+  graph runner scenarios. A later change will update it.
+- No test now covers how `task metrics` reads workflow journals recorded before
+  2.0.0. The removed tests created those journals with the workflow runner.
+  A later change will add static journal fixtures.
+
 ## 1.1.1
 
 Released 2026-11-22.

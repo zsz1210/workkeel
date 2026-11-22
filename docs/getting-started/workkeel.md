@@ -2,8 +2,8 @@
 
 Workkeel is a repository-native task coordination framework for coding agents.
 Your existing coding agent executes the work. The repository retains the approved
-task, identities, boundaries, handoff and acceptance. Optional executable workflows
-add explicit model routing and recoverable steps; start with the task lifecycle below.
+task, identities, boundaries, handoff and acceptance. Start with the task
+lifecycle below.
 
 This guide installs Workkeel in a project that will use it. To develop the
 Workkeel framework itself, use the
@@ -12,7 +12,7 @@ Do not run task initialization in the public framework source checkout.
 
 ## Availability and compatibility
 
-Use Node.js 24.15 or newer. npm's `latest` dist-tag is `1.1.1`: install
+Use Node.js 24.15 or newer. npm's `latest` dist-tag is `2.0.0`: install
 `@zsz1210/workkeel` or `@zsz1210/workkeel@latest`. The `next` dist-tag still
 points to the old `0.1.0-beta.1` [beta line](../../CHANGELOG.md#010-beta1);
 do not install `@next` for the current release. You can also run the current source
@@ -121,7 +121,7 @@ node /path/to/workkeel/bin/workkeel.mjs start /path/to/your/project --request br
 Inspect `intake_preview` and use its exact fingerprint with the returned
 `intake apply` arguments. `ready: true` means a preview was produced. It does not
 claim work, launch a model or accept a task. Continue through the lifecycle below;
-the optional `workkeel monitor .` observer shows recorded progress and results.
+`workkeel status .` and `workkeel task summary . --id <task-id>` show recorded progress and results.
 An invalid brief returns exit code 1 with `mutation_status: no-write`; a valid
 guidance step returns exit code 0 even when there is more setup to do.
 
@@ -426,8 +426,8 @@ A shallow boundary can also cut the history behind the reviewed commit, for
 example when HEAD merges a side branch that started before it. When Workkeel
 cannot show that the history between the reviewed commit and HEAD is complete,
 close stops, names the missing commit or history, and asks for the full history
-(`git fetch --unshallow`). The task stays in `release_gate`. Task summaries and
-the monitor still read done and cancelled tasks from their records, without
+(`git fetch --unshallow`). The task stays in `release_gate`. Task summaries still
+read done and cancelled tasks from their records, without
 attention, and report `candidate_head.history_status: "unavailable"` without
 later paths. Evidence committed in a reviewed commit that the clone lacks shows
 the status `history-unavailable`, and `quality.evidence_current` is false.
@@ -466,11 +466,8 @@ global configuration or prove live compatibility. Preserve the same connection
 fingerprint on resume; no silent provider fallback. A fixed requested alias does
 not prove the server disabled its own fallback/routing.
 
-For automatic execution, follow [executable workflows](../operations/workkeel-workflows.md).
-The qualified local Codex subscription host uses explicit models, read/write
-permission profiles and disabled tool networking. It does not require a gateway
-or an additional API key. Narrower unsupported conditions still block execution.
-Live LiteLLM behavior remains unverified until a real service and explicit test
+Workkeel 2.0.0 removed the workflow runner (`workkeel workflow`). Run the work
+in your coding agent and record it with the task lifecycle. Live LiteLLM behavior remains unverified until a real service and explicit test
 authority are supplied. Runtime completion never equals task acceptance.
 
 ## Rolling back

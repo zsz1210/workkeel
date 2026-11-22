@@ -34,15 +34,6 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
-## Product identification marks
-
-The workspace embeds official Codex and Claude Code product icons solely to
-identify the reported execution tool. These marks remain the property of OpenAI
-and Anthropic respectively; Workkeel's MIT license does not license their brands
-or imply endorsement. Images are not recolored or redrawn. Exact source versions,
-byte digests and the single proportional resize are documented in
-[tool identity provenance](docs/concepts/tool-identity.md).
-
 ## Runtime dependencies
 
 The npm lockfile resolves these core runtime packages. They are installed as separate dependencies and are not copied into Workkeel's source files.
@@ -59,47 +50,6 @@ The npm lockfile resolves these core runtime packages. They are installed as sep
 | `semver` | 7.8.5 | ISC |
 
 The dependency packages retain their own copyright and license files in an installed dependency tree. Review this inventory together with `package-lock.json` before each public release.
-
-## Optional graph dependencies
-
-Workkeel uses public LangGraph interfaces for graph execution and checkpointing.
-These exact installed packages and their license files were reviewed on 2026-09-23.
-All entries below are MIT-licensed; retain their copyright and permission notices
-when redistributing dependency code. The lockfile records artifact integrity.
-
-| Package | Resolved version(s) |
-| --- | --- |
-| `@langchain/core` | 1.2.12 |
-| `@langchain/langgraph` | 1.4.17 |
-| `@langchain/langgraph-checkpoint` | 1.1.5 |
-| `@langchain/langgraph-sdk` | 1.11.2 |
-| `@langchain/protocol` | 0.0.19 |
-| `@cfworker/json-schema` | 4.1.1 |
-| `@standard-schema/spec` | 1.1.0 |
-| `@types/json-schema` | 7.0.15 |
-| `zod` | 4.6.5 |
-| `js-tiktoken` | 1.0.21 |
-| `base64-js` | 1.5.1 |
-| `langsmith` | 0.10.5 |
-| `mustache` | 4.2.0 |
-| `p-queue` | 6.6.2, 9.3.3 |
-| `p-timeout` | 3.2.0, 7.0.2 |
-| `p-finally` | 1.0.0 |
-| `p-retry` | 7.1.1 |
-| `is-network-error` | 1.3.2 |
-| `eventemitter3` | 4.0.7, 5.0.4 |
-
-These are optional npm dependencies, **installed by default** by npm. Use
-`npm ci --omit=optional --ignore-scripts` for the core-only source installation.
-Workkeel loads the graph engine only when executing a workflow. `langsmith` being
-present does not enable a hosted tracing service: external tracing is rejected
-by the workflow runner. No LangGraph hosted service or Enterprise source is used.
-Node's built-in SQLite API stores checkpoints; no SQLite npm binding is bundled.
-
-Upstream navigation: [LangGraph](https://github.com/langchain-ai/langgraphjs),
-[LangChain Core](https://github.com/langchain-ai/langchainjs),
-[Zod](https://github.com/colinhacks/zod). Exact package versions above, not upstream
-default branches, identify this review.
 
 ## External coding runtimes and gateways
 
@@ -153,20 +103,6 @@ Workkeel uses validate-npm-package-name only in the repository import boundary c
 - License: MIT
 
 Workkeel commits independently authored Mermaid source and static SVG documentation assets. Mermaid is used only during documentation authoring; it is not vendored, installed as a runtime dependency, or required to operate Workkeel.
-
-## Headroom optional tool-output adapter
-
-- Project: <https://github.com/headroomlabs-ai/headroom>
-- Pinned package: `headroom-ai==0.37.0`, upstream tag `v0.37.0`
-- License: Apache-2.0; Copyright 2025 Headroom Contributors
-- Local tokenizer: `tiktoken==0.14.0`, MIT, OpenAI contributors
-
-Workkeel's independently authored wrapper uses an explicitly supplied, separately
-installed Python environment. No Headroom/tokenizer source, environment or model
-weights are vendored, downloaded or installed by Workkeel. The upstream LICENSE and
-NOTICE were reviewed; the operator must retain the environment's licenses, notices
-and dependency lock. Default-off operation needs no Python packages. The version
-pin is not a full environment integrity attestation. See the [context guide](docs/extensions/workkeel-context.md).
 
 ## Archify
 

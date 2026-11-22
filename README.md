@@ -9,7 +9,7 @@ English · [繁體中文](README.zh-TW.md) · [日本語](README.ja.md)
 
 [![CI](https://github.com/zsz1210/workkeel/actions/workflows/ci.yml/badge.svg)](https://github.com/zsz1210/workkeel/actions/workflows/ci.yml)
 
-[npm](https://www.npmjs.com/package/@zsz1210/workkeel) 1.1.1 · Node.js 24.15+ · [MIT](LICENSE)
+[npm](https://www.npmjs.com/package/@zsz1210/workkeel) 2.0.0 · Node.js 24.15+ · [MIT](LICENSE)
 
 The [1.0 compatibility guarantees](docs/concepts/compatibility.md) list what is stable, best effort or experimental.
 
@@ -98,7 +98,7 @@ alias workkeel="node $PWD/bin/workkeel.mjs"
 ```
 
 Or install from npm with `npm install -g @zsz1210/workkeel` to use the `workkeel` command.
-The npm `latest` dist-tag is `1.1.1`. `next` still points to the old
+The npm `latest` dist-tag is `2.0.0`. `next` still points to the old
 `0.1.0-beta.1`. For the current release, install `@zsz1210/workkeel` or
 `@zsz1210/workkeel@latest`. Do not install `@next`.
 
@@ -148,10 +148,29 @@ defines Must fix (blocks) and Consider / Note / Dismiss (recorded), and requires
 independent Codex/Claude cross-review for `high` and `critical`; the CLI checks
 registered model families, but that check does not prove cross-review happened.
 
+## Upgrade from 1.x
+
+Workkeel 2.0.0 removes four optional commands:
+
+| Removed command | Use instead |
+| --- | --- |
+| `workkeel monitor` | `workkeel status` and `workkeel task show\|summary\|metrics` |
+| `workkeel workspace` | `workkeel status` in each project |
+| `workkeel workflow` | Your agent host, recorded with `workkeel task claim\|handoff\|review\|close` |
+| `workkeel headroom` | Read the tool output directly |
+
+A removed command prints a `command-removed` error with the replacement and exits
+with status 1. It does not read or change project files. Existing records stay on
+disk.
+
+A project pinned to 1.x stops write commands under the 2.0.0 CLI. Read commands
+still run with a warning. To move the pin, run `workkeel upgrade --actor <id>` with
+the 2.0.0 CLI in each project. An approving Principal runs it. See the
+[changelog](CHANGELOG.md#200).
+
 ## Optional extras
 
-- **[Workspace observatory](docs/operations/workkeel-workspace.md):** start with `workkeel workspace serve`; browse project records without idle model calls. The separate [read-only observer](docs/operations/workkeel-observer.md) uses `workkeel monitor`.
-- **[Workflows / LangGraph](docs/operations/workkeel-workflows.md):** opt into a runner with approved graphs, model policy and recoverable steps. EXPERIMENTAL: outside the [1.0 compatibility guarantees](docs/concepts/compatibility.md); we may change or remove this runner in a minor release.
+- **[Task metrics and native reports](docs/operations/workkeel-usage.md):** `workkeel task metrics` reads recorded tokens and time. `workkeel usage` binds and collects host reports.
 - **[Workkeel Loop L1 report](docs/operations/loop-trial.md):** `workkeel stats --report --cutoff 2026-10-19T00:00:00Z --timezone UTC` produces a weekly read-only report with zero model/API spend. Repeat `--project` to report on several projects at once. It also reads 0.1.0-beta.1 task records and does not change them.
 - **[Native dispatch](docs/operations/workkeel-native-dispatch.md):** record execution handoffs and requested models; the host reports what ran.
 - **[Reference Bot-layer usage](docs/operations/reference-usage-bot-layer.md):** one way to coordinate project Bots, Claude Code and Codex through human gates, outside the core.

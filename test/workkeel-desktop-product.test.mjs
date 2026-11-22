@@ -1,9 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {editPolicy,latestRecordedExecution} from '../src/workkeel-model-rules-ui.mjs';
-import {buildExecutionVisual,taskVisualRows} from '../src/workkeel-execution-visuals.mjs';
 import {resolveModelPolicy} from '../src/workkeel-model-policy.mjs';
-import {renderWorkspaceScene} from '../src/workkeel-workspace-scene.mjs';
 
 const auto={mode:'auto'}, fixed=value=>({mode:'fixed',value}), inherit={mode:'inherit'};
 const model=(id,efforts,services)=>({id,provider:'synthetic',model:id,data_classes:['internal'],risk_tiers:['standard'],quality:1,
@@ -11,11 +9,10 @@ const model=(id,efforts,services)=>({id,provider:'synthetic',model:id,data_class
 const policy=()=>({schema_version:'workkeel.model-policy/v1',id:'test',version:1,
   project:{model:auto,reasoning:auto,service:auto},rules:[],models:[model('a',['low','high'],['standard','priority']),model('b',['high'],['standard'])]});
 
-test('latest execution uses canonical operation chronology and preserves missing or tied timestamps',()=>{
-  const task={updated_at:'2030-01-01T00:00:00Z',runs:[{run_id:'r',operations:[
-    {operation_id:'older',activity_kind:'implementation',start_at:'2026-01-01T00:00:00Z',runtime_model:'older-model'},
-    {operation_id:'newer',activity_kind:'implementation',dispatched_at:'2026-01-02T00:00:00Z',runtime_model:'newer-model'}]}]};
-  const rows=buildExecutionVisual(taskVisualRows(task)).operations.map(row=>({task,row}));
+test('latest execution uses recorded order and preserves missing or tied timestamps',()=>{
+  const task={id:'WK-one'};
+  const rows=[{task,row:{order_at:Date.parse('2026-01-01T00:00:00Z'),actual_model:'older-model'}},
+    {task,row:{order_at:Date.parse('2026-01-02T00:00:00Z'),actual_model:'newer-model'}}];
   assert.equal(latestRecordedExecution(rows).row.actual_model,'newer-model');
   assert.equal(rows[0].row.actual_model,'older-model','selection does not reorder input');
   assert.equal(latestRecordedExecution([...rows,{task,row:{order_at:null}}]),null);
@@ -44,12 +41,4 @@ test('editing a task activity preserves other tasks, role metadata and independe
   assert.equal(resolveModelPolicy(next,{activity:'verification',task:'WK-one'}).requested.model.mode,'auto');
   assert.deepEqual(next.rules[0],p.rules[0]);assert.deepEqual(next.models,p.models);assert.equal(p.rules.length,1);
   assert.throws(()=>editPolicy(next,{layer:'project'},p.project,['a'],3),/disabled model/);
-});
-
-test('scene escapes recorded identities, preserves unknown metrics and does not invent a current executor',()=>{
-  const empty=renderWorkspaceScene([],{language:'zh-TW'});
-  assert.match(empty,/尚無執行回報/);assert.doesNotMatch(empty,/aria-current="step"/);
-  const html=renderWorkspaceScene([{activity_kind:'implementation',actor:{agent_id:'<img onerror=x>',principal_id:'p'},state:'completed',started_at:'2026-01-01T00:00:00Z',ended_at:'2026-01-01T00:00:01Z',reported:{model:'<script>bad</script>'},tokens:null}],{});
-  assert.doesNotMatch(html,/<img|<script>/);assert.match(html,/&lt;img/);assert.match(html,/Tokens not reported/);
-  assert.doesNotMatch(html,/aria-current="step"/);
 });

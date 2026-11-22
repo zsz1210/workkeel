@@ -17,10 +17,8 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
 // Shared modules native code may load besides src/workkeel-*.
 export const NATIVE_SHARED_MODULES = new Set([
-  "src/files.mjs", "src/task-contract.mjs", "src/headroom-adapter.mjs"
+  "src/files.mjs", "src/task-contract.mjs"
 ]);
-// Modules the monitor serves to the browser; their "/name.mjs" imports are served asset URLs.
-export const BROWSER_MODULES = new Set(["src/workkeel-monitor-client.mjs"]);
 
 // A package subpath segment: plain characters only, never "." or "..". This
 // excludes traversal, empty segments, backslashes and percent-encoding, which
@@ -41,9 +39,8 @@ function packageSpecifier(specifier) {
 // name, package subpaths that could normalize) is rejected. This covers ESM
 // import and export statements and import(); CommonJS require through
 // createRequire is not checked.
-function externalSpecifier(file, specifier) {
+function externalSpecifier(specifier) {
   if (specifier.startsWith("node:")) return isBuiltin(specifier);
-  if (BROWSER_MODULES.has(file) && /^\/[A-Za-z0-9._-]+\.mjs$/.test(specifier)) return true;
   return packageSpecifier(specifier);
 }
 
@@ -106,7 +103,7 @@ export function checkImportBoundary(target = root, entries = nativeEntries(targe
         continue;
       }
       if (!item.specifier.startsWith(".")) {
-        if (!externalSpecifier(file, item.specifier)) errors.push(`${file}: import specifier ${JSON.stringify(item.specifier)} must be a relative path, a node: built-in or another package`);
+        if (!externalSpecifier(item.specifier)) errors.push(`${file}: import specifier ${JSON.stringify(item.specifier)} must be a relative path, a node: built-in or another package`);
         continue;
       }
       const dependency = path.posix.normalize(path.posix.join(path.posix.dirname(file), item.specifier));
@@ -129,20 +126,11 @@ export function checkImportBoundary(target = root, entries = nativeEntries(targe
 // docs/concepts/compatibility.md, which OPTIONAL_TIERS lists by command name.
 // "loop" stands for the experimental Workkeel Loop features of that document.
 export const OPTIONAL_TIERS = {
-  monitor: ["src/workkeel-monitor.mjs", "src/workkeel-monitor-analytics.mjs", "src/workkeel-monitor-client.mjs", "src/workkeel-monitor-data.mjs",
-    "src/workkeel-monitor-dom.mjs", "src/workkeel-monitor-page.mjs", "src/workkeel-monitor-time.mjs", "src/workkeel-monitor-view.mjs",
-    "src/workkeel-observer-index.mjs", "src/workkeel-tailnet.mjs", "scripts/serve-workkeel-observer.mjs", "scripts/verify-workkeel-monitor.mjs",
-    "scripts/workkeel-monitor-fixture.mjs", "scripts/workkeel-observer-fixture.mjs", "scripts/workkeel-execution-clarity-browser.mjs",
-    "scripts/workkeel-observer-release-browser.mjs"],
-  workspace: ["src/workkeel-workspace.mjs", "src/workkeel-workspace-server.mjs", "src/workkeel-workspace-ui.mjs", "src/workkeel-workspace-scene.mjs",
-    "src/workkeel-workspace-hooks.mjs"],
-  workflow: ["src/workkeel-workflows.mjs", "src/workkeel-workflow-schema.mjs", "src/workkeel-continuation.mjs", "src/workkeel-checkpoints.mjs"],
   dispatch: ["src/workkeel-dispatch.mjs", "src/workkeel-dispatch-classifier.mjs", "scripts/prepare-workkeel-dispatch.mjs"],
   usage: ["src/workkeel-host-usage.mjs", "scripts/collect-workkeel-host-usage.mjs", "scripts/workkeel-background-collector.mjs",
     "scripts/workkeel-execution-capture.mjs"],
   "model-policy": ["src/workkeel-model-policy.mjs", "src/workkeel-model-policy-resolution.mjs", "src/workkeel-model-routing.mjs",
     "src/workkeel-model-rules-ui.mjs"],
-  headroom: ["src/workkeel-headroom.mjs", "src/headroom-adapter.mjs"],
   learning: ["src/workkeel-learning.mjs", "src/workkeel-learning-context.mjs", "src/workkeel-learning-lifecycle.mjs", "src/workkeel-learning-receipts.mjs"],
   "skill-lifecycle": ["src/workkeel-learning-lifecycle.mjs"],
   goal: ["src/workkeel-goals.mjs", "src/workkeel-goal-runtime.mjs"],
@@ -153,17 +141,10 @@ export const OPTIONAL_TIERS = {
 
 // Optional tests without a src/<test name>.mjs module, mapped to the modules they cover.
 export const OPTIONAL_TEST_MODULES = {
-  "headroom-preservation": ["src/headroom-adapter.mjs"],
+  "workkeel-desktop-product": ["src/workkeel-model-rules-ui.mjs"],
   "workkeel-background-collector": ["scripts/workkeel-background-collector.mjs"],
-  "workkeel-capture-observer": ["scripts/workkeel-execution-capture.mjs"],
-  "workkeel-desktop-product": ["src/workkeel-model-rules-ui.mjs", "src/workkeel-workspace-scene.mjs"],
   "workkeel-dispatch-history": ["src/workkeel-dispatch.mjs"],
   "workkeel-execution-capture": ["scripts/workkeel-execution-capture.mjs"],
-  "workkeel-flow-browser": ["src/workkeel-workspace-server.mjs", "scripts/workkeel-monitor-fixture.mjs"],
-  "workkeel-host-observer": ["src/workkeel-monitor-view.mjs"],
-  "workkeel-learning-observer": ["src/workkeel-learning.mjs", "scripts/workkeel-monitor-fixture.mjs"],
-  "workkeel-monitor-catalogue": ["src/workkeel-monitor-data.mjs", "scripts/workkeel-observer-fixture.mjs"],
-  "workkeel-observer": ["src/workkeel-monitor-data.mjs", "scripts/workkeel-observer-fixture.mjs"],
   "workkeel-usage-scope": ["src/workkeel-host-usage.mjs"]
 };
 
@@ -173,10 +154,6 @@ export const OPTIONAL_TEST_MODULES = {
 // matches an edge fails the check, so the list cannot go stale.
 const router = (to, command) => ({ from: "src/workkeel-cli.mjs", to: `src/${to}`, lazy: true, reason: `command router loads ${command} on demand` });
 export const OPTIONAL_IMPORT_ALLOWLIST = [
-  router("workkeel-monitor.mjs", "`workkeel monitor`"),
-  router("workkeel-workspace.mjs", "`workkeel workspace`"),
-  router("workkeel-workspace-server.mjs", "`workkeel workspace serve`"),
-  router("workkeel-workspace-hooks.mjs", "`workkeel workspace serve`"),
   router("workkeel-scoring.mjs", "`workkeel stats`"),
   router("workkeel-retention.mjs", "`workkeel retention`"),
   router("workkeel-model-policy.mjs", "`workkeel model-policy`"),
@@ -187,9 +164,6 @@ export const OPTIONAL_IMPORT_ALLOWLIST = [
   router("workkeel-learning.mjs", "`workkeel learning`"),
   router("workkeel-dispatch.mjs", "`workkeel dispatch`"),
   router("workkeel-host-usage.mjs", "`workkeel usage`"),
-  router("workkeel-workflows.mjs", "`workkeel workflow`"),
-  router("workkeel-continuation.mjs", "`workkeel workflow continuation-plan|continue`"),
-  router("workkeel-headroom.mjs", "`workkeel headroom`"),
   { from: "src/workkeel-codex-host.mjs", to: "src/workkeel-learning-lifecycle.mjs", reason: "the Codex host records skill-lifecycle use for workflow runs" },
   { from: "src/workkeel-execution-policy.mjs", to: "src/workkeel-model-routing.mjs", reason: "execution policy resolves the model route of each role" },
   { from: "src/workkeel-material.mjs", to: "src/workkeel-learning-context.mjs", lazy: true, reason: "`workkeel context prepare` adds approved learning context when requested" },
@@ -198,7 +172,6 @@ export const OPTIONAL_IMPORT_ALLOWLIST = [
   { from: "src/workkeel-review-recovery.mjs", to: "src/workkeel-host-usage.mjs", reason: "review recovery reads the usage binding of the failed review" },
   { from: "src/workkeel-stats-report.mjs", to: "src/workkeel-scoring.mjs", reason: "`stats --report` reuses the review score model" },
   { from: "src/workkeel-tasks.mjs", to: "src/workkeel-loop-run.mjs", reason: "task records carry the Workkeel Loop run fields" },
-  { from: "scripts/verify-workkeel-process-recovery.mjs", to: "src/workkeel-workflows.mjs", reason: "process recovery verification drives a workflow run" },
   { from: "scripts/workkeel-delivery.mjs", to: "src/workkeel-dispatch.mjs", reason: "delivery reads the dispatch record of the task" },
   { from: "scripts/workkeel-delivery.mjs", to: "src/workkeel-host-usage.mjs", reason: "delivery reads the usage binding of the task" }
 ];

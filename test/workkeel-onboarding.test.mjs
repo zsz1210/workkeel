@@ -7,8 +7,6 @@ import test from "node:test";
 import { initializeTaskProject } from "../src/workkeel-project.mjs";
 import { previewInstructions, applyInstructions } from "../src/workkeel-onboarding.mjs";
 import { auditSkillUse } from "../src/workkeel-skill-audit.mjs";
-import { workkeelToolView, workkeelOriginal, workflowToolView } from "../src/workkeel-headroom.mjs";
-import { sha256 } from "../src/files.mjs";
 
 async function fixture(t) {
   const root = await fs.mkdtemp(path.join(os.tmpdir(), "workkeel-onboarding-"));
@@ -71,39 +69,4 @@ test("Skill audit catches missing, unexpected, unread and unapplied choices with
   const applied = await auditSkillUse(root, { expected: [skill], selected: [skill], records: [{ skill, read_complete: true,
     application_evidence: ["WORKKEEL.md"], verification_evidence: ["WORKKEEL.md"] }] });
   assert.equal(applied.records_complete, true); assert.equal(applied.quality_verified, false);
-});
-test("native Headroom preserves instructions and exact original bytes, including BOM", async t => {
-  const root = await fixture(t); let calls = 0;
-  const request = { input: "WORKKEEL.md", kind: "json", mode: "lossless", snapshot: ".ai-org/artifacts/WK-one/headroom/original.json", python_env: null };
-  const protectedView = await workkeelToolView(root, request, { runWorker: async () => { calls++; } });
-  assert.equal(protectedView.diagnostics.reason, "protected-source"); assert.equal(calls, 0);
-  const text = "\ufeff日本語\r\nexact bytes";
-  await fs.writeFile(path.join(root, "tool.txt"), text);
-  const raw = await workkeelToolView(root, { ...request, input: "tool.txt", kind: "log", mode: "off" });
-  assert.equal(raw.text, text);
-});
-test("planned lossless policy verifies values, stores original and falls back on worker failure", async t => {
-  const root = await fixture(t);
-  const rows = Array.from({ length: 400 }, (_, id) => ({ id, detail: `unique-detail-${id}` }));
-  const source = JSON.stringify(rows, null, 2), compact = JSON.stringify(rows);
-  await fs.writeFile(path.join(root, "tool.json"), source);
-  const contract = { id: "WK-one", skills: [], authorization: { approval_ref: "approval.md" },
-    environment: { read_paths: ["."], data: { policy_refs: ["policy.json"] } } };
-  const context = { target: root, contract, policy: { headroom: { mode: "lossless" } } };
-  const request = { input: "tool.json", kind: "json", snapshot: ".ai-org/artifacts/WK-one/headroom/original.json", python_env: null };
-  const runWorker = async data => {
-    const text = JSON.stringify({ content: compact, readback: data.modelReadback });
-    return { version: "0.37.0", tokenizer_version: "0.14.0", original_sha256: sha256(source), content: compact,
-      transforms: ["offline-fixture"], input_tokens: 6000, output_tokens: 4000, model_payload: { text, sha256: sha256(text), tokens: 4100 } };
-  };
-  const compressed = await workflowToolView(context, request, { runWorker });
-  assert.equal(compressed.diagnostics.status, "compressed");
-  assert.equal((await workkeelOriginal(root, { input: request.snapshot, sha256: sha256(source) })).content, source);
-  const failed = await workflowToolView(context, { ...request, snapshot: ".ai-org/artifacts/WK-one/headroom/failure.json" }, { runWorker: async () => { throw new Error("offline"); } });
-  assert.equal(failed.text, source); assert.equal(failed.diagnostics.reason, "worker-unavailable");
-  context.policy.headroom.mode = "off";
-  const disabled = await workflowToolView(context, request, { runWorker: async () => { throw new Error("should not run"); } });
-  assert.equal(disabled.diagnostics.metrics.worker_attempts, 0);
-  await fs.writeFile(path.join(root, "policy.json"), source);
-  assert.equal((await workflowToolView(context, { ...request, input: "policy.json" })).diagnostics.reason, "protected-task-authority");
 });

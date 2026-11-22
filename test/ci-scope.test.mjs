@@ -89,9 +89,9 @@ test("complete and browser verification remain explicit commands; publishing ver
   assert.equal(packageDocument.scripts["test:daily"], "node scripts/test-groups.mjs daily");
   assert.equal(packageDocument.scripts.verify, "npm run check && npm run test:full");
   assert.equal(packageDocument.scripts["verify:daily"], "npm run check && npm run test:daily");
-  assert.equal(packageDocument.scripts["test:browser"], "node scripts/verify-workkeel-monitor.mjs");
+  assert.equal(packageDocument.scripts["test:browser"], undefined);
   assert.match(testingGuide, /npm run verify/);
-  assert.match(testingGuide, /npm run test:browser/);
+  assert.doesNotMatch(testingGuide, /npm run test:browser/);
   assert.match(testingGuide, /local/i);
   const release = await fs.readFile(path.join(root, ".github/workflows/publish-npm.yml"), "utf8");
   assert.match(release, /npm run verify/);

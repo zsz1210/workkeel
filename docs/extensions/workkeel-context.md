@@ -1,4 +1,4 @@
-# Project context, Skills and Headroom
+# Project context and Skills
 
 Context engineering means choosing the instructions and evidence a task actually
 needs. Workkeel keeps those sources in the repository and binds important
@@ -69,42 +69,10 @@ records. `records_complete: true` still returns `quality_verified: false`:
 self-reported reading and nonempty files cannot prove a good README or correct code.
 Review actual output. The audit does not install Skills or modify files.
 
-## Plan Headroom before execution
+## Headroom removed
 
-Choose `headroom.mode` in the immutable workflow policy:
+Workkeel 2.0.0 removed the Headroom tool-output view and `workkeel headroom`.
+Workkeel no longer compresses tool output. Execution policies still accept
+`headroom.mode` (`off` or `lossless`) for compatibility. The value has no
+compression effect.
 
-- `off`: preserve the original tool output.
-- `lossless`: attempt compression only for eligible derived JSON/log output,
-  verify preservation, and use the original when checks or minimum savings fail.
-
-The existing adapter keeps the exact source snapshot and its SHA-256 for readback.
-It protects instruction files, task authority, approval/policy references and
-original evidence. This is a derived tool-output view, not a whole-prompt rewrite.
-Lossy compression is not offered by the native Workkeel interface.
-
-An embedded host that owns its tool pipeline uses `context.toolView(request)` to
-apply the planned policy. The concrete Codex subscription adapter cannot intercept
-Codex's built-in tool results and therefore rejects `lossless`; use `off` there.
-Do not count standalone compression as automatic Codex token savings.
-
-For an explicit standalone view, save a request such as:
-
-```json
-{
-  "input":"logs/build.json", "kind":"json", "mode":"lossless",
-  "snapshot":".ai-org/artifacts/WK-build/headroom/build.original.json",
-  "python_env":"WORKKEEL_HEADROOM_PYTHON"
-}
-```
-
-```sh
-workkeel headroom view . --request tool-view.json
-workkeel headroom read . --request original-read.json
-```
-
-`original-read.json` contains `input` (the returned original path, repository-relative)
-and its `sha256`. The named environment variable identifies an explicitly installed
-Python executable; Workkeel installs nothing. `off` needs no Python packages.
-The adapter is pinned to `headroom-ai==0.37.0` and `tiktoken==0.14.0`; see
-[third-party notices](../../THIRD_PARTY_NOTICES.md). Always report originals,
-compressed views and actual runtime token usage separately.

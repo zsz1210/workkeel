@@ -54,20 +54,12 @@ workkeel context prepare [target] --id task-id --request material-request.json
 workkeel skills audit [target] --request skill-use.json
 
 Optional subsystems. The core lifecycle never needs them; each one is off until used:
-workkeel monitor [target]                                   local read-only observer
-workkeel workspace create|register|remove|integration [private state directory] --request request.json
-workkeel workspace show|serve [private state directory]
-workkeel workflow plan|run [target] --request workflow-request.json
-workkeel workflow continuation-plan|continue [target] --request continuation.json
-workkeel workflow show|metrics [target] --id run-id
-workkeel workflow cancel|recover-lock [target] --id run-id --request actor.json
 workkeel dispatch prepare|plan|bind [target] --request dispatch-request.json
 workkeel dispatch show [target] --id execution-id
 workkeel usage bind|report|activity|close [target] --request usage-request.json
 workkeel usage collect [target] --id binding-id
 workkeel model-policy show [target] --id policy-id
 workkeel model-policy draft|approve|preview [target] --request policy-request.json
-workkeel headroom view|read [target] --request tool-view-request.json
 workkeel learning list [target]
 workkeel learning capture|review|use|search|impact [target] --request learning-request.json
 workkeel skill-lifecycle list [target]
@@ -81,21 +73,33 @@ workkeel autonomy tick|serve [target]
 workkeel retention inventory|preview|archive|verify|usage [target] --request request.json
 
 All task commands return JSON. Lifecycle mutation requests contain operation_id,
-expected_version and actor; workflow requests use a stable run_id and active claim.
+expected_version and actor.
 A CLI with the pinned major version and not older than the pin is compatible.
 Otherwise reads warn on stderr and mutations stop until workkeel upgrade.
 See docs/getting-started/workkeel.md and docs/README.md for the optional subsystems.
 Native host execution is the default. Runtime plans do not launch models or grant
-permissions. Workflow run explicitly launches the qualified Codex subscription host.
+permissions. Workkeel 2.0.0 removed monitor, workspace, workflow and headroom.
 `;
+// Commands removed in 2.0.0. Each one stops before it reads or writes project state.
+const REMOVED_COMMANDS = {
+  monitor: "Read task state with `workkeel status` and `workkeel task show|summary|metrics`.",
+  workspace: "Run `workkeel status` in each project. Workkeel does not read or change existing workspace state directories.",
+  workflow: "Run each step in your agent host and record it with the task lifecycle (`workkeel task claim|handoff|review|close`). Workkeel does not read or change existing workflow records.",
+  headroom: "Read tool output directly. Execution policies still accept the `headroom` key for compatibility. Workkeel no longer compresses tool output."
+};
+function removedCommand(command) {
+  console.error(JSON.stringify({ schema_version: "workkeel.operation-error/v1", code: "command-removed",
+    message: `The \`workkeel ${command}\` command was removed in Workkeel 2.0.0.`, mutation_status: "no-write", next_action: REMOVED_COMMANDS[command] }));
+  return 1;
+}
 function required(options, key) { if (!options[key]) throw new Error(`Missing ${key}`); return options[key]; }
 function allow(options, keys) { if (Object.keys(options).some(k => !keys.includes(k))) throw new Error("Option is not supported by this command"); }
 // Commands that never write project state. Everything else counts as a mutation.
 const READ_ONLY = {
   start: null, status: null, doctor: null, stats: null, policy: ["show"], runtime: ["plan"], context: ["prepare"], skills: ["audit"],
   task: ["show", "assess", "evidence-check", "metrics", "summary"], dispatch: ["show", "plan"], intake: ["preview"],
-  "model-policy": ["show", "preview"], learning: ["list", "search", "impact"], headroom: ["read"], "skill-lifecycle": ["list"], autonomy: ["show"], goal: ["list", "show"],
-  workflow: ["show", "metrics", "plan", "continuation-plan"], instructions: ["preview"], retention: ["inventory", "preview", "verify", "usage"]
+  "model-policy": ["show", "preview"], learning: ["list", "search", "impact"], "skill-lifecycle": ["list"], autonomy: ["show"], goal: ["list", "show"],
+  instructions: ["preview"], retention: ["inventory", "preview", "verify", "usage"]
 };
 const readOnly = (command, action) => Object.hasOwn(READ_ONLY, command) && (READ_ONLY[command] === null || READ_ONLY[command].includes(action));
 /** Reads warn when this CLI is incompatible with the pin; mutations stop. */
@@ -145,18 +149,11 @@ async function warnUnlabeledRework(summary) {
 async function runCommand(args) {
   if (!args.length || ["help", "--help", "-h"].includes(args[0])) { console.log(args[1] === "advanced" ? ADVANCED_HELP : HELP); return 0; }
   if (["version", "--version"].includes(args[0])) { console.log(TEMPLATE_VERSION); return 0; }
-  if (args[0] === "monitor") {
-    // The monitor runs until stopped, so its warning is printed before it starts.
-    const compatibility = await readProjectCompatibility(args[1] ?? ".");
-    if (compatibility) warnIncompatibleCli(compatibility);
-    printWarnings();
-    const { monitorMain } = await import("./workkeel-monitor.mjs");
-    return monitorMain(args.slice(1));
-  }
+  if (Object.hasOwn(REMOVED_COMMANDS, args[0])) return removedCommand(args[0]);
   const { command, action, target, targetGiven, options, json } = parseCommandLine(args);
   // A multi-source report names its projects with --project; each one reports its own format.
   const multiSource = command === "stats" && (options["--project"] || options["--projects-file"]);
-  if (!multiSource && !["init", "workspace", "upgrade"].includes(command) && await existsEntry(target, "workkeel.lock")) await checkCompatibility(target, command, action);
+  if (!multiSource && !["init", "upgrade"].includes(command) && await existsEntry(target, "workkeel.lock")) await checkCompatibility(target, command, action);
   let output;
   if (command === "start") {
     allow(options, ["--request"]);
@@ -167,24 +164,6 @@ async function runCommand(args) {
     else {
       allow(options, ["--principal", "--builder", "--reviewer"]);
       output = await initializeTaskProject(target, defaultPolicy(options["--principal"], { builder: options["--builder"], reviewer: options["--reviewer"] }));
-    }
-  } else if(command==='workspace') {
-    const workspace=await import('./workkeel-workspace.mjs');
-    if(action==='show'){allow(options,[]);output=await workspace.readWorkspaceSnapshot(target);}
-    else if(action==='serve') {
-      allow(options,['--request']);const config=options['--request']?(await readTaskContractInput(target,options['--request'])).document:{};
-      const {startWorkspaceServer}=await import('./workkeel-workspace-server.mjs');
-      const {createWorkspaceHooks}=await import('./workkeel-workspace-hooks.mjs');
-      const server=await startWorkspaceServer(target,{control:config.control??null,hooks:createWorkspaceHooks({host_models:config.host_models??[]})});
-      console.log(JSON.stringify({schema_version:'workkeel.workspace-server/v1',url:server.url,read_url:server.read_url,model_called:false},null,2));
-      const stop=()=>void server.close();process.once('SIGINT',stop);process.once('SIGTERM',stop);return 0;
-    } else {
-      allow(options,['--request']);const request=(await readTaskContractInput(target,required(options,'--request'))).document;
-      if(action==='create')output=await workspace.createWorkspace(target,request);
-      else if(action==='register')output=await workspace.registerWorkspaceProject(target,request.project,{expectedVersion:request.expected_version});
-      else if(action==='remove')output=await workspace.removeWorkspaceProject(target,request.id,{expectedVersion:request.expected_version});
-      else if(action==='integration')output=await workspace.inspectWorkspaceIntegration(await workspace.readWorkspaceSnapshot(target),request);
-      else throw Error('Unknown workspace action');
     }
   } else if (multiSource && options["--report"]) {
     // Each --project is checked by the report itself, so the current directory needs no project.
@@ -349,44 +328,6 @@ async function runCommand(args) {
     if (action === "preview") output = await previewInstructions(target);
     else if (action === "apply") output = await applyInstructions(target, required(options, "--fingerprint"));
     else throw new Error("Instructions requires preview or apply");
-  } else if (command === "workflow") {
-    const { planWorkflow, readWorkflowRun, cancelWorkflow, recoverWorkflowLock } = await import("./workkeel-workflows.mjs");
-    if (action === "metrics") {
-      allow(options, ["--id"]);
-      const { readWorkflowMeasurements } = await import("./workkeel-measurements.mjs");
-      output = await readWorkflowMeasurements(target, required(options, "--id"));
-    } else if (action === "show") { allow(options, ["--id"]); output = await readWorkflowRun(target, required(options, "--id")); }
-    else {
-      allow(options, ["plan", "run", "continuation-plan", "continue"].includes(action) ? ["--request"] : ["--id", "--request"]);
-      const request = (await readTaskContractInput(target, required(options, "--request"))).document;
-      if (action === "plan") output = await planWorkflow(target, request);
-      else if (action === "continuation-plan") {
-        const { planContinuation } = await import("./workkeel-continuation.mjs");
-        output = await planContinuation(target, request);
-      } else if (["run", "continue"].includes(action)) {
-        const { executeWorkflow } = await import("./workkeel-workflows.mjs");
-        const { continueWorkflow } = await import("./workkeel-continuation.mjs");
-        const { createLocalCodexSubscriptionRuntime } = await import("./workkeel-codex-host.mjs");
-        const { exactKeys } = await import("./workkeel-execution-policy.mjs");
-        exactKeys(request, ["run"], ["approvals", "reconciliations"]);
-        const runtime = await createLocalCodexSubscriptionRuntime(target);
-        const controller = new AbortController(); const stop = () => controller.abort();
-        process.once("SIGINT", stop); process.once("SIGTERM", stop);
-        try { output = await (action === "continue" ? continueWorkflow : executeWorkflow)(target, request.run, { adapters: [runtime], approvals: request.approvals,
-          reconciliations: request.reconciliations, signal: controller.signal }); }
-        finally { process.removeListener("SIGINT", stop); process.removeListener("SIGTERM", stop); }
-      }
-      else if (action === "cancel") output = await cancelWorkflow(target, required(options, "--id"), request);
-      else if (action === "recover-lock") output = await recoverWorkflowLock(target, required(options, "--id"), request);
-      else throw new Error("Workflow requires plan, run, show, metrics, cancel or recover-lock");
-    }
-  } else if (command === "headroom") {
-    allow(options, ["--request"]);
-    const request = (await readTaskContractInput(target, required(options, "--request"))).document;
-    const { workkeelToolView, workkeelOriginal } = await import("./workkeel-headroom.mjs");
-    if (action === "view") output = await workkeelToolView(target, request);
-    else if (action === "read") output = await workkeelOriginal(target, request);
-    else throw new Error("Headroom requires view or read");
   } else throw new Error("Unsupported Workkeel command");
   console.log(JSON.stringify(output, null, 2));
   return output.valid === false || output.coverage_consistent === false ? 1 : 0;
