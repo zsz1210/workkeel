@@ -12,7 +12,6 @@ import {executionDigest} from '../src/workkeel-execution-policy.mjs';
 import {mutateAutonomy,readAutonomy,runAutonomyStep,serveAutonomy} from '../src/workkeel-autonomy.mjs';
 import {readGoalAdmissions,admitGoalImprovement,reconcileGoalAdmission,extendGoalAdmission,readGoalAdmissionAuthority,disposeGoalProposal} from '../src/workkeel-autonomy-admission.mjs';
 import {runImprovementCycle} from '../src/workkeel-improvement-cycle.mjs';
-import {createWorkspaceHooks} from '../src/workkeel-workspace-hooks.mjs';
 import {inventoryRetention} from '../src/workkeel-retention.mjs';
 import {loadTaskRequirements} from '../src/workkeel-requirements.mjs';
 import {createHash} from 'node:crypto';
@@ -116,13 +115,10 @@ test('unresolved derived results remain visible while service listens and clear 
   const adapter=createTrustedGoalAdapter({id:'held-result',assertCapabilities:f.adapter.assertCapabilities,cancel:f.adapter.cancel,execute:async ctx=>{executions++;held=await f.adapter.execute(ctx);return {status:'unknown',reason,model_called:true};},reconcile:async()=>recover?held:{status:'unknown',reason}});
   let failed;for(let n=0;n<8;n++){failed=await runImprovementCycle(f.root,{adapter});if(failed.idle==='derived-goal-needs-attention')break;}
   assert.equal(failed.idle,'derived-goal-needs-attention');assert.equal(failed.reason,reason);assert.equal(failed.phase,'planning');
-  const hooks=createWorkspaceHooks(),project={id:'fixture',task_root:f.root};
-  const view=await hooks.autonomy.read({project,actor});assert.equal(view.state,'needs-reconciliation');assert.equal(view.needs_attention.length,1);assert.equal(view.needs_attention[0].reason,reason);assert.equal(view.needs_attention[0].goal_id,failed.goal_id);
   const before=await readNativeGoal(f.root,failed.goal_id),count=executions;
   const again=await runImprovementCycle(f.root,{adapter});assert.equal(again.idle,'derived-goal-needs-attention');assert.equal(executions,count);
   recover=true;const resumed=await runImprovementCycle(f.root,{adapter});assert.equal(resumed.operation.id,failed.operation.id);assert.equal(resumed.operation.status,'completed');assert.equal(executions,count);
   const after=await readNativeGoal(f.root,failed.goal_id);assert.equal(after.operations.length,before.operations.length);assert.equal(after.reserved_ms,before.reserved_ms);assert.deepEqual(resumed.operation.first_result,failed.operation.first_result);
-  const clear=await hooks.autonomy.read({project,actor});assert.deepEqual(clear.needs_attention,[]);assert.equal(clear.state,'execution-recorded');
 });
 
 test('known high-risk findings stop speculative discovery without spending another model turn',async t=>{
@@ -166,14 +162,6 @@ test('exhausted discovery is explicit on unchanged sources without blocking admi
     await fs.appendFile(f.root+'/src/value.mjs','// new event cannot renew an exhausted allowance\n');
     assert.equal((await runImprovementCycle(f.root,{adapter:f.adapter})).idle,'discovery-round-budget');assert.equal(f.calls.length,before);
     assert.equal(JSON.stringify((await readGoalAdmissions(f.root)).entries.map(e=>e.reservation)),reservations);
-    const hooks=createWorkspaceHooks({goalAdapter:f.adapter}),project={task_root:f.root};
-    try{
-      await hooks.autonomy.execute({action:'autonomy.start-service',expectedVersion:(await readAutonomy(f.root)).version,idempotencyKey:'observe-exhausted',payload:{},project,actor});
-      let observed;
-      for(let n=0;n<100;n++){observed=await hooks.autonomy.read({project,actor});if(observed.service.last_step?.idle==='discovery-round-budget')break;await new Promise(r=>setTimeout(r,20));}
-      assert.equal(observed.service.last_step.idle,'discovery-round-budget');assert.equal(observed.service.last_step.rounds_used,1);assert.equal(observed.service.last_step.rounds_limit,1);assert.deepEqual(observed.service.errors,[]);assert.equal(f.calls.length,before);
-      assert.ok(Number.isFinite(Date.parse(observed.service.observed_at)));assert.equal(observed.service.check_interval_ms,30000);assert.ok(['checking','listening'].includes(observed.service.activity));assert.deepEqual(observed.watch_scope.repositories.map(r=>r.root),[f.root]);assert.deepEqual(observed.watch_scope.source_refs,['src/value.mjs']);
-    }finally{hooks.autonomy.close();}
   }
 });
 
@@ -187,7 +175,7 @@ test('event driver progresses native derived goals without a human continue and 
   const entry=(await readGoalAdmissions(f.root)).entries[0];assert.ok(entry);assert.equal((await readNativeGoal(f.root,entry.intent.manifest.id)).accepted,true);assert.deepEqual(errors,[]);controller.abort();service.close();
 });
 
-test('explicit extension preserves spent rounds, reexamines once, and enforces the total through actual hooks and derived authority',async t=>{
+test('explicit extension preserves spent rounds, reexamines once, and enforces the total through derived authority',async t=>{
   const f=await fixture(t,{empty:true,maxRounds:1,maxGoals:1}),root=f.root;
   async function settle(){let result;for(let n=0;n<50;n++){result=await runImprovementCycle(root,{adapter:f.adapter});if(result.idle)return result;}assert.fail('cycle did not settle: '+JSON.stringify(result));}
   assert.equal((await settle()).idle,'discovery-round-budget');
@@ -212,7 +200,6 @@ test('explicit extension preserves spent rounds, reexamines once, and enforces t
   assert.equal((await readGoalAdmissionAuthority(root,goal)).grant.max_rounds,5);assert.equal((await extendGoalAdmission(root,request)).replayed,true);
   const policy={...f.policy,discovery:{...f.policy.discovery,max_rounds:5}};
   await mutateAutonomy(root,'policy',{...f.request,goal_id:goal.id,operation_id:'use-five',expected_version:(await readAutonomy(root)).version,policy});
-  const hooks=createWorkspaceHooks({goalAdapter:f.adapter});try{const view=await hooks.autonomy.read({project:{task_root:root},actor});assert.equal(view.available_goals[0].grant.max_rounds,5);}finally{hooks.autonomy.close();}
   assert.equal((await settle()).idle,'unchanged-approved-sources');assert.equal((await readGoalAdmissions(root)).entries.length,2);
   const count=f.calls.length;assert.equal((await settle()).idle,'unchanged-approved-sources');assert.equal(f.calls.length,count);
   for(let round=3;round<=5;round++){await fs.appendFile(root+'/src/value.mjs','// actual synthetic source event '+round+'\n');git(root,'add','src/value.mjs');git(root,'commit','-qm','Synthetic approved source event '+round);assert.equal((await settle()).idle,round===5?'discovery-round-budget':'unchanged-approved-sources');}
@@ -259,25 +246,14 @@ test('partial native intake reconciles frozen IDs and reserved budgets instead o
   const replay=await admitGoalImprovement(f.root,request,{proposal});assert.equal(replay.replayed,true);assert.equal((await readGoalAdmissions(f.root)).entries.length,1);assert.equal(f.calls.length,0);
 });
 
-test('derived execution rechecks cancelled parent authority while its original operator can still cancel through UI hooks',async t=>{
+test('derived execution rechecks cancelled parent authority while its original operator can still cancel',async t=>{
   const f=await fixture(t,{empty:true});await runImprovementCycle(f.root,{adapter:f.adapter});const entry=(await readGoalAdmissions(f.root)).entries[0],before=await readNativeGoal(f.root,entry.intent.manifest.id);
   const sourceController=await readNativeTask(f.root,f.request.task_id);await mutateNativeTask(f.root,sourceController.id,'cancel',{operation_id:'revoke-parent-coordination',expected_version:sourceController.version,actor,summary:'Explicitly revoke original standing task authority',evidence:['docs/approval.md']});
   await assert.rejects(runNativeGoalStep(f.root,before.id,{adapter:f.adapter}),/authority changed or cancelled/);assert.equal(f.calls.length,0);
-  const hooks=createWorkspaceHooks({goalAdapter:f.adapter});t.after(()=>hooks.goals.close());
-  const result=await hooks.goals.execute({project:{task_root:f.root},actor,action:'goals.cancel',expectedVersion:before.version,idempotencyKey:'stop-derived-after-grant-drift',payload:{goal_id:before.id}});assert.equal(result.goal.state,'cancel-requested');
-  for(let n=0;n<100&&(await readNativeGoal(f.root,before.id)).state!=='cancelled';n++)await new Promise(r=>setTimeout(r,10));assert.equal((await readNativeGoal(f.root,before.id)).state,'cancelled');assert.equal(f.calls.length,0);
+  const result=await controlNativeGoal(f.root,before.id,'cancel',{actor,expected_version:before.version,operation_id:'stop-derived-after-grant-drift'});assert.equal(result.goal.state,'cancel-requested');
+  for(let n=0;n<10&&(await readNativeGoal(f.root,before.id)).state!=='cancelled';n++)await runNativeGoalStep(f.root,before.id,{adapter:f.adapter});assert.equal((await readNativeGoal(f.root,before.id)).state,'cancelled');assert.equal(f.calls.length,0);
   assert.equal((await readNativeTask(f.root,entry.intent.product.id)).state,'cancelled');
 });
-
-test('one registered project routes equal goal IDs to their exact repository without changing the primary store',async t=>{
-  const first=await fixture(t,{empty:true}),second=await fixture(t,{empty:true}),hooks=createWorkspaceHooks({goalAdapter:first.adapter});t.after(()=>hooks.goals.close());
-  const project={id:'suite',task_root:first.root,repositories:[{id:'primary',path:first.root,scope:'.'},{id:'secondary',path:second.root,scope:'.'}]},view=await hooks.goals.read({project,actor});assert.equal(view.entries.filter(g=>g.id==='source-goal').length,2);assert.equal(view.services.length,2);
-  const primary=await readNativeGoal(first.root,'source-goal'),foreign=await readNativeGoal(second.root,'source-goal');
-  await assert.rejects(hooks.goals.execute({project,actor,action:'goals.pause',expectedVersion:foreign.version,idempotencyKey:'deny-unregistered',payload:{goal_id:'source-goal',repo_id:'arbitrary'}}),/explicitly registered/);
-  await hooks.goals.execute({project,actor,action:'goals.pause',expectedVersion:foreign.version,idempotencyKey:'foreign-goal-control',payload:{goal_id:'source-goal',repo_id:'secondary'}});
-  assert.equal((await readNativeGoal(first.root,'source-goal')).version,primary.version);assert.equal((await readNativeGoal(second.root,'source-goal')).version,foreign.version+1);
-});
-
 
 test('proposal disposal rejects unknown IDs and foreign sources without journaling a decision',async t=>{
   const f=await fixture(t,{risk:'high',proposalCount:2});

@@ -7,7 +7,7 @@ ordinary Git staging. Export needed records deliberately when preserving evidenc
 changing the ignore policy blocks new observation writes for inspection.
 
 Use this path in an initialized task-first project. Your coding-tool conversation is
-the place to agree on work and execute it; the optional observer is read-only.
+the place to agree on work and execute it.
 No desktop plugin, global model change, background service or extra dependency
 is required. Commands below use `workkeel` as shorthand for
 `node /path/to/workkeel/bin/workkeel.mjs` from the reviewed source checkout.
@@ -95,21 +95,20 @@ risk and the project's existing review separation, with no claim or dispatch.
 workkeel intake preview . --request brief.json
 workkeel intake apply . --request brief.json --fingerprint <fingerprint-from-preview>
 workkeel task summary . --id WK-cart-total
-workkeel monitor .
 ```
 
 Inspect the returned contract before applying. If the brief, policy or approval
 bytes change, obtain a fresh preview. Apply calls the existing native creation
 guard. Identical replays do not create duplicate tasks. Continue with the existing
 [claim, handoff, review and close commands](../getting-started/workkeel.md).
-Only separately approved [workflows](workkeel-workflows.md) launch a model.
+Intake and the lifecycle commands do not launch a model.
 
 Keep each executor's prompt bounded to its goal, permitted files, relevant
 interfaces, acceptance and required instructions. Link supporting evidence instead
 of copying the full parent discussion into every node. One executor reports its
 own work; the coordinator alone performs lifecycle mutations. Prepare each exact
 host binding at dispatch and complete its report before the task's closing steps.
-Use the [capture helper](workkeel-observer.md#capture-an-operation-from-start-to-finish)
+Use the [capture helper](workkeel-usage.md#capture-an-operation-from-start-to-finish)
 when the host does not already report active intervals. Begin before product work,
 pause during waits, resume only while working, then finish and inspect the receipt.
 Keep the original binding while waiting for a late host completion row. Explicit
@@ -120,12 +119,12 @@ source metadata is required; a missing child report is not evidence of zero usag
 `task summary` reports the current lifecycle, goal, acceptance, next action,
 exact delivery revision, handoff/review/closeout summaries, evidence digest state
 and task timeline. Rework counts rejected native deliveries, not arbitrary model
-requests; workflow attempts remain separately visible. `formal_first_review_pass`
+requests. `formal_first_review_pass`
 and `formal_rework_count` describe only native delivery reviews; the older
 `first_review_pass` and `rework_count` fields retain that meaning for compatibility.
 First-review quality is unknown before a review. Lifecycle duration includes waits and human/coordinator
-work; recorded time and tokens cover workflow runs and explicitly bound native
-reports only.
+work; recorded time and tokens cover explicitly bound native reports and run
+journals recorded before 2.0.0 only.
 
 Use the [delivery report check and review packet](workkeel-native-dispatch.md#check-expected-operations-before-handoff-and-closeout)
 to check expected bindings before handoff and reports before acceptance. The
@@ -137,7 +136,7 @@ numeric reports and evidence checks; creating another Agent solely to copy
 numbers, update status or reformat a report adds another context handoff.
 For measurement-enabled work, declare preparation, implementation, review and
 closeout in the expected work plan before detailed execution. Follow the
-[recording-boundary table](workkeel-observer.md#recording-boundaries-for-new-work)
+[recording-boundary table](workkeel-usage.md#recording-boundaries-for-new-work)
 immediately after claim. Inspect excluded responses at begin and preserve pending
 terminal collection through closeout. A mixed coordinator turn must not be
 reported as several invented stage operations.
@@ -171,7 +170,7 @@ Timeline rows distinguish a failed review followed by rework from a voluntary
 release of the task claim. A release returns the task to intake so another
 executor can claim it; it does not establish a review failure. New history events
 retain the operation summary and review judgment in their hash chain. For older
-events, the observer can recover the summary from a bounded, task-local operation
+events, `task summary` can recover the summary from a bounded, task-local operation
 request only when its complete request digest matches that history event. Missing
 requests stay unexplained; the current task title is not a transition reason.
 
@@ -241,49 +240,17 @@ attribution alone cannot prove that another actual Agent reviewed the source.
 Pre-delivery observations never satisfy the formal review gate or change native
 task history. A formal first pass can coexist with earlier source-review failures;
 neither field alone establishes end-to-end speed or token savings. Older ordinary
-observations remain supported, and the observer still reads data without models.
+observations remain supported.
 
-## Observer surfaces and limits
-
-- **Work overview:** attention-first cards, search and status filter.
-- **Task detail:** next action, acceptance, recorded execution time by stage,
-  timeline, delivery evidence and observed links.
-- **Usage & quality:** per-task sample kind, token coverage, recorded operation time,
-  rework and review. It does not rank models or infer subscription costs.
-
-The stage chart intersects recorded dispatch-to-completion intervals with the
-task's implementation, review and rework stages. Overlapping intervals count once
-in task details. Time without an execution interval, including time awaiting a
-person, is never filled in from lifecycle residence. These intervals include the
-execution tool's work; they are not measurements of model compute alone. A missing
-completion timestamp or stage history leaves that portion unavailable or
-unassigned. A recorded zero is preserved; missing measurements are not zero.
-Usage analysis instead sums matching operations, so parallel work can make its
-total larger than the non-overlapping time in task details.
+## Measurement limits
 
 Host-owned tasks report lifecycle transitions independently from usage. The
-optional [native measurement collector](workkeel-observer.md#native-execution-reports) reads metadata
+optional [native measurement collector](workkeel-usage.md#native-execution-reports) reads metadata
 from explicitly bound operations; it does not scan unrelated conversations or
 call models. Native tokens can arrive before timing. A total turn duration is
-kept separate when human waiting cannot be excluded; only measured execution
-intervals appear in stage and activity charts. Task content, documents and events
-remain available when either measurement is missing.
-The activity page opens its bounded event list by default;
-the backlog links document counts to each task's document list.
-
-The indexed viewer validates the execution inventory when rebuilding its local
-projection. Task summaries use bounded concurrency and a memory cache invalidated
-by changes to their source files; fresh reconciliation runs every 30 seconds.
-Task details and documents are revalidated when opened. The compatibility
-full-snapshot endpoint uses fresh reads without this cross-request cache.
-This changes no authority or acceptance rules.
-Attributable errors mark the affected task incomplete; unknown run attribution marks every
-task's measurement total incomplete. Healthy task state can remain visible.
-Fatal snapshot errors hide old content until recovery. The indexed workspace supports
-up to 2,000 native tasks; the compatibility full-snapshot endpoint remains capped at
-200. Execution inventory remains bounded at 4,096 entries and responses at 4 MiB. This is a point-in-time,
-single-project view; it does not guarantee process liveness or collect arbitrary
-native-session tokens. Keep the capability URL private and stop with Ctrl-C.
+kept separate when human waiting cannot be excluded. Task content, documents and
+events remain available when either measurement is missing. A recorded zero is
+preserved; missing measurements are not zero.
 
 ## Repository maintenance
 
@@ -436,7 +403,6 @@ not automatically become a framework-wide Skill.
 
 This opt-in task-first entry prepares navigation from the full approved contract.
 It does not grant permission, prove that a model read a file, or replace acceptance.
-Existing workflow v1 string inputs remain supported.
 
 ### Prepare material
 
@@ -445,10 +411,8 @@ workkeel context prepare . --id WK-example --request docs/material-request.json
 ```
 
 The command prints a JSON packet without writing project state or calling a model.
-Save that output to a new project-local file, then reference it in a workflow plan
-or run request as `material_refs: { "work": "docs/material.json" }`, where `work`
-is an existing runtime node. The run command still takes a `{ "run": ... }` wrapper.
-Do not add packet fields to the workflow v1 node schema.
+Save that output to a new project-local file and give it to the executor with the
+task. Workkeel 2.0.0 removed the workflow runner that read `material_refs`.
 
 Example material request:
 
@@ -468,8 +432,8 @@ Example material request:
 Selected files must be inside approved read roots or already required by the
 contract. Policy refs, approval, named Skills and discovered applicable project
 instructions remain required. Applicable nested instructions and matching Skills
-still have to be read during work. The packet binds source bytes and is checked
-again before dispatch; changed material requires a newly prepared packet and run.
+still have to be read during work. The packet binds source bytes; changed
+material requires a newly prepared packet.
 Keep generated packets outside policy refs to avoid a circular hash dependency.
 
 | Kind | Additional required purposes | Write scope / candidate |
@@ -489,38 +453,6 @@ bounded to 64 selected materials and 1 MiB of source text; split larger work.
 `summarizeChecks` groups exact status/message pairs with all original test IDs,
 without asserting acceptance. Preserve original check evidence beside summaries.
 
-### Continue a confirmed interruption
-
-```sh
-workkeel workflow continuation-plan . --request docs/continuation-plan.json
-workkeel workflow continue . --request docs/continuation-run.json
-```
-
-The plan request contains `source_run_id`, a distinct new `run_id`, `actor`,
-`workflow_ref`, `policy_ref` and optional fresh `material_refs`. The successor
-workflow and policy must already belong to the task's approved policy refs.
-Prepare the successor workflow when authoring the task; a prompt cannot waive
-an unapproved policy change. The execute request wraps those fields and the
-returned digest as `{ "run": { ..., "expected_plan": "..." } }`.
-
-Only a terminal interrupted operation with confirmed cleanup, complete journal,
-unchanged Git HEAD and bounded partial product snapshot can qualify. Explicit
-cancellation, an active/unknown runner, uncertain operation, changed authority,
-expired approval, or source drift blocks dispatch. The default snapshot supports
-bounded UTF-8 product directories (512 entries, 16 MiB), not arbitrary binaries,
-symlinks, the entire repository or `.ai-org`. Unsupported snapshots remain blocked.
-
-Continuation preserves the original operation and creates one durable successor
-through ordinary release/claim operations. Retrying the exact continuation request
-can finish interrupted initialization. Once a successor run exists, repeated calls
-only inspect it; they do not automatically restart it. A retained diagnostic lock
-still requires the existing recovery procedure. Old runs without settlement receipts
-cannot be retroactively declared clean. This is not cross-host or hard-crash recovery.
-
-The existing monitor uses a redacted read-only projection of the same checks for
-its next action. Full plans, prompts, conversation IDs and source bytes are not
-added to the public projection. The view does not authorize a run.
-
 ### Scope and limits
 
 The personal `prepare-stage.mjs` wrapper and CLI use the same core preparation.
@@ -529,5 +461,6 @@ structured scopes and provenance, not the truth of arbitrary instructions.
 Required materials may make a prepared packet larger. No speed, token-cost or
 monetary savings follow solely from shorter optional instructions.
 
-See [workflow execution](workkeel-workflows.md) and
-[ADR-0079](../adr/0079-stage-material-and-confirmed-continuation.md).
+See [ADR-0079](../adr/0079-stage-material-and-confirmed-continuation.md).
+Workkeel 2.0.0 removed confirmed continuation (`workkeel workflow
+continuation-plan|continue`) with the workflow runner.

@@ -19,9 +19,9 @@ Workkeel in your own project is a separate use case.
 | Prepare a daily brief, preserve approved requirements and resume a handoff | [Daily work](operations/workkeel-daily-work.md) |
 | Check agreed requirements and visual evidence before declaring completion | [Completion evidence](operations/workkeel-evidence.md) |
 | Focus an independent review or recover an interrupted one | [Review assessment and recovery](operations/workkeel-review-assessment.md) |
-| Connect Codex/Claude instructions, check Skill use, plan Headroom | [Project context](extensions/workkeel-context.md) |
-| Inspect measurements and qualification limits | [Measurement definitions](operations/workkeel-observer.md#task-execution-measurements), [testing policy](getting-started/testing.md) |
-| Review dependencies and licenses | [Third-party notices](../THIRD_PARTY_NOTICES.md), [execution ADR](adr/0073-opt-in-workflow-execution.md) |
+| Connect Codex/Claude instructions and check Skill use | [Project context](extensions/workkeel-context.md) |
+| Inspect measurements and qualification limits | [Measurement definitions](operations/workkeel-usage.md#task-execution-measurements), [testing policy](getting-started/testing.md) |
+| Review dependencies and licenses | [Third-party notices](../THIRD_PARTY_NOTICES.md) |
 | Develop and test the framework | [Private development workspace](operations/framework-development.md), [testing](getting-started/testing.md), [contributing](../CONTRIBUTING.md) |
 | Keep source and task state separate | [Publication boundary](operations/publication-boundary.md), [public source decision](adr/0083-public-source-private-state.md), [foundations](adr/0091-foundations.md) |
 | Publish an npm release | [npm release operations](operations/npm-release.md) |
@@ -31,16 +31,17 @@ Workkeel in your own project is a separate use case.
 
 These subsystems are listed only by `workkeel help advanced`. The core lifecycle
 never needs them, and each one stays off until you use it. They are kept and tested,
-but may be removed in a later release if nobody uses them.
+but may be removed in a later release if nobody uses them. Workkeel 2.0.0
+removed the monitor, workspace, workflow and headroom subsystems; see the
+[changelog](../CHANGELOG.md).
 
 | Goal | Read |
 | --- | --- |
 | Validate, find and reuse lessons; inspect source changes | [Native Learning](extensions/workkeel-learning.md) |
 | Compare, activate and revalidate a project Skill version | [Versioned Skill learning](extensions/workkeel-skill-lifecycle.md) |
-| Observe tasks, read their documents, and compare recorded time and tokens | [Local observer workspace](operations/workkeel-observer.md) |
-| Manage several projects and repositories from the desktop | [Desktop workspace and controlled settings](operations/workkeel-workspace.md) |
+| Bind host sessions and collect recorded time and tokens | [Task metrics and native execution reports](operations/workkeel-usage.md) |
 | Deliver all mandatory repositories with distinct review and bounded repair | [Whole-goal coordination](operations/workkeel-goals.md), [opt-in improvement](operations/workkeel-autonomy.md) |
-| Explore optional workflow adapters and model routing | [Workflow and routing guide](operations/workkeel-workflows.md) (LangGraph runner is EXPERIMENTAL: outside the [1.0 compatibility guarantees](concepts/compatibility.md); we may change or remove it in a minor release), [native dispatch](operations/workkeel-native-dispatch.md) |
+| Record execution handoffs and requested models | [Native dispatch](operations/workkeel-native-dispatch.md) |
 
 ## Decision records
 

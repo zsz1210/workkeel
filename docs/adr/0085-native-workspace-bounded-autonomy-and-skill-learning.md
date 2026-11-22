@@ -75,6 +75,5 @@ sealed original standing grant can admit new bounded tasks. Capacity
 limits fail explicitly rather than silently dropping evidence. All maintainer data
 stays outside public source under ADR-0083.
 
-See [workspace operations](../operations/workkeel-workspace.md),
-[native Skill lifecycle](../extensions/workkeel-skill-lifecycle.md) and
+See the [native Skill lifecycle](../extensions/workkeel-skill-lifecycle.md) and
 [native learning](../extensions/workkeel-learning.md).

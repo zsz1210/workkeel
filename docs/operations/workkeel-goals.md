@@ -62,9 +62,6 @@ workkeel goal serve /private/project --id approved-goal
 
 `tick` performs one eligible step. `serve` watches local changes and reconciles
 missed events without idle inference. It runs in the foreground; stop with Ctrl-C.
-Closing a browser tab leaves its host running. Stopping the workspace host stops
-services it owns; a separately started CLI service has its own lifetime. The UI
-only confirms services it actually owns.
 
 ## Review and completion
 
@@ -102,8 +99,8 @@ cancel remain usable after execution authority drifts or expires. Resume/recover
 revalidate authority. Confirmed cancellation requires actual operation and native
 task quiescence; unknown effects require reconciliation.
 
-If a fixed model or another required capability is unavailable, the workspace
-overview identifies the affected goal as needing recovery. Open that goal, inspect
+If a fixed model or another required capability is unavailable, `goal show`
+identifies the affected goal as needing recovery. Open that goal, inspect
 the recorded reason, restore the required capability or authority, then reconcile
 and recover. Automatic dependency waits and deliberately paused goals do not
 create recovery decisions.
@@ -153,8 +150,7 @@ cannot rewrite this manifest or an in-flight turn; changed selections require a
 newly approved goal. Auto/fixed dimensions retain provider-specific meaning and
 must satisfy task, risk, data and host boundaries.
 
-See [bounded improvement](workkeel-autonomy.md) and
-[workspace operations](workkeel-workspace.md).
+See [bounded improvement](workkeel-autonomy.md).
 
 ## Browser verification for UI work
 

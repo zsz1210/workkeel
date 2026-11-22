@@ -57,7 +57,5 @@ or a tighter approved budget. At the limit, stop and ask the person to re-scope,
 approve a new task or cancel. Optional review scores remain statistical records;
 they do not replace findings, required checks or human gates.
 
-Use the CLI and repository files on their own, or optionally inspect records in
-the [workspace observatory](workkeel-workspace.md) with
-`workkeel workspace serve`. Viewing records does not start model work or approve
-a release.
+Use the CLI and repository files. Reading records does not start model work or
+approve a release.

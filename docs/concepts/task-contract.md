@@ -112,13 +112,12 @@ the quick start. Neither path authenticates a human merely from an attributed id
 
 ## Optional fixed gateway descriptor
 
-For executable workflows, `execution.model_connection` can instead be
+For adapter execution, `execution.model_connection` can instead be
 `{"kind":"policy","policy_ref":"docs/model-policy.json"}`. The policy reference
 must be an approved `environment.data.policy_refs` entry. An explicit subscription
 connection is `{"kind":"codex-subscription","model":"gpt-6-sol","effort":"medium"}`;
-it requires the Codex adapter and approved model-data access. See the
-[workflow reference](../operations/workkeel-workflows.md) for routing and actual
-host enforcement. A descriptor or read-only runtime plan alone never executes it.
+it requires the Codex adapter and approved model-data access. The host enforces
+the actual limits. A descriptor or read-only runtime plan alone never executes it.
 
 Model selection belongs to the adapter/model connection, not a job title. A
 gateway descriptor has this shape:

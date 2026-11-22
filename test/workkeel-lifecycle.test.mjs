@@ -9,7 +9,6 @@ import { createHash } from "node:crypto";
 import { initializeTaskProject } from "../src/workkeel-project.mjs";
 import { createNativeTask, mutateNativeTask, readNativeTask, diagnoseTaskProject, listTaskItems, evidenceStatus } from "../src/workkeel-tasks.mjs";
 import { readTaskSummary } from "../src/workkeel-task-summary.mjs";
-import { readMonitorSnapshot } from "../src/workkeel-monitor.mjs";
 import { formatJson, sha256 } from "../src/files.mjs";
 
 const cli = fileURLToPath(new URL("../bin/workkeel.mjs", import.meta.url));
@@ -287,15 +286,13 @@ for (const state of ['done', 'cancelled']) for (const fetchCandidate of [false, 
   const record = path.join(clone, '.ai-org/work-items/WK-one.json'), before = await fs.readFile(record);
   assert.equal((await diagnoseTaskProject(clone)).valid, true);
   const summary = await readTaskSummary(clone, 'WK-one');
-  const monitored = (await readMonitorSnapshot(clone)).tasks.find(task => task.id === 'WK-one');
   assert.deepEqual(summary.candidate_head, {head:git(clone, 'rev-parse', 'HEAD'), delivered:revision, matches:false, later_in_scope_paths:[], history_status:'unavailable'});
-  for (const item of [summary, monitored]) {
+  for (const item of [summary]) {
     assert.equal(item.task_state, state);
     assert.equal(item.needs_attention, false);
     assert.deepEqual(item.attention_reasons, []);
     assert.equal(item.quality.locally_accepted, state === 'done');
   }
-  assert.equal(monitored.read_status, 'available');
   assert.deepEqual(await fs.readFile(record), before, 'summary and monitor preserve the task record');
 });
 
@@ -364,8 +361,7 @@ for (const state of ['done', 'cancelled', 'release_gate']) test(`shallow merge c
   const record = path.join(clone, '.ai-org/work-items/WK-one.json'), before = await fs.readFile(record);
   assert.equal((await diagnoseTaskProject(clone)).valid, true);
   const summary = await readTaskSummary(clone, 'WK-one');
-  const monitored = (await readMonitorSnapshot(clone)).tasks.find(task => task.id === 'WK-one');
-  for (const item of [summary, monitored]) {
+  for (const item of [summary]) {
     assert.deepEqual(item.candidate_head, {head:git(clone, 'rev-parse', 'HEAD'), delivered:revision, matches:false, later_in_scope_paths:[], history_status:'unavailable'});
     assert.equal(item.task_state, state);
     assert.ok(!item.attention_reasons.includes('head-moved-past-candidate'));
@@ -427,11 +423,10 @@ for (const state of ['done', 'cancelled']) test(`${state} task with candidate ev
   const clone = await shallowClone(t, root, {fetchCandidate:false});
   const record = path.join(clone, '.ai-org/work-items/WK-one.json'), before = await fs.readFile(record);
   const summary = await readTaskSummary(clone, 'WK-one');
-  const monitored = (await readMonitorSnapshot(clone)).tasks.find(task => task.id === 'WK-one');
   const candidateEvidence = summary.evidence.filter(entry => entry.source === 'candidate');
   assert.ok(candidateEvidence.length);
   for (const entry of candidateEvidence) assert.equal(entry.status, 'history-unavailable');
-  for (const item of [summary, monitored]) {
+  for (const item of [summary]) {
     assert.equal(item.task_state, state);
     assert.equal(item.needs_attention, false);
     assert.deepEqual(item.attention_reasons, []);
@@ -450,8 +445,7 @@ for (const state of ['done', 'cancelled']) test(`later in-scope work leaves ${st
   const record = path.join(root, '.ai-org/work-items/WK-one.json'), before = await fs.readFile(record);
   const checkAttention = async () => {
     const summary = await readTaskSummary(root, 'WK-one');
-    const monitored = (await readMonitorSnapshot(root)).tasks.find(task => task.id === 'WK-one');
-    for (const item of [summary, monitored]) {
+    for (const item of [summary]) {
       assert.equal(item.task_state, state);
       assert.equal(item.needs_attention, false);
       assert.deepEqual(item.attention_reasons, []);

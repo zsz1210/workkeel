@@ -57,7 +57,7 @@ test("the repository's native modules reach only native and shared modules", () 
   const result = checkImportBoundary();
   assert.deepEqual(result.errors, []);
   assert.ok(result.entries.includes("src/workkeel-claude-review.mjs") && result.entries.includes("src/workkeel-dispatch-classifier.mjs"));
-  assert.ok(result.reached.every(file => file === "bin/workkeel.mjs" || /^src\/(?:workkeel-[^/]+|files|task-contract|headroom-adapter)\.mjs$/.test(file)));
+  assert.ok(result.reached.every(file => file === "bin/workkeel.mjs" || /^src\/(?:workkeel-[^/]+|files|task-contract)\.mjs$/.test(file)));
 });
 
 test("native imports of non-native modules are rejected, including transitive ones", async t => {
@@ -222,11 +222,10 @@ test("package subpaths that Node could normalize back into the repository are re
   }
 });
 
-test("built-ins, other packages and the browser module's served assets stay allowed", async t => {
+test("built-ins and other packages stay allowed", async t => {
   const root = await fixture(t, {
     "bin/workkeel.mjs": entry,
-    "src/workkeel-cli.mjs": 'import fs from "node:fs";\nimport fsp from "node:fs/promises";\nimport Ajv from "ajv";\nimport x from "ajv/dist/2020.js";\nawait import("@langchain/langgraph");\nawait import("@langchain/langgraph-checkpoint/dist/index.js");\nawait import("JSONStream");\n',
-    "src/workkeel-monitor-client.mjs": 'import { label } from "/view.mjs";\n'
+    "src/workkeel-cli.mjs": 'import fs from "node:fs";\nimport fsp from "node:fs/promises";\nimport Ajv from "ajv";\nimport x from "ajv/dist/2020.js";\nawait import("@scope/engine");\nawait import("@scope/engine-store/dist/index.js");\nawait import("JSONStream");\n'
   });
   assert.deepEqual(checkImportBoundary(root).errors, []);
 });
@@ -295,7 +294,7 @@ test("the repository's core modules import optional modules only through allowli
   assert.deepEqual(result.edges, OPTIONAL_IMPORT_ALLOWLIST.map(entry => `${entry.from} -> ${entry.to}`).sort());
   assert.ok(OPTIONAL_IMPORT_ALLOWLIST.every(entry => entry.reason.trim() && !entry.reason.includes("\n")));
   for (const file of ["src/workkeel-dispatch.mjs", "src/workkeel-host-usage.mjs", "src/workkeel-loop-run.mjs", "src/workkeel-model-routing.mjs",
-    "src/workkeel-learning-lifecycle.mjs", "src/workkeel-continuation.mjs", "scripts/workkeel-execution-capture.mjs"]) assert.ok(result.optional.includes(file), file);
+    "src/workkeel-learning-lifecycle.mjs", "src/workkeel-goals.mjs", "scripts/workkeel-execution-capture.mjs"]) assert.ok(result.optional.includes(file), file);
   for (const file of ["src/workkeel-tasks.mjs", "src/workkeel-execution-policy.mjs", "src/workkeel-codex-host.mjs", "src/workkeel-review-recovery.mjs"])
     assert.ok(!result.optional.includes(file), file);
 });

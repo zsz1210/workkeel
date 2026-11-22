@@ -36,9 +36,6 @@ export const COMMAND_FORMS = [
   form("start", [], "request?"),
   form("init", [], "policy!"),
   form("init", [], "principal? builder? reviewer?"),
-  form("workspace", ["show"], ""),
-  form("workspace", ["serve"], "request?"),
-  form("workspace", ["create", "register", "remove", "integration"], "request!"),
   // --project or --projects-file selects the multi-project report, which takes no positional target.
   form("stats", [], "report! days? previous? cutoff! timezone! project? projects-file? strict?", { report: true }),
   form("stats", [], ""),
@@ -81,12 +78,10 @@ export const COMMAND_FORMS = [
   form("runtime", ["plan"], "id!"),
   form("skills", ["audit"], "request!"),
   form("instructions", ["preview"], ""),
-  form("instructions", ["apply"], "fingerprint!"),
-  form("workflow", ["metrics", "show"], "id!"),
-  form("workflow", ["plan", "run", "continuation-plan", "continue"], "request!"),
-  form("workflow", ["cancel", "recover-lock"], "id! request!"),
-  form("headroom", ["view", "read"], "request!")
+  form("instructions", ["apply"], "fingerprint!")
 ];
+// Commands removed in 2.0.0. The CLI rejects them before it parses any argument.
+export const REMOVED_COMMANDS = ["monitor", "workspace", "workflow", "headroom"];
 
 // Task operations that build a request from flags and need --summary (src/workkeel-cli-flags.mjs).
 const SUMMARY_ACTIONS = new Set(["release", "handoff", "review", "rework", "close", "cancel"]);
@@ -280,8 +275,7 @@ function contractProblems(parsed) {
 export function validateCommand(args, forms = COMMAND_FORMS) {
   if (!args.length || ["help", "--help", "-h"].includes(args[0])) return args.length > 2 || (args[1] && args[1] !== "advanced") ? ["help takes no argument but advanced"] : [];
   if (["version", "--version"].includes(args[0])) return args.length > 1 ? ["version takes no argument"] : [];
-  // The monitor reads its own arguments (src/workkeel-monitor.mjs): at most one project path.
-  if (args[0] === "monitor") return args.length > 2 || args.slice(1).some(arg => arg.startsWith("-")) ? ["monitor takes at most one project path"] : [];
+  if (REMOVED_COMMANDS.includes(args[0])) return [`${args[0]} was removed in Workkeel 2.0.0`];
   let parsed;
   try { parsed = parseCommandLine(args); } catch (error) { return [error.message]; }
   const given = Object.keys(parsed.options).map(name => name.slice(2));

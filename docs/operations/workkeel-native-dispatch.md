@@ -49,10 +49,11 @@ reasoning scale. Host capabilities and permitted data classes must match.
 
 ### Layered settings for new operations
 
-The desktop policy editor independently configures model, reasoning and service
-as inherited, automatic or fixed. It can narrow the model catalog already approved
-for the task. A saved draft needs exact-version approval; neither save nor approval
-starts an operation. See [desktop settings](workkeel-workspace.md).
+A model policy independently configures model, reasoning and service as
+inherited, automatic or fixed. It can narrow the model catalog already approved
+for the task. Save a draft with `workkeel model-policy draft`. A saved draft needs
+exact-version approval with `workkeel model-policy approve`; neither save nor
+approval starts an operation.
 
 To authorize runtime adoption, a new pinned dispatch policy may include:
 
@@ -104,7 +105,7 @@ select and enforce the declared settings before reporting them.
    host's agent-start tool with only necessary context and approved scope. If the
    host cannot select that tuple, report the mismatch; never silently inherit the
    coordinator model. The host still enforces filesystem, tools and networking.
-5. Before product work, use the [capture helper](workkeel-observer.md#capture-an-operation-from-start-to-finish)
+5. Before product work, use the [capture helper](workkeel-usage.md#capture-an-operation-from-start-to-finish)
    to bind the returned exact thread/turn and start its activity clock. Hosts that
    already measure intervals can use `dispatch bind` with `{execution_id,source}`.
    Binding rechecks active dependency/conflict limits. A local runner or
@@ -177,12 +178,12 @@ implement the same interface. Execution through a gateway is a separate choice.
 Immutable tickets are ignored project-local intent records under `.ai-org/dispatch`,
 bounded to 1,024 entries. A ticket does not prove execution. Usage bindings record
 the exact host source, selected/reported model and activity kind. Export deliberately;
-the observer serves no raw prompt, private source path or credential.
+task metrics contain no raw prompt, private source path or credential.
 
 Usage analysis sums operation durations; task execution time takes their interval
 union. Parallel operations can overlap, including across kinds. Explicit activity
 labels take precedence over old lifecycle attribution. Unknown, partial and measured
-zero remain distinct. See [native reporting](workkeel-observer.md#native-execution-reports).
+zero remain distinct. See [native reporting](workkeel-usage.md#native-execution-reports).
 
 Hosts must actually consume tickets and report execution. Workkeel cannot intercept
 arbitrary desktop tool calls. Repository instructions require this path for new
@@ -589,8 +590,7 @@ the opt-in role preflight for dispatched roles.
 For future real product work, record the same fields and review/repair outcomes.
 Do not invent an unrelated product task or model benchmark to fill the dashboard.
 Compare only compatible recorded scopes; publishing, user waiting and unmeasured
-work must remain explicit. This helper does not alter the observer UI or learning
-promotion rules.
+work must remain explicit. This helper does not alter learning promotion rules.
 
 ## Direct and prepared delivery requests
 

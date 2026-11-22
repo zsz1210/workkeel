@@ -25,7 +25,7 @@ including vulnerability details.
   review evidence and machine settings in a separate private workspace outside
   the public checkout. Git-ignored paths are not a storage boundary. Preserve a
   private backup; never attach those records to public issues, PRs or releases.
-- Optional adapters and observers must stay within their documented access
+- Optional adapters must stay within their documented access
   and authority boundaries. Review their specific guides before enabling them.
 
 See the [source/private-state decision](docs/adr/0083-public-source-private-state.md)

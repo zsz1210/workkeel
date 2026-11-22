@@ -119,7 +119,7 @@ at that stage it is `verified`, `failed` or `unknown`. A later outcome may repor
 counterexample even after guidance becomes ineligible. These are reported facts,
 not independent review or lifecycle acceptance.
 
-## Observer projections and recommendation boundaries
+## Read-only projections and recommendation boundaries
 
 List/search/impact return `workkeel.learning-view/v1`, `items`, `uses`,
 `authority: observation-only`, `mutation_status: no-write`,

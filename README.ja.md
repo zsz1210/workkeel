@@ -132,10 +132,22 @@ Must fix は進行を止める指摘、Consider／Note／Dismiss は記録する
 `high` と `critical` には Codex／Claude による独立した相互レビューを求めます。
 CLI は登録済みのモデルファミリーを検査しますが、それだけでは相互レビューの実施を証明できません。
 
+## 次のリリースでの互換性のない変更
+
+次のリリース 2.0.0 では、任意のコマンドを 4 つ削除します。ソースにはすでに反映済みですが、npm の `latest`（1.1.1）にはまだ含まれていません。
+
+| 削除するコマンド | 代わりの方法 |
+| --- | --- |
+| `workkeel monitor` | `workkeel status` と `workkeel task show\|summary\|metrics` |
+| `workkeel workspace` | 各プロジェクトで `workkeel status` を実行 |
+| `workkeel workflow` | エージェントのホストで作業し、`workkeel task claim\|handoff\|review\|close` で記録 |
+| `workkeel headroom` | ツールの出力を直接読む |
+
+削除したコマンドを実行すると、`command-removed` エラーと代わりの方法を表示し、終了コード 1 で終わります。プロジェクトのファイルは読み書きしません。既存の記録はそのまま残ります。詳しくは [CHANGELOG](CHANGELOG.md) を参照してください。
+
 ## 任意の追加機能
 
-- **[Workspace 観測画面](docs/operations/workkeel-workspace.md)：**`workkeel workspace serve` で起動し、プロジェクトの記録を閲覧します。待機中のモデル呼び出しはありません。別の[読み取り専用オブザーバー](docs/operations/workkeel-observer.md)は `workkeel monitor` で起動します。
-- **[ワークフロー／LangGraph](docs/operations/workkeel-workflows.md)：**承認済みのグラフとモデルポリシーに従い、再開可能なステップを実行するランナーを選べます。実験的機能（EXPERIMENTAL）：[1.0 の互換性保証](docs/concepts/compatibility.md)の対象外で、マイナーリリースで変更または削除する場合があります。
+- **[タスク計測とネイティブ実行レポート](docs/operations/workkeel-usage.md)：**`workkeel task metrics` で記録済みのトークンと時間を読み取ります。`workkeel usage` はホストのレポートを紐づけて収集します。
 - **[Workkeel Loop L1 レポート](docs/operations/loop-trial.md)：**`workkeel stats --report --cutoff 2026-10-19T00:00:00Z --timezone UTC` が読み取り専用の週次レポートを生成します。モデル／API の費用はかかりません。`--project` を繰り返すと、複数のプロジェクトをまとめて集計できます。0.1.0-beta.1 のタスク記録も、変更せずに読み取ります。
 - **[ネイティブディスパッチ](docs/operations/workkeel-native-dispatch.md)：**実行の引き継ぎと指定モデルを記録し、何が実行されたかをホストが報告します。
 - **[Bot レイヤーの参考運用](docs/operations/reference-usage-bot-layer.md)：**プロジェクト Bot、Claude Code、Codex を人の承認で連携させる一例です。コアには含まれません。

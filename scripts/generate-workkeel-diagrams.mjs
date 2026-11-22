@@ -19,14 +19,14 @@ const layers = [
     nodes: [["Goal + acceptance", "One bounded change", "with checkable results"], ["Environment + authority", "Read/write roots, tools,", "data policy and expiry"], ["Task contract", "An approved record", "beside your code"]],
     note: "Principle: repository-native state. A conversation is not the source of authority." },
   { title: "Coordination", question: "Who can act next, and which model will run?", badge: "CORE + OPT-IN", color: "#e6f3ec", accent: "#226b4d",
-    nodes: [["Core task lifecycle", "Claim → handoff → review", "Guard each transition"], ["Optional graph", "LangGraph orders steps", "and pauses for approval"], ["Model policy", "Node override → rule", "→ approved default"]],
-    note: "Principle: state machines + graph orchestration. Core use does not require a graph." },
+    nodes: [["Core task lifecycle", "Claim → handoff → review", "Guard each transition"], ["Native dispatch", "Records the handoff", "and requested model"], ["Model policy", "Node override → rule", "→ approved default"]],
+    note: "Principle: state machines. Core use does not require dispatch." },
   { title: "Execution", question: "How does an agent actually do the work?", badge: "EXISTING RUNTIME", color: "#fff1df", accent: "#835316",
     nodes: [["Coding runtime", "Native agent by default", "Codex adapter: opt-in"], ["Agent feedback loop", "Read → decide → use tools", "→ observe → continue"], ["Approved environment", "Files, tests and tools", "Host enforces permissions"]],
     note: "Principle: harness engineering. The runtime owns tool use; a prompt is not a sandbox." },
   { title: "Evidence + acceptance", question: "Did the delivered change meet the agreement?", badge: "CORE / LOCAL", color: "#f0eafa", accent: "#65508a",
     nodes: [["Execution evidence", "Results, time and usage", "Unknown values stay null"], ["Exact candidate review", "Git revision + checks", "Declared review separation"], ["Accepted task", "Persist review + closeout", "Keep the failure history"]],
-    note: "Principle: evidence-based verification. A completed graph is not an accepted task." }
+    note: "Principle: evidence-based verification. A completed run is not an accepted task." }
 ];
 
 // Keep the hand-drawn layouts here as the dependency-free authoring source.
@@ -154,9 +154,9 @@ export function workflowSvg(mobile = false) {
 }
 
 export function coreOptionalSvg() {
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="1216" height="660" viewBox="0 0 1216 660" role="img" aria-labelledby="title desc">
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="1216" height="552" viewBox="0 0 1216 552" role="img" aria-labelledby="title desc">
   <title id="title">Workkeel core and optional parts</title>
-  <desc id="desc">The core is repository files for task contracts, evidence and policy, plus the Workkeel CLI. Your existing coding tool sits beside the core and enforces execution permissions. Dashed boxes are optional: workspace observatory using workkeel workspace serve, workflow runner using LangGraph, Workkeel Loop L1 report, native dispatch, and read-only observer. Core task coordination requires none of them.</desc>
+  <desc id="desc">The core is repository files for task contracts, evidence and policy, plus the Workkeel CLI. Your existing coding tool sits beside the core and enforces execution permissions. Dashed boxes are optional: Workkeel Loop L1 report and native dispatch. Core task coordination requires neither of them.</desc>
   <defs>
     <marker id="arrow" markerWidth="9" markerHeight="9" refX="8" refY="4" orient="auto"><path d="M0 0L8 4L0 8" fill="none" stroke="#536a7c" stroke-width="1.5"/></marker>
     <style>
@@ -188,23 +188,11 @@ export function coreOptionalSvg() {
   <text x="32" y="413" font-size="23" font-weight="500">Optional · dashed boxes · none required for core task coordination</text>
   <g transform="translate(32 437)">
     <rect class="optional" width="368" height="91" rx="12"/>
-    <text x="18" y="34" font-size="22" font-weight="500">Workspace observatory</text><text x="18" y="67" font-size="19">workkeel workspace serve</text>
+    <text x="18" y="34" font-size="22" font-weight="500">Workkeel Loop L1 report</text><text x="18" y="67" font-size="19">Weekly, read-only, zero API spend</text>
   </g>
   <g transform="translate(424 437)">
     <rect class="optional" width="368" height="91" rx="12"/>
-    <text x="18" y="34" font-size="22" font-weight="500">Workflow runner / LangGraph</text><text x="18" y="67" font-size="19">Approved graphs + recoverable steps</text>
-  </g>
-  <g transform="translate(816 437)">
-    <rect class="optional" width="368" height="91" rx="12"/>
-    <text x="18" y="34" font-size="22" font-weight="500">Workkeel Loop L1 report</text><text x="18" y="67" font-size="19">Weekly, read-only, zero API spend</text>
-  </g>
-  <g transform="translate(32 551)">
-    <rect class="optional" width="368" height="85" rx="12"/>
-    <text x="18" y="34" font-size="22" font-weight="500">Native dispatch</text><text x="18" y="65" font-size="19">Execution handoffs + host reports</text>
-  </g>
-  <g transform="translate(424 551)">
-    <rect class="optional" width="368" height="85" rx="12"/>
-    <text x="18" y="34" font-size="22" font-weight="500">Read-only observer</text><text x="18" y="65" font-size="19">workkeel monitor · no model calls</text>
+    <text x="18" y="34" font-size="22" font-weight="500">Native dispatch</text><text x="18" y="67" font-size="19">Execution handoffs + host reports</text>
   </g>
 </svg>
 `;
@@ -224,7 +212,7 @@ export function architectureSvg(mobile = false) {
         body += rect(28, cy, 334, 99, "#ffffff", "#c8d3dc", 10) + text(42, cy + 28, label, 19, 600) + lines(42, cy + 55, [a, b], 16, 23);
         if (j < 2) body += arrow(`M195 ${cy + 100}V${cy + 114}`);
       });
-      const notes = ["Repository records are the authority.", "Core use does not require a graph.", "The host enforces tool permissions.", "Execution completed ≠ task accepted."];
+      const notes = ["Repository records are the authority.", "Core use does not require dispatch.", "The host enforces tool permissions.", "Execution completed ≠ task accepted."];
       body += text(28, y + 460, notes[i], 15, 500);
     } else {
       body += text(56, y + 43, `0${i + 1}`, 26, 600, layer.accent) + text(112, y + 43, layer.title, 29, 600);
@@ -240,8 +228,8 @@ export function architectureSvg(mobile = false) {
     if (i < 3) body += arrow(`M${w / 2} ${y + laneHeight + 2}V${y + laneHeight + 24}`);
   });
   const end = 108 + 4 * (laneHeight + 26);
-  body += text(mobile ? 20 : 32, end + 19, mobile ? "Optional persistence: SQLite + journal" : "Optional runner persistence: SQLite checkpoints + dispatch journal. Uncertain effects stop for reconciliation.", mobile ? 16 : 21);
-  return shell(w, end + 48, "Workkeel architecture in four explanatory layers", "Task agreement defines authority. Coordination guards task states and optionally routes graph nodes. A coding runtime operates host-approved tools. Evidence and exact-candidate review determine acceptance. Optional runner checkpoints are not acceptance records.", body);
+  body += text(mobile ? 20 : 32, end + 19, mobile ? "Optional record: dispatch journal" : "Optional record: dispatch journal. Uncertain effects stop for reconciliation.", mobile ? 16 : 21);
+  return shell(w, end + 48, "Workkeel architecture in four explanatory layers", "Task agreement defines authority. Coordination guards task states and optionally records dispatch. A coding runtime operates host-approved tools. Evidence and exact-candidate review determine acceptance. Dispatch records are not acceptance records.", body);
 }
 
 export const generatedDiagrams = () => ({

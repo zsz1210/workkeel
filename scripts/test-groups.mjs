@@ -16,13 +16,10 @@ export const dailyFiles = [...new Set([...fastFiles, ...[
 // Tests of the optional subsystems listed by `workkeel help advanced`. The core
 // lifecycle never needs them; the full suite still runs them.
 export const optionalFiles = [
-  "headroom-adapter", "headroom-preservation", "workkeel-autonomy", "workkeel-background-collector", "workkeel-capture-observer",
-  "workkeel-desktop-product", "workkeel-dispatch", "workkeel-dispatch-classifier", "workkeel-dispatch-history",
-  "workkeel-execution-capture", "workkeel-execution-visuals", "workkeel-flow-browser", "workkeel-goal-runtime", "workkeel-goals",
-  "workkeel-host-observer", "workkeel-host-usage", "workkeel-improvement-cycle", "workkeel-learning", "workkeel-learning-lifecycle",
-  "workkeel-learning-observer", "workkeel-learning-receipts", "workkeel-model-policy", "workkeel-model-routing", "workkeel-monitor", "workkeel-monitor-analytics",
-  "workkeel-monitor-catalogue", "workkeel-monitor-time", "workkeel-observer", "workkeel-observer-index", "workkeel-retention", "workkeel-scoring",
-  "workkeel-tailnet", "workkeel-usage-scope", "workkeel-workflows", "workkeel-workspace", "workkeel-workspace-hooks"
+  "workkeel-autonomy", "workkeel-background-collector", "workkeel-desktop-product", "workkeel-dispatch", "workkeel-dispatch-classifier",
+  "workkeel-dispatch-history", "workkeel-execution-capture", "workkeel-goal-runtime", "workkeel-goals", "workkeel-host-usage",
+  "workkeel-improvement-cycle", "workkeel-learning", "workkeel-learning-lifecycle", "workkeel-learning-receipts", "workkeel-model-policy",
+  "workkeel-model-routing", "workkeel-retention", "workkeel-scoring", "workkeel-usage-scope"
 ].map((name) => `test/${name}.test.mjs`);
 
 // New tests default to core; the group also drives changed-file selection.

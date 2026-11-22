@@ -1,7 +1,4 @@
 import test from 'node:test';
-import {projectWorkspaceGoals} from '../src/workkeel-workspace.mjs';
-import {createWorkspaceHooks} from '../src/workkeel-workspace-hooks.mjs';
-import {buildExecutionVisual} from '../src/workkeel-execution-visuals.mjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import fsSync from 'node:fs';
@@ -122,13 +119,10 @@ test('whole goal continues first FAIL, native rework, fresh candidate, distinct 
   const f=await fixture(t),adapter=fixtureAdapter();let failed;
   for(let n=0;n<12;n++){await runNativeGoalStep(f.target,f.manifest.id,{adapter});failed=await readNativeGoal(f.target,f.manifest.id);if(failed.mandatory_components[0].review?.judgment==='fail')break;}
   assert.equal(failed.mandatory_components[0].review.judgment,'fail');
-  const registry={projects:[{id:'project-0',task_root:f.target,repositories:[{id:'repo-0',path:f.target,scope:'.'}]}]},projected=projectWorkspaceGoals([failed],registry,'project-0')[0],row=projected.operations.find(op=>op.review_judgment==='fail');
-  assert.ok(row);assert.equal(row.state,'completed','successful host execution does not mean a passing verdict');assert.equal(buildExecutionVisual(projected.operations).nodes[3].state,'failed');assert.equal(projected.mandatory_components[0].review_judgment,'fail');
   const accepted=await finish(f,adapter),task=await readNativeTask(f.target,'WK-component-0');
   assert.equal(task.state,'done');assert.equal(task.attempts[0].kind,'rejected');assert.equal(task.attempts[0].review.judgment,'fail');assert.notEqual(task.attempts[0].delivery.revision,task.delivery.revision);
   assert.equal(task.review.actor.agent_id,'reviewer');assert.equal(accepted.whole_acceptance,'accepted');assert.equal(accepted.components[0].failures[0].kind,'review');assert.equal(accepted.mandatory_components.length,1);assert.equal(accepted.published,'not-performed');
   const failProof=task.attempts[0].review.evidence.find(p=>p.path.includes('goal-review-'));assert.equal(JSON.parse((await readTaskFile(f.target,failProof.path)).content).native_request.judgment,'fail');
-  const repaired=projectWorkspaceGoals([accepted],registry,'project-0')[0];assert.deepEqual(repaired.mandatory_components[0].reviews.map(value=>value.judgment),['fail','pass']);assert.deepEqual(repaired.operations.filter(op=>op.review_judgment).map(op=>op.review_judgment),['fail','pass']);assert.equal(buildExecutionVisual(repaired.operations,{review_judgments:repaired.mandatory_components.map(value=>value.review_judgment)}).nodes[3].state,'review-passed');
 });
 
 test('three repositories remain partial until every required task and exact integration set are accepted',async t=>{
@@ -225,8 +219,7 @@ test('whole acceptance becomes stale when an approved interface differs from its
   const f=await fixture(t),adapter=fixtureAdapter({firstFail:false});assert.equal((await finish(f,adapter)).accepted,true);
   await fs.appendFile(f.target+'/src/value.mjs','// Unreviewed interface change\n');const stale=await readNativeGoal(f.target,f.manifest.id);assert.equal(stale.accepted,false);assert.equal(stale.whole_acceptance,'stale');assert.equal(stale.mandatory_components[0].accepted,false);
   // A stale historical acceptance is not an execution fault: the goal stays done and needs no recovery.
-  assert.equal(stale.status,'done');const registry={projects:[{id:'project-0',task_root:f.target,repositories:[{id:'repo-0',path:f.target,scope:'.'}]}]},projected=projectWorkspaceGoals([stale],registry,'project-0')[0];
-  assert.equal(projected.acceptance,'stale');assert.equal(projected.requires_recovery,false);
+  assert.equal(stale.status,'done');
 });
 
 test('separate scheduler process cannot double-start an operation owned by a live process',async t=>{
@@ -318,23 +311,6 @@ test('service close drains the in-flight operation and callback and discards pen
   const view=await readNativeGoal(f.target,f.manifest.id),runtime=view.operations.filter(op=>op.kind==='runtime');
   assert.equal(runtime.length,1);assert.equal(runtime[0].result.reason,'Result persisted before close resolves');
   assert.equal(calls,1);assert.equal(reconciliations,0);assert.deepEqual(errors.map(e=>e.message),[]);
-});
-
-test('workspace goal hook close drains in-flight writes before clearing service records',async t=>{
-  const f=await fixture(t),entered=Promise.withResolvers(),release=Promise.withResolvers();
-  const watchMock=t.mock.method(fsSync,'watch',()=>({close(){}}));syncBuiltinESMExports();t.after(()=>{watchMock.mock.restore();syncBuiltinESMExports();});
-  const adapter=createTrustedGoalAdapter({id:'draining-hook-fixture',assertCapabilities:async()=>{},execute:async()=>{entered.resolve();await release.promise;return {status:'unknown',reason:'Hook shutdown persisted this result'};},reconcile:async()=>({status:'unknown'}),cancel:async()=>({status:'cancelled'})});
-  const hooks=createWorkspaceHooks({goalAdapter:adapter}),context={project:{task_root:f.target},actor:builder};
-  t.after(async()=>{release.resolve();await hooks.goals.close();});
-  await hooks.goals.execute({...context,action:'goals.start',expectedVersion:(await readNativeGoal(f.target,f.manifest.id)).version,payload:{goal_id:f.manifest.id}});
-  await entered.promise;
-  let settled=false;const closing=Promise.resolve(hooks.goals.close()).then(()=>{settled=true;});
-  await new Promise(resolve=>setImmediate(resolve));assert.equal(settled,false,'hook close must wait for the active step');
-  assert.equal((await hooks.goals.read(context)).services[0].state,'running-in-this-host','service is retained until draining finishes');
-  release.resolve();await closing;
-  const view=await readNativeGoal(f.target,f.manifest.id);
-  assert.equal(view.operations.find(op=>op.kind==='runtime').result.reason,'Hook shutdown persisted this result');
-  assert.equal((await hooks.goals.read(context)).services[0].state,'not-confirmed-in-this-host');
 });
 
 test('service close synchronously clears a queued tick before any operation starts',async t=>{

@@ -3,13 +3,13 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import {execFileSync} from 'node:child_process';
-import {createMonitorFixture} from '../scripts/workkeel-monitor-fixture.mjs';
+import {createTaskFixture} from './fixtures/workkeel-task-fixture.mjs';
 import {readNativeTask,mutateNativeTask} from '../src/workkeel-tasks.mjs';
 import {recordTaskObservation,readTaskSummary} from '../src/workkeel-task-summary.mjs';
 import {executionDigest} from '../src/workkeel-execution-policy.mjs';
 
 async function fixture(t) {
-  const root=await createMonitorFixture();t.after(()=>fs.rm(root,{recursive:true,force:true}));
+  const root=await createTaskFixture();t.after(()=>fs.rm(root,{recursive:true,force:true}));
   const id='WK-unobserved',actor={agent_id:'builder',principal_id:'owner'};
   await fs.writeFile(path.join(root,'docs/source-review.md'),'Synthetic source review findings.');
   execFileSync('git',['-C',root,'add','.']);

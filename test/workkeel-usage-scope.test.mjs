@@ -1,7 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {nativeUsageScope} from '../src/workkeel-host-usage.mjs';
-import {operationRows,aggregateRows} from '../src/workkeel-monitor-analytics.mjs';
 const fixture=()=>({source:{kind:'codex-rollout'},source_status:'observed',turn_started_at:'2026-01-01T00:00:00Z',turn_ended_at:'2026-01-01T00:01:00Z',turn_terminal:'completed',created_at:'2026-01-01T00:00:20Z',claim_at:'2026-01-01T00:00:10Z',capture_turn_from_start:false,unassigned_responses:1,usage:{input_tokens:40,output_tokens:10,cached_input_tokens:30},last_cumulative:{input_tokens:100,output_tokens:20,cached_input_tokens:70}});
 test('turn reference keeps recorded usage separate, preserving excluded zero and missing fields',()=>{
  const b=fixture(),before=structuredClone(b),scope=nativeUsageScope(b);
@@ -23,10 +22,4 @@ test('source health, absent metadata, pending and closed remain distinct',()=>{
 test('unsafe totals and cache counts never produce misleading numeric references',()=>{
  const b=fixture();b.last_cumulative={input_tokens:Number.MAX_SAFE_INTEGER,output_tokens:10,cached_input_tokens:Number.MAX_SAFE_INTEGER+1};const r=nativeUsageScope(b).turn_reference;
  assert.equal(r.usage.total_tokens,null);assert.equal(r.usage.cached_input_tokens,null);
-});
-test('turn references cannot enter task/model aggregates or multiply on shared references',()=>{
- const b=fixture(),scope=nativeUsageScope(b),operation={operation_id:'one',runtime_model:'model',usage:b.usage,usage_scope:scope};
- const rows=operationRows([{id:'WK-one',runs:[{run_id:'run',operations:[operation,{...operation,operation_id:'two'}]}]}]);
- assert.equal(rows[0].usage_scope.turn_reference.usage.total_tokens,120);
- const total=aggregateRows(rows,'model')[0];assert.equal(total.tokens,100);assert.equal(total.token_breakdown.total,100);assert.equal(total.turn_reference,undefined);
 });

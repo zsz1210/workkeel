@@ -3,7 +3,6 @@
 Autonomy observes approved sources, selects bounded improvement work and delegates
 all delivery to [native goals](workkeel-goals.md). Goal operations own planning,
 execution, verification, independent review, repair, acceptance and cancellation.
-The generic [workflow engine](workkeel-workflows.md) remains available separately.
 
 ## Trigger and control
 
@@ -135,9 +134,8 @@ First complete the source goal. Enable project autonomy with
 `admission:{enabled:true,goal_id:"approved-goal"}` and a bounded `discovery` policy
 that only narrows this grant. Add `goal_id` to common mutation requests and use
 the sealed original controller claim/hash returned by `goal show`; settings
-deliberately remain usable after that claim ends. The UI selects an approved goal
-without requiring typed claim identities. Saving settings does not start inference:
-start the background service from the workspace or run `autonomy serve` explicitly.
+deliberately remain usable after that claim ends. Saving settings does not start
+inference: run `autonomy serve` explicitly.
 
 Changed approved sources create a bounded read-only discovery goal. Its structured
 report and distinct review must be accepted before admission. Each proposal has
@@ -156,8 +154,8 @@ are never mislabeled as currently accepted.
 
 After pending work and eligible proposals settle, an exhausted discovery round
 allowance is reported even if approved sources are unchanged. It remains exhausted
-after a new source event; the service does not renew its own grant. The workspace
-shows the limit and retained results so a new authorized round is an explicit choice.
+after a new source event; the service does not renew its own grant. `autonomy tick`
+reports the limit as `discovery-round-budget`, so a new authorized round is an explicit choice.
 
 ### Extend an approved discovery allowance
 

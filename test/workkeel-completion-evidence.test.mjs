@@ -4,13 +4,13 @@ import fs from 'node:fs/promises';
 import {createHash} from 'node:crypto';
 import {execFileSync,spawnSync} from 'node:child_process';
 import {fileURLToPath} from 'node:url';
-import {createMonitorFixture} from '../scripts/workkeel-monitor-fixture.mjs';
+import {createTaskFixture} from './fixtures/workkeel-task-fixture.mjs';
 import {readNativeTask} from '../src/workkeel-tasks.mjs';
 import {readNativeGit} from '../src/workkeel-project.mjs';
 import {checkCompletionEvidence} from '../src/workkeel-completion-evidence.mjs';
 
 async function fixture(t){
-  const root=await fs.realpath(await createMonitorFixture({extended:true}));t.after(()=>fs.rm(root,{recursive:true,force:true}));
+  const root=await fs.realpath(await createTaskFixture({extended:true}));t.after(()=>fs.rm(root,{recursive:true,force:true}));
   const task=await readNativeTask(root,'WK-working'),candidate=(await readNativeGit(root,['rev-parse','HEAD'])).trim(),dir='.ai-org/artifacts/WK-working';await fs.mkdir(root+'/'+dir,{recursive:true});
   const text=Buffer.from('Synthetic observed UI record; fixture evidence is not actual visual acceptance.\n'),png=Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Wl6fSAAAAAASUVORK5CYII=','base64');
   await fs.writeFile(root+'/'+dir+'/observation.txt',text);await fs.writeFile(root+'/'+dir+'/screenshot.png',png);

@@ -11,6 +11,14 @@ describe mechanisms that Workkeel no longer ships and are not current behavior.
 [ADR-0083](0083-public-source-private-state.md) keeps its own exact wording and
 governs the public and private boundary.
 
+Workkeel 2.0.0 removed the monitor, workspace, workflow and headroom subsystems.
+ADR-0071, ADR-0073, ADR-0074 and ADR-0080 described only those subsystems, so
+they were removed from this tree and remain available in Git history. ADR-0075,
+ADR-0078, ADR-0079, ADR-0085 and ADR-0086 keep their original wording. Their
+parts about the monitor, the observer, the desktop workspace or workflow runs no
+longer describe current behavior. ADR-0091 still names `npm run test:browser`;
+Workkeel 2.0.0 removed that script with the monitor.
+
 ## Foundations and boundaries
 
 - [ADR-0091: Foundations carried forward from the Temple-era decisions](0091-foundations.md)
@@ -36,12 +44,8 @@ governs the public and private boundary.
 
 ## Execution, dispatch and observation
 
-- [ADR-0071: Opt-in tool-output compression with exact original readback](0071-opt-in-tool-output-compression.md)
-- [ADR-0073: Opt-in workflow execution with explicit model and context policies](0073-opt-in-workflow-execution.md)
 - [ADR-0081: Native dispatch and retained reading state](0081-native-dispatch-and-reading-state.md)
-- [ADR-0074: Read existing task measurements on demand](0074-on-demand-task-monitor.md)
 - [ADR-0078: Observer task lifecycle measurements](0078-observer-task-lifecycle-measurements.md)
-- [ADR-0080: Read existing records in a local observer workspace](0080-read-only-observer-workspace.md)
 - [ADR-0085: Native workspace, bounded autonomy and versioned Skill learning](0085-native-workspace-bounded-autonomy-and-skill-learning.md)
 
 ADR-0090 was originally filed as a second `0071`; it was renumbered without

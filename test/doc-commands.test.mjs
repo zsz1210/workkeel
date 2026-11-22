@@ -87,7 +87,7 @@ test("invalid examples are flagged: unknown commands, actions and flags, and fai
     "task handoff --id WK-1 --summary s --rollback=": "task handoff --rollback must not be empty",
     "task new --goal= --acceptance ok": "--goal is required by this form",
     "task new --goal g --acceptance=": "task new --acceptance must not be empty",
-    "workspace create --request=": "--request is required by this form",
+    "goal create --request=": "--request is required by this form",
     "goal show --id=": "--id is required by this form",
     "task new --goal g --acceptance a --write ../outside": "task contract: /environment/write_paths must contain normalized repository-relative roots",
     "task new --goal g --acceptance a --write src/**": "task contract: /environment/write_paths must contain normalized repository-relative roots",
@@ -102,14 +102,17 @@ test("invalid examples are flagged: unknown commands, actions and flags, and fai
     "task rework --id WK-1 --summary s --mode fresh": "--mode \"fresh\": must be source or evidence-only",
     "intake apply --request b.json --fingerprint abc": "--fingerprint \"abc\": must be a preview fingerprint",
     "instructions preview --fingerprint <f>": "--fingerprint is not accepted by this form",
-    "workspace show --request r.json": "--request is not accepted by this form",
+    "autonomy show --request r.json": "--request is not accepted by this form",
     "task create --source c.json --goal g": "is not accepted by this form",
     "stats --report --cutoff 2026-10-19 --timezone UTC": "needs an ISO time with an explicit UTC offset",
     "stats --report --cutoff 2026-10-19T00:00:00Z --timezone Mars/Base": "must be an IANA time zone",
     "stats . --report --project ../a --cutoff 2026-10-19T00:00:00Z --timezone UTC": "a multi-project report takes --project or --projects-file, not a positional target",
     "stats --project ../a": "--report is required by this form",
-    "monitor . --port 1": "monitor takes at most one project path",
-    "workspace create --request ./workspace.json": "--request \"./workspace.json\": must be a normalized repository-relative file path",
+    "monitor .": "monitor was removed in Workkeel 2.0.0",
+    "workspace serve": "workspace was removed in Workkeel 2.0.0",
+    "workflow plan --request w.json": "workflow was removed in Workkeel 2.0.0",
+    "headroom view --request v.json": "headroom was removed in Workkeel 2.0.0",
+    "goal create --request ./goal.json": "--request \"./goal.json\": must be a normalized repository-relative file path",
     "task create --source /tmp/contract.json": "--source \"/tmp/contract.json\": must be a normalized repository-relative file path",
     "init --policy ../policy.json": "--policy \"../policy.json\": must be a normalized repository-relative file path",
     "task claim --id WK-1 --request a/../claim.json": "--request \"a/../claim.json\": must be a normalized repository-relative file path",
@@ -124,8 +127,8 @@ test("invalid examples are flagged: unknown commands, actions and flags, and fai
 
 test("valid forms, placeholders and the CLI's longer allow lists pass", () => {
   for (const command of [
-    "help", "help advanced", "version", "monitor", "monitor .", "init .", "status . --stale-after 24", "doctor .",
-    "task claim --id WK-1 --base 531f9fd5 --pre-claim", "task claim --id WK-1 --base <sha>", "task rework --id WK-1 --summary s --mode evidence-only", "workspace serve --request config.json", "task new --goal g --acceptance a --include src --exclude test",
+    "help", "help advanced", "version", "init .", "status . --stale-after 24", "doctor .",
+    "task claim --id WK-1 --base 531f9fd5 --pre-claim", "task claim --id WK-1 --base <sha>", "task rework --id WK-1 --summary s --mode evidence-only", "task new --goal g --acceptance a --include src --exclude test",
     "task create --source c.json --actor builder", "task create --goal g --acceptance a", "intake apply --request b.json --fingerprint <fingerprint>",
     "stats --report --cutoff 2026-10-19T00:00:00Z --timezone UTC --days 7 --previous " + "a".repeat(64),
     "task new --goal g --acceptance a --write src/app --read . --risk standard --approval docs/approval.md --id WK-cart",
@@ -133,7 +136,7 @@ test("valid forms, placeholders and the CLI's longer allow lists pass", () => {
     "task claim . --id WK-1 --request claim.json", "task review . --id WK-1 --request review.json", "task close --id WK-1 --summary s --rollback <plan>", "task handoff --id WK-1 --summary s --unresolved x --claim c --revision $SHA",
     "stats --report --projects-file list.txt --cutoff ... --timezone ...", "stats --report --project a --projects-file b --cutoff 2026-10-19T00:00:00+09:00 --timezone Asia/Tokyo --strict --json",
     "task new --goal g --acceptance a --acceptance b --write docs --risk low --actor builder",
-    "init --policy policy/repository-policy.json", "task create --source <contract.json> --request $REQUEST", "workspace create --request .workkeel/request.json"
+    "init --policy policy/repository-policy.json", "task create --source <contract.json> --request $REQUEST", "goal create --request .workkeel/request.json"
   ]) assert.deepEqual(validateCommand(command.split(" ")), [], command);
   assert.ok(placeholder("<id>") && placeholder("...") && placeholder("${SHA}") && !placeholder("main"));
 });
@@ -163,7 +166,7 @@ test("COMMAND_FORMS uses exactly the flag lists of the CLI's allow(...) calls", 
 test("every command, action and flag of `workkeel help advanced` has a form in COMMAND_FORMS", () => {
   const help = spawnSync(process.execPath, [path.join(root, "bin/workkeel.mjs"), "help", "advanced"], { encoding: "utf8" });
   assert.equal(help.status, 0, help.stderr);
-  const forms = helpForms(help.stdout).filter(entry => entry.command !== "monitor" && !entry.actions.includes("<operation>"));
+  const forms = helpForms(help.stdout).filter(entry => !entry.actions.includes("<operation>"));
   assert.ok(forms.length >= 40);
   for (const entry of forms) for (const action of entry.actions.length ? entry.actions : [null]) {
     const matching = COMMAND_FORMS.filter(candidate => candidate.command === entry.command && (action === null ? !candidate.actions.length : candidate.actions.includes(action)));

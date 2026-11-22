@@ -14,15 +14,20 @@ Breaking changes to the following require a new major release (2.0):
 
 ## Optional parts, best effort
 
-The workspace observatory, `workkeel monitor`, native dispatch and usage records
-have best-effort compatibility. Their JSON may gain fields in minor releases.
+Native dispatch and usage records have best-effort compatibility. Their JSON may gain fields in minor releases.
 We announce breaking changes in the CHANGELOG first.
 
 ## Experimental, no guarantee
 
-The LangGraph workflow runner, goals and autonomy, Workkeel Loop features, review
-helpers and the Bot-layer reference usage may change or be removed in a minor
-release.
+Goals and autonomy, Workkeel Loop features, review helpers and the Bot-layer
+reference usage may change or be removed in a minor release.
+
+## Removed in 2.0.0
+
+Workkeel 2.0.0 removes `workkeel monitor`, `workkeel workspace`, `workkeel workflow`
+and `workkeel headroom`. Each removed command exits with status 1 and prints a
+`command-removed` error that names the replacement. Execution policies still
+accept the `headroom` key, so existing policy files stay valid.
 
 ## Never guaranteed
 
