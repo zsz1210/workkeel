@@ -159,7 +159,7 @@ export function createModelRulesUI(host) {
     picker.addEventListener('input',()=>{offset=0;results();});picker.addEventListener('click',event=>{const action=event.target.closest('[data-rule-action]')?.dataset.ruleAction;if(action==='picker-back'||action==='picker-next'){offset+=action==='picker-back'?-20:20;results();}});picker.addEventListener('close',()=>{picker?.remove();picker=null;/** @type {HTMLElement|null} */ (document.querySelector('[data-rule-action="task-picker"]'))?.focus();});results();picker.showModal();
   }
   document.addEventListener('input',event=>{if(/** @type {Element} */ (event.target).closest('#model-rule-form'))validate();});
-  document.addEventListener('change',(/** @type {Event & {target: HTMLInputElement | HTMLSelectElement}} */ event)=>{if(!event.target.closest('#model-rule-form'))return;if(event.target.name.endsWith('-mode')){const input=event.target.form.elements[event.target.name.replace('-mode','-value')];if(input)input.hidden=input.disabled=event.target.value!=='fixed';}validate();});
+  document.addEventListener('change',event=>{const target=/** @type {HTMLInputElement | HTMLSelectElement} */ (event.target);if(!target.closest('#model-rule-form'))return;if(target.name.endsWith('-mode')){const input=target.form.elements[target.name.replace('-mode','-value')];if(input)input.hidden=input.disabled=target.value!=='fixed';}validate();});
   document.addEventListener('submit',async event=>{
     if(/** @type {Element} */ (event.target).id!=='model-rule-form')return;event.preventDefault();if(saving||editor?.unconfirmed||!editable())return;
     const active=editor;

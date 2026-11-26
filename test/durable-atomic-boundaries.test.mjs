@@ -193,7 +193,7 @@ async function withInjectedPartialWrite(directory, body) {
     record.handles.push(handle);
     const originalWriteFile = handle.writeFile;
     handle.writeFile = async function (data) {
-      const bytes = Buffer.isBuffer(data) ? data : Buffer.from(data, "utf8");
+      const bytes = Buffer.isBuffer(data) ? data : Buffer.from(/** @type {string} */ (data), "utf8");
       record.prefix = bytes.subarray(0, Math.floor(bytes.length / 2));
       await originalWriteFile.call(this, record.prefix);
       record.observed = await fs.readFile(filename);

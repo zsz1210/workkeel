@@ -193,7 +193,7 @@ test('record-check does not report a supervisor startup failure as a RED test',a
   // Fault injection: the real supervisor child receives the start request but
   // exits before starting the test command or acknowledging it over IPC.
   // The fault-injection wrapper only handles the (command, args, options) form the runtime uses.
-  childProcess.spawn=/** @type {any} */ (function(executable,args,options) {
+  childProcess.spawn=/** @type {any} */ (/** @this {any} */ function(executable,args,options) {
     if(args[0]?.endsWith('/workkeel-command-worker.mjs'))args=['-e',"process.on('message',()=>process.exit(2))"];
     return spawn.call(this,executable,args,options);
   });
@@ -210,10 +210,10 @@ test('record-check does not report a supervisor startup failure as a RED test',a
 test('record-check preserves an interrupted supervisor as unknown execution, not a RED test',async t=>{
   const f=await checkFixture(t),spawn=childProcess.spawn;let acknowledged=false,pid;
   await fs.writeFile(f.root+'/src/check.test.mjs','await new Promise(resolve=>setTimeout(resolve,30000));\n');
-  childProcess.spawn=/** @type {any} */ (function(executable,args,options) {
+  childProcess.spawn=/** @type {any} */ (/** @this {any} */ function(executable,args,options) {
     const child=spawn.call(this,executable,args,options);
     if(args[0]?.endsWith('/workkeel-command-worker.mjs'))child.on('message',message=>{
-      if(message?.action==='command-started'){acknowledged=true;pid=child.pid;process.kill(pid,'SIGKILL');}
+      if(/** @type {{action?: unknown}|null|undefined} */ (message)?.action==='command-started'){acknowledged=true;pid=child.pid;process.kill(pid,'SIGKILL');}
     });
     return child;
   });

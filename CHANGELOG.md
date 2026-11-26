@@ -63,6 +63,13 @@ repository migration does not republish old tags, archives or npm versions.
   `test/`. Caught errors, fixture helper options and invalid-input case tables
   have JSDoc types or casts. These are typing changes only. Runtime behavior
   is unchanged.
+- Development: `tsconfig.json` now turns on four of the `strict` family
+  options: `alwaysStrict`, `strictFunctionTypes`, `strictBindCallApply` and
+  `noImplicitThis`. `strict` itself stays off. The model rules UI `change`
+  listener takes an `Event` and casts its target, the partial-write test casts
+  non-`Buffer` data before `Buffer.from`, and the delivery-request test's
+  `spawn` wrappers type `this` and cast IPC messages before reading `action`.
+  These are typing changes only. Runtime behavior is unchanged.
 - CLI: `task new` accepts a repeatable `--skill path` that records repository
   Skill files in the contract's `skills` and pins their digests at creation.
   Without it, behavior is unchanged.

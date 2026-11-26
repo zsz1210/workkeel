@@ -8,7 +8,11 @@
     "target": "ES2024",
     "types": ["node"],
     "skipLibCheck": true,
-    "strict": false
+    "strict": false,
+    "alwaysStrict": true,
+    "strictFunctionTypes": true,
+    "strictBindCallApply": true,
+    "noImplicitThis": true
   },
   "include": ["bin/**/*.mjs", "src/**/*.mjs", "scripts/**/*.mjs", "test/**/*.mjs"]
 }
