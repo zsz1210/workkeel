@@ -103,6 +103,6 @@ export async function inspectEvidenceAvailability(rootInput,request){
 
 if(process.argv[1]&&import.meta.url===pathToFileURL(path.resolve(process.argv[1])).href)try{
   const [root,input,...extra]=process.argv.slice(2);if(!root||!input||extra.length)fail('usage: project request.json');
-  const request=JSON.parse(await read(path.dirname(path.resolve(input)),path.basename(input),4*1024*1024));
+  const request=JSON.parse(/** @type {any} */ (await read(path.dirname(path.resolve(input)),path.basename(input),4*1024*1024)));
   process.stdout.write(JSON.stringify(await inspectEvidenceAvailability(root,request),null,2)+'\n');
 }catch{process.stderr.write('Evidence availability request failed; check explicit paths, metadata and bounds.\n');process.exitCode=1;}

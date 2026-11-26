@@ -32,7 +32,11 @@ export function checkProbe(probe,{expected_revision,free_bytes,now=Date.now()}) 
  return reasons;
 }
 /** Explicit opt-in wrapper: inspect -> fresh probe -> validate -> long command.
- * Commands are caller supplied and host scoped; this is not a process sandbox. */
+ * Commands are caller supplied and host scoped; this is not a process sandbox.
+ * @param {string} root
+ * @param {any} request
+ * @param {{ runProbe?: (command: string[]) => any }} [options]
+ */
 export async function preflight(root,request,{runProbe}={}) {
  root=await fs.realpath(root);
  const task=await readNativeTask(root,request.task_id);

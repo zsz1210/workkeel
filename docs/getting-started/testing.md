@@ -7,7 +7,7 @@ acceptance. The native lifecycle and actual verification evidence live
 in a [separate private development workspace](../operations/framework-development.md).
 A public source checkout has no maintainer task history or raw development output.
 
-`npm run check` validates repository structure, documentation language boundaries, local Markdown link targets, and the actual npm dry-run package boundary. These checks run for every change. `npm run typecheck` runs a non-strict TypeScript check with `checkJs` off: only source files that start with `// @ts-check` are checked, and other files imported into the program are not. Add `// @ts-check` to a file only when it already passes. `npm run verify` runs the typecheck after `npm run check`. The full suite is offline: it tests code, contracts, and simulated providers, not paid model calls.
+`npm run check` validates repository structure, documentation language boundaries, local Markdown link targets, and the actual npm dry-run package boundary. These checks run for every change. `npm run typecheck` runs a non-strict TypeScript check with `checkJs` on. `tsconfig.json` includes `bin/**/*.mjs`, `src/**/*.mjs` and `scripts/**/*.mjs`, so every module there is checked, including new files; `test/` is not checked yet. Some source files still start with `// @ts-check`; the line is no longer needed. `npm run verify` runs the typecheck after `npm run check`. The full suite is offline: it tests code, contracts, and simulated providers, not paid model calls.
 
 ## Local development
 

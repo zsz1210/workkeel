@@ -34,6 +34,12 @@ repository migration does not republish old tags, archives or npm versions.
   includes `bin/**/*.mjs` and `src/**/*.mjs`, so new source files are checked
   without a `// @ts-check` line; `scripts/` and `test/` are still not checked.
   These are typing changes only. Runtime behavior is unchanged.
+- Development: all 25 files in `scripts/` are typechecked, and `tsconfig.json`
+  now also includes `scripts/**/*.mjs`; `test/` is still not checked. The
+  evidence check script imports Ajv as a named export, and a few options
+  parameters, return values and lists have JSDoc types or casts. The testing
+  guide now describes the `checkJs` setup. These are typing changes only.
+  Runtime behavior is unchanged.
 - CLI: `task new` accepts a repeatable `--skill path` that records repository
   Skill files in the contract's `skills` and pins their digests at creation.
   Without it, behavior is unchanged.

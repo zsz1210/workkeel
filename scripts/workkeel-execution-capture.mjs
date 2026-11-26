@@ -180,7 +180,7 @@ export async function beginCapture(targetInput,request,options={}){
       return result(v,bound??null);
     }
     const i=await captureIdentity(target,request);
-    const task=await assertTaskExecutionContext(target,i.task_id,i);
+    const task=await assertTaskExecutionContext(target,i.task_id,/** @type {{actor:any,claim_id:any,contract_sha256?:any}} */ (i));
     let source=request.source,fingerprint=null;
     if(source.kind==='codex-rollout'){
       exactKeys(source,['kind','path','thread_id','turn_id'],['start_offset']);

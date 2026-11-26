@@ -8,6 +8,7 @@ const manifestPath='public-files.json';
 const localSetupFiles=new Set(['WORKKEEL.md','workkeelw.mjs']);
 const forbiddenRoots=/^(?:\.ai-org|\.codex|\.workkeel-private|node_modules|output|coverage|private|backups)(?:\/|$)|^(?:TEMPLE\.md|temple\.lock|templew\.mjs|workkeel\.lock)$|^docs\/(?:validation|planning|pilots|research|policies)(?:\/|$)/;
 const forbiddenNames=/(?:^|\/)(?:\.env(?:\..*)?|\.npmrc|id_rsa|id_ed25519|credentials(?:\..*)?|[^/]*\.jsonl|[^/]*\.log|[^/]*\.bundle|[^/]*\.tgz|[^/]*\.zip)$/i;
+/** @type {[string,RegExp][]} */
 const privateContent=[
   ['private-key',/-----BEGIN (?:RSA |EC |OPENSSH |DSA )?PRIVATE KEY-----/],
   ['github-token',/\b(?:gh[pousr]_[A-Za-z0-9]{30,}|github_pat_[A-Za-z0-9_]{50,})\b/],
@@ -42,6 +43,7 @@ export const HISTORICAL_TRAILER_COMMITS=Object.freeze([
  'dc7c5a55d855ab5ab1dafa89e05549f1adb617da','29d755e24dd45d51736947e843505f2e6e438b01'
 ]);
 const historicalTrailerCommits=new Set(HISTORICAL_TRAILER_COMMITS);
+/** @type {[string,RegExp][]} */
 const forbiddenTrailers=[['Co-Authored-By',/^[ \t]*co-authored-by[ \t]*:/im],['Generated with',/^[^\S\n]*(?:[^\w\s]+[^\S\n]*)?generated with\b/im]];
 /** History failures for one commit message; only the frozen commits keep their Co-Authored-By trailer. */
 export function commitTrailerFailures(commit,message){

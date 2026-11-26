@@ -153,6 +153,7 @@ export const OPTIONAL_TEST_MODULES = {
 // so a static import of the same module still fails. An entry that no longer
 // matches an edge fails the check, so the list cannot go stale.
 const router = (to, command) => ({ from: "src/workkeel-cli.mjs", to: `src/${to}`, lazy: true, reason: `command router loads ${command} on demand` });
+/** @type {{ from: string, to: string, reason: string, lazy?: boolean }[]} */
 export const OPTIONAL_IMPORT_ALLOWLIST = [
   router("workkeel-scoring.mjs", "`workkeel stats`"),
   router("workkeel-retention.mjs", "`workkeel retention`"),
