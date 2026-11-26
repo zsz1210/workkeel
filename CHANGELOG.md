@@ -28,6 +28,12 @@ repository migration does not republish old tags, archives or npm versions.
   and the `onError` and `onStep` callbacks, have JSDoc types, as do the
   trusted role host members. These are typing changes only. Runtime behavior
   is unchanged.
+- Development: the model rules UI module is typechecked, so all 61 files in
+  `bin/` and `src/` are covered. Its dialog, form, input and button lookups and
+  event targets have JSDoc casts. `tsconfig.json` now turns `checkJs` on and
+  includes `bin/**/*.mjs` and `src/**/*.mjs`, so new source files are checked
+  without a `// @ts-check` line; `scripts/` and `test/` are still not checked.
+  These are typing changes only. Runtime behavior is unchanged.
 - CLI: `task new` accepts a repeatable `--skill path` that records repository
   Skill files in the contract's `skills` and pins their digests at creation.
   Without it, behavior is unchanged.
