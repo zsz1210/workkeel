@@ -752,6 +752,7 @@
     "test/workkeel-workflows.test.mjs",
     "test/workkeel-workspace-hooks.test.mjs",
     "test/workkeel-workspace.test.mjs",
+    "tsconfig.json",
     "docs/operations/workkeel-usage.md",
     "test/fixtures/workkeel-task-fixture.mjs"
   ],

@@ -1,3 +1,4 @@
+// @ts-check
 import {AsyncLocalStorage} from 'node:async_hooks';
 const scope=new AsyncLocalStorage();
 const sources=new AsyncLocalStorage();

@@ -1,3 +1,4 @@
+// @ts-check
 import semver from "semver";
 import { TEMPLATE_VERSION } from "./workkeel-version.mjs";
 

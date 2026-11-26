@@ -87,7 +87,7 @@ test("complete and browser verification remain explicit commands; publishing ver
   assert.equal(packageDocument.scripts.test, "node scripts/test-groups.mjs full");
   assert.equal(packageDocument.scripts["test:full"], "node scripts/test-groups.mjs full");
   assert.equal(packageDocument.scripts["test:daily"], "node scripts/test-groups.mjs daily");
-  assert.equal(packageDocument.scripts.verify, "npm run check && npm run test:full");
+  assert.equal(packageDocument.scripts.verify, "npm run check && npm run typecheck && npm run test:full");
   assert.equal(packageDocument.scripts["verify:daily"], "npm run check && npm run test:daily");
   assert.equal(packageDocument.scripts["test:browser"], undefined);
   assert.match(testingGuide, /npm run verify/);

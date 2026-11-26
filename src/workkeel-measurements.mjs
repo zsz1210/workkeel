@@ -1,3 +1,4 @@
+// @ts-check
 import fs from "node:fs/promises";
 import { readTaskContractInput } from "./task-contract.mjs";
 import { safeDirectory, existsEntry } from "./workkeel-project.mjs";

@@ -7,6 +7,11 @@ repository migration does not republish old tags, archives or npm versions.
 
 ## Unreleased changes
 
+- Development: `npm run verify` now runs `npm run typecheck` after
+  `npm run check` and before the test suite. It is a non-strict TypeScript
+  check with `checkJs` off: only the 33 source files that start with
+  `// @ts-check` are checked. `tsconfig.json` is source-only and is not in the
+  npm package. Runtime behavior is unchanged.
 - CLI: `task new` accepts a repeatable `--skill path` that records repository
   Skill files in the contract's `skills` and pins their digests at creation.
   Without it, behavior is unchanged.

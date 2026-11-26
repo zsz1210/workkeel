@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// @ts-check
 import { workkeelMain } from "../src/workkeel-cli.mjs";
 import { parseCommandLine } from "../src/workkeel-cli-flags.mjs";
 try {

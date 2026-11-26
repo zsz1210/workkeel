@@ -1,3 +1,4 @@
+// @ts-check
 import {exactKeys,executionDigest} from './workkeel-execution-policy.mjs';
 import {searchNativeLearning} from './workkeel-learning.mjs';
 import {listNativeSkillLifecycle} from './workkeel-learning-lifecycle.mjs';

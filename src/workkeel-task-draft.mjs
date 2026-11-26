@@ -1,3 +1,4 @@
+// @ts-check
 import { TASK_CONTRACT_SCHEMA } from "./task-contract.mjs";
 import { contractRiskFloor } from "./workkeel-risk.mjs";
 
