@@ -75,7 +75,7 @@ test("claim with pre_claim adopts earlier in-scope commits; handoff, review and 
   const revision = git(root, "rev-parse", "HEAD");
   await createNativeTask(root, contract(), request(0));
   await assert.rejects(mutateNativeTask(root, "WK-one", "claim", request(1, developer, { base_revision: base })),
-    error => /Claim base must equal current HEAD/.test(error.message) && /--pre-claim/.test(error.message));
+    (/** @type {any} */ error) => /Claim base must equal current HEAD/.test(error.message) && /--pre-claim/.test(error.message));
   const claimRequest = request(1, developer, { base_revision: base.slice(0, 12), pre_claim: true });
   const claimed = await mutateNativeTask(root, "WK-one", "claim", claimRequest);
   assert.equal((await mutateNativeTask(root, "WK-one", "claim", claimRequest)).replayed, true);
@@ -104,7 +104,7 @@ test("claim with pre_claim rejects a non-ancestor base, paths outside the write 
   await createNativeTask(root, contract(), request(0));
   const claim = extra => mutateNativeTask(root, "WK-one", "claim", request(1, developer, extra));
   await assert.rejects(claim({ base_revision: side, pre_claim: true }), /is not an ancestor of HEAD/);
-  await assert.rejects(claim({ base_revision: side }), error => /^Claim base must equal current HEAD$/.test(error.message));
+  await assert.rejects(claim({ base_revision: side }), (/** @type {any} */ error) => /^Claim base must equal current HEAD$/.test(error.message));
   await assert.rejects(claim({ base_revision: base, pre_claim: true }), /outside the task's write roots.*README\.md/);
   await assert.rejects(claim({ base_revision: inScope, pre_claim: "yes" }), /pre_claim must be true/);
   const item = await readNativeTask(root, "WK-one");
@@ -169,7 +169,7 @@ for (const drift of ['tracked', 'committed', 'untracked', 'both']) test(`product
   if (['untracked', 'both'].includes(drift)) await write(root, 'src/new.mjs', 'export const value = 1;\n');
   const record = path.join(root, '.ai-org/work-items/WK-one.json'), before = await fs.readFile(record);
   await assert.rejects(mutateNativeTask(root, 'WK-one', 'review', request(3, reviewer,
-    {revision, judgment:'pass', summary:'Review', evidence:[ref]})), error => {
+    {revision, judgment:'pass', summary:'Review', evidence:[ref]})), (/** @type {any} */ error) => {
     assert.equal(error.message.includes('tracked files changed since the candidate'), drift !== 'untracked');
     assert.equal(error.message.includes('untracked files present'), ['untracked', 'both'].includes(drift));
     assert.equal(error.message.includes('src/cart.mjs'), drift !== 'untracked');
@@ -184,7 +184,7 @@ test('product-drift lists at most ten paths', async t => {
   const root = await fixture(t), {revision, ref} = await deliver(root);
   for (let index = 0; index < 12; index++) await write(root, `src/untracked-${String(index).padStart(2, '0')}.mjs`, 'New\n');
   await assert.rejects(mutateNativeTask(root, 'WK-one', 'review', request(3, reviewer,
-    {revision, judgment:'pass', summary:'Review', evidence:[ref]})), error => {
+    {revision, judgment:'pass', summary:'Review', evidence:[ref]})), (/** @type {any} */ error) => {
     assert.equal((error.message.match(/src\/untracked-/g) ?? []).length, 10);
     assert.match(error.message, /2 more paths/); return true;
   });
@@ -218,7 +218,7 @@ for (const later of ['outside', 'in-scope', 'reverted', 'outside-merge', 'in-sco
   // Every later product commit is unreviewed, inside the write roots or not.
   const unreviewed = git(root, 'rev-list', '--no-merges', `${revision}..HEAD`).split('\n');
   assert.equal(unreviewed.length, later.startsWith('reverted') ? 2 : 1);
-  await assert.rejects(mutateNativeTask(root, 'WK-one', 'close', close), error => {
+  await assert.rejects(mutateNativeTask(root, 'WK-one', 'close', close), (/** @type {any} */ error) => {
     assert.ok(error.message.includes(revision)); assert.ok(error.message.includes(head));
     for (const commit of unreviewed) assert.ok(error.message.includes(commit.slice(0, 12)), commit);
     assert.equal(error.message.includes(paths[0]), !outside);
@@ -244,7 +244,7 @@ test('close lists every unreviewed commit after the review and ignores .ai-org-o
     await write(root, file, `${subject}\n`); git(root, 'add', file); git(root, 'commit', '-qm', subject);
     commits.push({revision:git(root, 'rev-parse', 'HEAD'), subject});
   }
-  await assert.rejects(mutateNativeTask(root, 'WK-one', 'close', close), error => {
+  await assert.rejects(mutateNativeTask(root, 'WK-one', 'close', close), (/** @type {any} */ error) => {
     assert.match(error.message, /has 3 unreviewed commit\(s\) after reviewed candidate/);
     for (const commit of commits) assert.ok(error.message.includes(`${commit.revision.slice(0, 12)} ${JSON.stringify(commit.subject)}`), commit.subject);
     const at = commit => error.message.indexOf(`${commit.revision.slice(0, 12)} "`);
@@ -317,7 +317,7 @@ test('close of a missing candidate commit asks for full history and stays in rel
   const clone = await shallowClone(t, root, {fetchCandidate:false});
   assert.throws(() => git(clone, 'cat-file', '-e', `${revision}^{commit}`));
   const record = path.join(clone, '.ai-org/work-items/WK-one.json'), before = await fs.readFile(record);
-  for (const named of [revision, revision.slice(0, 12)]) await assert.rejects(mutateNativeTask(clone, 'WK-one', 'close', request(4, developer, {revision:named, summary:'Accept', rollback:'Revert', evidence:[ref]})), error => {
+  for (const named of [revision, revision.slice(0, 12)]) await assert.rejects(mutateNativeTask(clone, 'WK-one', 'close', request(4, developer, {revision:named, summary:'Accept', rollback:'Revert', evidence:[ref]})), (/** @type {any} */ error) => {
     assert.ok(error.message.includes(`delivered candidate ${revision} is missing from this repository`));
     assert.match(error.message, /Fetch the full history \(git fetch --unshallow\) before closing/);
     assert.doesNotMatch(error.message, /rework/i);
@@ -325,7 +325,7 @@ test('close of a missing candidate commit asks for full history and stays in rel
   });
   // A revision that is not the delivered candidate keeps the generic error.
   await assert.rejects(mutateNativeTask(clone, 'WK-one', 'close', request(4, developer, {revision:git(clone, 'rev-parse', 'HEAD'), summary:'Accept', rollback:'Revert', evidence:[ref]})),
-    error => error.message === 'Close requires the independently accepted exact candidate');
+    (/** @type {any} */ error) => error.message === 'Close requires the independently accepted exact candidate');
   assert.equal((await readNativeTask(clone, 'WK-one')).state, 'release_gate');
   assert.deepEqual(await fs.readFile(record), before, 'failed close preserves task state');
 });
@@ -370,7 +370,7 @@ for (const state of ['done', 'cancelled', 'release_gate']) test(`shallow merge c
   }
   if (state === 'release_gate') {
     const close = request(4, developer, {revision, summary:'Accepted', rollback:'Revert repair', evidence:[ref]});
-    await assert.rejects(mutateNativeTask(clone, 'WK-one', 'close', close), error => {
+    await assert.rejects(mutateNativeTask(clone, 'WK-one', 'close', close), (/** @type {any} */ error) => {
       assert.match(error.message, /History between delivered candidate .* is unavailable.*git fetch --unshallow/);
       assert.doesNotMatch(error.message, /unreviewed commit/);
       return true;
@@ -396,7 +396,7 @@ test('a shallow clone holding the candidate history keeps the exact comparison',
   assert.deepEqual(summary.candidate_head, {head:later, delivered:revision, matches:false, later_in_scope_paths:['src/later.mjs']});
   assert.ok(summary.attention_reasons.includes('head-moved-past-candidate'));
   await assert.rejects(mutateNativeTask(clone, 'WK-one', 'close', request(4, developer, {revision, summary:'Accept', rollback:'Revert', evidence:[ref]})),
-    error => error.message.includes(`has 1 unreviewed commit(s)`) && error.message.includes(`${later.slice(0, 12)} "Later work"`));
+    (/** @type {any} */ error) => error.message.includes(`has 1 unreviewed commit(s)`) && error.message.includes(`${later.slice(0, 12)} "Later work"`));
 });
 
 /** Like `deliver`, with the developer report committed in the candidate itself. */
@@ -468,7 +468,7 @@ test('close HEAD error names at most ten paths, while summary retains every in-s
   for (const file of paths) await write(root, file, 'Later change');
   git(root, 'add', 'src'); git(root, 'commit', '-qm', 'Later files');
   assert.deepEqual((await readTaskSummary(root, 'WK-one')).candidate_head.later_in_scope_paths, paths);
-  await assert.rejects(mutateNativeTask(root, 'WK-one', 'close', request(4, developer, {revision, summary:'Accept', rollback:'Revert', evidence:[ref]})), error => {
+  await assert.rejects(mutateNativeTask(root, 'WK-one', 'close', request(4, developer, {revision, summary:'Accept', rollback:'Revert', evidence:[ref]})), (/** @type {any} */ error) => {
     const listed = JSON.parse(error.message.match(/changed paths \(up to 10\): (\[.*\])/)[1]);
     assert.deepEqual(listed, paths.slice(0, 10)); return true;
   });

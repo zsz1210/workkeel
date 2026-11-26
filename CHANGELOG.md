@@ -57,6 +57,12 @@ repository migration does not republish old tags, archives or npm versions.
   cleanly against the test-only config, which leaves `lifecycle` and
   `review-recovery`. Partial fixtures, offline hosts and caught errors have
   JSDoc casts. These are typing changes only. Runtime behavior is unchanged.
+- Development: the `lifecycle` and `review-recovery` tests now check cleanly,
+  so all 70 files in `test/` do, and `tsconfig.json` now also includes
+  `test/**/*.mjs`. `npm run typecheck` covers `bin/`, `src/`, `scripts/` and
+  `test/`. Caught errors, fixture helper options and invalid-input case tables
+  have JSDoc types or casts. These are typing changes only. Runtime behavior
+  is unchanged.
 - CLI: `task new` accepts a repeatable `--skill path` that records repository
   Skill files in the contract's `skills` and pins their digests at creation.
   Without it, behavior is unchanged.

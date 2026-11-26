@@ -24,6 +24,7 @@ const model={provider:'review-provider',model:'careful-model',reasoning:'deep'};
 const completed={status:'completed',usage:{input_tokens:7,output_tokens:3},runtime_model:'careful-model',reasoning:'deep',output:'Synthetic review notes'};
 const probe=(overrides={})=>({host:'fixture-review-host',enforcement:{sandbox:'enforced',product_access:'read',network:'disabled',test_scratch:'host-private'},
   tools:['shell'],models:[{provider:'review-provider',model:'careful-model',efforts:['deep']}],usage:{fields:['input_tokens','output_tokens'],unknown:'null'},...overrides});
+/** @param {{state?: string | Error | ((query: any) => unknown), result?: object | ((spec: any) => unknown), probeResult?: object}} [options] */
 function reviewHost({state='stopped',result=completed,probeResult=probe()}={}) {
   const calls={launch:0,runtimeState:0,specs:[]};
   const host=createTrustedRoleHost({id:'fixture-review-host',probe:async()=>structuredClone(probeResult),
@@ -36,6 +37,7 @@ const lockPath=root=>path.join(os.tmpdir(),`workkeel-mutation-${sha256(path.reso
 const until=async check=>{for(let i=0;i<400&&!check();i++)await new Promise(r=>setTimeout(r,5));assert.ok(check());};
 
 async function fixture(t,{expiresAt=null,closeBinding=true,beforeHandoff=null,parallelism=2}={}) {
+/** @param {import("node:test").TestContext} t @param {{expiresAt?: string | null, closeBinding?: boolean, beforeHandoff?: ((ctx: any) => unknown) | null, parallelism?: number}} [options] */
   const root=await fs.realpath(await fs.mkdtemp(path.join(os.tmpdir(),'workkeel-review-recovery-')));t.after(()=>fs.rm(root,{recursive:true,force:true}));
   const git=(...args)=>execFileSync('git',['-C',root,...args],{encoding:'utf8',stdio:['ignore','pipe','pipe']}).trim();
   git('init','-q');git('config','user.name','Fixture');git('config','user.email','fixture@example.invalid');
@@ -112,7 +114,7 @@ test('recovery launch enforces the original dispatch read roots without changing
     const flags=['--permission',...spec.contract.environment.read_paths.map(ref=>'--allow-fs-read='+path.join(f.root,ref))];
     const read=ref=>execFileSync(process.execPath,[...flags,'-e',`process.stdout.write(require('node:fs').readFileSync(${JSON.stringify(path.join(f.root,ref))},'utf8'))`],{encoding:'utf8',stdio:['ignore','pipe','pipe']});
     assert.match(read('src/a.mjs'),/export const a/);
-    assert.throws(()=>read('docs/check.md'),error=>error.status===1&&/ERR_ACCESS_DENIED/.test(error.stderr));
+    assert.throws(()=>read('docs/check.md'),(/** @type {any} */ error)=>error.status===1&&/ERR_ACCESS_DENIED/.test(error.stderr));
     assert.deepEqual(spec.contract.environment.write_paths,[]);
     assert.deepEqual(spec.dispatch.node.read_paths,['src']);
     return completed;
@@ -182,7 +184,7 @@ test('unknown and cancelled recovery reservations need an exact trusted stopped 
     await assert.rejects(confirmReviewRecoveryStopped(f.root,{...request,operation_id:'other-stop'},{host:observer.host}),/different input/);
     assert.deepEqual(await fs.readFile(f.root+'/.ai-org/work-items/'+f.id+'.json'),before);
     const marker=f.root+'/.ai-org/review-recovery-stops/'+attempt.attempt_id+'.json',bytes=await fs.readFile(marker);
-    const forged=JSON.parse(bytes);forged.value.attempt_sha256='0'.repeat(64);forged.sha256=executionDigest(forged.value);
+    const forged=JSON.parse(/** @type {any} */ (bytes));forged.value.attempt_sha256='0'.repeat(64);forged.sha256=executionDigest(forged.value);
     await fs.writeFile(marker,JSON.stringify(forged));await assert.rejects(other.bind(),/stopped observation/);
     await fs.writeFile(marker,bytes);
     assert.equal((await other.bind()).collection_closed,false);
@@ -301,7 +303,7 @@ test('source uniqueness holds across tasks in both directions and under concurre
 test('a concurrent binding and recovery reserving one source have exactly one winner',async t=>{
   const f=await fixture(t),other=await secondTask(f),source={thread_id:'race-thread',turn_id:'race-turn'};
   const {host,calls}=reviewHost();
-  const outcomes=await Promise.allSettled([recoverInterruptedReview(f.root,await f.request({source}),{host}),bindHostUsage(f.root,other(source))]);
+  const outcomes=/** @type {any[]} */ (await Promise.allSettled([recoverInterruptedReview(f.root,await f.request({source}),{host}),bindHostUsage(f.root,other(source))]));
   assert.equal(outcomes.filter(o=>o.status==='fulfilled').length,1,JSON.stringify(outcomes.map(o=>o.reason?.message??o.status)));
   const recovered=outcomes[0].status==='fulfilled',view=await readReviewRecovery(f.root,f.id);
   assert.equal(view.attempts.length,recovered?1:0);assert.equal(calls.launch,recovered?1:0);
@@ -321,7 +323,7 @@ test('initial recovery inspection waits for a binding whose directory is visible
   // been renamed to binding.json. Hold its writer here until recovery either
   // joins the same lock or (incorrectly) finishes its unlocked initial read.
   fs.rename=async(from,to)=>{if(to===target){paused=true;publish();await canFinalize;}return realRename(from,to);};
-  fs.link=async(from,to)=>{const linked=await realLink(from,to);if(paused&&path.dirname(to)===locks)contend();return linked;};
+  fs.link=async(from,to)=>{const linked=await realLink(from,to);if(paused&&path.dirname(/** @type {string} */ (to))===locks)contend();return linked;};
   const restore=()=>{fs.rename=realRename;fs.link=realLink;finalize();};t.after(restore);
   const binding=bindHostUsage(f.root,other(source));
   const bound=Promise.allSettled([binding]);
@@ -519,7 +521,7 @@ test('a further retry chains from the interrupted attempt, preserves prior bytes
 
 test('unsafe recovery requests fail before reservation or inference',async t=>{
   const f=await fixture(t),{host,calls}=reviewHost();
-  const cases=[
+  const cases=/** @type {[any, RegExp][]} */ ([
     [{revision:'0'.repeat(40)},/exact delivered candidate/],
     [{reviewer:f.actor},/separation policy/],
     [{actor:f.reviewer},/cannot also be the reviewer/],
@@ -531,9 +533,9 @@ test('unsafe recovery requests fail before reservation or inference',async t=>{
     [{policy_ref:'docs/approval.md'},/policy reference/],
     [{source:{thread_id:'review-thread-1',turn_id:'new'}},/fresh source/],
     [{claim_id:f.claimId},/unknown fields/]
-  ];
+  ]);
   for(const [overrides,pattern] of cases)await assert.rejects(recoverInterruptedReview(f.root,await f.request(overrides),{host}),pattern);
-  for(const [state,pattern] of [['active',/runtime is active/],['unknown',/runtime is unknown/],[new Error('host offline'),/runtime state is unknown/]]) {
+  for(const [state,pattern] of /** @type {[string | Error, RegExp][]} */ ([['active',/runtime is active/],['unknown',/runtime is unknown/],[new Error('host offline'),/runtime state is unknown/]])) {
     const probeHost=reviewHost({state});
     await assert.rejects(recoverInterruptedReview(f.root,await f.request(),{host:probeHost.host}),pattern);assert.equal(probeHost.calls.launch,0);
   }
@@ -578,11 +580,11 @@ test('probes run unlocked; changes while they are awaited block reservation and 
   assert.deepEqual(seen,{probe:false,launch:true});
   const cancel=c=>mutateNativeTask(c.root,c.id,'cancel',{operation_id:'cancel',expected_version:3,actor:c.actor,summary:'Stop',evidence:['docs/check.md']});
   const recovered=async c=>{await recoverInterruptedReview(c.root,await c.request({operation_id:'concurrent',source:{thread_id:'other',turn_id:'other'}}),{host:reviewHost().host});};
-  const during=[
+  const during=/** @type {[(c: any) => unknown, RegExp][]} */ ([
     [cancel,/Stale expected version/],
     [c=>fs.writeFile(c.root+'/src/a.mjs','export const a = 2;\n'),/tracked files changed since the candidate/],
     [recovered,/stale recovery chain/]
-  ];
+  ]);
   for(const [change,pattern] of during) {
     const c=await fixture(t),probeHost=reviewHost({state:async()=>{await change(c);return 'stopped';}}),request=await c.request();
     await assert.rejects(recoverInterruptedReview(c.root,request,{host:probeHost.host}),pattern);
@@ -675,9 +677,9 @@ test('close binds the reviewed attempt by ID and commit, not by its result diges
 test('persisted attempts and results are fully validated beyond their envelope digests',async t=>{
   const f=await fixture(t);await recoverInterruptedReview(f.root,await f.request(),{host:reviewHost().host});
   const dir=`${f.root}/.ai-org/review-recovery/${f.id}/${f.claimId}`;
-  const rewrite=async(name,edit)=>{const file=`${dir}/${name}`,bytes=await fs.readFile(file),envelope=JSON.parse(bytes);
+  const rewrite=async(name,edit)=>{const file=`${dir}/${name}`,bytes=await fs.readFile(file),envelope=JSON.parse(/** @type {any} */ (bytes));
     edit(envelope.value);envelope.sha256=executionDigest(envelope.value);await fs.writeFile(file,JSON.stringify(envelope));return ()=>fs.writeFile(file,bytes);};
-  const cases=[
+  const cases=/** @type {[string, (v: any) => void, RegExp][]} */ ([
     ['attempt-001-result.json',v=>{v.unknown_field='unrecognized';},/missing or unknown fields/],
     ['attempt-001-result.json',v=>{v.usage.input_tokens=-1;},/invalid usage/],
     ['attempt-001-result.json',v=>{v.usage={input_tokens:7};},/missing or unknown fields/],
@@ -693,7 +695,7 @@ test('persisted attempts and results are fully validated beyond their envelope d
     ['attempt-001.json',v=>{v.implementation_authority=true;},/invalid attempt authority/],
     ['attempt-001.json',v=>{delete v.selected.reasoning;},/missing or unknown fields/],
     ['attempt-001.json',v=>{v.delivery_evidence=[];},/does not belong to this delivery chain/]
-  ];
+  ]);
   for(const [name,edit,pattern] of cases) {const restore=await rewrite(name,edit);await assert.rejects(readReviewRecovery(f.root,f.id),pattern);await restore();}
   assert.equal((await readReviewRecovery(f.root,f.id)).attempts[0].status,'completed');
 });
