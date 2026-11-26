@@ -52,6 +52,11 @@ repository migration does not republish old tags, archives or npm versions.
   module imports have `@ts-expect-error` with a reason. `tsconfig.json` still
   does not include `test/`. These are typing changes only. Runtime behavior
   is unchanged.
+- Development: a second batch of five `workkeel-` tests (`risk-tiers`,
+  `check-evidence`, `goal-runtime`, `goals` and `codex-runtime`) now checks
+  cleanly against the test-only config, which leaves `lifecycle` and
+  `review-recovery`. Partial fixtures, offline hosts and caught errors have
+  JSDoc casts. These are typing changes only. Runtime behavior is unchanged.
 - CLI: `task new` accepts a repeatable `--skill path` that records repository
   Skill files in the contract's `skills` and pins their digests at creation.
   Without it, behavior is unchanged.

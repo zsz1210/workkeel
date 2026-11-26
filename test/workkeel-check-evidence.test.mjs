@@ -14,6 +14,7 @@ const actor={agent_id:'builder',principal_id:'owner'},reviewer={agent_id:'review
 const criterion='Reject negative quantities';
 const inventory={tests:['src/check.test.mjs'],oracles:['docs/requirement.txt'],inputs:['src/total.mjs'],configuration:[],packages:[],environment:['WK_CHECK_FORCE_RED']};
 const script=new URL('../scripts/workkeel-delivery.mjs',import.meta.url).pathname;
+/** @param {import("node:test").TestContext} t @param {{testSource?: string, readPaths?: string[], writePaths?: string[]}} [options] */
 async function fixture(t,{testSource,readPaths=['.'],writePaths=['src','.ai-org/artifacts/WK-check']}={}) {
   const root=await fs.realpath(await fs.mkdtemp(path.join(os.tmpdir(),'check-evidence-')));t.after(()=>fs.rm(root,{recursive:true,force:true}));
   const git=(...args)=>execFileSync('git',['-C',root,...args],{encoding:'utf8',stdio:['ignore','pipe','pipe']}).trim();
@@ -37,7 +38,7 @@ async function fixture(t,{testSource,readPaths=['.'],writePaths=['src','.ai-org/
   const handoff=async results=>mutateNativeTask(root,'WK-check','handoff',{operation_id:'handoff',expected_version:2,actor,claim_id:(await read()).claim.id,
     revision:git('rev-parse','HEAD'),summary:'Fixture evidence',evidence:results.flatMap(r=>[r.bundle.path,...(r.log?[r.log.path]:[])]),unresolved:[]});
   const assess=(results,extra={})=>assessDeliveryChecks(root,{schema_version:'workkeel.assess-checks/v1',task_id:'WK-check',inventory,attempts:results.map(r=>r.bundle),impact_ref:'docs/impact.json',...extra});
-  const changeBundle=async(result,fn)=>{const file=root+'/'+result.bundle.path,b=JSON.parse(await fs.readFile(file));fn(b);await fs.writeFile(file,JSON.stringify(b));return {...result,bundle:await pin(result.bundle.path)};};
+  const changeBundle=async(result,fn)=>{const file=root+'/'+result.bundle.path,b=JSON.parse(/** @type {any} */ (await fs.readFile(file)));fn(b);await fs.writeFile(file,JSON.stringify(b));return {...result,bundle:await pin(result.bundle.path)};};
   return {root,git,input,capture,pin,read,handoff,assess,changeBundle};
 }
 function setEnv(t,key,value) {const old=process.env[key];if(value===undefined)delete process.env[key];else process.env[key]=value;t.after(()=>{if(old===undefined)delete process.env[key];else process.env[key]=old;});}
@@ -54,7 +55,7 @@ async function treeBytes(root,relative='') {
 test('real capture retains original context; semantic overclaim awaits independent confirmation and handoff',async t=>{
   setEnv(t,'WK_CHECK_FORCE_RED',undefined);const f=await fixture(t),before=await f.read(),result=await f.capture('green');
   assert.equal(result.status,'pass',JSON.stringify(result));assert.deepEqual(await f.read(),before);
-  const bundle=JSON.parse(await fs.readFile(f.root+'/'+result.bundle.path));
+  const bundle=JSON.parse(/** @type {any} */ (await fs.readFile(f.root+'/'+result.bundle.path)));
   assert.equal(bundle.runtime.version,process.version);assert.equal(bundle.receipt.exit_code,0);assert.equal(bundle.coverage.author.agent_id,'builder');
   assert.deepEqual(bundle.launch_environment,[{name:'WK_CHECK_FORCE_RED',present:false,sha256:null}]);
   // Every .ai-org/ file is administrative, so an unnamed report is no longer a candidate issue.
@@ -82,14 +83,14 @@ test('unset differs from empty and stripped Node options never appear as effecti
   setEnv(t,'WK_CHECK_FORCE_RED',undefined);setEnv(t,'NODE_OPTIONS','--require /must-not-run.cjs');setEnv(t,'NODE_PATH','/private-unused');
   const f=await fixture(t),input=f.input('stripped');input.inventory={...inventory,environment:['NODE_OPTIONS','NODE_PATH','NODE_TEST_CONTEXT','WK_CHECK_FORCE_RED']};
   const captured=await captureDeliveryCheck(f.root,input);assert.equal(captured.status,'pass');
-  const b=JSON.parse(await fs.readFile(f.root+'/'+captured.bundle.path));assert.ok(b.launch_environment.every(e=>e.present===false));
+  const b=JSON.parse(/** @type {any} */ (await fs.readFile(f.root+'/'+captured.bundle.path)));assert.ok(b.launch_environment.every(e=>e.present===false));
   assert.ok(!JSON.stringify(b).includes('/private-unused'));assert.ok(!JSON.stringify(b).includes('must-not-run'));
   await f.handoff([captured]);process.env.WK_CHECK_FORCE_RED='';
   const a=await f.assess([captured],{inventory:input.inventory});assert.ok(a.attempts[0].issues.includes('selected-environment-mismatch'));assert.equal(a.assessment.measurements[0].reuse,'ineligible');
 });
 
 test('reserved, legacy, missing, tampered and incomplete captures never acquire present-day context',async t=>{
-  const f=await fixture(t),r=await f.capture('green'),b=JSON.parse(await fs.readFile(f.root+'/'+r.bundle.path));
+  const f=await fixture(t),r=await f.capture('green'),b=JSON.parse(/** @type {any} */ (await fs.readFile(f.root+'/'+r.bundle.path)));
   await assert.rejects(f.capture('green'),/exist/);
   await fs.writeFile(f.root+'/.ai-org/artifacts/WK-check/legacy.json',JSON.stringify(b.receipt));
   const legacy={bundle:await f.pin('.ai-org/artifacts/WK-check/legacy.json')};
@@ -122,7 +123,7 @@ test('dirty inputs, runtime input mutation and interrupted recorder remain incom
   const c=await changing.capture('changing');assert.equal(c.status,'incomplete');assert.ok(c.issues.includes('receipt-context-mismatch'));
   const f=await fixture(t);await fs.mkdir(f.root+'/.ai-org/artifacts/WK-check',{recursive:true});await fs.writeFile(f.root+'/.ai-org/artifacts/WK-check/collision.log','old evidence');
   const failed=await f.capture('collision');assert.equal(failed.status,'incomplete');
-  assert.equal(JSON.parse(await fs.readFile(f.root+'/'+failed.bundle.path)).state,'incomplete');assert.equal(await fs.readFile(f.root+'/.ai-org/artifacts/WK-check/collision.log','utf8'),'old evidence');
+  assert.equal(JSON.parse(/** @type {any} */ (await fs.readFile(f.root+'/'+failed.bundle.path))).state,'incomplete');assert.equal(await fs.readFile(f.root+'/.ai-org/artifacts/WK-check/collision.log','utf8'),'old evidence');
   const tamper=await fixture(t,{testSource:"import fs from 'node:fs';fs.writeFileSync('.ai-org/artifacts/WK-check/tamper.json','foreign update');\n"});
   await assert.rejects(tamper.capture('tamper'),/reserved bundle changed/);
   assert.equal(await fs.readFile(tamper.root+'/.ai-org/artifacts/WK-check/tamper.json','utf8'),'foreign update');

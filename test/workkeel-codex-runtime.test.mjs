@@ -18,6 +18,11 @@ async function context(t) {
     selection: { connection: { kind: "gateway", provider: "litellm", base_url: "http://localhost:4000/v1", model: "fixture-fixed", selection: "fixed", credential_env: "FIXTURE_KEY" } },
     input: { instruction: "Offline protocol fixture", previous_results: {} } };
 }
+/**
+ * Tests replace connect and add assertSourceReview, so the fixture host is deliberately loosely typed.
+ * @param {{[option: string]: any, malformed?: boolean | string, onStart?: (params: any) => unknown, onTurn?: (params: any) => unknown, onStarted?: () => unknown, onInterrupt?: () => unknown}} [options]
+ * @returns {any}
+ */
 function fixtureHost({ reroute = false, earlyReroute = false, approval = false, neverComplete = false, account = "chatgpt", available = true, permissionMismatch = false, effortMismatch = false, serviceMismatch = false, earlyApproval = false, dirtyTerminals = false, wrongCwd = false, attention = false, prelude = false, malformed = false, delayedStart = false, hideStarted = false, onStart = () => {}, onTurn = () => {}, onStarted = () => {}, onInterrupt = () => {} } = {}) {
   const source = `import readline from 'node:readline';
     const send = x => process.stdout.write(JSON.stringify(x)+'\\n');
@@ -77,7 +82,8 @@ test("Codex start/resume uses a real local JSON-RPC process, pinned model and re
   assert.equal(profile.filesystem[await fs.realpath(path.join(c.target, "src"))], "write");
   assert.equal(profile.filesystem[`${await fs.realpath(c.target)}/.ai-org/execution`], "deny");
   c.contract.environment.write_paths = ["."];
-  c.contract.authorization = { approval_ref: "approval.md" };
+  // Deliberately incomplete: the narrowed authorization omits expiry and operations.
+  c.contract.authorization = /** @type {any} */ ({ approval_ref: "approval.md" });
   await fs.writeFile(path.join(c.target, "approval.md"), "Synthetic approval");
   const rootWrites = await codexPermissionsForContract(c.target, c.contract);
   for (const name of ["workkeel.lock", "workkeelw.mjs", "approval.md"]) {
@@ -141,7 +147,8 @@ test('source review cannot succeed when a violation arrives during terminal clea
 });
 
 test('layered subscription routing sends and confirms the exact default service mode on start and resume',async t=>{
-  const c=await context(t);c.selection.connection={kind:'codex-subscription',model:'gpt-6-luna',effort:'low'};
+  // The subscription variant replaces the gateway default.
+  const c=await context(t);c.selection.connection=/** @type {any} */ ({kind:'codex-subscription',model:'gpt-6-luna',effort:'low'});
   c.selection.runtime_selection={provider:'openai',model:'gpt-6-luna',reasoning:'low',service:'provider-default'};
   const turns=[],runtime=createCodexRuntime(fixtureHost({onTurn:params=>turns.push(params)}));
   assert.deepEqual(runtime.assertModelSelection(c),c.selection.runtime_selection);
@@ -172,7 +179,8 @@ test('exact file scopes remain exact, support new files and reject symlink escap
 });
 
 test('unsupported fixed service or connection tuple blocks before process dispatch and host mode drift blocks before inference',async t=>{
-  const c=await context(t);c.selection.connection={kind:'codex-subscription',model:'gpt-6-luna',effort:'low'};
+  // The subscription variant replaces the gateway default.
+  const c=await context(t);c.selection.connection=/** @type {any} */ ({kind:'codex-subscription',model:'gpt-6-luna',effort:'low'});
   c.selection.runtime_selection={provider:'openai',model:'gpt-6-luna',reasoning:'low',service:'priority'};
   let connections=0;const runtime=createCodexRuntime({assertCompatible:async()=>{},connect:()=>{connections++;throw Error('Unexpected dispatch');}});
   await assert.rejects(runtime.start(c),/supported default service/);assert.equal(connections,0);
@@ -182,7 +190,8 @@ test('unsupported fixed service or connection tuple blocks before process dispat
   await assert.rejects(createCodexRuntime(fixtureHost({serviceMismatch:true,onTurn:()=>turns++})).start(c),/confirm.*default service/);assert.equal(turns,0);
 });
 test("unqualified hosts and unsupported conditions fail before connecting", async t => {
-  assert.throws(() => createCodexProcessHost({}), /qualified host/);
+  // Deliberately missing assertCompatible and env.
+  assert.throws(() => createCodexProcessHost(/** @type {any} */ ({})), /qualified host/);
   const c = await context(t); let connections = 0;
   const runtime = createCodexRuntime({ assertCompatible: async () => { throw new Error("Unqualified host tools"); }, connect: () => { connections++; } });
   await assert.rejects(runtime.start(c), /Unqualified/);
@@ -221,7 +230,8 @@ test("abort terminates the owned local process and reports uncertain interruptio
 });
 test("subscription routing requires existing ChatGPT login and an available explicit model/effort", async t => {
   const c = await context(t);
-  c.selection.connection = { kind: "codex-subscription", model: "gpt-6-luna", effort: "low" };
+  // The subscription variant replaces the gateway default.
+  c.selection.connection = /** @type {any} */ ({ kind: "codex-subscription", model: "gpt-6-luna", effort: "low" });
   const result = await createCodexRuntime(fixtureHost()).start(c);
   assert.equal(result.runtime_model, "gpt-6-luna");
   await assert.rejects(createCodexRuntime(fixtureHost({ account: "apiKey" })).start(c), /ChatGPT login/);
@@ -315,7 +325,8 @@ test("dispatch separates numeric authorization observation from unchanged task a
 test("invalid or expired authorization blocks both start and resume before connection", async t => {
   for (const authority of [null, { approval_ref: "approval.md" }, { approval_ref: "approval.md", expires_at: "bad" },
     { approval_ref: "approval.md", expires_at: new Date(Date.now() - 1000).toISOString() }]) {
-    const c = await context(t); c.contract.authorization = authority;
+    // Each authority is deliberately null, partial or invalid.
+    const c = await context(t); c.contract.authorization = /** @type {any} */ (authority);
     let connects = 0;
     const runtime = createCodexRuntime({ assertCompatible: async () => {}, connect: () => { connects++; } });
     await assert.rejects(runtime.start(c), /authorization/);
@@ -342,7 +353,7 @@ test("cancellation binds early turn notifications and preserves unknown dispatch
       ...(hideStarted ? { onTurn: enter } : { onStarted: enter }), onInterrupt: () => interrupts++ });
     const running = createCodexRuntime(host).start({ ...c, signal: controller.signal });
     await entered; controller.abort();
-    await assert.rejects(running, error => hideStarted ? error.runtimeUnsettled === true : /interrupted/.test(error.message));
+    await assert.rejects(running, (/** @type {any} */ error) => hideStarted ? error.runtimeUnsettled === true : /interrupted/.test(error.message));
     assert.equal(interrupts, hideStarted ? 0 : 1);
   }
 });
