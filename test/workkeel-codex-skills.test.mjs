@@ -81,7 +81,8 @@ test("configured disables survive missing discovery and reject a restored enable
     Object.freeze({path:restored, enabled:false}),
     Object.freeze({path:local.path, enabled:false})
   ]);
-  const policy = await codexSkillPolicy(rpc, root, {configuredSkills});
+  // The frozen list proves the policy snapshots rather than mutates its input.
+  const policy = await codexSkillPolicy(rpc, root, {configuredSkills: /** @type {any} */ (configuredSkills)});
   assert.deepEqual(new Set(policy.disabledPaths), new Set([restored, local.path]));
   assert.deepEqual(policy.enabledPaths, []);
   local.enabled = false;
@@ -103,7 +104,8 @@ test("malformed or ambiguous configured Skill overrides fail before discovery", 
     [{...item,enabled:'false'}], [item,item], [item,{...item,enabled:true}]]) {
     let calls = 0;
     const rpc = {request:async()=>{calls++;return {data:[{cwd:root,errors:[],skills:[]}]};}};
-    await assert.rejects(codexSkillPolicy(rpc, root, {configuredSkills}), /configured Skill/);
+    // Each entry is deliberately malformed; the policy must reject it before discovery.
+    await assert.rejects(codexSkillPolicy(rpc, root, {configuredSkills: /** @type {any} */ (configuredSkills)}), /configured Skill/);
     assert.equal(calls, 0);
   }
 });

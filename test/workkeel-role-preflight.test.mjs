@@ -87,6 +87,7 @@ test("sparse or padded arrays never satisfy role or probe requirements", async (
 });
 
 test("preflight keeps the checked request stable while the host probe is pending", async t => {
+  /** @type {[string, (value: any) => void][]} */
   const mutations = [
     ["test ownership", value => { value.tests = "role"; }],
     ["editing tools", value => { value.edit_tools[0] = "shell"; }],
@@ -97,7 +98,7 @@ test("preflight keeps the checked request stable while the host probe is pending
   for (const [name, mutate] of mutations) await t.test(name, async () => {
     const input = role(), expected = structuredClone(input);
     const context = { approved_tools: ["apply_patch"], coordinator_checks: ["tests"] };
-    const entered = Promise.withResolvers(), resume = Promise.withResolvers();
+    const entered = /** @type {PromiseWithResolvers<void>} */ (Promise.withResolvers()), resume = /** @type {PromiseWithResolvers<void>} */ (Promise.withResolvers());
     let seen;
     const host = createTrustedRoleHost({ id: "snapshot-host", probe: async request => {
       seen = structuredClone(request); entered.resolve(); await resume.promise; return probe();

@@ -105,12 +105,12 @@ test("Release asset must be a byte-identical regular file", async (t) => {
 
 test("release tooling rejects a different compressor even with identical Node and npm", () => {
   const good = { versions: { node: RELEASE_TOOLCHAIN.node, zlib: RELEASE_TOOLCHAIN.zlib }, npmVersion: RELEASE_TOOLCHAIN.npm };
-  assert.equal(validateReleaseToolchain(good).zlib, RELEASE_TOOLCHAIN.zlib);
+  assert.equal(validateReleaseToolchain(/** @type {any} */ (good)).zlib, RELEASE_TOOLCHAIN.zlib);
   for (const change of [
     { versions: { ...good.versions, zlib: "1.2.12" } },
     { versions: { ...good.versions, node: "24.19.0" } },
     { npmVersion: "11.18.0" }, { versions: {} }
-  ]) assert.throws(() => validateReleaseToolchain({ ...good, ...change }), /official Node.*No release archive was created/);
+  ]) assert.throws(() => validateReleaseToolchain(/** @type {any} */ ({ ...good, ...change })), /official Node.*No release archive was created/);
 });
 
 test("equal decompressed payloads never weaken the exact compressed-asset gate", async (t) => {
@@ -260,7 +260,7 @@ test("release identity gate refuses absent or mismatched repository IDs", async 
     .split("\n      - name:")[0];
   const body = step.split("        run: |\n")[1].split("\n")
     .filter((line) => line.startsWith("          ")).map((line) => line.slice(10)).join("\n");
-  for (const [expected, actual, status] of [["", "123", 1], ["456", "123", 1], ["123", "123", 0]]) {
+  for (const [expected, actual, status] of /** @type {[string, string, number][]} */ ([["", "123", 1], ["456", "123", 1], ["123", "123", 0]])) {
     const result = spawnSync("/bin/bash", ["-e", "-c", body], {
       env: { EXPECTED_REPOSITORY_ID: expected, ACTUAL_REPOSITORY_ID: actual }, encoding: "utf8"
     });

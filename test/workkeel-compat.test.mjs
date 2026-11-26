@@ -123,7 +123,7 @@ for (const pin of ["0.2.0", "0.2.0-beta.0"]) test(`source CLI upgrades pin ${pin
 test("read-only learning reads run on CLI 1.0.0 with a warning", async t => {
   const root = await fixture(t), cli = await cliAt(t, "1.0.0");
   await fs.writeFile(path.join(root, "notes.txt"), "original\n");
-  for (const [name, body] of [["search.json", { query: "anything" }], ["impact.json", { source: "notes.txt" }]])
+  for (const [name, body] of /** @type {[string, object][]} */ ([["search.json", { query: "anything" }], ["impact.json", { source: "notes.txt" }]]))
     await fs.writeFile(path.join(root, name), JSON.stringify(body));
   for (const args of [["learning", "search", "--request", "search.json"], ["learning", "impact", "--request", "impact.json"]]) {
     const read = launch(root, cli, ...args);
@@ -149,7 +149,7 @@ test("the launcher rejects a pin that is not an exact version before any downloa
   const bin = path.join(root, ".fake-bin"), marker = path.join(root, "npm-called");
   await fs.mkdir(bin);
   await fs.writeFile(path.join(bin, "npm"), `#!/bin/sh\ntouch ${JSON.stringify(marker)}\n`, { mode: 0o755 });
-  const env = { ...process.env, PATH: `${bin}${path.delimiter}${process.env.PATH}`, WORKKEEL_ALLOW_PACKAGE_FETCH: "1" };
+  const env = /** @type {NodeJS.ProcessEnv} */ ({ ...process.env, PATH: `${bin}${path.delimiter}${process.env.PATH}`, WORKKEEL_ALLOW_PACKAGE_FETCH: "1" });
   delete env.WORKKEEL_CLI_PATH;
   const output = spawnSync(process.execPath, [path.join(root, "workkeelw.mjs"), "status"], { cwd: root, env, encoding: "utf8" });
   assert.equal(output.status, 1); assert.match(output.stderr, /must pin an exact Workkeel version/);

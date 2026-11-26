@@ -30,7 +30,7 @@ test('completion evidence rejects an unborn repository with baseline guidance an
   const ref='.ai-org/artifacts/WK-working/completion.json',canonical=root+'/.ai-org/work-items/WK-working.json';
   await fs.writeFile(root+'/'+ref,JSON.stringify(report));
   const before=await fs.readFile(canonical),message='This repository has no commits. Make a baseline commit first (git add -A && git commit -m baseline), then retry.';
-  await assert.rejects(checkCompletionEvidence(root,'WK-working',report),error=>{
+  await assert.rejects(checkCompletionEvidence(root,'WK-working',report),(/** @type {any} */ error)=>{
     assert.equal(error.message,message);
     assert.doesNotMatch(String(error),/fatal:|ambiguous argument|Command failed/);
     return true;

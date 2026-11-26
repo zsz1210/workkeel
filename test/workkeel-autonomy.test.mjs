@@ -83,7 +83,7 @@ test('events and policy retain authority and integrity checks',async t=>{
 });
 
 test('idle service uses no host, observes events and closes all watchers',async t=>{
-  const f=await fixture(t),settled=Promise.withResolvers(),errors=[];let steps=0,closed=0;
+  const f=await fixture(t),settled=/** @type {PromiseWithResolvers<void>} */ (Promise.withResolvers()),errors=[];let steps=0,closed=0;
   const service=await serveAutonomy(f.root,{debounce_ms:0,reconcile_ms:60000,watchFactory:()=>({close(){closed++;}}),onError:e=>{errors.push(e);settled.reject(e);},onStep:r=>{steps++;assert.equal(r.model_called,false);settled.resolve();}});
   t.after(()=>service.close());await settled.promise;
   const deadline=Date.now()+5000;while(service.observe().state==='checking'&&Date.now()<deadline)await new Promise(resolve=>setTimeout(resolve,5));
@@ -105,7 +105,7 @@ test('CLI tick is idle without a workflow host and retired commands report goal 
   assert.equal(JSON.parse(output).idle,'improvement-disabled');
   const requestRef=f.root+'/docs/request.json';await fs.writeFile(requestRef,JSON.stringify(await f.request({})));
   for(const action of ['enqueue','cancel','discover','resume-job']){
-    assert.throws(()=>execFileSync(process.execPath,[cli,'autonomy',action,f.root,'--request','docs/request.json'],{encoding:'utf8',stdio:['ignore','pipe','pipe']}),error=>{
+    assert.throws(()=>execFileSync(process.execPath,[cli,'autonomy',action,f.root,'--request','docs/request.json'],{encoding:'utf8',stdio:['ignore','pipe','pipe']}),(/** @type {any} */ error)=>{
       assert.match(error.stderr,/retired.*goal/);return true;
     });
   }

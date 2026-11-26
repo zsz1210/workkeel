@@ -192,10 +192,11 @@ test('record-check does not report a supervisor startup failure as a RED test',a
   const f=await checkFixture(t),spawn=childProcess.spawn;
   // Fault injection: the real supervisor child receives the start request but
   // exits before starting the test command or acknowledging it over IPC.
-  childProcess.spawn=function(executable,args,options) {
+  // The fault-injection wrapper only handles the (command, args, options) form the runtime uses.
+  childProcess.spawn=/** @type {any} */ (function(executable,args,options) {
     if(args[0]?.endsWith('/workkeel-command-worker.mjs'))args=['-e',"process.on('message',()=>process.exit(2))"];
     return spawn.call(this,executable,args,options);
-  };
+  });
   syncBuiltinESMExports();
   try {
     const result=await f.check('startup-failure');
@@ -209,19 +210,19 @@ test('record-check does not report a supervisor startup failure as a RED test',a
 test('record-check preserves an interrupted supervisor as unknown execution, not a RED test',async t=>{
   const f=await checkFixture(t),spawn=childProcess.spawn;let acknowledged=false,pid;
   await fs.writeFile(f.root+'/src/check.test.mjs','await new Promise(resolve=>setTimeout(resolve,30000));\n');
-  childProcess.spawn=function(executable,args,options) {
+  childProcess.spawn=/** @type {any} */ (function(executable,args,options) {
     const child=spawn.call(this,executable,args,options);
     if(args[0]?.endsWith('/workkeel-command-worker.mjs'))child.on('message',message=>{
       if(message?.action==='command-started'){acknowledged=true;pid=child.pid;process.kill(pid,'SIGKILL');}
     });
     return child;
-  };
+  });
   syncBuiltinESMExports();
   try {
     const result=await f.check('interrupted-supervisor');
     assert.equal(acknowledged,true);assert.equal(result.execution_started,true);assert.equal(result.exit_code,null);
     assert.equal(result.status,'instrument-failure');assert.equal(result.instrument_error,'command-exit-unconfirmed');
-    assert.equal(result.process_exit_confirmed,true);assert.throws(()=>process.kill(-pid,0),error=>error.code==='ESRCH');
+    assert.equal(result.process_exit_confirmed,true);assert.throws(()=>process.kill(-pid,0),(/** @type {any} */ error)=>error.code==='ESRCH');
     assert.match(await fs.readFile(f.root+'/'+result.log_ref,'utf8'),/Exit code: unknown\nStatus: instrument-failure/);
     assert.equal((await f.read()).state,'build');
   } finally {childProcess.spawn=spawn;syncBuiltinESMExports();}

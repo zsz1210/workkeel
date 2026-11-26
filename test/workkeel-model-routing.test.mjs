@@ -22,6 +22,7 @@ const host = () => ({host: 'synthetic-host', models: ['fast', 'careful'].map(id 
 const authority = pin => ({schema_version: 'workkeel.dispatch-policy/v1', models: ['fast', 'careful'].map(alias => ({alias, provider: 'synthetic', model: `${alias}-model`, reasoning: 'high',
   reasoning_efforts: ['low', 'high'], service_tiers: ['standard', 'priority'], data_classes: ['internal']})), default_alias: 'fast', conservative_alias: 'careful', parallelism: 2, model_policy: {...pin, min_quality: 70}});
 
+/** @param {any} t @param {{mutateAuthority?: (policy: any) => void, mutatePolicy?: (policy: any) => void}} [options] */
 async function fixture(t, {mutateAuthority = () => {}, mutatePolicy = () => {}} = {}) {
   const root = await fs.realpath(await fs.mkdtemp(path.join(os.tmpdir(), 'workkeel-model-routing-')));
   t.after(() => fs.rm(root, {recursive: true, force: true}));

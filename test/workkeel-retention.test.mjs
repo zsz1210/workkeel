@@ -175,10 +175,10 @@ test('roundtrip verification detects corrupted archive, preserved receipt mismat
   const verify = {archive_root: '.ai-org/retention', archive_id: 'archive-one', limits: policy().limits};
   await assert.rejects(verifyRetentionArchive(f.root, {...verify, expected_archive_sha256: '0'.repeat(64)}), /expected digest/);
   const file = f.root + '/' + receipt.verification.archive_ref, original = await fs.readFile(file);
-  const data = JSON.parse(gunzipSync(original)); data.files[0].content_base64 = Buffer.from('wrong').toString('base64');
+  const data = JSON.parse(/** @type {any} */ (gunzipSync(original))); data.files[0].content_base64 = Buffer.from('wrong').toString('base64');
   await fs.writeFile(file, gzipSync(JSON.stringify(data)));
   await assert.rejects(verifyRetentionArchive(f.root, verify), /roundtrip digest/);
-  await fs.writeFile(file, gzipSync(JSON.stringify(JSON.parse(gunzipSync(original)))));
+  await fs.writeFile(file, gzipSync(JSON.stringify(JSON.parse(/** @type {any} */ (gunzipSync(original))))));
   await assert.rejects(verifyRetentionArchive(f.root, verify), /preserved receipt/);
   await fs.writeFile(file, original);
   const receiptFile = f.root + '/' + receipt.receipt_ref, envelope = JSON.parse(await fs.readFile(receiptFile, 'utf8'));
@@ -194,5 +194,5 @@ test('archive write refuses symlink storage and verification requires its exact 
   await fs.unlink(f.root + '/.ai-org/retention');
   const receipt = await applyRetentionArchive(f.root, request);
   await fs.rename(f.root + '/' + receipt.receipt_ref, f.root + '/' + receipt.receipt_ref + '.saved');
-  await assert.rejects(verifyRetentionArchive(f.root, {archive_root: '.ai-org/retention', archive_id: 'archive-one', limits: policy().limits}), error => error.code === 'ENOENT');
+  await assert.rejects(verifyRetentionArchive(f.root, {archive_root: '.ai-org/retention', archive_id: 'archive-one', limits: policy().limits}), (/** @type {any} */ error) => error.code === 'ENOENT');
 });

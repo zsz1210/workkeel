@@ -167,7 +167,7 @@ test('exhausted discovery is explicit on unchanged sources without blocking admi
 
 test('event driver progresses native derived goals without a human continue and stops cleanly',{timeout:60000},async t=>{
   const f=await fixture(t,{empty:true});const errors=[],controller=new AbortController();
-  const settled=Promise.withResolvers();
+  const settled=/** @type {PromiseWithResolvers<void>} */ (Promise.withResolvers());
   const service=await serveAutonomy(f.root,{goalAdapter:f.adapter,signal:controller.signal,debounce_ms:1,reconcile_ms:20,onError:e=>{errors.push(e);settled.reject(e);},onStep:result=>{if(result.idle==='unchanged-approved-sources')settled.resolve();}});t.after(()=>{controller.abort();service.close();});
   t.signal.addEventListener('abort',()=>{controller.abort();service.close();settled.reject(t.signal.reason);},{once:true});
   // Observe the driver's actual settled event, not a machine-speed dependent poll count.

@@ -23,7 +23,7 @@ await fs.writeFile(path.join(project, "approval.md"), "synthetic approval");
 await fs.writeFile(path.join(root, "outside.txt"), "out-of-scope synthetic input");
 let connections = 0;
 const server = http.createServer((request, response) => { connections++; response.end("unexpected network access"); });
-await new Promise(resolve => server.listen(0, "127.0.0.1", resolve));
+await /** @type {Promise<void>} */ (new Promise(resolve => server.listen(0, "127.0.0.1", /** @type {() => void} */ (resolve))));
 const profile = await codexPermissionsForContract(project, { authorization: { approval_ref: "approval.md" }, environment: { read_paths: ["."], write_paths: ["."] } });
 const id = `workkeel-${crypto.randomUUID()}`;
 const rpc = createJsonRpcProcess("codex", ["app-server", "--stdio", ...codexPermissionProfileArgs({ id, profile }), "-c", "allow_login_shell=false"], { cwd: project });
@@ -41,7 +41,7 @@ try {
     ["authority-write", ["/usr/bin/touch", path.join(project, ".ai-org/authority.txt")], false],
     ["task-policy-write", ["/usr/bin/touch", path.join(project, "workkeel.lock")], false],
     ["approval-write", ["/usr/bin/touch", path.join(project, "approval.md")], false],
-    ["network", ["/usr/bin/curl", "--max-time", "2", `http://127.0.0.1:${server.address().port}`], false]
+    ["network", ["/usr/bin/curl", "--max-time", "2", `http://127.0.0.1:${/** @type {import("node:net").AddressInfo} */ (server.address()).port}`], false]
   ]) {
     const result = await rpc.request("command/exec", { command, cwd: project, permissionProfile: id, timeoutMs: 3000, outputBytesCap: 2048 });
     report.cases.push({ name, exit_code: result.exitCode, expected_success: expected, pass: (result.exitCode === 0) === expected });

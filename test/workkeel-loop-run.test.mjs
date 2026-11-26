@@ -57,6 +57,7 @@ test('persistent stop closes admission before cancellation; restart and user cle
   }), /stop/);
   assert.equal(cancelled, true);
   // A fresh module/context reads the retained flag, not an in-memory reset.
+  // @ts-expect-error The query string forces a fresh module instance; TypeScript cannot resolve it.
   const restarted = await import('../src/workkeel-loop-run.mjs?restart');
   assert.equal((await restarted.readLoopRun(root)).stop.confirmed, true);
   await assert.rejects(clearLoopStop(root), /only the user/);
@@ -102,6 +103,7 @@ for (const entryStop of [false, true]) test(`cancellation after cap survives res
   await assert.rejects(withLoopRun(root, 'one', { costPath }, async () => {
     await countLoopOperation('sixtieth'); await countLoopOperation('sixty-first');
   }, async () => {
+    // @ts-expect-error The query string forces a fresh module instance; TypeScript cannot resolve it.
     const restarted = await import('../src/workkeel-loop-run.mjs?cancellation-restart');
     assert.equal((await restarted.readLoopRun(root)).stop.requested, true);
     await assert.rejects(prepareDispatchTicket(root, {}), /stop/);
@@ -168,8 +170,8 @@ for (const terminal of ['finish', 'clear']) test(`ordinary task claims resume af
   await assertTaskExecutionContext(root, task.id, { actor: builder, claim_id: claimed.claim.id });
   assert.equal(await assertLoopAdmission(root, 'another-goal'), null);
   // These invalid requests reach ordinary validation, rather than a loop gate.
-  await assert.rejects(prepareDispatchTicket(root, {}), error => !error.message.startsWith('Loop run:'));
-  await assert.rejects(admitGoalImprovement(root, {}), error => !error.message.startsWith('Loop run:'));
+  await assert.rejects(prepareDispatchTicket(root, {}), (/** @type {any} */ error) => !error.message.startsWith('Loop run:'));
+  await assert.rejects(admitGoalImprovement(root, {}), (/** @type {any} */ error) => !error.message.startsWith('Loop run:'));
   await requestLoopStop(root); // Ordinary goal cancellation must not reactivate the old ledger.
   assert.equal(await fs.readFile(path.join(root, '.ai-org/loop/run.json'), 'utf8'), before);
   await assert.rejects(startLoopRun(root, approval(), { authorizeUser, costPath }), /one L2/);

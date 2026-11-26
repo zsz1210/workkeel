@@ -94,7 +94,7 @@ test("CLI errors preserve their envelope and give command-appropriate recovery g
     message: "Task-first coordination requires an initialized Git repository; run `git init` here or choose the repository root",
     mutation_status: "inspect-before-retry", next_action: neutral
   });
-  for (const [args, next] of [
+  for (const [args, next] of /** @type {[string[], string][]} */ ([
     [["task", "new", "--goal", "Clarify the guide", "--acceptance", "The guide is clear"], lifecycle],
     [["task", "claim", "--id", "WK-0001", "--request", "claim.json"], lifecycle],
     [["task", "--json", "claim", "--id", "WK-0001"], lifecycle],
@@ -105,7 +105,7 @@ test("CLI errors preserve their envelope and give command-appropriate recovery g
     [["task", "show", "--id", "WK-0001"], neutral],
     [["task", "unknown"], neutral],
     [["doctor"], neutral]
-  ]) assert.equal(JSON.parse(fails(root, ...args)).next_action, next, args.join(" "));
+  ])) assert.equal(JSON.parse(fails(root, ...args)).next_action, next, args.join(" "));
   assert.deepEqual(await fs.readdir(root), [], "failed setup and guidance leave the empty folder untouched");
 });
 
@@ -758,11 +758,11 @@ test("a request left pending for an old candidate is never resent to a newer one
 });
 
 // The label warning is advisory: same exit code, same stdout and the same stored summary.
-for (const [name, summary, warned] of [
+for (const [name, summary, warned] of /** @type {[string, string, boolean][]} */ ([
   ["labeled", "[code-error] Fix the off-by-one", false],
   ["unlabeled", "Fix the off-by-one", true],
   ["unknown-label", "[typo] Fix the off-by-one", true]
-]) test(`rework with a ${name} summary ${warned ? "warns on stderr" : "does not warn"} and still records it unchanged`, async t => {
+])) test(`rework with a ${name} summary ${warned ? "warns on stderr" : "does not warn"} and still records it unchanged`, async t => {
   const root = await initialized(t);
   await states.failed(root);
   const result = spawnSync(process.execPath, [cli, "task", "rework", "--id", ID, "--actor", B, "--summary", summary], { cwd: root, encoding: "utf8" });

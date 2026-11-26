@@ -32,9 +32,9 @@ test('framework checks preserve private failed evidence while public source boun
   const alias=path.join(directory,'source-alias');await fs.symlink(clone,alias,'dir');
   assert.throws(()=>inspect(path.join(alias,'scripts/check-source-checkout.mjs')),privateRejected,'an aliased CLI entry must run the check rather than silently exit zero');
   await fs.writeFile(path.join(clone,'docs/nonlocalized-probe.md'),'Synthetic public prose: 資料\n');
-  assert.throws(check,error=>error.status!==0&&String(error.stderr).includes('nonlocalized-probe.md'));
+  assert.throws(check,(/** @type {any} */ error)=>error.status!==0&&String(error.stderr).includes('nonlocalized-probe.md'));
   await fs.rm(path.join(clone,'docs/nonlocalized-probe.md'));await fs.writeFile(path.join(clone,'invalid-source.json'),'');
-  assert.throws(check,error=>error.status!==0&&String(error.stderr).includes('invalid JSON: invalid-source.json'));
+  assert.throws(check,(/** @type {any} */ error)=>error.status!==0&&String(error.stderr).includes('invalid JSON: invalid-source.json'));
   assert.equal(await fs.readFile(path.join(clone,'.workkeel-private/failed-stdout.json'),'utf8'),'','retain the original failed evidence unchanged');
 });
 

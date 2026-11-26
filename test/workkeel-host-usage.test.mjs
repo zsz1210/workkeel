@@ -45,7 +45,8 @@ async function fixture(t,{advancingClaimClock=false,dispatchReasoning=undefined}
   if(dispatchReasoning!==undefined){brief.environment.data.policy_refs.push('docs/dispatch.json');brief.environment.data.model_access='approved-connection';brief.authorization.operations.push('execute');brief.environment.tools.push('native-agent-host');}
   const preview=await previewTaskIntake(root,brief);await applyTaskIntake(root,brief,preview.fingerprint);
   const RealDate=Date;let tick=RealDate.now();
-  if(advancingClaimClock)globalThis.Date=class extends RealDate{constructor(...args){super(...(args.length?args:[tick++]));}static now(){return tick++;}};
+  // The advancing clock subclass only needs the Date behavior the claim path reads.
+  if(advancingClaimClock)globalThis.Date=/** @type {any} */ (class extends RealDate{constructor(...args){super(.../** @type {[any]} */ (args.length?args:[tick++]));}static now(){return tick++;}});
   try{await mutateNativeTask(root,brief.id,'claim',{operation_id:'claim',expected_version:1,actor,base_revision:git('rev-parse','HEAD')});}
   finally{globalThis.Date=RealDate;}
   const task=await readNativeTask(root,brief.id),at=offset=>new Date(Date.parse(task.history.at(-1).at)+offset).toISOString();

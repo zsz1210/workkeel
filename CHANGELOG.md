@@ -40,6 +40,18 @@ repository migration does not republish old tags, archives or npm versions.
   parameters, return values and lists have JSDoc types or casts. The testing
   guide now describes the `checkJs` setup. These are typing changes only.
   Runtime behavior is unchanged.
+- Development: test files have started to get typings, in batches. 21 of
+  the 28 `test/` files with type errors now check cleanly against a test-only
+  config: `ci-scope`, `durable-atomic-boundaries`, `import-boundary`,
+  `npm-release-workflow`, `fixtures/workkeel-sandbox-qualification` and the
+  `workkeel-` tests for `autonomy`, `branding`, `claude-review`, `cli-flags`,
+  `codex-skills`, `compat`, `completion-evidence`, `delivery-request`,
+  `host-usage`, `improvement-cycle`, `learning`, `loop-run`, `model-routing`,
+  `retention`, `review-assessment` and `role-preflight`. Deliberately invalid
+  fixtures and caught errors have JSDoc casts, and the two cache-busting
+  module imports have `@ts-expect-error` with a reason. `tsconfig.json` still
+  does not include `test/`. These are typing changes only. Runtime behavior
+  is unchanged.
 - CLI: `task new` accepts a repeatable `--skill path` that records repository
   Skill files in the contract's `skills` and pins their digests at creation.
   Without it, behavior is unchanged.
