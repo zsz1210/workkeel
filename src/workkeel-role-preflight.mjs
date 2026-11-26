@@ -56,7 +56,10 @@ export function validateRoleContract(contract) {
   return contract;
 }
 
-/** Register trusted application code. A parsed JSON object can never become a host. */
+/**
+ * Register trusted application code. A parsed JSON object can never become a host.
+ * @param {{ id: string, probe: (...args: any[]) => any, runtimeState?: (...args: any[]) => any, launch?: (...args: any[]) => any, [member: string]: any }} host
+ */
 export function createTrustedRoleHost({ id, probe, runtimeState, launch, ...rest }) {
   if (Object.keys(rest).length) fail("unknown host members");
   label(id, "host ID");

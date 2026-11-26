@@ -22,6 +22,12 @@ repository migration does not republish old tags, archives or npm versions.
   and several options parameters have JSDoc types, and a few error and
   `Promise` values have JSDoc casts. These are typing changes only. Runtime
   behavior is unchanged.
+- Development: six more source files are typechecked, for 60 in all: the
+  goals, goal runtime, autonomy, autonomy admission, improvement cycle and CLI
+  modules. Goal and autonomy options, including `actor`, `adapter`, `signal`
+  and the `onError` and `onStep` callbacks, have JSDoc types, as do the
+  trusted role host members. These are typing changes only. Runtime behavior
+  is unchanged.
 - CLI: `task new` accepts a repeatable `--skill path` that records repository
   Skill files in the contract's `skills` and pins their digests at creation.
   Without it, behavior is unchanged.

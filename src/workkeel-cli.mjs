@@ -1,3 +1,4 @@
+// @ts-check
 import { createHash } from "node:crypto";
 import { TEMPLATE_VERSION } from "./workkeel-version.mjs";
 import { readTaskContractInput } from "./task-contract.mjs";

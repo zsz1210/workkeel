@@ -1,3 +1,4 @@
+// @ts-check
 import {readAutonomy,recordGoalDiscovery} from './workkeel-autonomy.mjs';
 import {readNativeGoal,runNativeGoalStep,assertNativeGoalAuthority} from './workkeel-goals.mjs';
 import {readGoalAdmissions,admitGoalImprovement,readGoalAdmissionAuthority} from './workkeel-autonomy-admission.mjs';
@@ -10,7 +11,10 @@ const exhausted=e=>/budget exhausted|cooldown|journal capacity|inventory exhaust
 
 /** Events wake a deterministic controller; idle observations do not call a
  * model. Every inference is an operation of a sealed, independently reviewed
- * native goal, with reservations made before intake or dispatch. */
+ * native goal, with reservations made before intake or dispatch.
+ * @param {string} target
+ * @param {{ adapter?: any, signal?: AbortSignal }} [options]
+ */
 export async function runImprovementCycle(target,{adapter,signal}={}){
   const state=await readAutonomy(target),policy=state.policy;
   if(signal?.aborted)return idle('aborted');

@@ -1,3 +1,4 @@
+// @ts-check
 import {countLoopOperation, assertLoopCostPath, readLoopRun, isLoopRunActive} from './workkeel-loop-run.mjs';
 import fs from 'node:fs/promises';
 import path from 'node:path';
@@ -106,7 +107,7 @@ async function browserPrerequisites(ctx,args){
   if(!(await fs.stat(chrome)).isFile())fail('installed Google Chrome is required for browser checks');
   return origin;
 }
-async function freePort(){const server=net.createServer();await new Promise((resolve,reject)=>server.once('error',reject).listen(0,'127.0.0.1',resolve));const port=server.address().port;await new Promise(resolve=>server.close(resolve));return port;}
+async function freePort(){const server=net.createServer();await /** @type {Promise<void>} */ (new Promise((resolve,reject)=>server.once('error',reject).listen(0,'127.0.0.1',resolve)));const port=/** @type {import('node:net').AddressInfo} */ (server.address()).port;await new Promise(resolve=>server.close(resolve));return port;}
 async function stockCommand(ctx,{command,args,git_write=false,check_id='check'}){
   await countLoopOperation('local-command-'+check_id);
   if(process.platform!=='darwin')fail('local command runner requires qualified macOS sandbox');
@@ -119,7 +120,7 @@ async function stockCommand(ctx,{command,args,git_write=false,check_id='check'})
   const scratch=browser?await fs.mkdtemp('/private/tmp/workkeel-browser-'):await safeDirectory(ctx.target,'.ai-org/goals/'+ctx.goal+'/scratch/'+ctx.operation_id+'/'+check_id,{create:true});
   try{
   const components=ctx.component.id===ctx.manifest.integration.component_id?ctx.manifest.components:[ctx.component],readRoots=['/System','/usr','/bin','/sbin','/Library/Apple',path.dirname(process.execPath),path.dirname(path.dirname(binary))],denied=[];
-  if(command==='node'||browser)for(const ref of process.report?.getReport().sharedObjects??[])if(path.isAbsolute(ref)&&!ref.startsWith('/System/')&&!ref.startsWith('/usr/')){
+  if(command==='node'||browser)for(const ref of /** @type {any} */ (process.report)?.getReport().sharedObjects??[])if(path.isAbsolute(ref)&&!ref.startsWith('/System/')&&!ref.startsWith('/usr/')){
     const resolved=await fs.realpath(ref);readRoots.push(path.dirname(resolved));
     // dyld checks the installed Homebrew opt alias before following the Cellar
     // symlink. Grant that exact verified library-directory alias as well.
@@ -202,7 +203,9 @@ function authoredFailure(ctx,result){
   try{return JSON.parse(result.output).native_request?.judgment==='fail';}catch{return false;}
 }
 /** Trusted stock host with fixed Codex protocol, role sandbox and unchanged
- * reviewer-authored request relay. Optional factories are trusted embedding code. */
+ * reviewer-authored request relay. Optional factories are trusted embedding code.
+ * @param {{ hostFactory?: typeof createLocalCodexSubscriptionHost, commandRunner?: typeof stockCommand, costPath?: any }} [options]
+ */
 export async function createCodexGoalAdapter({hostFactory=createLocalCodexSubscriptionHost,commandRunner=stockCommand,costPath}={}){
   if(typeof hostFactory!=='function'||typeof commandRunner!=='function')fail('trusted host functions required');
   const hosts=new Map(),runtimes=new Map();
@@ -316,7 +319,7 @@ export async function createCodexGoalAdapter({hostFactory=createLocalCodexSubscr
     try{
       const old=await readSlot(ctx);if(old.input_sha256!==slot.input_sha256)fail('runtime operation replay conflict');
       if(old.status==='not-started'&&old.model_requested===false){
-        if(!Array.isArray(old.pre_model_stops)||old.pre_model_stops.length>=32){const error=Error('Pre-model stop history limit; retained evidence cannot be pruned');error.retentionBlocked=true;throw error;}
+        if(!Array.isArray(old.pre_model_stops)||old.pre_model_stops.length>=32){const error=/** @type {Error & { retentionBlocked?: boolean }} */ (Error('Pre-model stop history limit; retained evidence cannot be pruned'));error.retentionBlocked=true;throw error;}
         slot.pre_model_stops=structuredClone(old.pre_model_stops);
       }else{
         effectsMayExist=true;if(old.final)return old.final;if(old.runtime_result)return await finalize(ctx,old);return {status:'unknown',reason:'Existing runtime intent requires exact host reconciliation'};
