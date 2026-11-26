@@ -1,3 +1,4 @@
+// @ts-check
 import { readTaskFile } from "./task-contract.mjs";
 import { readNativeGit } from "./workkeel-project.mjs";
 import { listTaskItems, readNativeTask } from "./workkeel-tasks.mjs";

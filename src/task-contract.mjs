@@ -1,7 +1,8 @@
+// @ts-check
 import fs from "node:fs/promises";
 import { constants } from "node:fs";
 import path from "node:path";
-import Ajv from "ajv";
+import { Ajv } from "ajv";
 import addFormats from "ajv-formats";
 import { sha256 } from "./files.mjs";
 import { observeFileRead, observeSource } from './workkeel-read-metrics.mjs';
@@ -62,7 +63,7 @@ export const taskContractSchema = object({
   })
 });
 const ajv = new Ajv({ allErrors: true, strict: true, ownProperties: true });
-addFormats(ajv);
+/** @type {import("ajv-formats").FormatsPlugin} */ (/** @type {unknown} */ (addFormats))(ajv);
 const validate = ajv.compile(taskContractSchema);
 
 function repositoryPath(value, allowRoot = false) {

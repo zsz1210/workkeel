@@ -12,6 +12,11 @@ repository migration does not republish old tags, archives or npm versions.
   check with `checkJs` off: only the 33 source files that start with
   `// @ts-check` are checked. `tsconfig.json` is source-only and is not in the
   npm package. Runtime behavior is unchanged.
+- Development: seven more source files are typechecked, for 40 in all. The
+  native Git read helper now declares a string result for text output and a
+  `Buffer` for `encoding: "buffer"`. Ajv is imported as a named export, and
+  the `ajv-formats` plugin call and Ajv validators have JSDoc types. These are
+  typing changes only. Runtime behavior is unchanged.
 - CLI: `task new` accepts a repeatable `--skill path` that records repository
   Skill files in the contract's `skills` and pins their digests at creation.
   Without it, behavior is unchanged.

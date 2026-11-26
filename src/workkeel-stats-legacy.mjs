@@ -1,6 +1,7 @@
+// @ts-check
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import Ajv from 'ajv';
+import { Ajv } from 'ajv';
 import addFormats from 'ajv-formats';
 import { formatJson, sha256 } from './files.mjs';
 import { readTaskContractInput } from './task-contract.mjs';
@@ -117,7 +118,8 @@ const recordSchema = object({
   history: { type: 'array', minItems: 1, items: event }
 });
 const ajv = new Ajv({ strict: true, allErrors: true, ownProperties: true });
-addFormats(ajv);
+/** @type {import("ajv-formats").FormatsPlugin} */ (/** @type {unknown} */ (addFormats))(ajv);
+/** @type {import("ajv").ValidateFunction<any>} */
 const validateRecord = ajv.compile(recordSchema);
 const describe = error => `${error.instancePath || '/'} ${error.message}${error.params?.additionalProperty ? ` (${error.params.additionalProperty})` : ''}`;
 
