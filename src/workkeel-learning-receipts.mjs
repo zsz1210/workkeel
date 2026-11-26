@@ -1,3 +1,4 @@
+// @ts-check
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import {exactKeys,executionDigest} from './workkeel-execution-policy.mjs';
@@ -26,6 +27,12 @@ export function replayLearningReceipt(events,action,request,fail){
   if(prior.event.action!==action||prior.event.request_sha256!==executionDigest(request))fail('operation replay conflict');
   return {...prior,replayed:true,mutation_status:'already-applied'};
 }
+/**
+ * @param {string} target
+ * @param {string} root
+ * @param {any} event
+ * @param {{ maxBytes?: number, fail?: (message: string) => never }} [options]
+ */
 export async function appendLearningReceipt(target,root,event,{maxBytes=Infinity,fail}={}){
   const envelope={event,sha256:executionDigest(event)},content=formatJson(envelope);
   if(Buffer.byteLength(content)>maxBytes)fail('event exceeds bounded size');

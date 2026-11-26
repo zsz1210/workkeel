@@ -1,3 +1,4 @@
+// @ts-check
 import {spawn} from 'node:child_process';
 import {setTimeout as delay} from 'node:timers/promises';
 import {crc32, inflateSync} from 'node:zlib';
@@ -44,12 +45,12 @@ export function assertScreenshotPNG(data) {
 
 async function closeBrowser(endpoint) {
   if (!endpoint) return;
-  await new Promise(resolve=>{
+  await /** @type {Promise<void>} */ (new Promise(resolve=>{
     const socket=new WebSocket(endpoint), timer=setTimeout(()=>{socket.close();resolve();},1000);
     socket.addEventListener('open',()=>socket.send(JSON.stringify({id:1,method:'Browser.close'})),{once:true});
     const done=()=>{clearTimeout(timer);socket.close();resolve();};
     socket.addEventListener('close',done,{once:true});socket.addEventListener('error',done,{once:true});
-  });
+  }));
 }
 
 // The coordinator owns Chrome. The approved check connects to it, but its OS
@@ -61,7 +62,7 @@ export async function withOwnedBrowser({chrome,profile,port,scratch,cwd,env,sign
   const args=['--headless','--no-sandbox','--no-first-run','--no-default-browser-check','--disable-background-networking','--disable-component-update','--disable-sync','--disable-extensions','--disable-breakpad','--disable-crash-reporter','--disable-crashpad-for-testing','--disable-dev-shm-usage','--disable-features=MediaRouter,OptimizationHints','--metrics-recording-only','--password-store=basic','--use-mock-keychain','--remote-debugging-address=127.0.0.1','--remote-debugging-port='+port,'--user-data-dir='+scratch+'/chrome-profile','about:blank'];
   const child=spawn('/usr/bin/sandbox-exec',['-p',profile,chrome,...args],{cwd,env,detached:true,stdio:['ignore','ignore','pipe']});
   let finished=false, launchError, endpoint, diagnostics='';
-  const settled=new Promise(resolve=>{child.once('error',e=>{launchError=e;finished=true;resolve();});child.once('close',()=>{finished=true;resolve();});});
+  const settled=/** @type {Promise<void>} */ (new Promise(resolve=>{child.once('error',e=>{launchError=e;finished=true;resolve();});child.once('close',()=>{finished=true;resolve();});}));
   child.stderr.on('data',data=>{if(diagnostics.length<8192)diagnostics+=data.toString().slice(0,8192-diagnostics.length);});
   const kill=()=>{if(child.pid)try{process.kill(-child.pid,'SIGKILL');}catch(e){if(e.code!=='ESRCH')throw e;}};
   const abort=()=>{kill();};lifetime.addEventListener('abort',abort,{once:true});

@@ -20,6 +20,7 @@ export function drainCompatibilityWarnings() { return warnings.splice(0); }
 /**
  * A CLI can operate a project when it has the lock's major version and is not
  * older than the lock. Reads still run otherwise; mutations stop.
+ * @returns {{ status: string, lock: any, cli: any, next_action?: string }}
  */
 export function cliCompatibility(lockVersion, cliVersion = TEMPLATE_VERSION) {
   if (!semver.valid(lockVersion) || !semver.valid(cliVersion)) return { status: "invalid", lock: lockVersion, cli: cliVersion };

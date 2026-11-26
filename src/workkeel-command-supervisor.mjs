@@ -1,3 +1,4 @@
+// @ts-check
 import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
 
@@ -18,6 +19,10 @@ function boundedText(chunks) {
 
 // Trusted command supervision is an owned process-group boundary, not a sandbox.
 // Windows needs a Job Object adapter before we can confirm descendant cleanup.
+/**
+ * @param {any} command
+ * @param {{ timeout_ms: any, output_limit_bytes: any, hooks?: { started?: (event: { process_group_id: number }) => any } }} options
+ */
 export async function runSupervisedCommand(command, { timeout_ms, output_limit_bytes, hooks = {} }) {
   const result = { execution_started: false, process_exit_confirmed: true, exit_code: null, stdout: "", stderr: "", timed_out: false, surviving_descendants: false, instrument_error: null };
   if (process.platform === "win32") return { ...result, instrument_error: "unsupported-platform-descendant-cleanup" };

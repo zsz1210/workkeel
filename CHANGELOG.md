@@ -17,6 +17,11 @@ repository migration does not republish old tags, archives or npm versions.
   `Buffer` for `encoding: "buffer"`. Ajv is imported as a named export, and
   the `ajv-formats` plugin call and Ajv validators have JSDoc types. These are
   typing changes only. Runtime behavior is unchanged.
+- Development: fourteen more source files are typechecked, for 54 in all,
+  including the task list and project modules. The CLI compatibility result
+  and several options parameters have JSDoc types, and a few error and
+  `Promise` values have JSDoc casts. These are typing changes only. Runtime
+  behavior is unchanged.
 - CLI: `task new` accepts a repeatable `--skill path` that records repository
   Skill files in the contract's `skills` and pins their digests at creation.
   Without it, behavior is unchanged.

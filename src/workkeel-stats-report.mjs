@@ -1,3 +1,4 @@
+// @ts-check
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { createHash } from 'node:crypto';
@@ -17,6 +18,7 @@ const avg = xs => xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : null;
 const at = value => Date.parse(value);
 
 
+/** @param {{ days?: number, cutoff?: any, timezone?: string, previous?: any }} [options] */
 function reportWindow({ days = 7, cutoff, timezone = 'UTC', previous = null } = {}) {
   if (days !== 7) throw Error('--days must be 7 for the weekly report');
   if(typeof cutoff !== 'string')throw Error('--cutoff is required for a fixed weekly observation');

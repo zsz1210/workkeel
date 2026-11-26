@@ -1,3 +1,4 @@
+// @ts-check
 // A separate supervisor survives coordinator death. IPC disconnect and the local
 // deadline terminate only this owned POSIX process group, including its children.
 import { spawn } from "node:child_process";
@@ -9,7 +10,7 @@ if (process.argv[2] === "--command-supervise") {
   process.once("disconnect", terminate);
   const timer = setTimeout(terminate, timeout + 3000);
   let started = false;
-  process.on("message", message => {
+  process.on("message", (/** @type {any} */ message) => {
     if (started || message?.action !== "start") return;
     started = true;
     if (!message.command || typeof message.command.executable !== "string" || !Array.isArray(message.command.args)) process.exit(2);
@@ -35,7 +36,7 @@ if (process.argv[2] === "--command-supervise") {
       });
     });
     child.once("error", error => {
-      process.send({ action: "command-start-failed", code: error.code ?? "unknown" }, sendError => {
+      process.send({ action: "command-start-failed", code: /** @type {NodeJS.ErrnoException} */ (error).code ?? "unknown" }, sendError => {
         if (sendError) return terminate();
         spawnReported = true; complete(2, null, false);
       });

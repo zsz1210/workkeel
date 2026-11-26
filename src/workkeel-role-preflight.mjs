@@ -1,3 +1,4 @@
+// @ts-check
 import { exactKeys, executionDigest } from "./workkeel-execution-policy.mjs";
 
 // Role requirements are declared in JSON; satisfaction is only ever probed by
@@ -101,6 +102,7 @@ function validateProbe(result, role) {
  * Run before inference. The host probe may inspect connections and catalogues,
  * but must not start a model turn. The receipt is an observation, not authority.
  */
+/** @param {{ role: any, host: any, context?: { approved_tools?: any, coordinator_checks?: any } }} request */
 export async function runRolePreflight({ role, host, context = {} }) {
   // All checks and the receipt must describe the same request across the probe
   // await. The host receives its own copy below, never this private snapshot.
