@@ -9,7 +9,7 @@ repository migration does not republish old tags, archives or npm versions.
 
 ## 2.1.0
 
-Pending publication. This release has no breaking changes.
+Released 2026-11-27. This release has no breaking changes.
 
 ### Changes
 
