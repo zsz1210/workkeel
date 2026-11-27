@@ -1,3 +1,4 @@
+// @ts-check
 import {assertLoopAdmission, countLoopOperation} from './workkeel-loop-run.mjs';
 import fs from "node:fs/promises";
 import path from "node:path";
@@ -135,6 +136,8 @@ export function validateNativeTaskSnapshot(item, id) {
  * `excludeRule` lets a read-only caller skip entries by name, such as backup
  * copies; each skipped entry goes to `excluded`. Without it, any entry other
  * than a task record is an error.
+ * @param {string} target
+ * @param {{ isolateErrors?: boolean, staleAfter?: number, now?: Date, excludeRule?: any, excluded?: any[] }} [options]
  */
 export async function listTaskItems(target, { isolateErrors = false, staleAfter, now = new Date(), excludeRule = null, excluded = [] } = {}) {
   if (staleAfter !== undefined && (!Number.isFinite(staleAfter) || staleAfter <= 0))

@@ -59,6 +59,7 @@ test('transitive impact excludes contradicted and stale ancestors and traces lin
   assert.equal((await search(f.root,{query:'外部介面'})).items.length,3);
   await review(f.root,{...f.confirmed('LESSON-native'),result:'contradicted'});
   assert.equal((await search(f.root,{query:'外部介面'})).items.length,0);
+  /** @type {any} */
   let result=await impact(f.root,{source:'docs/evidence.md'});assert.equal(result.items.length,3);assert.equal(result.skills.length,1);assert.equal(result.historical_acceptance_changed,false);
   assert.equal(result.items[2].reasons[0].code,'ancestor-ineligible');
   await review(f.root,f.confirmed('LESSON-native'));await fs.writeFile(f.root+'/docs/evidence.md','Changed contract.');

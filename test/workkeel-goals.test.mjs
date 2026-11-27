@@ -43,6 +43,7 @@ async function fixture(t,{count=1,maxReworks=2,purpose='execution',release=false
   return {target,roots,manifest,request,directory};
 }
 async function artifact(ctx,kind,value){const ref='.ai-org/artifacts/'+ctx.task.id+'/goal-'+kind+'-'+ctx.operation_id+'.json';await fs.mkdir(path.dirname(ctx.component.root+'/'+ref),{recursive:true});await fs.writeFile(ctx.component.root+'/'+ref,JSON.stringify(value,null,2)+'\n');return {path:ref,sha256:(await readTaskFile(ctx.component.root,ref)).bytes_digest};}
+/** @param {{firstFail?: boolean, alwaysFail?: boolean, onExecute?: (ctx: any) => unknown, wrongThread?: boolean, interruptAfterNativeReview?: boolean, costPath?: any, directNative?: boolean}} [options] */
 function fixtureAdapter({firstFail=true,alwaysFail=false,onExecute=()=>{},wrongThread=false,interruptAfterNativeReview=false,costPath,directNative=false}={}){
   const reviews=new Map(),receipts=new Map();
   return createTrustedGoalAdapter({id:'synthetic-goal-host',...(costPath?{costPath}:{}),assertCapabilities:async()=>{},cancel:async()=>({status:'cancelled',reason:'Synthetic exact owned host stopped'}),reconcile:async ctx=>receipts.get(ctx.operation_id)??{status:'unknown',reason:'Synthetic effects are unknown'},
@@ -100,7 +101,7 @@ for(const taskId of ['WK-controller','WK-component-0'])test(`goal authority boun
     const missing=Object.assign(Error('Synthetic missing task'),{code:'ENOENT'});
     if(failure==='malformed JSON')await fs.writeFile(taskFile,'{');
     if(failure==='integrity'){
-      const record=JSON.parse(original);record.history[0].hash='0'.repeat(64);
+      const record=JSON.parse(/** @type {any} */ (original));record.history[0].hash='0'.repeat(64);
       await fs.writeFile(taskFile,JSON.stringify(record));
     }
     t.mock.method(fs,'open',async(file,...args)=>{
@@ -190,7 +191,7 @@ test('frozen goal remains cancellable after approved manifest and approval bytes
 
 test('goal control snapshots validated input before waiting for the mutation lock',async t=>{
   const f=await fixture(t),goal=await readNativeGoal(f.target,f.manifest.id);
-  const entered=Promise.withResolvers(),release=Promise.withResolvers(),validated=Promise.withResolvers();
+  const entered=/** @type {PromiseWithResolvers<void>} */ (Promise.withResolvers()),release=/** @type {PromiseWithResolvers<void>} */ (Promise.withResolvers()),validated=/** @type {PromiseWithResolvers<void>} */ (Promise.withResolvers());
   const locked=withProjectMutationLock(f.target,async()=>{entered.resolve();await release.promise;});
   await entered.promise;
   let operationId='pause-snapshot';
@@ -226,7 +227,7 @@ test('separate scheduler process cannot double-start an operation owned by a liv
   const f=await fixture(t),adapter=fixtureAdapter();await runNativeGoalStep(f.target,f.manifest.id,{adapter});
   const module=new URL('../src/workkeel-goals.mjs',import.meta.url).href,source=`import {runNativeGoalStep,createTrustedGoalAdapter} from ${JSON.stringify(module)};const adapter=createTrustedGoalAdapter({id:'actual-child-fixture',assertCapabilities:async()=>{},execute:async ctx=>{process.stdout.write('entered\\n');await new Promise(r=>process.stdin.once('data',r));return {status:'unknown',reason:'Actual fixture child held exact operation'};},reconcile:async()=>({status:'unknown'}),cancel:async()=>({status:'cancelled'})});await runNativeGoalStep(${JSON.stringify(f.target)},'goal-one',{adapter});`;
   const child=spawn(process.execPath,['--input-type=module','-e',source],{stdio:['pipe','pipe','pipe']});t.after(()=>{if(child.exitCode===null)child.kill('SIGKILL');});let stderr='';child.stderr.on('data',d=>stderr+=d);const exited=new Promise(r=>child.once('exit',r));
-  await new Promise((resolve,reject)=>{const timer=setTimeout(()=>reject(Error('Child did not acquire: '+stderr)),5000);child.stdout.on('data',d=>{if(String(d).includes('entered')){clearTimeout(timer);resolve();}});});
+  await /** @type {Promise<void>} */ (new Promise((resolve,reject)=>{const timer=setTimeout(()=>reject(Error('Child did not acquire: '+stderr)),5000);child.stdout.on('data',d=>{if(String(d).includes('entered')){clearTimeout(timer);resolve();}});}));
   const result=await runNativeGoalStep(f.target,f.manifest.id,{adapter});assert.equal(result.idle,'waiting-for-dependencies');child.stdin.end('release\n');assert.equal(await exited,0,stderr);
   const view=await readNativeGoal(f.target,f.manifest.id);assert.equal(view.operations.filter(o=>o.kind==='runtime').length,1);assert.equal(view.operations.at(-1).first_result.reason,'Actual fixture child held exact operation');
 });
@@ -285,7 +286,7 @@ test('service does not spin on its own uncertain result writes or invoke inferen
 });
 
 test('service close drains the in-flight operation and callback and discards pending triggers',async t=>{
-  const entered=Promise.withResolvers(),release=Promise.withResolvers(),reported=Promise.withResolvers(),finishReport=Promise.withResolvers();
+  const entered=/** @type {PromiseWithResolvers<void>} */ (Promise.withResolvers()),release=/** @type {PromiseWithResolvers<void>} */ (Promise.withResolvers()),reported=/** @type {PromiseWithResolvers<void>} */ (Promise.withResolvers()),finishReport=/** @type {PromiseWithResolvers<void>} */ (Promise.withResolvers());
   let service;t.after(async()=>{release.resolve();finishReport.resolve();await service?.close();});
   const f=await fixture(t);let calls=0,reconciliations=0,settled=false;const errors=[];
   t.mock.timers.enable({apis:['setInterval']});

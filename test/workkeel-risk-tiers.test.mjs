@@ -37,6 +37,7 @@ function contract(id, { tier, write = ["src"], approvedBy = "owner", classificat
 }
 const git = (root, ...args) => execFileSync("git", ["-C", root, ...args], { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }).trim();
 async function write(root, ref, data) { await fs.mkdir(path.dirname(path.join(root, ref)), { recursive: true }); await fs.writeFile(path.join(root, ref), data); }
+/** @param {import("node:test").TestContext} t @param {object} [policy] @param {(root: string) => unknown} [setup] */
 async function fixture(t, policy = teamPolicy(), setup = () => {}) {
   const root = await fs.mkdtemp(path.join(os.tmpdir(), "workkeel-risk-"));
   t.after(() => fs.rm(root, { recursive: true, force: true }));
@@ -86,7 +87,7 @@ test("low and standard tasks keep the existing distinct-agent lifecycle", async 
 });
 
 // High work is the same with one Principal or many: another model family reviews it, then the approving Principal closes it.
-for (const [name, policy, approvedBy, closer] of [["one Principal", soloPolicy, "owner", builder], ["several Principals", teamPolicy, "lead", lead]]) {
+for (const [name, policy, approvedBy, closer] of /** @type {[string, () => object, string, typeof builder][]} */ ([["one Principal", soloPolicy, "owner", builder], ["several Principals", teamPolicy, "lead", lead]])) {
   test(`high work with ${name} needs another model family's review and the approving Principal's close`, async t => {
     const root = await fixture(t, policy());
     await assert.rejects(createNativeTask(root, contract("WK-under", { tier: "standard", write: ["src/auth"], approvedBy }), request(0, builder)), /below the high tier/);
@@ -174,7 +175,8 @@ test("a low task whose candidate touches a high path is escalated at handoff", a
 
 test("risk path patterns are repository-relative, include dotfiles and cannot negate", async t => {
   for (const pattern of ["../x/**", "/abs/**", "!src/**", "src//x", "src\\x"]) {
-    const policy = teamPolicy(); policy.risk_paths = { high: [pattern] };
+    // Deliberately partial: only the high tier carries the invalid pattern.
+    const policy = teamPolicy(); policy.risk_paths = /** @type {any} */ ({ high: [pattern] });
     const root = await fs.mkdtemp(path.join(os.tmpdir(), "workkeel-risk-"));
     t.after(() => fs.rm(root, { recursive: true, force: true }));
     git(root, "init", "-q");

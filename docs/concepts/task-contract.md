@@ -93,7 +93,7 @@ ports, redirect behavior, symlinks, resource limits and command permissions.
 | --- | --- | --- |
 | Work and accountability | `actor`, `scope`, `acceptance`, `handoff` | Who performs this task and what must be delivered |
 | Permission and environment | `authorization`, `environment` | Explicit approval references and requested operational boundaries |
-| Project methods | `skills` | Repository-relative instructions needed by this project, not generic AI abilities |
+| Project methods | `skills` | Repository-relative instructions needed by this project, not generic AI abilities; `task new --skill path` (repeatable) or a brief's `skills` sets them, and creation pins each file's digest in `authority_pins` |
 | Execution and model connection | `execution.runtime`, `execution.model_connection` | Runtime requirements versus native or optional gateway model settings |
 
 `verification` preserves actual identity separation. A distinct-agent requirement

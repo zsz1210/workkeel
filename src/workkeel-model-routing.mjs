@@ -1,3 +1,4 @@
+// @ts-check
 import path from 'node:path';
 import {exactKeys, executionDigest, selectNodeModel} from './workkeel-execution-policy.mjs';
 import {readModelPolicy, selectModelPolicy, validateModelSnapshot} from './workkeel-model-policy.mjs';
@@ -50,6 +51,13 @@ export async function readApprovedModelPolicy(target, pin, {require_active = fal
 }
 
 /** Approved tuple lists constrain routing; a policy editor never supplies its own authority. */
+/**
+ * @param {string} target
+ * @param {any} task
+ * @param {any} authority
+ * @param {{ model_policy: any, capabilities: any, node: any, route?: { risk?: string, alias?: string } }} request
+ * @param {{ historical?: boolean }} [options]
+ */
 export async function resolveDispatchModelRouting(target, task, authority, {model_policy, capabilities, node, route = {}}, {historical = false} = {}) {
   if (!authority.model_policy) fail('layered routing requires an explicitly pinned approved policy bridge');
   const pin = assertModelPolicyRequest(authority.model_policy, model_policy);

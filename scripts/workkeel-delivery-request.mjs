@@ -22,7 +22,12 @@ export function deliveryCheckEnvironment() {
   return env;
 }
 
-/** Record an actual Node test command and its input hashes; never accept a task. */
+/**
+ * Record an actual Node test command and its input hashes; never accept a task.
+ * @param {string} target
+ * @param {any} input
+ * @param {{ observeEnvironment?: (env: Record<string, string | undefined>) => void }} [options]
+ */
 export async function recordDeliveryCheck(target,input,{observeEnvironment}={}) {
   exactKeys(input,['task_id','actor','expected_version','name','tests','files']);
   if(typeof input.name!=='string'||!ID.test(input.name))throw Error('Delivery: explicit check name required');

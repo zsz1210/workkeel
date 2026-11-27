@@ -354,7 +354,8 @@ test("a lazy allowlist entry rejects a static import, and stale or unexplained e
 test("optional tests map to their src modules, and unmapped or missing ones fail", async t => {
   const root = await fixture(t, { "src/workkeel-usage.mjs": "export {};\n", "src/workkeel-view.mjs": "export {};\n" });
   const tests = ["test/workkeel-usage.test.mjs", "test/workkeel-observer.test.mjs", "test/workkeel-browser.test.mjs"];
-  const result = optionalModules(root, { tests, tiers: { monitor: ["src/workkeel-gone.mjs"] }, testModules: { "workkeel-observer": ["src/workkeel-view.mjs"] } });
+  // Deliberately partial tier and test-module maps replace the full defaults.
+  const result = optionalModules(root, /** @type {any} */ ({ tests, tiers: { monitor: ["src/workkeel-gone.mjs"] }, testModules: { "workkeel-observer": ["src/workkeel-view.mjs"] } }));
   assert.deepEqual(result.modules, ["src/workkeel-usage.mjs", "src/workkeel-view.mjs"]);
   assert.deepEqual(result.errors, [
     "optional test test/workkeel-browser.test.mjs: no src/workkeel-browser.mjs; map it in OPTIONAL_TEST_MODULES",

@@ -1,5 +1,6 @@
+// @ts-check
 import fs from 'node:fs/promises';
-import Ajv from 'ajv';
+import { Ajv } from 'ajv';
 import { formatJson, sha256 } from './files.mjs';
 import { readTaskFile, validateTaskContract } from './task-contract.mjs';
 import { readTaskProject, assertActor, safeDirectory, readNativeGit, requireHeadRevision } from './workkeel-project.mjs';
@@ -33,7 +34,9 @@ const inputSchema = { type: 'object', additionalProperties: false, properties: {
   schema_version: { const: 'workkeel.review-assessment-input/v1' }, candidate_revision: revision,
   impact_ref: text, current: object(environment), measurements: list(measurement), blockers: list(text)
 } };
+/** @type {import("ajv").ValidateFunction<any>} */
 const validateInput = new Ajv({ strict: true, allErrors: true }).compile(inputSchema);
+/** @type {import("ajv").ValidateFunction<any>} */
 const validateImpact = new Ajv({ strict: true }).compile(object({
   schema_version: { const: 'workkeel.review-impact/v1' }, task_id: text, approved_by: text,
   irreversible_impact: { enum: ['none', 'material', 'unknown'] }

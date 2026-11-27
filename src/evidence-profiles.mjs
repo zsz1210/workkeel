@@ -1,3 +1,4 @@
+// @ts-check
 import path from "node:path";
 import { atomicCreate, formatJson, pathExists, readJson, sha256 } from "./files.mjs";
 

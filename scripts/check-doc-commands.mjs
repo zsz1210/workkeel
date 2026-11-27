@@ -69,7 +69,7 @@ export const COMMAND_FORMS = [
   form("task", ["observe"], "id! request!"),
   form("task", ["metrics"], "id!"),
   form("task", ["show"], "id!"),
-  form("task", ["new", "create"], "goal! acceptance! write? read? include? exclude? risk? id? actor? approval?"),
+  form("task", ["new", "create"], "goal! acceptance! write? read? include? exclude? risk? id? actor? approval? skill?"),
   form("task", ["create"], "source! request!"),
   form("task", LIFECYCLE, "id! request!"),
   form("task", ["create"], "source! actor?"),
@@ -264,6 +264,8 @@ function contractProblems(parsed) {
   const write = list("write", "docs"), read = list("read", "docs");
   if (write || read) draft.environment = { ...(write ? { write_paths: write } : {}), ...(read ? { read_paths: read } : {}) };
   if (parsed.options["--risk"] !== undefined) draft.verification = { risk_tier: value("risk", "low") };
+  const skills = list("skill", ".agents/skills/example/SKILL.md");
+  if (skills) draft.skills = skills;
   const actor = { agent_id: "builder", principal_id: "owner" };
   if (parsed.options["--approval"] !== undefined) draft.authorization = { approved_by: actor.principal_id, approval_ref: value("approval", "docs/approval.md"),
     operations: ["read", "write"], expires_at: null };

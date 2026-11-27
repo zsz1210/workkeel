@@ -1,3 +1,4 @@
+// @ts-check
 import { AsyncLocalStorage } from 'node:async_hooks';
 import path from 'node:path';
 import { readTaskFile } from './task-contract.mjs';
@@ -47,6 +48,11 @@ export const isLoopRunActive = run => Boolean(run && (['running', 'stopping'].in
 
 /** Host-only infrastructure. Exactly one approved L2 for this private trial.
  * This does not create a task or execute an improvement. Delivery remains goal. */
+/**
+ * @param {string} target
+ * @param {any} approval
+ * @param {{ authorizeUser?: (request: any) => any, costPath?: any }} [options]
+ */
 export async function startLoopRun(target, approval, { authorizeUser, costPath } = {}) {
   approval=structuredClone(approval);costPath=structuredClone(costPath);
   exactKeys(approval, ['id', 'goal_id', 'proposal_sha256', 'baseline_sha256', 'cost_path']);
@@ -77,6 +83,10 @@ export async function requestLoopStop(target, reason = 'user-requested') {
     s.status = 'stopping'; return write(target, stored(s));
   });
 }
+/**
+ * @param {string} target
+ * @param {{ authorizeUser?: (request: any) => any }} [options]
+ */
 export async function clearLoopStop(target, { authorizeUser } = {}) {
   if (typeof authorizeUser !== 'function' || await authorizeUser({ action: 'clear-stop', run: await readLoopRun(target) }) !== true) fail('only the user can clear the persistent stop');
   return lock(target, async () => {
@@ -121,7 +131,14 @@ export async function countLoopOperation(label, target = context.getStore()?.tar
     await write(target, stored(s));
   });
 }
-/** Shared context follows nested async operations; it never owns delivery. */
+/**
+ * Shared context follows nested async operations; it never owns delivery.
+ * @param {string} target
+ * @param {any} goalId
+ * @param {any} adapter
+ * @param {() => any} operation
+ * @param {() => any} [cancel]
+ */
 export async function withLoopRun(target, goalId, adapter, operation, cancel) {
   const inherited = context.getStore();
   const ledgerTarget = inherited?.target ?? target;

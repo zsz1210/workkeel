@@ -12,7 +12,7 @@ You need no server or model call for core task coordination.
 The dashed boxes show optional additions. Use native dispatch to record execution handoffs. For a weekly read-only view
 with no model/API spend, use the
 [Workkeel Loop L1 report](../operations/loop-trial.md) through
-`workkeel stats --report --cutoff 2026-10-19T00:00:00Z --timezone UTC`.
+`workkeel stats --report --cutoff <ISO-time> --timezone <IANA-zone>`.
 
 ## Workkeel execution and authority boundaries
 

@@ -1,3 +1,4 @@
+// @ts-check
 import {assertLoopAdmission} from './workkeel-loop-run.mjs';
 import fs from 'node:fs/promises';
 import path from 'node:path';

@@ -1,6 +1,7 @@
+// @ts-check
 // Opt-in protocol preparation only. The caller owns authorization, process
 // isolation, timeout, raw capture and descendant cleanup; this module launches nothing.
-import Ajv from 'ajv/dist/2020.js';
+import { Ajv2020 as Ajv } from 'ajv/dist/2020.js';
 
 export const CLAUDE_REVIEW_VERSION = '2.1.287';
 const fields=['rule_id','file','line_start','line_end','scenario','actual','expected','recommendation'];

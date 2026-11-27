@@ -101,7 +101,7 @@ function launchParticipant(participant, target) {
     if (state.stderr.length < 8192) state.stderr += chunk;
   });
   child.on("error", (error) => fail(new Error(`participant ${participant} process error: ${error.message}`)));
-  child.on("message", (message) => {
+  child.on("message", (/** @type {any} */ message) => {
     if (message?.type === "ready" && !state.readyMessage) {
       state.readyMessage = message;
       state.ready.resolve(message);
@@ -161,9 +161,9 @@ test("durableAtomicCreate admits exactly one of several independent processes ra
     assert.equal(new Set(ready.map((message) => message.pid)).size, PARTICIPANTS);
     await assert.rejects(fs.lstat(target), { code: "ENOENT" });
 
-    const released = states.map((state) => new Promise((resolve, reject) => {
+    const released = states.map((state) => /** @type {Promise<void>} */ (new Promise((resolve, reject) => {
       state.child.send({ type: "start" }, (error) => (error ? reject(error) : resolve()));
-    }));
+    })));
     await bounded(Promise.all(released), RESULT_TIMEOUT_MS, "barrier release");
     const results = await bounded(Promise.all(states.map((state) => state.result.promise)), RESULT_TIMEOUT_MS, "participant results");
     const exits = await bounded(Promise.all(states.map((state) => state.exit.promise)), EXIT_TIMEOUT_MS, "participant exit");
@@ -193,7 +193,7 @@ async function withInjectedPartialWrite(directory, body) {
     record.handles.push(handle);
     const originalWriteFile = handle.writeFile;
     handle.writeFile = async function (data) {
-      const bytes = Buffer.isBuffer(data) ? data : Buffer.from(data, "utf8");
+      const bytes = Buffer.isBuffer(data) ? data : Buffer.from(/** @type {string} */ (data), "utf8");
       record.prefix = bytes.subarray(0, Math.floor(bytes.length / 2));
       await originalWriteFile.call(this, record.prefix);
       record.observed = await fs.readFile(filename);

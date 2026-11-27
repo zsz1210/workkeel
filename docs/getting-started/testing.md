@@ -7,7 +7,7 @@ acceptance. The native lifecycle and actual verification evidence live
 in a [separate private development workspace](../operations/framework-development.md).
 A public source checkout has no maintainer task history or raw development output.
 
-`npm run check` validates repository structure, documentation language boundaries, local Markdown link targets, and the actual npm dry-run package boundary. These checks run for every change. The full suite is offline: it tests code, contracts, and simulated providers, not paid model calls.
+`npm run check` validates repository structure, documentation language boundaries, local Markdown link targets, and the actual npm dry-run package boundary. These checks run for every change. `npm run typecheck` runs a non-strict TypeScript check with `checkJs` on. `tsconfig.json` includes `bin/**/*.mjs`, `src/**/*.mjs`, `scripts/**/*.mjs` and `test/**/*.mjs`, so every module and test file there is checked, including new files. `strict` is off, but `alwaysStrict`, `strictFunctionTypes`, `strictBindCallApply` and `noImplicitThis` are on. Tests that pass deliberately invalid input use a JSDoc cast or a `@ts-expect-error` line with a reason. Some source files still start with `// @ts-check`; the line is no longer needed. `npm run verify` runs the typecheck after `npm run check`. The full suite is offline: it tests code, contracts, and simulated providers, not paid model calls.
 
 ## Local development
 
@@ -82,7 +82,7 @@ Ordinary GitHub Actions is a remote consistency check, not Workkeel's complete t
 
 - lockfile-strict dependency installation without lifecycle scripts;
 - the clean-clone entrypoint, `check:source-checkout`, `check:publication` and `check:public-history`;
-- `npm run verify`: repository, documentation-link and package-boundary checks plus the full contract suite;
+- `npm run verify`: repository, documentation-link and package-boundary checks, the TypeScript typecheck, and the full contract suite;
 - public-checkout cleanliness again after the tests.
 
 The workflow reports every required result and fails if any required step fails. It uses immutable Action revisions, read-only repository permission, and cancels an older in-progress run when the same pull request receives a newer commit.

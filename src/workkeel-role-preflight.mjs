@@ -1,3 +1,4 @@
+// @ts-check
 import { exactKeys, executionDigest } from "./workkeel-execution-policy.mjs";
 
 // Role requirements are declared in JSON; satisfaction is only ever probed by
@@ -55,7 +56,10 @@ export function validateRoleContract(contract) {
   return contract;
 }
 
-/** Register trusted application code. A parsed JSON object can never become a host. */
+/**
+ * Register trusted application code. A parsed JSON object can never become a host.
+ * @param {{ id: string, probe: (...args: any[]) => any, runtimeState?: (...args: any[]) => any, launch?: (...args: any[]) => any, [member: string]: any }} host
+ */
 export function createTrustedRoleHost({ id, probe, runtimeState, launch, ...rest }) {
   if (Object.keys(rest).length) fail("unknown host members");
   label(id, "host ID");
@@ -101,6 +105,7 @@ function validateProbe(result, role) {
  * Run before inference. The host probe may inspect connections and catalogues,
  * but must not start a model turn. The receipt is an observation, not authority.
  */
+/** @param {{ role: any, host: any, context?: { approved_tools?: any, coordinator_checks?: any } }} request */
 export async function runRolePreflight({ role, host, context = {} }) {
   // All checks and the receipt must describe the same request across the probe
   // await. The host receives its own copy below, never this private snapshot.

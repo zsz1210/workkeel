@@ -1,6 +1,6 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import Ajv from 'ajv';
+import {Ajv} from 'ajv';
 import {isDeepStrictEqual} from 'node:util';
 import {sha256} from '../src/files.mjs';
 import {readTaskFile} from '../src/task-contract.mjs';

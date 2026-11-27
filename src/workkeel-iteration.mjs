@@ -1,3 +1,4 @@
+// @ts-check
 import {exactKeys} from './workkeel-execution-policy.mjs';
 
 const text=(v,n=2000)=>typeof v==='string'&&v.trim().length>0&&v.length<=n;

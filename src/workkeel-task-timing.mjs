@@ -1,3 +1,4 @@
+// @ts-check
 const phases = ['waiting', 'implementation', 'review', 'rework', 'acceptance'];
 const terminal = state => ['done', 'cancelled'].includes(state);
 

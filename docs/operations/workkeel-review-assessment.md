@@ -55,6 +55,29 @@ verification requirements pass. At a rework limit, stop for an authorized
 scope/budget decision; do not waive an outstanding blocker. Preserve failed-candidate
 reviews.
 
+### Reproduction for must fix
+
+Give each **must fix** finding a reproduction:
+
+- the exact command that shows the defect;
+- the actual output of that command, or the relevant part of it.
+
+For a documentation-only defect, give the file path, line number and quoted
+text instead. The lead reruns the command, or opens the cited line, to confirm
+the defect. A finding without this evidence is not demonstrated. Get the
+reproduction before you assign **must fix**.
+
+### State the premise after a second failed review
+
+When the same task fails its second review, the next rework summary must state,
+after its category label:
+
+1. **Premise:** the assumption that the new fix depends on.
+2. **Check:** how to test that assumption before the fix goes to review.
+
+If the check disproves the premise, change the approach. Do not send the same
+fix again. This is a review procedure; the CLI does not check the summary text.
+
 ### Cross-review
 
 Cross-review is mandatory for high/critical and optional below. Give Codex and
@@ -73,8 +96,9 @@ silence is not disagreement. Down-weight single-model findings: assigning one to
 Agreement is a signal, not a substitute for evidence. Retain both reviews and the
 lead's dispositions with the exact candidate in the private review evidence.
 
-The disposition and cross-review guidance adapts pstack's `interrogate` Skill,
-MIT License, Copyright (c) 2026 Lauren Tan; see the
+The disposition, reproduction and cross-review guidance adapts pstack's
+`interrogate` Skill. The premise step adapts its `principle-attack-the-premise`
+guidance. Both are MIT License, Copyright (c) 2026 Lauren Tan; see the
 [source and retained license](../../THIRD_PARTY_NOTICES.md#pstack-review-guidance).
 
 ## Start with the repository facts

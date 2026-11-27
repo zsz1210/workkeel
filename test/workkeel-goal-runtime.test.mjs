@@ -31,7 +31,8 @@ async function fixture(t,{count=1,maxReworks=2,purpose='execution',release=false
   for(let n=0;n<count;n++){
     const root=roots[n],id='WK-component-'+n;
     const contract={schema_version:'workkeel.task-contract/v2',id,goal:'Exact synthetic component',actor:builder,state:'intake',scope:{include:['src'],exclude:['publication']},dependencies:[],acceptance:{criteria:['Exact synthetic component verified','Whole combination accepted'],evidence:[]},verification:{risk_tier:'standard',separation:'distinct-agent',implementer:null,reviewer:null,candidate_revision:null},handoff:null,environment:{cwd:'.',read_paths:['.'],write_paths:purpose==='discovery'?['.ai-org/artifacts/'+id+'/discovery']:['src'],tools:['codex'],resources:[],network:{mode:'none',hosts:[]},external_actions:[],data:{classification:'internal',model_access:'approved-connection',policy_refs:['docs/approval.md']}},authorization:{approved_by:'owner',approval_ref:'docs/approval.md',operations:['read','write','execute'],expires_at:null},execution:{runtime:{kind:'adapter',adapter_id:'codex-app-server',required_features:['filesystem-sandbox','network-disabled','fixed-model','resume','cancel']},model_connection:{kind:'codex-subscription',model:'gpt-6-luna',effort:'low'}},skills:[]};
-    if(modelPolicy){contract.execution.model_connection={kind:'policy',policy_ref:'docs/models.json'};contract.environment.data.policy_refs.push('docs/models.json');}
+    // A policy connection is a different model_connection variant from the subscription default.
+    if(modelPolicy){contract.execution.model_connection=/** @type {any} */ ({kind:'policy',policy_ref:'docs/models.json'});contract.environment.data.policy_refs.push('docs/models.json');}
     if(browserScript){contract.environment.tools.push('node','browser');contract.environment.network={mode:'allowlist',hosts:['127.0.0.1']};contract.authorization.operations.push('network');contract.environment.data.policy_refs.push('docs/browser.mjs');}
     if(guarded){
       await fs.writeFile(root+'/docs/original.md','Synthetic original: preserve exported value.');
@@ -60,6 +61,11 @@ async function fixture(t,{count=1,maxReworks=2,purpose='execution',release=false
 import {createCodexGoalAdapter} from '../src/workkeel-goal-runtime.mjs';
 import {createCodexProcessHost} from '../src/workkeel-codex-runtime.mjs';
 // Actual child-process JSON-RPC; agents/model/permissions are offline fixtures.
+/**
+ * The offline host deliberately implements only the process-host surface the adapter calls.
+ * @param {{events?: any[], proposalEvidence?: any[], neverComplete?: boolean, reviewAttention?: boolean, reroute?: boolean, efforts?: string[], models?: string[], onQualify?: (...args: any[]) => Promise<void>, onResponse?: (method: string, params?: any, value?: any) => Promise<void>}} [options]
+ * @returns {any}
+ */
 function protocolHost({events=[],proposalEvidence=[],neverComplete=false,reviewAttention=false,reroute=false,efforts=['low'],models=['gpt-6-luna'],onQualify=async()=>{},onResponse=async()=>{}}={}){
   const source=`import readline from 'node:readline';import fs from 'node:fs';import crypto from 'node:crypto';
   const send=x=>process.stdout.write(JSON.stringify(x)+'\\n'),reply=(id,result)=>send({id,result});let thread,cwd;

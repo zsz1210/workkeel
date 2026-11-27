@@ -1,3 +1,4 @@
+// @ts-check
 import fs from "node:fs/promises";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
@@ -310,6 +311,11 @@ export async function liveReviewRecoveryReservations(target) {
  * Releases only capacity; never launches work, edits an attempt, or grants a
  * verdict. The original approving actor and original runtime host must agree.
  */
+/**
+ * @param {string} targetInput
+ * @param {any} input
+ * @param {{ host?: any }} [options]
+ */
 export async function confirmReviewRecoveryStopped(targetInput, input, { host } = {}) {
   const request = structuredClone(input);
   strict(request, ["operation_id", "task_id", "attempt_id", "attempt_sha256", "actor"]);
@@ -479,6 +485,11 @@ async function writeResult(target, item, attempt, value) {
  * Replay and chain reads happen under the project lock; host probes are awaited
  * outside it; everything they could have outlived is rechecked under the lock,
  * which is held through launch invocation but never while the model runs.
+ */
+/**
+ * @param {string} targetInput
+ * @param {any} input
+ * @param {{ host?: any }} [options]
  */
 export async function recoverInterruptedReview(targetInput, input, { host } = {}) {
   const request = snapshotRequest(input);

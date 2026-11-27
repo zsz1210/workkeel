@@ -88,7 +88,7 @@ test('task assess rejects an unborn repository with baseline guidance and no raw
   }
   const before = await snapshot(root);
   const message = 'This repository has no commits. Make a baseline commit first (git add -A && git commit -m baseline), then retry.';
-  await assert.rejects(assessNativeTask(root, 'WK-0001'), error => {
+  await assert.rejects(assessNativeTask(root, 'WK-0001'), (/** @type {any} */ error) => {
     assert.equal(error.message, message);
     assert.doesNotMatch(String(error), /fatal:|ambiguous argument|Command failed/);
     return true;

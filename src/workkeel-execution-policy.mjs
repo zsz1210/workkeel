@@ -1,3 +1,4 @@
+// @ts-check
 import { formatJson, sha256 } from "./files.mjs";
 import { codexModelConnectionParams } from "./workkeel-runtime.mjs";
 import { validateModelPolicyPin, validateRoutingTuple, validateWorkflowRoutingAuthority } from './workkeel-model-routing.mjs';

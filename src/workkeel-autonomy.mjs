@@ -1,3 +1,4 @@
+// @ts-check
 import path from 'node:path';
 import {exactKeys,executionDigest} from './workkeel-execution-policy.mjs';
 import {assertTaskExecutionContext,readNativeTask} from './workkeel-tasks.mjs';
@@ -111,6 +112,10 @@ export async function mutateAutonomy(target,action,r){
 }
 /** Autonomy selects bounded work; goals own every delivery operation. Legacy
  * jobs with possibly live executions require reconciliation first. */
+/**
+ * @param {string} target
+ * @param {{ goalAdapter?: any, signal?: AbortSignal }} [options]
+ */
 export async function runAutonomyStep(target,{goalAdapter,signal}={}){
   if(signal?.aborted)return {idle:'aborted',model_called:false};
   const s=await readAutonomy(target);
@@ -122,6 +127,10 @@ export async function runAutonomyStep(target,{goalAdapter,signal}={}){
 
 /** Timers observe approved sources and advance their derived goals. Unchanged
  * sources and idle observations never initiate speculative model calls. */
+/**
+ * @param {string} target
+ * @param {{ goalAdapter?: any, signal?: AbortSignal, onError?: (error: any) => void, debounce_ms?: number, reconcile_ms?: number, watchFactory?: any, onStep?: (result: any) => any }} [options]
+ */
 export async function serveAutonomy(target,{goalAdapter,signal,onError=()=>{},debounce_ms=100,reconcile_ms=30000,watchFactory=null,onStep=()=>{}}={}){
   integer(debounce_ms,0,10000);integer(reconcile_ms,10,60000);await safeDirectory(target,ROOT,{create:true});
   let working=false,pending=false,timer=null,retryTimer=null,closed=false,startedAt=null;

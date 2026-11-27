@@ -1,3 +1,4 @@
+// @ts-check
 import { createHash } from "node:crypto";
 import { TEMPLATE_VERSION } from "./workkeel-version.mjs";
 import { readTaskContractInput } from "./task-contract.mjs";
@@ -29,7 +30,7 @@ workkeel init [target] [--principal id] [--builder family] [--reviewer family] |
 workkeel policy show [target] | policy update [target] --policy repository-policy.json [--actor id]
 workkeel status [target] [--stale-after hours] | doctor [target]
 workkeel upgrade [target] [--actor id]
-workkeel task new [target] --goal text --acceptance text [--acceptance text] [--write path] [--read path] [--risk tier] [--approval path] [--id id] [--actor id]
+workkeel task new [target] --goal text --acceptance text [--acceptance text] [--write path] [--read path] [--risk tier] [--approval path] [--skill path] [--id id] [--actor id]
 workkeel task create [target] --source contract.json --request request.json
 workkeel task show [target] --id task-id
 workkeel task claim|release|handoff|review|rework|close|cancel [target] --id task-id [--actor id] [--summary text] [--evidence path] [--judgment pass|fail] [--revision sha] [--rollback text] [--expect version]
@@ -292,7 +293,7 @@ async function runCommand(args) {
       output = await readTaskMeasurements(target, required(options, "--id"));
     } else if (action === "show") { allow(options, ["--id"]); output = await readNativeTask(target, required(options, "--id")); }
     else if (action === "new" || action === "create" && !options["--source"]) {
-      allow(options, ["--goal", "--acceptance", "--write", "--read", "--include", "--exclude", "--risk", "--id", "--actor", "--approval"]);
+      allow(options, ["--goal", "--acceptance", "--write", "--read", "--include", "--exclude", "--risk", "--id", "--actor", "--approval", "--skill"]);
       output = await runCreateFromFlags(target, options);
     } else if (options["--request"]) {
       // Integration form: an exact request document, unchanged.

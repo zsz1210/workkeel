@@ -1,3 +1,4 @@
+// @ts-check
 import fs from 'node:fs/promises';
 import {constants} from 'node:fs';
 import path from 'node:path';
@@ -427,6 +428,11 @@ async function bindingInventory(target,request,{bindingId,task,ticket}) {
  * Shared execution admission. Reservation callers hold the host writer lock
  * through creation of either the binding or recovery attempt. Readiness alone
  * grants no slot. Only recovery may exclude its freshly confirmed predecessor.
+ */
+/**
+ * @param {string} target
+ * @param {any} ticket
+ * @param {{ dispatchBindings?: any[], stoppedRecoverySha256?: any }} [options]
  */
 export async function assertHostDispatchAdmission(target,ticket,{dispatchBindings,stoppedRecoverySha256=null}={}) {
   if(!dispatchBindings) {

@@ -1,3 +1,4 @@
+// @ts-check
 import { codexModelConnectionParams } from "./workkeel-runtime.mjs";
 import { validateRuntimeResult, exactKeys } from "./workkeel-execution-policy.mjs";
 import { safeDirectory } from "./workkeel-project.mjs";

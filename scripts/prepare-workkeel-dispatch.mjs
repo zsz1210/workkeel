@@ -20,7 +20,7 @@ try{
   if(extra.length||![target,requestPath,classifierModule,configPath].every(v=>typeof v==='string'&&path.isAbsolute(v)))throw Error('Use four explicit absolute paths');
   const request=await json(requestPath,65536),config=await json(configPath,16384);
   const stat=await fs.lstat(classifierModule);if(!stat.isFile()||stat.isSymbolicLink())throw Error('Trusted regular classifier module required');
-  const {preview}=await import(pathToFileURL(classifierModule));
+  const {preview}=await import(/** @type {any} */ (pathToFileURL(classifierModule)));
   if(typeof preview!=='function')throw Error('Classifier must export preview');
   const ticket=await prepareClassifiedDispatch(target,request,(prompt,{profile})=>preview(prompt,{profile,config}));
   console.log(JSON.stringify(ticket,null,2));

@@ -1,3 +1,4 @@
+// @ts-check
 import { spawn } from "node:child_process";
 import { StringDecoder } from "node:string_decoder";
 import { sha256 } from "./files.mjs";
@@ -96,7 +97,7 @@ export function createJsonRpcProcess(command, args = [], options = {}) {
       if (!request) return;
       pending.delete(String(message.id));
       if (message.error) {
-        const error = new Error(`Codex App Server ${request.method} failed (${message.error.code ?? "unknown"})`);
+        const error = /** @type {Error & { rpcCode?: number | null, providerReason?: string }} */ (new Error(`Codex App Server ${request.method} failed (${message.error.code ?? "unknown"})`));
         error.rpcCode = Number.isInteger(message.error.code) ? message.error.code : null;
         error.providerReason = boundedText(message.error.message, 240);
         request.reject(error);

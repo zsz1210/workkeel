@@ -1,3 +1,4 @@
+// @ts-check
 /** Pure resolution shared by the host and its local settings preview.
  * The host validates the document before resolving and enforces authority later.
  * Resolving settings alone never authorizes an execution.

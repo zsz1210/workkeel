@@ -5,6 +5,7 @@ import {prepareClaudeSourceReview,CLAUDE_REVIEW_VERSION} from '../src/workkeel-c
 const options=()=>({files:{'src/space 測試.mjs':'export const value=1;\n'},version:CLAUDE_REVIEW_VERSION,model:'opus',expected_model:'claude-opus-5-5',reasoning:'high',session_id:'00000000-1111-2222-3333-444444444444'});
 const processResult={exit_code:0,timed_out:false,process_exit_confirmed:true,instrument_error:null,execution_started:true,surviving_descendants:false};
 const reply=()=>({type:'result',subtype:'success',is_error:false,session_id:options().session_id,result:'Not the structured channel',structured_output:{findings:[]},usage:{input_tokens:11,cache_read_input_tokens:20,cache_creation_input_tokens:30,output_tokens:10,output_tokens_details:{thinking_tokens:7}},modelUsage:{'claude-opus-5-5':{thinkingTokens:7}}});
+/** @param {any} [value] @param {any} [process] */
 const parse=(value=reply(),process=processResult)=>prepareClaudeSourceReview(options()).parse(JSON.stringify(value),process);
 
 test('qualified source review builds explicit schema, tool restriction and fresh-session arguments',()=>{
@@ -49,8 +50,8 @@ test('runtime errors, model/session mismatch and termination retain usage withou
   for(const change of [{is_error:true,subtype:'error_max_structured_output_retries'},{session_id:'other'},{modelUsage:{'claude-other':{}}},{type:'assistant'},{is_error:undefined}]){
     const r=parse({...reply(),...change});assert.notEqual(r.status,'completed');assert.equal(r.findings,null);assert.equal(r.usage.total_tokens,71);
   }
-  for(const [change,status] of [[{exit_code:1},'infrastructure-failure'],[{exit_code:null},'infrastructure-failure'],
-    [{timed_out:true},'timeout'],[{timed_out:undefined},'infrastructure-failure'],[{process_exit_confirmed:false},'process-cleanup-unconfirmed']]){
+  for(const [change,status] of /** @type {[object, string][]} */ ([[{exit_code:1},'infrastructure-failure'],[{exit_code:null},'infrastructure-failure'],
+    [{timed_out:true},'timeout'],[{timed_out:undefined},'infrastructure-failure'],[{process_exit_confirmed:false},'process-cleanup-unconfirmed']])){
     const r=parse(reply(),{...processResult,...change});assert.equal(r.status,status);assert.equal(r.findings,null);assert.equal(r.usage.total_tokens,71);
   }
   assert.equal(parse(reply(),{}).status,'process-cleanup-unconfirmed');

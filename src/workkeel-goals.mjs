@@ -1,3 +1,4 @@
+// @ts-check
 import {withLoopRun, countLoopOperation, readLoopRun, isLoopRunActive, requestLoopStop, assertLoopAdmission} from './workkeel-loop-run.mjs';
 import fs from 'node:fs/promises';
 import path from 'node:path';
@@ -89,6 +90,11 @@ async function standing(target,s,m,{stop=false}={}){
   await validateDerived(target,m);
 }
 async function manifestAt(target,s,{frozen=false}={}){if(frozen)return validateGoalManifest(structuredClone(s.manifest_frozen));const input=await readTaskFile(target,s.manifest_ref);if(input.bytes_digest!==s.manifest_sha256)fail('immutable goal manifest changed');return validateGoalManifest(JSON.parse(input.content));}
+/**
+ * @param {string} target
+ * @param {any} goalOrId
+ * @param {{ actor?: any, execution?: boolean }} [options]
+ */
 export async function assertNativeGoalAuthority(target,goalOrId,{actor:operator,execution=true}={}){
   const s=await stateAt(target,typeof goalOrId==='string'?goalOrId:goalOrId.id),m=await manifestAt(target,s,{frozen:true}),project=await readTaskProject(target);
   if(operator){assertApprover(project.policy,operator);if(!sameActor(operator,m.roles.approver))fail('goal operator is not the approved original actor');}
@@ -202,6 +208,7 @@ export async function controlNativeGoal(target,goalId,action,r){
 export function createTrustedGoalAdapter(adapter){exactKeys(adapter,['id','assertCapabilities','execute','reconcile','cancel'],['costPath']);id(adapter.id);for(const f of ['assertCapabilities','execute','reconcile','cancel'])if(typeof adapter[f]!=='function')fail('trusted adapter function required');const value=Object.freeze(adapter);trustedAdapters.add(value);return value;}
 function live(owner){if(!owner)return false;if(owner.host!==os.hostname())return true;try{process.kill(owner.pid,0);return true;}catch(e){return e.code!=='ESRCH';}}
 function operationId(s,component,phase,version){return 'goal-'+executionDigest({goal:s.manifest_sha256,component,phase,version}).slice(0,40);}
+/** @returns {{ action: string, request: any }} */
 function nativeInput(s,m,c,t,phase,p){
   const operation_id=operationId(s,c.id,phase,t.version),base={operation_id,expected_version:t.version,actor:m.roles.implementer};
   if(phase==='claim')return {action:'claim',request:{...base,base_revision:null}};
@@ -287,6 +294,11 @@ async function reserve(target,goalId,adapter,signal){
     }
   });
 }
+/**
+ * @param {string} target
+ * @param {any} goalId
+ * @param {{ adapter?: any, signal?: AbortSignal }} [options]
+ */
 export async function runNativeGoalStep(target,goalId,{adapter,signal}={}){
   if(!adapter){const {createCodexGoalAdapter}=await import('./workkeel-goal-runtime.mjs');adapter=await createCodexGoalAdapter();}
   if(!trustedAdapters.has(adapter))fail('qualified trusted goal adapter required');
@@ -311,6 +323,11 @@ export async function runNativeGoalStep(target,goalId,{adapter,signal}={}){
   try{return await withLoopRun(target,goalId,adapter,async()=>{const run=await readLoopRun(target);if(isLoopRunActive(run)){const m=(await stateAt(target,goalId)).manifest_frozen;if(m.components.some(c=>c.root!==target)||m.admission||m.derived_from)fail('L2 requires one project and one goal without admission');}return runGoalStep(target,goalId,{adapter,signal:controller.signal});},cancel);}
   finally{signal?.removeEventListener('abort',abort);}
 }
+/**
+ * @param {string} target
+ * @param {any} goalId
+ * @param {{ adapter?: any, signal?: AbortSignal }} [options]
+ */
 async function runGoalStep(target,goalId,{adapter,signal}={}){
   if(!adapter){const {createCodexGoalAdapter}=await import('./workkeel-goal-runtime.mjs');adapter=await createCodexGoalAdapter();}
   if(!trustedAdapters.has(adapter))fail('qualified trusted goal adapter required');
@@ -430,6 +447,11 @@ async function runGoalStep(target,goalId,{adapter,signal}={}){
     await save(target,current);return {operation:stored,status:current.status,accepted:false,model_called:op.kind==='runtime'&&reservation.mode==='execute'&&result.model_called!==false};
   });
 }
+/**
+ * @param {string} target
+ * @param {any} goalId
+ * @param {{ adapter?: any, signal?: AbortSignal, onError?: (error: any) => void, onStep?: (result: any) => any, reconcile_ms?: number }} [options]
+ */
 export async function serveNativeGoal(target,goalId,{adapter,signal,onError=()=>{},onStep=()=>{},reconcile_ms=30000}={}){
   integer(reconcile_ms,10,60000);if(!adapter){const {createCodexGoalAdapter}=await import('./workkeel-goal-runtime.mjs');adapter=await createCodexGoalAdapter();}
   const initial=await readNativeGoal(target,goalId);let closed=false,running=false,observing=false,pending=false,timer=null,lastObserved,runningPromise=null,observingPromise=null,closePromise=null;

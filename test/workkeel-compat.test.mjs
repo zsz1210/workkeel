@@ -123,7 +123,7 @@ for (const pin of ["0.2.0", "0.2.0-beta.0"]) test(`source CLI upgrades pin ${pin
 test("read-only learning reads run on CLI 1.0.0 with a warning", async t => {
   const root = await fixture(t), cli = await cliAt(t, "1.0.0");
   await fs.writeFile(path.join(root, "notes.txt"), "original\n");
-  for (const [name, body] of [["search.json", { query: "anything" }], ["impact.json", { source: "notes.txt" }]])
+  for (const [name, body] of /** @type {[string, object][]} */ ([["search.json", { query: "anything" }], ["impact.json", { source: "notes.txt" }]]))
     await fs.writeFile(path.join(root, name), JSON.stringify(body));
   for (const args of [["learning", "search", "--request", "search.json"], ["learning", "impact", "--request", "impact.json"]]) {
     const read = launch(root, cli, ...args);
@@ -149,7 +149,7 @@ test("the launcher rejects a pin that is not an exact version before any downloa
   const bin = path.join(root, ".fake-bin"), marker = path.join(root, "npm-called");
   await fs.mkdir(bin);
   await fs.writeFile(path.join(bin, "npm"), `#!/bin/sh\ntouch ${JSON.stringify(marker)}\n`, { mode: 0o755 });
-  const env = { ...process.env, PATH: `${bin}${path.delimiter}${process.env.PATH}`, WORKKEEL_ALLOW_PACKAGE_FETCH: "1" };
+  const env = /** @type {NodeJS.ProcessEnv} */ ({ ...process.env, PATH: `${bin}${path.delimiter}${process.env.PATH}`, WORKKEEL_ALLOW_PACKAGE_FETCH: "1" });
   delete env.WORKKEEL_CLI_PATH;
   const output = spawnSync(process.execPath, [path.join(root, "workkeelw.mjs"), "status"], { cwd: root, env, encoding: "utf8" });
   assert.equal(output.status, 1); assert.match(output.stderr, /must pin an exact Workkeel version/);
@@ -157,12 +157,12 @@ test("the launcher rejects a pin that is not an exact version before any downloa
 });
 
 test("upgrade rewrites a stale launcher, needs an approver and never downgrades", async t => {
-  const root = await fixture(t, TEMPLATE_VERSION), cli = await cliAt(t, "2.0.1");
+  const root = await fixture(t, TEMPLATE_VERSION), cli = await cliAt(t, "2.1.1");
   await fs.writeFile(path.join(root, "workkeelw.mjs"), (await fs.readFile(path.join(root, "workkeelw.mjs"), "utf8")) + "// stale\n");
   const result = JSON.parse(launch(root, cli, "upgrade", "--actor", "builder").stdout);
   assert.deepEqual(result.updated, ["workkeelw.mjs", "workkeel.lock"]);
-  assert.doesNotMatch(await fs.readFile(path.join(root, "workkeelw.mjs"), "utf8"), /stale|2\.0\.1/);
-  // The source CLI (2.0.0) is older than the 2.0.1 pin.
+  assert.doesNotMatch(await fs.readFile(path.join(root, "workkeelw.mjs"), "utf8"), /stale|2\.1\.1/);
+  // The source CLI (2.1.0) is older than the 2.1.1 pin.
   const lock = await fs.readFile(path.join(root, "workkeel.lock"));
   const older = spawnSync(process.execPath, [sourceCli, "upgrade", root, "--actor", "builder"], { encoding: "utf8" });
   assert.equal(older.status, 1); assert.match(older.stderr, /never downgrades/);
@@ -180,10 +180,10 @@ test("unknown lock fields only warn and upgrade keeps them, including one named 
   assert.deepEqual(drainCompatibilityWarnings(), [{ code: "unknown-fields-ignored", context: "workkeel.lock", fields: ["future_setting", "digest"] }]);
   const doctor = spawnSync(process.execPath, [sourceCli, "doctor", root], { encoding: "utf8" });
   assert.equal(doctor.status, 0); assert.deepEqual(warnings(doctor).map(w => w.fields), [["future_setting", "digest"]]);
-  const upgraded = launch(root, await cliAt(t, "2.0.1"), "upgrade", "--actor", "builder");
+  const upgraded = launch(root, await cliAt(t, "2.1.1"), "upgrade", "--actor", "builder");
   assert.equal(upgraded.status, 0, upgraded.stderr);
   const after = await lockOf(root);
-  assert.equal(after.cli.version, "2.0.1"); assert.equal(after.digest, "future-data"); assert.deepEqual(after.future_setting, { kept: true });
+  assert.equal(after.cli.version, "2.1.1"); assert.equal(after.digest, "future-data"); assert.deepEqual(after.future_setting, { kept: true });
 });
 
 test("unknown request fields warn and are neither stored, validated nor hashed", async t => {

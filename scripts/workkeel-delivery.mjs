@@ -127,7 +127,10 @@ export async function readDeliveryReview(target,request) {
       'Native task review rechecks candidate drift, evidence, dependencies, authority and identity when recording judgment.']};
 }
 
-/** Compact projection only. Scope, criteria and warnings are never excerpted. */
+/**
+ * Compact projection only. Scope, criteria and warnings are never excerpted.
+ * @returns {Promise<Record<string, any>>}
+ */
 export async function readDeliveryContext(target,taskId) {
   const summary=await readTaskSummary(target,taskId);
   const result=pick(summary,['authority','mutation_status','task_id','goal','scope','execution_scope','task_state','version',

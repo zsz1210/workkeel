@@ -3,12 +3,14 @@
 ## pstack review guidance
 
 - Project: [Cursor pstack](https://github.com/cursor/plugins/tree/main/pstack)
-- Material: `interrogate` Skill, reviewer prompt, review rubric and lead judgment
+- Material: `interrogate` Skill, reviewer prompt, review rubric and lead judgment;
+  `principle-attack-the-premise` Skill
 - License: MIT
 - Copyright (c) 2026 Lauren Tan
 
 The [independent QA and release gate](docs/operations/workkeel-review-assessment.md#independent-qa-and-release-gate)
-adapts finding dispositions, evidence filtering and independent multi-model review
+adapts finding dispositions, evidence filtering, must-fix reproductions, the
+premise step after a second failed review and independent multi-model review
 to Workkeel's risk tiers and acceptance boundaries. No pstack runtime or Skill is
 installed or invoked. The upstream license follows:
 

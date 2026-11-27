@@ -9,9 +9,9 @@
 
 [![CI](https://github.com/zsz1210/workkeel/actions/workflows/ci.yml/badge.svg)](https://github.com/zsz1210/workkeel/actions/workflows/ci.yml)
 
-[npm](https://www.npmjs.com/package/@zsz1210/workkeel) 2.0.0 · Node.js 24.15+ · [MIT](LICENSE)
+[npm](https://www.npmjs.com/package/@zsz1210/workkeel) 2.1.0 · Node.js 24.15+ · [MIT](LICENSE)
 
-哪些部分穩定、盡力維護或屬於實驗性功能，見 [1.0 相容性保證](docs/concepts/compatibility.md)（英文）。
+哪些部分穩定、盡力維護或屬於實驗性功能，見 [2.0 相容性保證](docs/concepts/compatibility.md)（英文）。
 
 ## 為什麼用 Workkeel
 
@@ -36,9 +36,7 @@ Workkeel 不是 sandbox，也不是 agent runtime，不會替你部署。
 
 先約定範圍、權限、驗收條件和風險等級，再認領任務，用 coding tool 實作，
 交付 commit 給另一個 Agent 審查。
-如果認領前就已經提交了實作，用 `--base <commit> --pre-claim` 認領。
-`<commit>` 要填實作開始前的最後一個 commit 的完整 ID，可用 `git rev-parse <第一個實作 commit>~1` 取得；base 本身不算在任務裡。
-base 之後的每個 commit 只能改任務寫入範圍內的產品檔案，審查也會涵蓋這些 commit。
+如果認領前就已經提交了實作，見[認領任務前就開始的工作](docs/getting-started/workkeel.md#claim-work-that-started-before-the-task)（英文）。
 審查失敗後，任務會停在 `test`，直到 approver 執行 `task rework`，
 保存失敗紀錄，沿用同一份契約回到 `intake`。接著由 builder 重新認領，交付新的 commit。
 `low` 最多重做兩次，其餘等級三次，達上限就停下來問人。
@@ -76,7 +74,15 @@ CLI 只記錄生命週期；修改和審查由你的 Agent 完成，不是 CLI�
 
 ## 快速開始
 
-你需要 Git、Node.js 24.15+ 和 coding tool。安裝目前的原始碼：
+你需要 Git、Node.js 24.15+ 和 coding tool。從 npm 安裝 CLI，就能使用 `workkeel` 指令：
+
+```sh
+npm install -g @zsz1210/workkeel
+```
+
+不要裝 `@next`，這個 dist-tag 還指向舊的 `0.1.0-beta.1`。
+
+想直接跑目前的原始碼，就 clone 下來：
 
 ```sh
 git clone https://github.com/zsz1210/workkeel.git
@@ -84,10 +90,6 @@ cd workkeel
 npm ci --omit=optional --ignore-scripts
 alias workkeel="node $PWD/bin/workkeel.mjs"
 ```
-
-也可以用 `npm install -g @zsz1210/workkeel` 從 npm 安裝，再執行 `workkeel` 指令。
-npm 的 `latest` dist-tag 是 `2.0.0`，`next` 仍指向舊的 `0.1.0-beta.1`。
-要安裝目前版本，請用 `@zsz1210/workkeel` 或 `@zsz1210/workkeel@latest`，不要裝 `@next`。
 
 shell alias 只在定義它的互動式 shell 裡有效。在 Agent 工具呼叫、CI 這類非互動式 shell 中，
 `workkeel` alias 無法使用。初始化後請改用 `node workkeelw.mjs`，本機安裝的話可用 `npx --no-install workkeel`。
@@ -99,21 +101,7 @@ shell alias 只在定義它的互動式 shell 裡有效。在 Agent 工具呼叫
 完成 `init` 後，再執行 `workkeel start .`，就會看到選用的[指示檔橋接](docs/extensions/workkeel-context.md#connect-native-instructions)建議。
 初始化、政策、證據與回復方式見[快速入門指南](docs/getting-started/workkeel.md)。
 開發 Workkeel 本身則請依[貢獻指南](CONTRIBUTING.md)操作。
-
-### 專案啟動器如何找到 CLI
-
-`node workkeelw.mjs` 會讀取 `workkeel.lock` 鎖定的版本，依序嘗試以下來源：
-
-1. `WORKKEEL_CLI_PATH`，指向相容的原始碼 `bin/workkeel.mjs`。
-2. 本機安裝的 `node_modules/@zsz1210/workkeel/bin/workkeel.mjs`
-   （`npm i -D @zsz1210/workkeel`）。
-3. `PATH` 上的全域 `workkeel`（`npm i -g @zsz1210/workkeel`）。啟動器會解析 symlink，
-   只接受套件名稱為 `@zsz1210/workkeel` 的 `bin/workkeel.mjs`。Windows 不使用這個備援。
-4. 明確下載鎖定版本的套件。只有在設定 `WORKKEEL_ALLOW_PACKAGE_FETCH=1`，
-   而且找不到已安裝的來源時才會這樣做。
-
-CLI 會檢查版本是否與鎖定版本相容。預設不會嘗試下載。既有專案會繼續使用原本的啟動器，
-直到明確執行 `workkeel upgrade`。
+`node workkeelw.mjs` 依什麼順序找 CLI，見[專案啟動器如何找到 CLI](docs/getting-started/workkeel.md#how-the-project-launcher-finds-the-cli)（英文）。
 
 ## 風險等級
 
@@ -148,7 +136,7 @@ Workkeel 2.0.0 移除了四個選用指令：
 ## 選用功能
 
 - **[任務量測與原生執行回報](docs/operations/workkeel-usage.md)：**`workkeel task metrics` 讀取已記錄的 token 與時間；`workkeel usage` 負責綁定與收集 host 回報。
-- **[Workkeel Loop L1 報告](docs/operations/loop-trial.md)：**`workkeel stats --report --cutoff 2026-10-19T00:00:00Z --timezone UTC` 產生每週唯讀報告，模型／API 花費為零。重複 `--project` 可以一次統計多個專案；也能讀取 0.1.0-beta.1 的任務紀錄，不會改動它們。
+- **[Workkeel Loop L1 報告](docs/operations/loop-trial.md)：**`workkeel stats --report --cutoff <ISO-time> --timezone <IANA-zone>` 產生每週唯讀報告，模型／API 花費為零。重複 `--project` 可以一次統計多個專案；也能讀取 0.1.0-beta.1 的任務紀錄，不會改動它們。
 - **[原生派工](docs/operations/workkeel-native-dispatch.md)：**記錄執行交接和指定模型，實際執行結果由 host 回報。
 - **[Bot 層參考用法](docs/operations/reference-usage-bot-layer.md)：**示範如何用人工關卡協調專案 Bot、Claude Code 與 Codex，屬於核心以外的用法。
 

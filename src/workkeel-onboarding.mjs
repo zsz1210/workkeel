@@ -1,3 +1,4 @@
+// @ts-check
 import path from "node:path";
 import fs from "node:fs/promises";
 import { execFile } from "node:child_process";

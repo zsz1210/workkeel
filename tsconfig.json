@@ -1,0 +1,18 @@
+{
+  "compilerOptions": {
+    "allowJs": true,
+    "checkJs": true,
+    "noEmit": true,
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "target": "ES2024",
+    "types": ["node"],
+    "skipLibCheck": true,
+    "strict": false,
+    "alwaysStrict": true,
+    "strictFunctionTypes": true,
+    "strictBindCallApply": true,
+    "noImplicitThis": true
+  },
+  "include": ["bin/**/*.mjs", "src/**/*.mjs", "scripts/**/*.mjs", "test/**/*.mjs"]
+}

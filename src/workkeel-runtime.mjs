@@ -1,3 +1,4 @@
+// @ts-check
 import { validateTaskContract } from "./task-contract.mjs";
 import { sha256, formatJson } from "./files.mjs";
 

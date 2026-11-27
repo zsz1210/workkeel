@@ -47,7 +47,11 @@ export async function planRetention(root,policy){
  return {...body,plan_sha256:sha(JSON.stringify(body))};
 }
 /** Destructive use is explicit and bound to the exact preview digest.
- * A receipt is opened exclusively; interrupted receipts stay incomplete. */
+ * A receipt is opened exclusively; interrupted receipts stay incomplete.
+ * @param {string} root
+ * @param {any} plan
+ * @param {{ confirm_sha256?: string, journal_ref?: string }} [options]
+ */
 export async function retireMedia(root,plan,{confirm_sha256,journal_ref}={}){
  root=await fs.realpath(root);
  const {plan_sha256,...body}=plan;if(!digest.test(plan_sha256)||confirm_sha256!==plan_sha256||sha(JSON.stringify(body))!==plan_sha256||plan.root!==root)throw Error('Exact retention plan confirmation required');

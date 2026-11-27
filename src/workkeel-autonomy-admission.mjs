@@ -1,3 +1,4 @@
+// @ts-check
 import {readLoopRun, isLoopRunActive} from './workkeel-loop-run.mjs';
 import path from 'node:path';
 import os from 'node:os';
@@ -61,7 +62,11 @@ async function immutable(target,ref,content){
   try{await durableAtomicCreate(path.join(directory,path.posix.basename(ref)),content);}catch(e){if(e.code!=='EEXIST')throw e;if((await readTaskFile(target,ref,{preserveBom:true})).content!==content)fail('frozen intake artifact conflict');}
 }
 /** Extra capacity is a separate pinned human authorization, never a rewritten
- * manifest or refunded reservation. Closed setup tasks retain their approval. */
+ * manifest or refunded reservation. Closed setup tasks retain their approval.
+ * @param {string} target
+ * @param {any} goal
+ * @param {{ journal?: any }} [options]
+ */
 export async function readGoalAdmissionAuthority(target,goal,{journal}={}){
   const goalId=goal.id,{assertNativeGoalAuthority}=await import('./workkeel-goals.mjs');goal=await assertNativeGoalAuthority(target,goalId,{execution:true});
   const original=validateGoalAdmissionGrant(goal.manifest.admission),s=journal??await readGoalAdmissions(target),project=await readTaskProject(target);
@@ -176,6 +181,7 @@ export async function admitGoalImprovement(target,request,{proposal=null,trigger
   for (const requirement of requirements.applicable) if (!accepted.includes(requirement.criterion)) accepted.push(requirement.criterion);
   const control=contractFor(controlBase,{id:controlId,goal:'Coordinate '+derivedId,actor:goal.controller.actor,read_paths:controlBase.contract.environment.read_paths,write_paths:['.ai-org/goals/'+derivedId],refs:[manifestRef,localReceipt],acceptance:['All mandatory derived components and their independent review/integration are accepted'],include:['Coordinate this exact bounded derived goal'],exclude:['Publication','Deployment']});
   const manifest={schema_version:'workkeel.goal/v1',id:derivedId,title:product.goal,approval_ref:product.authorization.approval_ref,approved_by:goal.manifest.approved_by,expires_at:goal.manifest.expires_at,components:[{...structuredClone(component),id:'work',root:component.root,task_id:componentId,contract_sha256:executionDigest(product),depends_on:[],...(kind==='discovery'?{purpose:'discovery'}:{})}],integration:{component_id:'work',criteria:accepted},roles:structuredClone(goal.manifest.roles),models:structuredClone(goal.manifest.models),limits:{max_operations:grant.max_operations,max_reworks:Math.min(grant.max_reworks,attempts-1),timeout_ms:max_runtime_ms,max_cost_usd},control:{release_parent:true},derived_from:{goal_id:goal.id,manifest_sha256:goal.manifest_sha256,admission_ref:localReceipt,admission_sha256:'0'.repeat(64),...(path.resolve(component.root)!==path.resolve(target)?{source_root:path.resolve(target)}:{})}};
+  /** @type {Record<string, any>} */
   const receipt={schema_version:'workkeel.goal-admission/v1',id:admissionId,source_goal_id:goal.id,source_manifest_sha256:goal.manifest_sha256,source_task_id:controller.id,source_contract_sha256:controller.contract_sha256,proposal_id:proposalId,proposal_sha256:inputHash,problem_sha256:problem,direction,derived_goal_id:derivedId,derived_manifest_body_sha256:goals.goalAdmissionManifestDigest(manifest),control_task_id:controlId,components:[{id:'work',root:component.root,task_id:componentId,contract_sha256:executionDigest(product)}],reservation:{operations:grant.max_operations,max_runtime_ms,max_cost_usd},created_at:current(),kind,source_goal_root:path.resolve(target),...(trigger?{source_fingerprint:problem,source_refs:input.source_refs}:{})};
   if(context.authority.extension_sha256)receipt.extension_sha256=context.authority.extension_sha256;
   if(trigger&&context.authority.continuation_sha256)receipt.continuation_sha256=context.authority.continuation_sha256;

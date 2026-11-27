@@ -1,3 +1,4 @@
+// @ts-check
 import picomatch from "picomatch";
 
 export const RISK_TIERS = ["low", "standard", "high", "critical"];

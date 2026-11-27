@@ -20,6 +20,10 @@ import {crc32,deflateSync} from 'node:zlib';
 const actor={agent_id:'builder',principal_id:'owner'},reviewer={agent_id:'reviewer',principal_id:'owner'};
 const git=(root,...args)=>execFileSync('git',['-C',root,...args],{encoding:'utf8',stdio:['ignore','pipe','pipe']}).trim();
 const tuple={provider:'openai',model:'synthetic-only',reasoning:'high',service:'provider-default'};
+// A runtime operation reserves timeout_ms/max_operations of wall time and is aborted before dispatch
+// once that elapses. Synthetic pre-dispatch work (locks, authority checks, git) took up to ~2 s under
+// full-suite parallel load, so the former 1250 ms slices raced the machine. Keep 10 s per operation.
+const opMs=10000,maxOperations=40,runtimeMs=opMs*maxOperations;
 async function fixture(t,{risk='standard',maxGoals=8,empty=false,maxRounds=2,guarded=false,proposalCount=1}={}){
   const root=await fs.realpath(await fs.mkdtemp(path.join(os.tmpdir(),'workkeel-improvement-')));t.after(()=>fs.rm(root,{recursive:true,force:true}));
   await fs.mkdir(root+'/src');await fs.mkdir(root+'/docs');git(root,'init','-q');git(root,'config','user.name','Synthetic');git(root,'config','user.email','fixture@example.invalid');
@@ -35,8 +39,8 @@ async function fixture(t,{risk='standard',maxGoals=8,empty=false,maxRounds=2,gua
     contract.environment.data.policy_refs.push('docs/requirements.json');contract.acceptance.criteria.push(requirement.criterion);
   }
   await createNativeTask(root,contract,{operation_id:'intake-source',expected_version:0,actor});const sourceTask=await readNativeTask(root,contract.id);
-  const grant={enabled:true,directions:['quality'],read_paths:['.'],write_paths:['src'],template_ref:'docs/template.json',source_refs:['src/value.mjs'],max_source_bytes:65536,max_rounds:maxRounds,cooldown_ms:0,max_goals:maxGoals,max_total_operations:320,max_total_runtime_ms:400000,max_total_cost_usd:null,max_reworks:1,max_operations:40,max_attempts:2,max_runtime_ms:50000,max_cost_usd:null};
-  const manifest={schema_version:'workkeel.goal/v1',id:'source-goal',title:'Synthetic accepted source',approval_ref:'docs/approval.md',approved_by:actor,expires_at:null,components:[{id:'source',project_id:'project',repo_id:'repo',root,task_id:contract.id,contract_sha256:sourceTask.contract_sha256,depends_on:[],checks:[{id:'syntax',command:'node',args:['--check','src/value.mjs']}],rollback:'Governed revert to baseline',interface_refs:['src/value.mjs']}],integration:{component_id:'source',criteria:['Verified source']},roles:{implementer:actor,reviewer,approver:actor},models:Object.fromEntries(['planning','implementation','verification','repair','review'].map(p=>[p,tuple])),limits:{max_operations:40,max_reworks:1,timeout_ms:50000,max_cost_usd:null},control:{release_parent:true},admission:grant};
+  const grant={enabled:true,directions:['quality'],read_paths:['.'],write_paths:['src'],template_ref:'docs/template.json',source_refs:['src/value.mjs'],max_source_bytes:65536,max_rounds:maxRounds,cooldown_ms:0,max_goals:maxGoals,max_total_operations:320,max_total_runtime_ms:8*runtimeMs,max_total_cost_usd:null,max_reworks:1,max_operations:maxOperations,max_attempts:2,max_runtime_ms:runtimeMs,max_cost_usd:null};
+  const manifest={schema_version:'workkeel.goal/v1',id:'source-goal',title:'Synthetic accepted source',approval_ref:'docs/approval.md',approved_by:actor,expires_at:null,components:[{id:'source',project_id:'project',repo_id:'repo',root,task_id:contract.id,contract_sha256:sourceTask.contract_sha256,depends_on:[],checks:[{id:'syntax',command:'node',args:['--check','src/value.mjs']}],rollback:'Governed revert to baseline',interface_refs:['src/value.mjs']}],integration:{component_id:'source',criteria:['Verified source']},roles:{implementer:actor,reviewer,approver:actor},models:Object.fromEntries(['planning','implementation','verification','repair','review'].map(p=>[p,tuple])),limits:{max_operations:maxOperations,max_reworks:1,timeout_ms:runtimeMs,max_cost_usd:null},control:{release_parent:true},admission:grant};
   await fs.writeFile(root+'/docs/goal.json',JSON.stringify(manifest)+'\n');git(root,'add','.');git(root,'commit','-qm','Approve exact synthetic standing goal');
   const controller={...structuredClone(contract),id:'WK-controller',environment:{...contract.environment,write_paths:['.'],data:{...contract.environment.data,policy_refs:[...contract.environment.data.policy_refs,'docs/goal.json']}}};
   await createNativeTask(root,controller,{operation_id:'intake-controller',expected_version:0,actor});await mutateNativeTask(root,controller.id,'claim',{operation_id:'claim-controller',expected_version:1,actor,base_revision:git(root,'rev-parse','HEAD')});
@@ -48,7 +52,7 @@ async function fixture(t,{risk='standard',maxGoals=8,empty=false,maxRounds=2,gua
     const result={status:'completed',operation_id:ctx.operation_id,actor:ctx.input.actor,thread_id:thread,runtime_selection:ctx.input.model,product_access:discovery||['planning','verification','review'].includes(phase)?'read':'write',usage:{input_tokens:null,output_tokens:null,cost_usd:null}};
     if(phase==='planning')result.report_pin=await artifact(ctx,phase,{synthetic:true});
     if(['implementation','repair'].includes(phase)){
-      if(discovery){const evidence={path:'src/value.mjs',sha256:(await readTaskFile(root,'src/value.mjs')).bytes_digest};result.proposal_report={proposals:empty?[]:Array.from({length:proposalCount},(_,n)=>({id:'improve-value-'+n,title:'Remove the observed fixture defect',direction:'quality',risk_tier:risk,expected_benefit:'Value equals improved',acceptance:['Exported value equals improved'],evidence:[evidence],scope:{read_paths:['.'],write_paths:['src']},budget:{max_attempts:2,max_runtime_ms:50000,max_cost_usd:null}}))};result.source_pins=[evidence];result.report_pin=await artifact(ctx,'discovery',result.proposal_report);}
+      if(discovery){const evidence={path:'src/value.mjs',sha256:(await readTaskFile(root,'src/value.mjs')).bytes_digest};result.proposal_report={proposals:empty?[]:Array.from({length:proposalCount},(_,n)=>({id:'improve-value-'+n,title:'Remove the observed fixture defect',direction:'quality',risk_tier:risk,expected_benefit:'Value equals improved',acceptance:['Exported value equals improved'],evidence:[evidence],scope:{read_paths:['.'],write_paths:['src']},budget:{max_attempts:2,max_runtime_ms:runtimeMs,max_cost_usd:null}}))};result.source_pins=[evidence];result.report_pin=await artifact(ctx,'discovery',result.proposal_report);}
       else{const value=ctx.manifest.id==='source-goal'?'source':phase==='repair'?'improved':'defective';await fs.writeFile(root+'/src/value.mjs','export const value="'+value+'";\n');git(root,'add','src/value.mjs');git(root,'commit','-qm','Synthetic '+ctx.operation_id);result.report_pin=await artifact(ctx,phase,{synthetic:true,value});}
       result.candidate_revision=git(root,'rev-parse','HEAD');
     }
@@ -68,7 +72,7 @@ async function fixture(t,{risk='standard',maxGoals=8,empty=false,maxRounds=2,gua
   }});
   for(let n=0;n<30&&!(await readNativeGoal(root,manifest.id)).accepted;n++)await runNativeGoalStep(root,manifest.id,{adapter});assert.equal((await readNativeGoal(root,manifest.id)).accepted,true);
   delete request.manifest_ref;
-  const policy={enabled:true,directions:['quality'],max_jobs:20,max_attempts:2,cooldown_ms:0,admission:{enabled:true,goal_id:manifest.id},discovery:{enabled:true,read_paths:['.'],write_paths:['src'],max_proposals:10,max_source_bytes:65536,max_rounds:maxRounds,cooldown_ms:0,max_runtime_ms:50000,max_cost_usd:null}};
+  const policy={enabled:true,directions:['quality'],max_jobs:20,max_attempts:2,cooldown_ms:0,admission:{enabled:true,goal_id:manifest.id},discovery:{enabled:true,read_paths:['.'],write_paths:['src'],max_proposals:10,max_source_bytes:65536,max_rounds:maxRounds,cooldown_ms:0,max_runtime_ms:runtimeMs,max_cost_usd:null}};
   await mutateAutonomy(root,'policy',{...request,goal_id:manifest.id,operation_id:'enable-standing',expected_version:0,policy});calls.length=0;return {root,manifest,request,policy,adapter,calls};
 }
 
@@ -167,7 +171,7 @@ test('exhausted discovery is explicit on unchanged sources without blocking admi
 
 test('event driver progresses native derived goals without a human continue and stops cleanly',{timeout:60000},async t=>{
   const f=await fixture(t,{empty:true});const errors=[],controller=new AbortController();
-  const settled=Promise.withResolvers();
+  const settled=/** @type {PromiseWithResolvers<void>} */ (Promise.withResolvers());
   const service=await serveAutonomy(f.root,{goalAdapter:f.adapter,signal:controller.signal,debounce_ms:1,reconcile_ms:20,onError:e=>{errors.push(e);settled.reject(e);},onStep:result=>{if(result.idle==='unchanged-approved-sources')settled.resolve();}});t.after(()=>{controller.abort();service.close();});
   t.signal.addEventListener('abort',()=>{controller.abort();service.close();settled.reject(t.signal.reason);},{once:true});
   // Observe the driver's actual settled event, not a machine-speed dependent poll count.
@@ -181,7 +185,7 @@ test('explicit extension preserves spent rounds, reexamines once, and enforces t
   assert.equal((await settle()).idle,'discovery-round-budget');
   const before=await readGoalAdmissions(root),oldEntry=JSON.stringify(before.entries[0]),goal=await readNativeGoal(root,f.manifest.id),fields=['max_rounds','max_goals','max_total_operations','max_total_runtime_ms'];
   const stale=structuredClone(goal);stale.manifest.admission.max_rounds=99;assert.equal((await readGoalAdmissionAuthority(root,stale)).grant.max_rounds,1);
-  const from=Object.fromEntries(fields.map(k=>[k,goal.manifest.admission[k]])),approval={schema_version:'workkeel.admission-extension/v1',goal_id:goal.id,manifest_sha256:goal.manifest_sha256,from,to:{max_rounds:5,max_goals:5,max_total_operations:480,max_total_runtime_ms:600000},reevaluate_unchanged_sources:true,reason:'Explicit synthetic total five including the spent round'};
+  const from=Object.fromEntries(fields.map(k=>[k,goal.manifest.admission[k]])),approval={schema_version:'workkeel.admission-extension/v1',goal_id:goal.id,manifest_sha256:goal.manifest_sha256,from,to:{max_rounds:5,max_goals:5,max_total_operations:480,max_total_runtime_ms:12*runtimeMs},reevaluate_unchanged_sources:true,reason:'Explicit synthetic total five including the spent round'};
   await fs.writeFile(root+'/docs/extension.json',JSON.stringify(approval)+'\n');git(root,'add','docs/extension.json');git(root,'commit','-qm','Approve synthetic extra discovery capacity');
   const contract=structuredClone((await readNativeTask(root,'WK-source')).contract);contract.id='WK-extend';contract.environment.write_paths=['.ai-org/autonomy'];contract.environment.data.policy_refs.push('docs/extension.json');
   await createNativeTask(root,contract,{actor,operation_id:'create-extension-task',expected_version:0});await mutateNativeTask(root,contract.id,'claim',{actor,operation_id:'claim-extension-task',expected_version:1,base_revision:git(root,'rev-parse','HEAD')});

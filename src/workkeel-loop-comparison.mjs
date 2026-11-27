@@ -1,3 +1,4 @@
+// @ts-check
 import { exactKeys, executionDigest } from './workkeel-execution-policy.mjs';
 import { RISK_TIERS } from './workkeel-risk.mjs';
 

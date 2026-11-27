@@ -16,7 +16,7 @@ export async function recoverClaimProof(root,taskId,revision,{apply=false}={}) {
  return withProjectMutationLock(root,async()=>{
   const current=await readNativeTask(root,taskId),source_path=`.ai-org/work-items/${taskId}.json`;
   const original=execFileSync('git',['-C',root,'show',`${revision}:${source_path}`],{maxBuffer:256*1024,stdio:['ignore','pipe','pipe']});
-  const snapshot=validateNativeTaskSnapshot(JSON.parse(original),taskId),event=snapshot.history.at(-1);
+  const snapshot=validateNativeTaskSnapshot(JSON.parse(/** @type {any} */ (original)),taskId),event=snapshot.history.at(-1);
   if(snapshot.state!=='build'||event.action!=='claim'||snapshot.contract_sha256!==current.contract_sha256||executionDigest(snapshot.history)!==executionDigest(current.history.slice(0,snapshot.version)))throw Error('Original claim is not anchored in current task history');
   const ref=`.ai-org/artifacts/${taskId}/dispatch-claim-${event.hash}.json`,sha256=createHash('sha256').update(original).digest('hex');
   const present=await existsEntry(root,ref);

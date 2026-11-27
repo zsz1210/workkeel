@@ -1,3 +1,4 @@
+// @ts-check
 import {readTaskFile} from './task-contract.mjs';
 import {exactKeys, executionDigest} from './workkeel-execution-policy.mjs';
 

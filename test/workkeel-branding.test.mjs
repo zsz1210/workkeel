@@ -7,8 +7,8 @@ import { PACKAGE_NAME, TEMPLATE_REPOSITORY, TEMPLATE_VERSION } from "../src/work
 import { WORKKEEL_PACKAGE } from "../src/workkeel-project.mjs";
 
 test("Workkeel package metadata, version and the CLI entrypoint agree", async () => {
-  const pkg = JSON.parse(await fs.readFile(new URL("../package.json", import.meta.url)));
-  const lock = JSON.parse(await fs.readFile(new URL("../package-lock.json", import.meta.url)));
+  const pkg = JSON.parse(/** @type {any} */ (await fs.readFile(new URL("../package.json", import.meta.url))));
+  const lock = JSON.parse(/** @type {any} */ (await fs.readFile(new URL("../package-lock.json", import.meta.url))));
   assert.equal(PACKAGE_NAME, "@zsz1210/workkeel");
   assert.equal(WORKKEEL_PACKAGE, PACKAGE_NAME);
   assert.equal(pkg.name, PACKAGE_NAME); assert.equal(lock.name, PACKAGE_NAME);

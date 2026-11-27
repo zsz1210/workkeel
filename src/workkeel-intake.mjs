@@ -1,3 +1,4 @@
+// @ts-check
 import { readTaskFile, validateTaskContract } from './task-contract.mjs';
 import { readTaskProject, assertActor, assertApprover } from './workkeel-project.mjs';
 import { createNativeTask } from './workkeel-tasks.mjs';

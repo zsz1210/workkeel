@@ -1,9 +1,10 @@
+// @ts-check
 import fs from "node:fs/promises";
 import path from "node:path";
 import os from "node:os";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
-import Ajv from "ajv";
+import { Ajv } from "ajv";
 import { assertSafeTarget, durableAtomicCreate, durableAtomicWrite, formatJson, sha256 } from "./files.mjs";
 import { withProjectMutationLock } from "./workkeel-lock.mjs";
 import { readTaskContractInput, readTaskFile } from "./task-contract.mjs";
@@ -16,7 +17,26 @@ export const TASK_PROJECT_SCHEMA = "workkeel.project/v2";
 const exec = promisify(execFile);
 
 /** Bounded native Git observation. Never inherit executable Git configuration
- * from the caller's environment or run repository hooks/content converters. */
+ * from the caller's environment or run repository hooks/content converters.
+ * @overload
+ * @param {string} target
+ * @param {string[]} args
+ * @param {{ maxBuffer?: number, encoding: "buffer" }} options
+ * @returns {Promise<Buffer>}
+ */
+/**
+ * @overload
+ * @param {string} target
+ * @param {string[]} args
+ * @param {{ maxBuffer?: number, encoding?: "utf8" }} [options]
+ * @returns {Promise<string>}
+ */
+/**
+ * @param {string} target
+ * @param {string[]} args
+ * @param {{ maxBuffer?: number, encoding?: "utf8" | "buffer" }} [options]
+ * @returns {Promise<string | Buffer>}
+ */
 export async function readNativeGit(target, args, { maxBuffer = 4 * 1024 * 1024, encoding = "utf8" } = {}) {
   if (!["rev-parse", "merge-base", "diff", "log", "ls-files", "ls-tree"].includes(args[0]) &&
       !(args[0] === "cat-file" && args.length === 3 && args[1] === "blob")) throw Error("Unsupported native Git read");
@@ -37,11 +57,11 @@ export async function readNativeGit(target, args, { maxBuffer = 4 * 1024 * 1024,
   if (args[0] === "diff") {
     // Turning a clean filter off would compare different bytes and could hide
     // real drift. Refuse the observation instead, including included configs.
-    const settings = (await run(["config", "--null", "--list"])).split("\0");
+    const settings = (/** @type {string} */ (await run(["config", "--null", "--list"]))).split("\0");
     if (settings.some(entry => /^filter\..*\.(?:clean|process)$/i.test(entry.split("\n", 1)[0])))
       throw Error("Native Git observation cannot safely inspect configured clean/process filters");
     // Worktree submodule inspection can invoke another repository's converters.
-    if ((await run(["ls-files", "--stage", "-z"])).split("\0").some(entry => entry.startsWith("160000 ")))
+    if ((/** @type {string} */ (await run(["ls-files", "--stage", "-z"]))).split("\0").some(entry => entry.startsWith("160000 ")))
       throw Error("Native Git observation cannot safely inspect submodule worktrees");
     args = ["diff", "--no-ext-diff", "--no-textconv", ...args.slice(1)];
   }
@@ -82,6 +102,7 @@ export const policySchema = {
     requirements_refs: {type: 'array', maxItems: 8, uniqueItems: true, items: {type: 'string', minLength: 1, maxLength: 1024}}
   }
 };
+/** @type {import("ajv").ValidateFunction<any>} */
 const validate = new Ajv({ strict: true, allErrors: true }).compile(policySchema);
 export function assertPolicy(policy) {
   if (!validate(policy)) throw new Error("Invalid task policy; use explicit Principals, Agents, approvers and review separation");
