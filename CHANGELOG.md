@@ -77,6 +77,10 @@ repository migration does not republish old tags, archives or npm versions.
   finding, and a stated premise and check after a second failed review.
 - Documentation: `stats --report` examples use `<ISO-time>` and `<IANA-zone>`
   placeholders instead of a fixed cutoff date.
+- Development: the improvement cycle test fixture now reserves 10 s of wall
+  time per synthetic runtime operation instead of 1.25 s. Under parallel test
+  load, pre-dispatch work could exceed the old slice, so a step returned
+  `aborted` and the test failed intermittently. Runtime behavior is unchanged.
 
 ## 2.0.0
 
