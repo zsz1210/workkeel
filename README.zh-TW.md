@@ -9,7 +9,7 @@
 
 [![CI](https://github.com/zsz1210/workkeel/actions/workflows/ci.yml/badge.svg)](https://github.com/zsz1210/workkeel/actions/workflows/ci.yml)
 
-[npm](https://www.npmjs.com/package/@zsz1210/workkeel) 2.0.0 · Node.js 24.15+ · [MIT](LICENSE)
+[npm](https://www.npmjs.com/package/@zsz1210/workkeel) 2.1.0 · Node.js 24.15+ · [MIT](LICENSE)
 
 哪些部分穩定、盡力維護或屬於實驗性功能，見 [2.0 相容性保證](docs/concepts/compatibility.md)（英文）。
 

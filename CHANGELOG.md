@@ -7,80 +7,50 @@ repository migration does not republish old tags, archives or npm versions.
 
 ## Unreleased changes
 
-- Development: `npm run verify` now runs `npm run typecheck` after
-  `npm run check` and before the test suite. It is a non-strict TypeScript
-  check with `checkJs` off: only the 33 source files that start with
-  `// @ts-check` are checked. `tsconfig.json` is source-only and is not in the
-  npm package. Runtime behavior is unchanged.
-- Development: seven more source files are typechecked, for 40 in all. The
-  native Git read helper now declares a string result for text output and a
-  `Buffer` for `encoding: "buffer"`. Ajv is imported as a named export, and
-  the `ajv-formats` plugin call and Ajv validators have JSDoc types. These are
+## 2.1.0
+
+Pending publication. This release has no breaking changes.
+
+### Changes
+
+- CLI: I added a repeatable `--skill path` option to `task new`. It records
+  repository Skill files in the `skills` field of the contract. It pins their
+  digests when it creates the task. Without the option, `task new` works as
+  before.
+- Documentation: I updated the compatibility document to the 2.0 guarantees.
+  A breaking change to a covered part requires version 3.0.
+- Documentation: I added a "Pins from another version" section to the
+  compatibility document. It tells you which commands run when your CLI and
+  the pin in `workkeel.lock` differ. It also tells you how to move the pin with
+  `workkeel upgrade`.
+- Documentation: the READMEs show the npm installation first. The source clone
+  comes second.
+- Documentation: I moved the launcher lookup details from the READMEs to the
+  getting-started guide.
+- Documentation: the QA gate requires a reproduction for each must-fix
+  finding. After a second failed review, it requires a stated premise and a
+  check.
+- Documentation: the `stats --report` examples use `<ISO-time>` and
+  `<IANA-zone>` placeholders instead of a fixed cutoff date.
+
+### Development
+
+- `npm run verify` runs `npm run typecheck` after `npm run check` and before
+  the test suite.
+- `tsconfig.json` turns on `checkJs`. The typecheck covers all files in
+  `bin/`, `src/`, `scripts/` and `test/`.
+- `tsconfig.json` turns on four options from the `strict` family:
+  `alwaysStrict`, `strictFunctionTypes`, `strictBindCallApply` and
+  `noImplicitThis`. `strict` itself stays off.
+- I added JSDoc types and casts where the typecheck needed them. These are
   typing changes only. Runtime behavior is unchanged.
-- Development: fourteen more source files are typechecked, for 54 in all,
-  including the task list and project modules. The CLI compatibility result
-  and several options parameters have JSDoc types, and a few error and
-  `Promise` values have JSDoc casts. These are typing changes only. Runtime
-  behavior is unchanged.
-- Development: six more source files are typechecked, for 60 in all: the
-  goals, goal runtime, autonomy, autonomy admission, improvement cycle and CLI
-  modules. Goal and autonomy options, including `actor`, `adapter`, `signal`
-  and the `onError` and `onStep` callbacks, have JSDoc types, as do the
-  trusted role host members. These are typing changes only. Runtime behavior
-  is unchanged.
-- Development: the model rules UI module is typechecked, so all 61 files in
-  `bin/` and `src/` are covered. Its dialog, form, input and button lookups and
-  event targets have JSDoc casts. `tsconfig.json` now turns `checkJs` on and
-  includes `bin/**/*.mjs` and `src/**/*.mjs`, so new source files are checked
-  without a `// @ts-check` line; `scripts/` and `test/` are still not checked.
-  These are typing changes only. Runtime behavior is unchanged.
-- Development: all 25 files in `scripts/` are typechecked, and `tsconfig.json`
-  now also includes `scripts/**/*.mjs`; `test/` is still not checked. The
-  evidence check script imports Ajv as a named export, and a few options
-  parameters, return values and lists have JSDoc types or casts. The testing
-  guide now describes the `checkJs` setup. These are typing changes only.
-  Runtime behavior is unchanged.
-- Development: test files have started to get typings, in batches. 21 of
-  the 28 `test/` files with type errors now check cleanly against a test-only
-  config: `ci-scope`, `durable-atomic-boundaries`, `import-boundary`,
-  `npm-release-workflow`, `fixtures/workkeel-sandbox-qualification` and the
-  `workkeel-` tests for `autonomy`, `branding`, `claude-review`, `cli-flags`,
-  `codex-skills`, `compat`, `completion-evidence`, `delivery-request`,
-  `host-usage`, `improvement-cycle`, `learning`, `loop-run`, `model-routing`,
-  `retention`, `review-assessment` and `role-preflight`. Deliberately invalid
-  fixtures and caught errors have JSDoc casts, and the two cache-busting
-  module imports have `@ts-expect-error` with a reason. `tsconfig.json` still
-  does not include `test/`. These are typing changes only. Runtime behavior
-  is unchanged.
-- Development: a second batch of five `workkeel-` tests (`risk-tiers`,
-  `check-evidence`, `goal-runtime`, `goals` and `codex-runtime`) now checks
-  cleanly against the test-only config, which leaves `lifecycle` and
-  `review-recovery`. Partial fixtures, offline hosts and caught errors have
-  JSDoc casts. These are typing changes only. Runtime behavior is unchanged.
-- Development: the `lifecycle` and `review-recovery` tests now check cleanly,
-  so all 70 files in `test/` do, and `tsconfig.json` now also includes
-  `test/**/*.mjs`. `npm run typecheck` covers `bin/`, `src/`, `scripts/` and
-  `test/`. Caught errors, fixture helper options and invalid-input case tables
-  have JSDoc types or casts. These are typing changes only. Runtime behavior
-  is unchanged.
-- Development: `tsconfig.json` now turns on four of the `strict` family
-  options: `alwaysStrict`, `strictFunctionTypes`, `strictBindCallApply` and
-  `noImplicitThis`. `strict` itself stays off. The model rules UI `change`
-  listener takes an `Event` and casts its target, the partial-write test casts
-  non-`Buffer` data before `Buffer.from`, and the delivery-request test's
-  `spawn` wrappers type `this` and cast IPC messages before reading `action`.
-  These are typing changes only. Runtime behavior is unchanged.
-- CLI: `task new` accepts a repeatable `--skill path` that records repository
-  Skill files in the contract's `skills` and pins their digests at creation.
-  Without it, behavior is unchanged.
-- Documentation: the QA gate now requires a reproduction for each must-fix
-  finding, and a stated premise and check after a second failed review.
-- Documentation: `stats --report` examples use `<ISO-time>` and `<IANA-zone>`
-  placeholders instead of a fixed cutoff date.
-- Development: the improvement cycle test fixture now reserves 10 s of wall
-  time per synthetic runtime operation instead of 1.25 s. Under parallel test
-  load, pre-dispatch work could exceed the old slice, so a step returned
-  `aborted` and the test failed intermittently. Runtime behavior is unchanged.
+- `tsconfig.json` is a source-only file. The npm package does not include it.
+- I added two devDependencies: `typescript` 7.0.2 and `@types/node` 24.19.4.
+- I fixed an intermittent failure in the improvement cycle test. The test
+  fixture gives each synthetic runtime operation a 10 s wall-time slice. The
+  old slice was 1.25 s. Under parallel test load, the pre-dispatch work could
+  take longer than 1.25 s. The step then returned `aborted` and the test
+  failed. Runtime behavior is unchanged.
 
 ## 2.0.0
 
